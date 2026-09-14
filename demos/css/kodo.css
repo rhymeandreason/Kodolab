@@ -575,6 +575,8 @@ a.crumb:hover { color: var(--accent) }
   display: flex; flex-direction: column; gap: .75rem;
   font-family: var(--font-ui); color: var(--text-body); text-transform: none; letter-spacing: 0;
 }
+.sitelinks .menu .card[hidden],
+.bar .links .menu .card[hidden] { display: none }
 .sitelinks .menu .who,
 .bar .links .menu .who { margin: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .9rem; line-height: 1.3; }
 .sitelinks .menu .who b,
