@@ -26,80 +26,85 @@
   <nav class="sitenav">
     <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
     <span class="crumb">teach</span>
+    <span class="who-me" id="meta" hidden></span>
   </nav>
 
   <header class="pagehead">
     <h1>teach</h1>
-    <p class="deck">Give each student a code. See what they build and what they asked for.</p>
-    <p class="meta" id="meta" hidden></p>
+    <form class="newclass" id="newClass" hidden>
+      <input id="newClassName" placeholder="New class, e.g. Bio period 3" maxlength="80">
+      <button class="btn" type="submit"><i class="ph-bold ph-plus"></i>Add class</button>
+    </form>
   </header>
 
   <main>
     <!-- Signed out -->
     <section class="signin" id="signin" hidden>
-      <form id="signinForm" class="card">
-        <label for="teacherCode">Teacher code</label>
-        <div class="line">
-          <input id="teacherCode" type="password" autocomplete="off" spellcheck="false">
-          <button class="cta" type="submit">Open</button>
+      <div class="card">
+        <div id="tSignedOut">
+          <label>Sign in to manage your classes</label>
+          <div id="tGbtn"></div>
         </div>
+        <form id="tInvite" hidden>
+          <p class="acct" id="tAcct"></p>
+          <label for="tInviteCode">Teacher invite code</label>
+          <div class="line">
+            <input id="tInviteCode" autocomplete="off" spellcheck="false">
+            <button class="cta" type="submit">Redeem</button>
+          </div>
+          <p class="sub">A pilot teacher code works here too, and moves its classes onto this account.</p>
+        </form>
         <p class="err" id="signinErr" hidden></p>
-        <p class="sub">This browser remembers the code. Don't sign in on a student's machine.</p>
-      </form>
+      </div>
     </section>
 
     <!-- Signed in -->
     <section id="dash" hidden>
       <div class="classbar">
         <div class="segmented" id="classTabs" role="tablist"></div>
-        <form class="newclass" id="newClass">
-          <input id="newClassName" placeholder="New class, e.g. Bio period 3" maxlength="80">
-          <button class="btn" type="submit"><i class="ph-bold ph-plus"></i>Add class</button>
-        </form>
       </div>
 
       <p class="empty" id="noClass" hidden>Make your first class above, then add students to it.</p>
 
       <div id="classView" hidden>
         <div class="line printline">
-          <button class="btn" type="button" id="print"><i class="ph-bold ph-printer"></i>Print code cards</button>
+          <button class="btn" type="button" id="printCards"><i class="ph-bold ph-printer"></i>Print code cards</button>
           <span class="sub">Students go to <b id="buildUrl"></b> and type their code.</span>
         </div>
-        <div class="sechead">
-          <h2 id="className" title="Click to rename"></h2><span class="rule"></span>
-          <span class="count" id="classCount"></span>
+
+        <div class="viewtabs" id="viewTabs" role="tablist">
+          <button type="button" data-view="roster" aria-pressed="true">Students<span class="chip" id="classCount"></span></button>
+          <button type="button" data-view="feed" aria-pressed="false">Activity</button>
+          <button type="button" data-view="addSeats" aria-pressed="false">Add students</button>
         </div>
 
-        <div class="cols">
-          <section class="roster">
-            <div class="tablewrap">
-              <table>
-                <thead><tr><th>Student</th><th>Code</th><th class="num">Apps</th><th class="num">Prompts</th><th>Last active</th><th></th></tr></thead>
-                <tbody id="seats"></tbody>
-              </table>
-            </div>
-            <p class="empty" id="noSeats" hidden>No students yet.</p>
+        <section class="roster" id="roster">
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>Student</th><th>Code</th><th class="num">Apps</th><th class="num">Prompts</th><th>Last active</th><th></th></tr></thead>
+              <tbody id="seats"></tbody>
+            </table>
+          </div>
+          <p class="empty" id="noSeats" hidden>No students yet.</p>
+        </section>
 
-            <form class="addseats card" id="addSeats">
-              <label for="seatLabels">Add students, one per line</label>
-              <textarea id="seatLabels" rows="4" placeholder="Seat 1&#10;Seat 2&#10;Jordan K."></textarea>
-              <p class="sub">A first name, nickname or seat number. Whatever you type is what this page shows.</p>
-              <div class="line">
-                <button class="btn" type="button" id="fillSeats">Fill with numbered seats</button>
-                <span class="spacer"></span>
-                <button class="btn btn--tint" type="submit">Add</button>
-              </div>
-              <p class="err" id="seatErr" hidden></p>
-            </form>
+        <form class="addseats card" id="addSeats" hidden>
+          <label for="seatLabels">Add students, one per line</label>
+          <textarea id="seatLabels" rows="4" placeholder="Seat 1&#10;Seat 2&#10;Jordan K."></textarea>
+          <p class="sub">A first name, nickname or seat number. Whatever you type is what this page shows.</p>
+          <div class="line">
+            <button class="btn" type="button" id="fillSeats">Fill with numbered seats</button>
+            <span class="spacer"></span>
+            <button class="btn btn--tint" type="submit">Add</button>
+          </div>
+          <p class="err" id="seatErr" hidden></p>
+        </form>
 
-          </section>
-
-          <section class="feed">
-            <h3 class="cap">Prompts, newest first</h3>
-            <ol id="feed"></ol>
-            <p class="empty" id="noFeed" hidden>Nothing yet. Prompts show up here as students build.</p>
-          </section>
-        </div>
+        <section class="feed" id="feedView" hidden>
+          <h3 class="cap">Prompts, newest first</h3>
+          <ol id="feed"></ol>
+          <p class="empty" id="noFeed" hidden>Nothing yet. Prompts show up here as students build.</p>
+        </section>
       </div>
 
       <section class="mine">
@@ -166,29 +171,37 @@
   const show = (id, text) => { $(id).textContent = text || ''; $(id).hidden = !text; };
 
   /* ---- signing in ------------------------------------------------------- */
-  $('signinForm').addEventListener('submit', async e => {
+  // A teacher is a Google account with a teacher row. A browser still holding
+  // the pilot's code is let in on it until that code is redeemed on an account.
+  $('tInvite').addEventListener('submit', async e => {
     e.preventDefault();
-    const code = $('teacherCode').value.trim();
-    if (!code) return;
-    Apps.codes.setTeacher(code);
+    const code = $('tInviteCode').value.trim(); if (!code) return;
     show('signinErr', '');
-    if (!(await load())) show('signinErr', 'That teacher code is not right.');
+    try {
+      const r = await Apps.account.redeem(code);
+      if (!r.teacher) return show('signinErr', 'That is a builder invite, not a teacher invite. You can build at /build.');
+      Apps.codes.setTeacher(null);
+      location.reload();
+    } catch (err) { show('signinErr', err.message); }
   });
-  $('signout').addEventListener('click', () => {
+  $('signout').addEventListener('click', async () => {
     Apps.codes.setTeacher(null);
-    location.hash = '';
-    location.reload();
+    await Apps.account.logout();
+    location.href = location.pathname;
   });
 
   async function load() {
-    if (!Apps.codes.teacher()) { signedOut(); return false; }
     try { data = await t(); }
     catch (err) {
-      if (err.status === 401) { Apps.codes.setTeacher(null); signedOut(); return false; }
-      signedOut(); show('signinErr', err.message); return true;
+      if (err.status === 401) {
+        if (Apps.codes.teacher()) Apps.codes.setTeacher(null);
+        signedOut(err.body && err.body.who);
+        return false;
+      }
+      signedOut(null); show('signinErr', err.message); return true;
     }
     $('signin').hidden = true; $('dash').hidden = false;
-    $('meta').hidden = false; $('meta').textContent = data.teacher.name;
+    $('meta').hidden = false; $('newClass').hidden = false; $('meta').textContent = data.teacher.name;
     $('buildUrl').textContent = BUILD.replace(/^https?:\/\//, '');
     $('buildLink').href = BUILD;
     const want = new URLSearchParams(location.hash.slice(1)).get('class');
@@ -197,12 +210,23 @@
     if (classId) await openClass(classId);
     return true;
   }
-  function signedOut() { $('signin').hidden = false; $('dash').hidden = true; $('meta').hidden = true; $('teacherCode').focus(); }
+  function signedOut(who) {
+    $('signin').hidden = false; $('dash').hidden = true; $('meta').hidden = true; $('newClass').hidden = true;
+    if (who && who.account) {
+      $('tSignedOut').hidden = true; $('tInvite').hidden = false;
+      $('tAcct').innerHTML = `Signed in as <b>${esc(who.name)}</b>. <button class="textbtn" id="tOut" type="button">Sign out</button>`;
+      $('tOut').addEventListener('click', () => $('signout').click());
+      $('tInviteCode').focus();
+    } else {
+      Apps.account.button($('tGbtn'), (user, err) => err ? show('signinErr', err.message) : location.reload())
+        .catch(e => show('signinErr', e.message));
+    }
+  }
 
   /* ---- classes ---------------------------------------------------------- */
   function paintClasses() {
     $('classTabs').innerHTML = data.classes.map(c =>
-      `<button type="button" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
+      `<button type="button" title="Double-click to rename" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
     $('classTabs').hidden = !data.classes.length;
     $('noClass').hidden = !!data.classes.length;
     $('classView').hidden = !classId;
@@ -218,6 +242,7 @@
     $('newClassName').value = '';
     data.classes.push({ id: r.id, name: r.name, seats: 0 });
     await openClass(r.id);
+    showView('addSeats');
     $('seatLabels').focus();
   });
 
@@ -233,9 +258,8 @@
 
   function paintClass() {
     const c = current;
-    $('className').textContent = c.class.name;
     const active = c.seats.filter(s => !s.revoked_at).length;
-    $('classCount').textContent = `${active} student${active === 1 ? '' : 's'}`;
+    $('classCount').textContent = active;
     $('noSeats').hidden = !!c.seats.length;
     $('seats').innerHTML = c.seats.map(s => `<tr data-id="${esc(s.id)}" class="${s.revoked_at ? 'off' : ''}">
       <td><button class="textbtn name" data-act="work" type="button">${esc(s.label)}</button></td>
@@ -260,7 +284,8 @@
       </button></li>`).join('');
   }
 
-  $('className').addEventListener('click', async () => {
+  $('classTabs').addEventListener('dblclick', async e => {
+    if (!e.target.closest('button[data-id]')) return;
     const name = prompt('Rename the class', current.class.name);
     if (!name || !name.trim()) return;
     await t('', { action: 'rename', class: classId, name });
@@ -285,6 +310,15 @@
     await openClass(classId);
   });
 
+  const VIEWS = { roster: 'roster', feed: 'feedView', addSeats: 'addSeats' };
+  function showView(v) {
+    for (const [k, id] of Object.entries(VIEWS)) $(id).hidden = k !== v;
+    $('viewTabs').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
+  }
+  $('viewTabs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-view]'); if (b) showView(b.dataset.view);
+  });
+
   $('fillSeats').addEventListener('click', () => {
     const n = current.seats.length;
     $('seatLabels').value = Array.from({ length: 30 }, (_, i) => `Seat ${n + i + 1}`).join('\n');
@@ -298,6 +332,7 @@
       await t('', { action: 'seats', class: classId, labels });
       $('seatLabels').value = '';
       await openClass(classId);
+      showView('roster');
     } catch (err) { show('seatErr', err.message); }
   });
 
@@ -366,7 +401,7 @@
   $('viewer').addEventListener('close', () => { $('vFrame').srcdoc = ''; viewing = null; });
 
   /* ---- printing --------------------------------------------------------- */
-  $('print').addEventListener('click', () => {
+  $('printCards').addEventListener('click', () => {
     const seats = current.seats.filter(s => !s.revoked_at);
     const where = BUILD.replace(/^https?:\/\//, '');
     $('printsheet').innerHTML = seats.map(s => `<div class="pcard">
@@ -374,6 +409,9 @@
       <span class="plabel">${esc(s.label)}</span>
       <span class="pcode">${esc(s.code)}</span>
       <span class="pwhere">Go to <b>${esc(where)}</b> and type your code.</span></div>`).join('');
+    if (!seats.length) { alert('No students to print yet.'); return; }
+    // Safari opens print only synchronously inside the click; reading a size forces layout first.
+    void $('printsheet').offsetHeight;
     window.print();
   });
 

@@ -36,6 +36,8 @@ const LIMITS = {
   /* A class is one room building at once: 30 students at ~10 turns a period. */
   classHour:   450,
   classDay:    1500,
+  /* One invited account. Teachers and class codes are not held to this. */
+  accountDay:  60,
 };
 
 const BUDGET_MS = 1500;
@@ -61,10 +63,11 @@ function enabled() { return log.enabled(); }
 
 /* ---- the limit --------------------------------------------------------- */
 
-async function counts(cohort, visitor) {
+async function counts(cohort, visitor, account) {
   const db = log.sql();
   const [row] = await db`
     SELECT
+      count(*) FILTER (WHERE a.owner_id = ${account})::int                  AS account_day,
       count(*) FILTER (WHERE a.cohort = ${cohort}
                          AND v.created_at > now() - interval '1 hour')::int AS cohort_hour,
       count(*) FILTER (WHERE a.cohort = ${cohort})::int                     AS cohort_day,
@@ -74,18 +77,19 @@ async function counts(cohort, visitor) {
     JOIN   apps a ON a.id = v.app_id
     WHERE  v.kind IN ('build', 'edit')
       AND  v.created_at > now() - interval '1 day'
-      AND  (a.cohort = ${cohort} OR a.visitor_id = ${visitor}::uuid)`;
+      AND  (a.cohort = ${cohort} OR a.visitor_id = ${visitor}::uuid OR a.owner_id = ${account})`;
   return row;
 }
 
 /* Null to allow the turn, or {status, body} to refuse it. */
-async function exceeded({ cohort, visitorId }) {
+/* `account` is an invited account's owner id, the only kind with a cap of its own. */
+async function exceeded({ cohort, visitorId, account }) {
   if (!enabled()) return null;
   const visitor = uuidOrNull(visitorId);
   let row;
   try {
     row = await Promise.race([
-      counts(cohort || null, visitor),
+      counts(cohort || null, visitor, account || null),
       new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), BUDGET_MS)),
     ]);
   } catch (err) {
@@ -99,6 +103,7 @@ async function exceeded({ cohort, visitorId }) {
   const who = klass ? 'Your class' : 'This link';
   if (cohort && row.cohort_day  >= day)  return refuse(`${who} has used its builds for today. They come back tomorrow.`);
   if (cohort && row.cohort_hour >= hour) return refuse(`${who} has built a lot in the last hour. Try again shortly.`);
+  if (account && row.account_day >= LIMITS.accountDay) return refuse(`You have used your ${LIMITS.accountDay} builds for today. They come back tomorrow.`);
   if (visitor && row.visitor_hour >= LIMITS.visitorHour) return refuse('You have built a lot in the last hour. Try again shortly.');
   return null;
 }
@@ -188,6 +193,12 @@ async function mayEdit(id, token, owner) {
   const [row] = await db`SELECT token_hash, owner_id FROM apps WHERE id = ${id}`;
   if (!row) return false;
   return (!!owner && row.owner_id === owner) || (!!token && sameHash(token, row.token_hash));
+}
+
+/* An app nobody owns becomes this owner's. False when someone already does. */
+async function adopt(id, owner) {
+  const rows = await log.sql()`UPDATE apps SET owner_id = ${owner} WHERE id = ${id} AND owner_id IS NULL RETURNING id`;
+  return rows.length > 0;
 }
 
 async function rotate(id) {
@@ -335,4 +346,4 @@ async function usage() {
 module.exports = { LIMITS, enabled, exceeded, validId, setThumb, setCard, sourcesNeedingCards,
                    thumbsWithoutSceneFlag, markScene, shelf, owned,
                    create, addVersion, read, versions, version, requests,
-                   mayEdit, rotate, setTitle, remove, recent, usage };
+                   mayEdit, adopt, rotate, setTitle, remove, recent, usage };

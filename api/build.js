@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
   /* What the student clicked before they typed, from the text mode's pills. */
   const selection = (Array.isArray(body.selection) ? body.selection : []).slice(0, MAX_PICKS);
 
-  const capped = await apps.exceeded({ cohort, visitorId: body.visitorId });
+  const capped = await apps.exceeded({ cohort, visitorId: body.visitorId, account: who && who.kind === 'user' ? owner : null });
   if (capped) return res.status(capped.status).json(capped.body);
 
   try {

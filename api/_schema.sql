@@ -292,3 +292,52 @@ CREATE INDEX IF NOT EXISTS seats_class_idx ON seats (class_id, created_at);
 -- `apps.owner_id` is 'seat:<id>' or 'teacher:<id>', and `apps.cohort` is
 -- 'class:<id>' for a seat's app, so the rate limit counts a class.
 CREATE INDEX IF NOT EXISTS apps_owner_idx ON apps (owner_id, created_at DESC);
+
+-- =============================================================================
+--  users, sessions, invites - Google sign-in, admitted by invite
+-- =============================================================================
+--  A USER IS A PERSON, so this is the one table that holds an email and a name
+--  by design: Google's, as of their last sign-in. Signing in admits nobody to
+--  the builder. `admitted_at` is set by redeeming an invite, and `invite_label`
+--  is the invite's cohort, which is what the invite-wide cap counts.
+--
+--  AN INVITE is 'member' (reusable, `max_uses` null or a number) or 'teacher'
+--  (single use). Revoking one stops new redemptions; accounts already admitted
+--  keep access, and `users.disabled_at` is how one person is turned off.
+--
+--  A SESSION is a random token in an HttpOnly cookie, stored hashed.
+--
+--  An account owns its apps as 'user:<id>'. A teacher is a `teachers` row with
+--  `user_id` set; the pilot's code-only teacher links by redeeming that code
+--  once while signed in, which moves its apps from 'teacher:<id>' to the user.
+CREATE TABLE IF NOT EXISTS users (
+  id            text PRIMARY KEY,
+  google_sub    text NOT NULL UNIQUE,
+  email         text,
+  name          text,
+  admitted_at   timestamptz,
+  invite_label  text,
+  disabled_at   timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash  text PRIMARY KEY,
+  user_id     text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  expires_at  timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id);
+
+CREATE TABLE IF NOT EXISTS invites (
+  code        text PRIMARY KEY,            -- 'abcd-efgh', lowercase
+  kind        text NOT NULL CHECK (kind IN ('member', 'teacher')),
+  label       text NOT NULL,               -- the cohort a member invite admits into
+  max_uses    int,                         -- null: unlimited. 1 for every teacher invite
+  uses        int NOT NULL DEFAULT 0,
+  note        text,
+  revoked_at  timestamptz,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS user_id text UNIQUE REFERENCES users(id) ON DELETE SET NULL;

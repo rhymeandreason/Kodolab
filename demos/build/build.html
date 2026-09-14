@@ -94,6 +94,16 @@
           <button class="cta" type="submit">Join</button>
         </form>
         <p class="codeerr" id="codeErr" hidden></p>
+        <div class="acct">
+          <p class="or"><span>or</span></p>
+          <div class="gbtn" id="gbtn"></div>
+          <p class="acctline" id="acctLine" hidden></p>
+          <form class="codeform" id="inviteForm" hidden>
+            <input id="inviteCode" aria-label="Invite code" placeholder="invite code" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64">
+            <button class="cta" type="submit">Redeem</button>
+          </form>
+          <p class="codeerr" id="inviteErr" hidden></p>
+        </div>
         <p class="sub">No code? The builder is open to invited testers for now. <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>, or open your personal access link once in this browser.</p>
       </div>
       <form id="ask">
@@ -213,6 +223,7 @@
 
   let app = null;        // { id, title, n, html }
   let token = null;
+  let whoNow = null;     // /api/build's `who`: seat, teacher, user or key
   let errors = [];       // relayed since the last turn
   let busy = false;
 
@@ -883,7 +894,7 @@
   // store holds whoever sat here last.
   let shelfList = [];
   async function paintMine() {
-    const coded = !!(Apps.codes.seat() || Apps.codes.teacher());
+    const coded = !!(Apps.codes.seat() || Apps.codes.teacher() || (whoNow && whoNow.account));
     let list;
     if (coded) {
       try {
@@ -1000,12 +1011,39 @@
     const el = $('who');
     if (!who || who.kind === 'key') { el.hidden = true; return; }
     el.hidden = false;
+    const out = who.account ? ` <button class="textbtn" data-signout type="button">Sign out</button>` : '';
     el.innerHTML = who.kind === 'seat'
       ? `Building as <b>${esc(who.label)}</b> · ${esc(who.className)} <button class="textbtn" id="notMe" type="button">Not you?</button>`
-      : `Teacher · <b>${esc(who.name)}</b> <a class="textbtn" href="teacher.html">Dashboard</a>`;
+      : who.kind === 'teacher'
+      ? `Teacher · <b>${esc(who.name)}</b> <a class="textbtn" href="teacher.html">Dashboard</a>${out}`
+      : `Signed in as <b>${esc(who.name)}</b>${out}`;
     const b = $('notMe');
     if (b) b.addEventListener('click', () => { Apps.codes.setSeat(null); location.href = location.pathname; });
   }
+  document.addEventListener('click', async e => {
+    if (!e.target.closest('[data-signout]')) return;
+    await Apps.account.logout();
+    location.href = location.pathname;
+  });
+  // Signed in: the apps this browser made on a testing link move into the account, then the page starts over as that account.
+  async function signedIn(user, err) {
+    if (err) { $('inviteErr').textContent = err.message; $('inviteErr').hidden = false; return; }
+    if (user && user.admitted) await Apps.account.claimLocal();
+    location.reload();
+  }
+  function pending(who) {
+    $('gbtn').hidden = true;
+    $('acctLine').hidden = false;
+    $('acctLine').innerHTML = `Signed in as <b>${esc(who.name)}</b>. Enter the invite code you were given. <button class="textbtn" data-signout type="button">Sign out</button>`;
+    $('inviteForm').hidden = false;
+  }
+  $('inviteForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const code = $('inviteCode').value.trim(); if (!code) return;
+    $('inviteErr').hidden = true;
+    try { await Apps.account.redeem(code); await Apps.account.claimLocal(); location.reload(); }
+    catch (err) { $('inviteErr').textContent = err.message; $('inviteErr').hidden = false; }
+  });
   $('codeForm').addEventListener('submit', async e => {
     e.preventDefault();
     const raw = $('classCode').value.trim();
@@ -1020,12 +1058,19 @@
     try {
       const cfg = await Apps.api('../../api/build');
       if (!cfg.ok) notice('The builder is not configured here: it needs a database and a model key.', true);
+      whoNow = cfg.who;
       paintWho(cfg.who);
+      if (cfg.who && cfg.who.account) Apps.account.claimLocal();
     } catch (err) {
       if (err.status === 401) {
+        const code = err.body && err.body.code;
         // A code that was turned off or mistyped is dropped, so the page asks again.
-        if (err.body && err.body.code) { Apps.codes.setSeat(null); codeError(err.message); }
+        if (code === 'invalid' || code === 'revoked') { Apps.codes.setSeat(null); codeError(err.message); }
         $('locked').hidden = false; $('ask').hidden = true;
+        if (code === 'invite') pending(err.body.who);
+        else Apps.account.button($('gbtn'), signedIn)
+          .then(s => { if (!s.clientId) document.querySelector('.locked .acct').hidden = true; })
+          .catch(e => console.warn('[google] ' + e.message));
       }
       else notice(err.message, true);
       $('send').disabled = true;

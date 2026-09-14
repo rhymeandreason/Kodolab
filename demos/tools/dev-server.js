@@ -684,7 +684,7 @@ function api(url, req, res) {
 
   if (url !== '/api/ask' && url !== '/api/log' && url !== '/api/find' &&
       url !== '/api/extend' && url !== '/api/land' &&
-      url !== '/api/app' && url !== '/api/build' && url !== '/api/teacher')
+      url !== '/api/app' && url !== '/api/build' && url !== '/api/teacher' && url !== '/api/auth')
     return json(404, { error: 'no such endpoint' });
 
   // Env and handler are both re-read per request, so pasting a key into
@@ -724,7 +724,7 @@ function api(url, req, res) {
      so their body cap is the tutor's times five, and /api/app reads its id
      from the query, which the other three never do. */
   if (url === '/api/find' || url === '/api/extend' || url === '/api/land' ||
-      url === '/api/app' || url === '/api/build' || url === '/api/teacher') {
+      url === '/api/app' || url === '/api/build' || url === '/api/teacher' || url === '/api/auth') {
     const file = 'api' + url.slice(4) + '.js';
     const query = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
     const cap = url === '/api/app' || url === '/api/build' ? 5e5 : 1e5;
@@ -734,11 +734,14 @@ function api(url, req, res) {
     /* `.end()` as well as `.json()`: /api/land answers 204 with no body, and it
        answers BEFORE it writes — a beacon has nobody waiting for a reply, so a
        shim that only knew how to send JSON would hang it. */
+    /* Headers a handler sets are kept for its reply: /api/auth's Set-Cookie is
+       the session, and a shim that dropped it would sign nobody in. */
+    const extra = {};
     const shim = {
-      setHeader: () => {},
+      setHeader: (k, v) => { extra[k] = v; },
       status: c => ({
-        json: b => json(c, b),
-        end: () => { res.writeHead(c); res.end(); },
+        json: b => { for (const [k, v] of Object.entries(extra)) if (k !== 'Cache-Control') res.setHeader(k, v); json(c, b); },
+        end: () => { res.writeHead(c, extra); res.end(); },
       }),
     };
     const run = body => Promise.resolve(

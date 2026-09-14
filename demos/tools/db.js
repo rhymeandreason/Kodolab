@@ -18,6 +18,12 @@
  *    node demos/tools/db.js teacher list
  *    node demos/tools/db.js teacher reissue <id>
  *                                    a new code; the old one stops working
+ *    node demos/tools/db.js invite teacher [note]
+ *                                    a single-use code that makes a signed-in account a teacher
+ *    node demos/tools/db.js invite member <label> [max-uses]
+ *                                    a reusable code that admits accounts to the builder under <label>
+ *    node demos/tools/db.js invite list | invite revoke <code>
+ *    node demos/tools/db.js user list | user disable <email> | user enable <email>
  *    node demos/tools/db.js seed <page> [title]
  *                                    store a page as an app; prints the view and edit links.
  *                                    The eval pages under tests/ go in this way.
@@ -193,6 +199,55 @@ const CMDS = {
       return;
     }
     throw new Error('teacher new <name> | teacher list | teacher reissue <id>');
+  },
+
+  async invite(sub, ...rest) {
+    const access = require(path.join(ROOT, 'api/_access.js'));
+    const sql = log.sql();
+    const mint = async (kind, label, max, note) => {
+      const code = access.mintSeatCode();
+      await sql`INSERT INTO invites (code, kind, label, max_uses, note) VALUES (${code}, ${kind}, ${label}, ${max}, ${note || null})`;
+      console.log(`${code}  ${kind}  ${label}${max ? `  up to ${max} uses` : '  unlimited uses'}`);
+      console.log('  Redeemed after signing in with Google, on /build or /teach.');
+    };
+    if (sub === 'teacher') return mint('teacher', 'teachers', 1, rest.join(' '));
+    if (sub === 'member') {
+      const [label, max] = rest;
+      if (!label) throw new Error('invite member needs a label: node demos/tools/db.js invite member bio101-fall [200]');
+      return mint('member', label, max ? Number(max) : null, null);
+    }
+    if (sub === 'revoke') {
+      const [r] = await sql`UPDATE invites SET revoked_at = now() WHERE code = ${String(rest[0] || '').toLowerCase()} RETURNING code`;
+      return console.log(r ? `${r.code} revoked; accounts it admitted keep access` : 'no such invite');
+    }
+    if (sub === 'list') {
+      const rows = await sql`SELECT code, kind, label, uses, max_uses, note, revoked_at FROM invites ORDER BY created_at`;
+      if (!rows.length) return console.log('no invites yet');
+      for (const r of rows) console.log(`${r.code}  ${r.kind.padEnd(7)}  ${r.label.padEnd(16)}  ${r.uses}${r.max_uses ? '/' + r.max_uses : ''} used`
+        + `${r.revoked_at ? '  REVOKED' : ''}${r.note ? '  ' + r.note : ''}`);
+      return;
+    }
+    throw new Error('invite teacher [note] | invite member <label> [max-uses] | invite list | invite revoke <code>');
+  },
+
+  async user(sub, email) {
+    const sql = log.sql();
+    if (sub === 'list') {
+      const rows = await sql`SELECT u.email, u.name, u.invite_label, u.admitted_at, u.disabled_at, t.id AS teacher
+                             FROM users u LEFT JOIN teachers t ON t.user_id = u.id ORDER BY u.created_at`;
+      if (!rows.length) return console.log('no accounts yet');
+      for (const r of rows) console.log(`${(r.email || '-').padEnd(32)} ${r.teacher ? 'teacher ' : r.admitted_at ? 'member  ' : 'pending '}`
+        + `${(r.invite_label || '').padEnd(16)} ${r.name || ''}${r.disabled_at ? '  DISABLED' : ''}`);
+      return;
+    }
+    if (sub === 'disable' || sub === 'enable') {
+      const rows = await sql`UPDATE users SET disabled_at = ${sub === 'disable' ? new Date().toISOString() : null}
+                             WHERE lower(email) = lower(${email || ''}) RETURNING id`;
+      if (!rows.length) throw new Error('no account with that email');
+      if (sub === 'disable') await sql`DELETE FROM sessions WHERE user_id = ${rows[0].id}`;
+      return console.log(`${email} ${sub}d`);
+    }
+    throw new Error('user list | user disable <email> | user enable <email>');
   },
 
   /* A page from disk becomes an app, so the render route and the builder can

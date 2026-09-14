@@ -111,6 +111,14 @@ body.fresh .bar .links { display: flex; }
 .codeform input:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
 .codeform .cta { margin: 0; }
 .locked p.codeerr { margin-top: 10px; font-size: 13px; color: var(--hue-coral); }
+.locked .acct { margin-top: 18px; }
+.locked .or { display: flex; align-items: center; gap: .8em; margin: 0 0 14px; font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--text-muted); }
+.locked .or::before, .locked .or::after { content: ''; flex: 1; border-top: 1px solid var(--border-hair); }
+.locked .gbtn { display: flex; justify-content: center; min-height: 44px; }
+.locked .gbtn[hidden], .locked form[hidden], .locked .acct[hidden] { display: none; }
+.locked p.acctline { font-size: 14px; }
+.locked p.acctline b { color: var(--text-strong); }
+
 /* Who the builder thinks this is, under the box: a shared machine is the case. */
 .hero .who { margin: .9rem 0 0; font-size: .9rem; color: color-mix(in srgb, var(--play-ink) 72%, transparent); }
 .hero .who[hidden], body.work .who { display: none; }

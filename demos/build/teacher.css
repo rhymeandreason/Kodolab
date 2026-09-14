@@ -28,16 +28,22 @@ input:focus-visible, textarea:focus-visible { outline: 0; border-color: var(--ac
 .signin { max-width: 28rem; margin: 2rem 0; }
 .signin input { flex: 1; min-width: 0; }
 .signin .sub { margin: .8rem 0 0; }
+.signin .acct { margin: 0 0 1rem; }
+.signin .acct b { color: var(--text-strong); }
+#tGbtn { min-height: 44px; }
 
 /* ---- classes ---- */
 .classbar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin: 0 0 2rem; }
 .classbar .segmented { flex-wrap: wrap; }
-.newclass { display: flex; gap: .5rem; margin-left: auto; }
+.newclass { display: flex; align-self: flex-end; gap: .5rem; margin-left: auto; }
 .newclass input { width: 16rem; }
-#className { cursor: text; }
 
-.cols { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
-@media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+.viewtabs { display: flex; gap: clamp(1.2rem, 3vw, 2.2rem); margin: 0 0 1.5rem; border-bottom: 1px solid var(--border-hair); }
+.viewtabs button { all: unset; cursor: pointer; padding: .7rem 0; margin-bottom: -1px; border-bottom: 2px solid transparent; font-family: var(--font-ui); font-size: .8rem; font-weight: var(--cap-weight); letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); transition: color var(--dur-fast), border-color var(--dur-fast); }
+.viewtabs button:hover { color: var(--text-strong); }
+.viewtabs button[aria-pressed="true"] { color: var(--text-strong); border-bottom-color: var(--spark); }
+.viewtabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+#addSeats { max-width: 40rem; }
 
 /* ---- roster ---- */
 .tablewrap { overflow-x: auto; }
@@ -58,7 +64,7 @@ tr.off td { color: var(--text-muted); }
 tr.off code { text-decoration: line-through; color: var(--text-muted); }
 .tag { font-size: .75rem; padding: .05rem .4rem; border-radius: 999px; background: var(--surface-stage); color: var(--text-dim); }
 
-.addseats { margin-top: 1.4rem; }
+.addseats { margin-top: 0; }
 .addseats textarea { width: 100%; resize: vertical; }
 .addseats .sub { margin: .4rem 0 .8rem; }
 .printline { margin: -1rem 0 2rem; }
@@ -121,7 +127,8 @@ dialog.viewer h2 { margin: 0; font-size: 1.15rem; color: var(--text-strong); }
 /* ---- print: code cards only ---- */
 .printsheet { display: none; }
 @media print {
-  body > .page, dialog { display: none !important; }
+  html, body.kodo { height: auto !important; overflow: visible !important; background: #fff !important; }
+  body > .page, body > dialog, body > script { display: none !important; }
   .printsheet { display: grid !important; grid-template-columns: 1fr 1fr; gap: 0; }
   .pcard {
     display: flex; flex-direction: column; gap: .3rem; padding: 1.1rem 1.3rem; break-inside: avoid;
@@ -132,3 +139,7 @@ dialog.viewer h2 { margin: 0; font-size: 1.15rem; color: var(--text-strong); }
   .pcode { font-family: ui-monospace, Menlo, monospace; font-size: 26pt; letter-spacing: .08em; margin: .2rem 0; }
   .pwhere { font-size: 10pt; color: #333; }
 }
+
+/* After the site links lib/site.js appends. */
+.sitenav .who-me { order: 1; margin-left: clamp(.9rem, 2.4vw, 1.7rem); padding-left: clamp(.9rem, 2.4vw, 1.7rem); border-left: 1px solid var(--border-hair); font-family: var(--font-ui); font-size: .74rem; font-weight: var(--cap-weight); letter-spacing: .18em; text-transform: uppercase; color: var(--spark); }
+.viewtabs .chip { display: inline-block; margin-left: .45em; padding: 0 .5em; min-width: 1.4em; border-radius: 999px; font-size: .85em; line-height: 1.5; text-align: center; font-variant-numeric: tabular-nums; background: color-mix(in srgb, currentColor 14%, transparent); }

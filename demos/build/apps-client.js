@@ -108,6 +108,44 @@ const Apps = (() => {
     return json;
   }
 
+  /* ---- the account ------------------------------------------------------ *
+   * Google sign-in sets an HttpOnly cookie, so this page never holds the
+   * session; it only asks /api/auth what the cookie says. */
+  function loadScript(src) {
+    return new Promise((ok, fail) => {
+      if (document.querySelector(`script[src="${src}"]`) && window.google) return ok();
+      const s = document.createElement('script');
+      s.src = src; s.async = true; s.onload = ok; s.onerror = () => fail(new Error('Google sign-in did not load'));
+      document.head.appendChild(s);
+    });
+  }
+  const account = {
+    state: () => api('../../api/auth').catch(() => ({ clientId: null, user: null })),
+    /* Google's own button, drawn into `el`. `done(user, err)` runs once the cookie is set. */
+    async button(el, done) {
+      const s = await account.state();
+      if (!s.clientId) { el.hidden = true; return s; }
+      await loadScript('https://accounts.google.com/gsi/client');
+      window.google.accounts.id.initialize({
+        client_id: s.clientId,
+        callback: async r => {
+          try { done((await api('../../api/auth', { method: 'POST', body: { action: 'google', credential: r.credential } })).user); }
+          catch (err) { done(null, err); }
+        },
+      });
+      window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' });
+      return s;
+    },
+    redeem: code => api('../../api/auth', { method: 'POST', body: { action: 'redeem', code } }),
+    logout: () => api('../../api/auth', { method: 'POST', body: { action: 'logout' } }).catch(() => null),
+    /* The apps this browser made on a testing link become the account's. Only
+       unowned ones move, so running it again is harmless. */
+    claimLocal() {
+      const list = mine().filter(m => m.token).map(m => ({ id: m.id, token: m.token }));
+      return list.length ? api('../../api/auth', { method: 'POST', body: { action: 'claim', apps: list } }).catch(() => null) : null;
+    },
+  };
+
   /* ---- links ------------------------------------------------------------ *
    * Deployed, the short forms `/app/<id>` and `/build?id=` are vercel.json
    * rewrites; on the dev server the file path is the URL. Which world this is
@@ -290,5 +328,5 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
     d.showModal();
   }
 
-  return { KEY, VISITOR, ID, codes, api, link, mount, preview, editMode, outline, exportFile, remember, forget, tokenFor, mine, beta };
+  return { KEY, VISITOR, ID, codes, account, api, link, mount, preview, editMode, outline, exportFile, remember, forget, tokenFor, mine, beta };
 })();

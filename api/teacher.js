@@ -1,7 +1,8 @@
 /* =============================================================================
  *  api/teacher.js — the teacher dashboard's data
  * =============================================================================
- *  Every call carries `X-Teacher-Code`; a seat code is never read here.
+ *  A teacher is a signed-in account with a teacher row, or the pilot's
+ *  `X-Teacher-Code`. A seat code is never read here.
  *
  *  GET  /api/teacher                  → the teacher, their classes, their own apps
  *  GET  /api/teacher?class=ID         → the roster with counts, and the class's prompts, newest first
@@ -39,7 +40,7 @@ module.exports = async function handler(req, res) {
   let who = null;
   try { who = await access.resolve(req, { seatFirst: false }); }
   catch (err) { console.error('[teacher] ' + ((err && err.message) || err)); return res.status(500).json({ error: 'the database failed' }); }
-  if (!who || who.kind !== 'teacher') return res.status(401).json({ error: 'That teacher code is not right.' });
+  if (!who || who.kind !== 'teacher') return res.status(401).json({ error: 'Sign in as a teacher.', who: access.describe(who) });
   const tid = who.teacher.id;
   const db = log.sql();
   const q = req.query || {};
@@ -47,7 +48,7 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       if (q.app) {
-        const app = await appOf(db, tid, String(q.app));
+        const app = await appOf(db, tid, who.owner, String(q.app));
         if (!app) return res.status(404).json({ error: 'no such app' });
         if (q.n) {
           const v = await apps.version(app.id, Number(q.n));
@@ -100,7 +101,7 @@ module.exports = async function handler(req, res) {
         SELECT c.id, c.name, c.created_at,
                (SELECT count(*) FROM seats s WHERE s.class_id = c.id AND s.revoked_at IS NULL)::int AS seats
         FROM classes c WHERE c.teacher_id = ${tid} ORDER BY c.created_at`;
-      return res.status(200).json({ teacher: who.teacher, classes, apps: await apps.owned('teacher:' + tid) });
+      return res.status(200).json({ teacher: who.teacher, classes, apps: await apps.owned(who.owner) });
     }
 
     if (req.method !== 'POST') {
@@ -172,14 +173,14 @@ async function classOf(db, tid, id) {
 }
 
 /* An app the teacher may read: their own, or one a seat in their classes owns. */
-async function appOf(db, tid, id) {
+async function appOf(db, tid, owner, id) {
   if (!apps.validId(id)) return null;
   const [row] = await db`
     SELECT a.id, a.title, a.owner_id, a.parent_id, a.created_at, s.id AS seat_id, s.label
     FROM apps a
     LEFT JOIN seats s   ON a.owner_id = 'seat:' || s.id
     LEFT JOIN classes c ON c.id = s.class_id
-    WHERE a.id = ${id} AND (a.owner_id = ${'teacher:' + tid} OR c.teacher_id = ${tid})`;
+    WHERE a.id = ${id} AND (a.owner_id = ${owner} OR c.teacher_id = ${tid})`;
   return row || null;
 }
 
