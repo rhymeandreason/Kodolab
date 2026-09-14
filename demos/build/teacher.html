@@ -85,7 +85,6 @@
         </section>
       </div>
 
-      <p class="signout"><button class="textbtn" id="signout" type="button">Sign out of this browser</button></p>
     </section>
   </main>
 </div>
@@ -144,11 +143,7 @@
   /* ---- signing in ------------------------------------------------------- */
   // A teacher is a Google account with a teacher row; /login is where one gets
   // made. A browser still holding the pilot's code is let in on it here.
-  $('signout').addEventListener('click', async () => {
-    Apps.codes.setTeacher(null);
-    await Apps.account.logout();
-    location.href = Apps.page('login');
-  });
+  // Signing out is the nav's account menu (lib/site.js).
 
   async function load() {
     try { data = await t(); }

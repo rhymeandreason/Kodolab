@@ -85,7 +85,6 @@ li.bad .s { color: var(--hue-coral); }
 .appgrid li > button:hover, .appgrid li > a:hover { border-color: var(--accent); }
 .appgrid .name { font-weight: 600; color: var(--text-strong); }
 .appgrid .body { font-family: var(--font-editorial); font-size: .88rem; color: var(--text-body); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.signout { margin-top: 3rem; }
 
 /* ---- one student ---- */
 dialog.studentbox {
