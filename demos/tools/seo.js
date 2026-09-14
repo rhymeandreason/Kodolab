@@ -84,6 +84,15 @@ function registryBlurb(key) {
   return p && p.blurb;
 }
 
+// A component's bench is described by its own card on library.html.
+function libraryCard(slug) {
+  const html = fs.readFileSync(path.join(DEMOS, 'library.html'), 'utf8');
+  const m = html.match(new RegExp(`<a class="card" href="/library/${slug}">[\\s\\S]*?<p class="blurb">([^<]*)</p><ul class="feats">([\\s\\S]*?)</ul>`));
+  if (!m) return null;
+  const feats = [...m[2].matchAll(/<li>([^<]*)/g)].map(x => x[1].replace(/ · /g, ', '));
+  return `${m[1].replace(/\.$/, '')}: ${feats.join(', ')}.`;
+}
+
 let fails = 0;
 const fail = m => { fails++; console.log(`  FAIL  ${m}`); };
 
@@ -100,6 +109,12 @@ for (const [url, dest] of routes) {
     const blurb = registryBlurb(m[1]);
     if (blurb) entry = { description: clip(blurb) };
   }
+  const lib = url.match(/^\/library\/([a-z0-9-]+)$/);
+  if (!entry && lib) {
+    const card = libraryCard(lib[1]);
+    // Crawlable but noindex: search should send a student to a lesson, not a component bench.
+    if (card) entry = { description: card, noindex: true };
+  }
   if (!entry) {
     fail(`${url} is routed in vercel.json but is in neither PAGES nor HIDDEN. Decide whether search should see it.`);
     continue;
@@ -110,7 +125,7 @@ for (const [url, dest] of routes) {
 }
 for (const url of Object.keys(PAGES)) if (!routes.has(url)) fail(`PAGES names ${url}, which vercel.json no longer routes`);
 
-function block({ url, file, description, image }) {
+function block({ url, file, description, image, noindex }) {
   const html = fs.readFileSync(path.join(REPO, file), 'utf8');
   const title = (html.match(/<title>([^<]*)<\/title>/) || [])[1];
   if (!title) fail(`${file} has no <title>`);
@@ -125,6 +140,7 @@ function block({ url, file, description, image }) {
     `<meta property="og:title" content="${esc(title || '')}">`,
     `<meta property="og:description" content="${esc(description)}">`,
   ];
+  if (noindex) lines.push('<meta name="robots" content="noindex">');
   if (image) {
     if (!fs.existsSync(path.join(DEMOS, 'media', 'og', image + '.jpg'))) fail(`${url} names image ${image}, but demos/media/og/${image}.jpg is missing`);
     lines.push(`<meta property="og:image" content="${SITE}/demos/media/og/${image}.jpg">`,
@@ -171,7 +187,7 @@ if (!fails) for (const p of indexed) stamp(p);
 
 const sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n'
   + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-  + indexed.map(p => `  <url><loc>${SITE}${p.url}</loc></url>`).join('\n')
+  + indexed.filter(p => !p.noindex).map(p => `  <url><loc>${SITE}${p.url}</loc></url>`).join('\n')
   + '\n</urlset>\n';
 write('sitemap.xml', read('sitemap.xml'), sitemap);
 
