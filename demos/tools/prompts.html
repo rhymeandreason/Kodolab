@@ -81,7 +81,8 @@
   const tokens = u => {
     if (!u) return '';
     const i = u.input ?? u.input_tokens, o = u.output ?? u.output_tokens;
-    const t = i != null && o != null ? `${i.toLocaleString()} in · ${o.toLocaleString()} out` : '';
+    let t = i != null && o != null ? `${i.toLocaleString()} in · ${o.toLocaleString()} out` : '';
+    if (u.written) t += ` · wrote ${u.written.toLocaleString()}`;
     return u.cost_usd != null ? `${t} · $${u.cost_usd.toFixed(3)}` : t;
   };
 

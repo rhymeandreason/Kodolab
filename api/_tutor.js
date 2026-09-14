@@ -232,7 +232,7 @@ async function ask({ messages, provider, system, cited, lesson, step, state, ben
       // Priced where the price lives. The bench prints this rather than doing
       // its own arithmetic against a rate it would have to keep in step.
       cost_usd: (u.input * p.PRICE.input + u.output * p.PRICE.output
-                 + u.cached * p.PRICE.cached) / 1e6,
+                 + u.cached * p.PRICE.cached + (u.written || 0) * (p.PRICE.write || 0)) / 1e6,
       priced: !p.PRICE.unknown,   // false means no rate is known for this model, not free
     },
   };

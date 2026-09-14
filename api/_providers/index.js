@@ -4,8 +4,11 @@
  *  `AI_PROVIDER` in the environment picks one. A provider is any module with
  *  `{id, label, envKey, model, PRICE, CACHE_MIN,
  *    ask({system, context, messages, schema})}`
- *  that returns `{json, usage:{input, output, cached}}`, so adding a third is a
- *  file and a line in PROVIDERS, and `_tutor.js` never learns its name.
+ *  that returns `{json, usage:{input, output, cached, written}}`, so adding a
+ *  third is a file and a line in PROVIDERS, and `_tutor.js` never learns its
+ *  name. `written` is the tokens this call wrote into the vendor's cache, priced
+ *  at `PRICE.write`: a cost line that skipped it undercounted the bill by a
+ *  factor of three on a bench that starts a process per run.
  *
  *  `system` and `context` arrive separately because they are priced separately:
  *  `system` is byte-stable for a whole lesson and every vendor sells it back

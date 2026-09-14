@@ -22,7 +22,13 @@
  *  an edit chain can be replayed from the file alone.
  *
  *  Prints one JSON line: model served, time, tokens, and for an edit the
- *  route. That line is the cost model; keep it.
+ *  route. That line is the cost model; keep it. `written` is the cache write
+ *  this process paid, which is every run: the cache map is module state and
+ *  dies with the process.
+ *
+ *  With DATABASE_URL set the run is also stored as a version under cohort
+ *  `gen-app`, so `db.js builds` and tools/prompts.html sum the eval's spend
+ *  beside the students'. --no-log skips that. Never fails the run.
  *
  *  Key: GEMINI_API_KEY (or ANTHROPIC_API_KEY with --provider anthropic) from
  *  .env.local at the repo root, the same file the tutor reads. Never printed.
@@ -47,9 +53,10 @@ const model    = flag('--model', true);
 const provider = flag('--provider', true);
 const EDIT     = flag('--edit', true);
 const WHOLE    = flag('--whole', false);
+const NOLOG    = flag('--no-log', false);
 const [request, out] = args;
 if (!request || !out) {
-  console.error('usage: gen-app.js [--edit <page>] "request" <path to write> [--model m] [--provider gemini|anthropic] [--whole]');
+  console.error('usage: gen-app.js [--edit <page>] "request" <path to write> [--model m] [--provider gemini|anthropic] [--whole] [--no-log]');
   process.exit(2);
 }
 // The provider reads its model from the environment when required, so the
@@ -57,6 +64,18 @@ if (!request || !out) {
 if (model) process.env[(provider || process.env.AI_PROVIDER || 'gemini') === 'anthropic' ? 'ANTHROPIC_MODEL' : 'GEMINI_MODEL'] = model;
 
 const builder = require(path.join(ROOT, 'api/_builder.js'));
+
+async function record(r, page) {
+  try {
+    const apps = require(path.join(ROOT, 'api/_apps.js'));
+    if (!apps.enabled()) return;
+    await apps.create({ cohort: 'gen-app', isLocal: true, title: request.slice(0, 80), version: {
+      kind: EDIT ? 'edit' : 'build', html: page, request, summary: r.summary,
+      provider: r.provider, model: r.model, usage: r.usage, ms: r.ms,
+      error: page ? null : ((r.problems || []).join('; ') || 'no page came back'),
+    } });
+  } catch (e) { console.error('[gen-app] not logged:', e.message); }
+}
 
 (async () => {
   let r;
@@ -73,7 +92,7 @@ const builder = require(path.join(ROOT, 'api/_builder.js'));
       const { html: page, summary } = json;
       r = { html: builder.withHistory(page, builder.history(html).concat(request)),
             summary, mode: 'whole', problems: builder.validate(page),
-            model: o.served, usage: o.usage, ms: Date.now() - t0 };
+            provider: p.id, model: o.served, usage: o.usage, ms: Date.now() - t0 };
     } else {
       r = await builder.edit({ html, request, provider, bench: true });
     }
@@ -86,11 +105,12 @@ const builder = require(path.join(ROOT, 'api/_builder.js'));
   const u = r.usage || {};
   console.log(JSON.stringify({
     model: r.model, ms: r.ms, mode: r.mode || 'draft',
-    input: u.input || 0, cached: u.cached || 0, output: u.output || 0,
+    input: u.input || 0, cached: u.cached || 0, written: u.written || 0, output: u.output || 0,
     usd: u.cost_usd == null ? undefined : Number(u.cost_usd.toFixed(4)),
     edits: r.edits, fallback: r.fallback || undefined, retried: r.retried || undefined,
     problems: r.problems && r.problems.length ? r.problems : undefined,
     summary: r.summary, lines: page ? page.split('\n').length : 0, out: page ? out : null,
   }));
+  if (!NOLOG) await record(r, page);
   if (!page) process.exit(1);
 })().catch(e => { console.error(e.message || e); process.exit(1); });

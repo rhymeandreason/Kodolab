@@ -27,21 +27,25 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
  * turned that knob. An unlisted model prices at zero and says so, which is the
  * one honest answer available when the rate is not known here.
  *
- * The 3.7-flash figures are promotional through 2026-12-31; input/output double
- * to 1.50/7.50 after that. */
+ * `write` is one cache write per token: creation bills at the input rate, then
+ * CACHE_TTL_S of storage (0.50/M/hour on the 3.x Flash line, 1.00 on 2.5).
+ * `usageMetadata` reports neither, so `ask` counts the write itself as `written`.
+ *
+ * The 3.7-flash figures are promotional through 2026-12-31 (re-read 2026-09-14):
+ * input/output double to 1.50/7.50 and storage to 1.00/M/hour after that. */
 const PRICES = {
-  'gemini-3.7-flash':      { input: 0.75, output: 3.75, cached: 0.075 },
-  'gemini-3.5-flash':      { input: 1.50, output: 9.00, cached: 0.15  },
+  'gemini-3.7-flash':      { input: 0.75, output: 3.75, cached: 0.075, write: 0.75 + 0.50 },
+  'gemini-3.5-flash':      { input: 1.50, output: 9.00, cached: 0.15,  write: 1.50 + 0.50 },
   // Flash-Lite has no context caching, so `cached` is zero because there is
   // nothing to price, not because a cache read is free.
-  'gemini-3.5-flash-lite': { input: 0.30, output: 2.50, cached: 0     },
+  'gemini-3.5-flash-lite': { input: 0.30, output: 2.50, cached: 0,     write: 0 },
   // The 2.5 pair is closed to new API keys: Google answers a request for one
   // with a 400 naming its 3.5 replacement. Kept priced for anyone still on it.
-  'gemini-2.5-flash':      { input: 0.30, output: 2.50, cached: 0.03  },
-  'gemini-2.5-flash-lite': { input: 0.10, output: 0.40, cached: 0.01  },
+  'gemini-2.5-flash':      { input: 0.30, output: 2.50, cached: 0.03,  write: 0.30 + 1.00 },
+  'gemini-2.5-flash-lite': { input: 0.10, output: 0.40, cached: 0.01,  write: 0.10 + 1.00 },
 };
 
-const UNPRICED = { input: 0, output: 0, cached: 0, unknown: true };
+const UNPRICED = { input: 0, output: 0, cached: 0, write: 0, unknown: true };
 const PRICE = PRICES[MODEL] || UNPRICED;
 
 /* The shortest prompt this model will cache, in tokens. Same reasoning as PRICE
@@ -103,14 +107,13 @@ function forGemini(node) {
  *  Every failure here falls back to sending the prompt inline. A cache is a
  *  discount, and a discount that can break the tutor is not worth having.
  *
- *  NOT IN THE COST READOUT: writing the entry is billed at the input rate, and
- *  holding it is billed by the hour, and `usageMetadata` reports neither. So the
- *  bench understates the first question against a cold instance and every idle
- *  hour. It is a rounding error against what the reads save, and it is still an
- *  understatement rather than a measurement.
+ *  A write is billed at the input rate plus an hour of storage, and
+ *  `usageMetadata` reports neither, so the entry remembers how many tokens it
+ *  wrote and the first `ask` to use it reports them as `usage.written`. Every
+ *  later turn on the same entry reports zero. A write that fails counts nothing.
  * ------------------------------------------------------------------------- */
 const CACHE_TTL_S = 3600;
-const cached = new Map();   // prompt text -> { handle: Promise<string|null>, until }
+const cached = new Map();   // prompt text -> { handle: Promise<string|null>, until, written }
 
 function cacheFor(system) {
   // A model with no context caching, so there is no request to make and no
@@ -120,11 +123,14 @@ function cacheFor(system) {
   const hit = cached.get(system);
   if (hit && hit.until > Date.now()) return hit.handle;
 
-  const handle = client.caches.create({
+  const entry = { handle: null, until: Date.now() + (CACHE_TTL_S - 300) * 1000, written: 0 };
+  entry.handle = client.caches.create({
     model: MODEL,
     config: { systemInstruction: system, ttl: `${CACHE_TTL_S}s`, displayName: 'tutor prompt' },
-  }).then(c => c.name || null)
-    .catch(err => {
+  }).then(c => {
+    entry.written = (c.usageMetadata && c.usageMetadata.totalTokenCount) || 0;
+    return c.name || null;
+  }).catch(err => {
       // A prompt under the model's minimum, or a model that does not cache.
       // Either way the answer will be the same one next question, so the null
       // is remembered for the same hour rather than re-asked every turn.
@@ -134,8 +140,17 @@ function cacheFor(system) {
 
   // Retired five minutes early, so a handle is never handed out in the window
   // where the server may already have dropped it.
-  cached.set(system, { handle, until: Date.now() + (CACHE_TTL_S - 300) * 1000 });
-  return handle;
+  cached.set(system, entry);
+  return entry.handle;
+}
+
+// The tokens the entry for `system` wrote, handed out once.
+function takeWritten(system) {
+  const hit = cached.get(system);
+  if (!hit || !hit.written) return 0;
+  const n = hit.written;
+  hit.written = 0;
+  return n;
 }
 
 /* `max` and `thinking` are the two knobs a caller other than the tutor needs:
@@ -202,6 +217,7 @@ async function ask({ system, context, messages, schema, max, thinking }) {
       input:  (u.promptTokenCount || 0) - (u.cachedContentTokenCount || 0),
       output: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0),
       cached: u.cachedContentTokenCount || 0,
+      written: takeWritten(system),
     },
   };
 }

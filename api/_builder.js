@@ -344,13 +344,13 @@ function priced(p, usage) {
   const c = p.PRICE || {};
   return { ...usage,
            cost_usd: ((usage.input || 0) * (c.input || 0) + (usage.output || 0) * (c.output || 0)
-                     + (usage.cached || 0) * (c.cached || 0)) / 1e6 };
+                     + (usage.cached || 0) * (c.cached || 0) + (usage.written || 0) * (c.write || 0)) / 1e6 };
 }
 
 function sum(a, b) {
   if (!a) return b;
   return { input: a.input + b.input, output: a.output + b.output, cached: a.cached + b.cached,
-           cost_usd: (a.cost_usd || 0) + (b.cost_usd || 0) };
+           written: (a.written || 0) + (b.written || 0), cost_usd: (a.cost_usd || 0) + (b.cost_usd || 0) };
 }
 
 /* Fences and prose the JSON should not carry but sometimes does. */

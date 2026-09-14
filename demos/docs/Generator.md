@@ -108,17 +108,23 @@ at the 2.41 chars/token these pages measure) that is $0.0023, twice what the
 whole reference costs cached. **The reference is not the expensive half of an
 edit and never was.**
 
-**Every figure in this section is a read-only number, and understates.**
-`usageMetadata` reports neither the cache write nor the hourly storage, which
-`_providers/gemini.js` says in its header and the cost line cannot know. A write
-is the whole prefix at input rate — $0.0122 today, larger than any single turn
-above. On the server that is amortised: the map is module state, so it is one
-write per warm instance per hour across every student on it. **Locally it is
-not.** `gen-app.js` is a fresh process per invocation, so every eval run writes
-a cache, reads it once and abandons it for the hour: a ten-run sweep prints
-about $0.10 and actually costs about $0.22. Running a sweep in one process would
-pay one write for all of it, and `system()` is byte-stable and `cacheFor`
-registers its promise synchronously, so nothing else would have to change.
+**Every figure in this section predates the cost line counting cache writes
+(2026-09-14), and understates.** `usageMetadata` reports neither the write nor
+the hourly storage, so each provider now counts the write itself as `written`,
+priced at `PRICE.write`: the input rate plus the TTL's hour of storage. A write
+is the whole prefix, $0.021 today, larger than any single turn above. On the
+server that is amortised: the map is module state, so it is one write per warm
+instance per hour across every student on it. **Locally it is not.**
+`gen-app.js` is a fresh process per invocation, so every eval run writes a cache,
+reads it once and abandons it for the hour, and the printed line now says so.
+Before this the logged total was about a third of the AI Studio bill. Running a
+sweep in one process would pay one write for all of it, and `system()` is
+byte-stable and `cacheFor` registers its promise synchronously, so nothing else
+would have to change.
+
+Every `gen-app.js` run is also stored as a version under cohort `gen-app` when
+`DATABASE_URL` is set, so the eval's spend sums beside the students' in
+`db.js builds` and `tools/prompts.html`; `--no-log` skips it.
 
 ## 6. What is built, and what an edit still cannot do
 

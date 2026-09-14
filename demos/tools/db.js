@@ -169,7 +169,7 @@ const CMDS = {
     const rows = await apps.usage();
     if (!rows.length) return console.log('no builds yet');
     for (const r of rows) console.log(`${String(r.day).slice(0, 10)}  ${(r.cohort || '-').padEnd(16)}`
-      + `${String(r.turns).padStart(4)} turns  in ${r.input} (cached ${r.cached})  out ${r.output}  $${r.usd}`);
+      + `${String(r.turns).padStart(4)} turns  in ${r.input} (cached ${r.cached}, wrote ${r.written})  out ${r.output}  $${r.usd}`);
   },
 
   /* The pilot's door: a teacher is minted here, not signed up. The code is

@@ -345,6 +345,7 @@ async function usage() {
                    sum((v.usage->>'input')::bigint)::bigint  AS input,
                    sum((v.usage->>'cached')::bigint)::bigint AS cached,
                    sum((v.usage->>'output')::bigint)::bigint AS output,
+                   coalesce(sum((v.usage->>'written')::bigint), 0)::bigint AS written,
                    round(sum((v.usage->>'cost_usd')::numeric), 4) AS usd
             FROM app_versions v JOIN apps a ON a.id = v.app_id
             WHERE v.kind IN ('build', 'edit')

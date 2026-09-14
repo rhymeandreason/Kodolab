@@ -9,18 +9,17 @@
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
 
-/* USD per 1M tokens, read 2026-08-19 from
- * https://docs.claude.com/en/docs/about-claude/pricing
- * A cache read is a tenth of an input token. Per model, because ANTHROPIC_MODEL
- * is a knob; an unlisted model prices at zero and says so rather than quoting
- * some other model's rate. */
+/* USD per 1M tokens, read 2026-09-14 from https://claude.com/pricing
+ * A cache read is a tenth of an input token; a 5-minute cache write is 1.25x.
+ * Per model, because ANTHROPIC_MODEL is a knob; an unlisted model prices at
+ * zero and says so rather than quoting some other model's rate. */
 const PRICES = {
-  'claude-opus-5':    { input: 5.00, output: 25.00, cached: 0.50 },
-  'claude-sonnet-5':  { input: 3.00, output: 15.00, cached: 0.30 },
-  'claude-haiku-4-5': { input: 1.00, output:  5.00, cached: 0.10 },
+  'claude-opus-5':    { input: 5.00, output: 25.00, cached: 0.50, write: 6.25 },
+  'claude-sonnet-5':  { input: 2.00, output: 10.00, cached: 0.20, write: 2.50 },
+  'claude-haiku-4-5': { input: 1.00, output:  5.00, cached: 0.10, write: 1.25 },
 };
 
-const PRICE = PRICES[MODEL] || { input: 0, output: 0, cached: 0, unknown: true };
+const PRICE = PRICES[MODEL] || { input: 0, output: 0, cached: 0, write: 0, unknown: true };
 
 /* The shortest prompt this model will cache, in tokens. NOT MONOTONIC across
  * generations and not guessable from the model's tier: Opus 5 halved what 4.8
@@ -75,12 +74,10 @@ async function ask({ system, context, messages, schema, max, thinking }) {
     json: JSON.parse(text),
     served: res.model || MODEL,   // what answered, not what was asked for
     usage: {
-      // Writing the cache is billed too, at a premium this table does not model.
-      // Counted as plain input, which understates the first question of an hour
-      // and is a great deal closer than dropping it.
-      input:  res.usage.input_tokens + (res.usage.cache_creation_input_tokens || 0),
-      output: res.usage.output_tokens,
-      cached: res.usage.cache_read_input_tokens || 0,
+      input:   res.usage.input_tokens,
+      output:  res.usage.output_tokens,
+      cached:  res.usage.cache_read_input_tokens || 0,
+      written: res.usage.cache_creation_input_tokens || 0,
     },
   };
 }
