@@ -82,16 +82,18 @@
   .slideops { display: flex; gap: .4rem; margin-bottom: .8rem; }
   .slideops button { font: 500 11px 'Jost', sans-serif; letter-spacing: .06em; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--rule); background: var(--card); cursor: pointer; }
   [hidden] { display: none !important; }
-  main { display: grid; grid-template-rows: 1fr auto auto; min-width: 0; }
+  main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
   #fit { display: grid; place-items: center; padding: 2rem; overflow: hidden; min-height: 420px; }
   #fit canvas { margin: auto; }
   canvas { display: block; box-shadow: 0 2px 4px rgba(var(--brand-ink-t), .06), 0 24px 60px -18px rgba(var(--brand-ink-t), .4); background: var(--paper); }
-  #bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 2rem; border-top: 1px solid var(--rule); background: var(--paper); }
-  #bar .dims { font: 500 12px 'Jost', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
+  #bar { display: flex; align-items: center; gap: 1rem; padding: .45rem 1.2rem; border-bottom: 1px solid var(--rule); background: var(--paper); white-space: nowrap; }
+  #bar .acts { margin-left: auto; }
+  #bar .acts .cta { padding: .4rem .8rem; font-size: 11px; }
+  #bar .dims { font: 500 11px 'Jost', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
   #bar .acts { display: flex; gap: .5rem; }
   #bar .zoom { display: flex; align-items: center; gap: .6rem; }
-  #bar .zoom span { font: 500 12px 'Jost', sans-serif; letter-spacing: .08em; color: var(--mute); min-width: 6.5rem; text-align: right; }
-  #bar .zoom input { width: 160px; accent-color: var(--ink); }
+  #bar .zoom span { font: 500 11px 'Jost', sans-serif; letter-spacing: .08em; color: var(--mute); min-width: 5.5rem; text-align: right; }
+  #bar .zoom input { width: 120px; accent-color: var(--ink); }
   #bar .zoom .cta { padding: .35rem .7rem; font-size: 11px; }
   #live { display: grid; grid-template-columns: 480px 1fr; gap: 1.2rem; align-items: start; padding: 1rem 2rem 1.2rem; border-top: 1px solid var(--rule); background: var(--paper); }
   #live[hidden] { display: none; }
@@ -201,6 +203,15 @@
 </aside>
 
 <main>
+  <div id="bar">
+    <span class="dims" id="dims"></span>
+    <label class="zoom"><span id="zoomLabel">feed 100%</span><input type="range" id="zoom" min="25" max="300" step="5"><button class="cta ghost" id="zoomFeed">Feed</button><button class="cta ghost" id="zoomFit">Fit</button></label>
+    <div class="acts">
+      <button class="cta ghost" id="pdf" hidden>PDF, all slides</button>
+      <button class="cta ghost" id="pngAll" hidden>PNGs, all slides</button>
+      <button class="cta" id="png">PNG</button>
+    </div>
+  </div>
   <div id="fit"><canvas id="c"></canvas></div>
   <div id="live">
     <div id="mount"></div>
@@ -211,15 +222,6 @@
       </div>
       <p>The box takes the shape of the image slot in the current layout, so a capture fills it. Drag to turn, scroll to zoom. Capture reads the box at its backing size (2x on a retina screen), transparent. Turn the card frame off to float it on the ground.</p>
       <div id="livelog"></div>
-    </div>
-  </div>
-  <div id="bar">
-    <span class="dims" id="dims"></span>
-    <label class="zoom"><span id="zoomLabel">feed 100%</span><input type="range" id="zoom" min="25" max="300" step="5"><button class="cta ghost" id="zoomFeed">Feed</button><button class="cta ghost" id="zoomFit">Fit</button></label>
-    <div class="acts">
-      <button class="cta ghost" id="pdf" hidden>PDF of all slides</button>
-      <button class="cta ghost" id="pngAll" hidden>PNG of every slide</button>
-      <button class="cta" id="png">Download PNG</button>
     </div>
   </div>
 </main>
