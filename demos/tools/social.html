@@ -85,6 +85,11 @@
   main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
   #fit { display: grid; place-items: center; padding: 2rem; overflow: hidden; min-height: 420px; }
   #fit canvas { margin: auto; }
+  #fit { position: relative; }
+  .flip { position: absolute; top: 50%; transform: translateY(-50%); width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 1px solid var(--rule); background: var(--card); color: var(--ink); font-size: 1.1rem; cursor: pointer; box-shadow: 0 2px 8px rgba(var(--brand-ink-t), .12); }
+  .flip:hover { background: var(--ink); color: var(--paper); }
+  .flip[disabled] { opacity: .3; cursor: default; }
+  #prev { left: 1rem; } #next { right: 1rem; }
   canvas { display: block; box-shadow: 0 2px 4px rgba(var(--brand-ink-t), .06), 0 24px 60px -18px rgba(var(--brand-ink-t), .4); background: var(--paper); }
   #bar { display: flex; align-items: center; gap: 1rem; padding: .45rem 1.2rem; border-bottom: 1px solid var(--rule); background: var(--paper); white-space: nowrap; }
   #bar .acts { margin-left: auto; }
@@ -212,7 +217,7 @@
       <button class="cta" id="png">PNG</button>
     </div>
   </div>
-  <div id="fit"><canvas id="c"></canvas></div>
+  <div id="fit"><button class="flip" id="prev" hidden aria-label="previous slide">&larr;</button><canvas id="c"></canvas><button class="flip" id="next" hidden aria-label="next slide">&rarr;</button></div>
   <div id="live">
     <div id="mount"></div>
     <div class="side">
@@ -752,6 +757,9 @@ function strip() {
   add.onclick = () => { S.slides.splice(S.slide + 1, 0, { headline: 'Next *point*', deck: '', image: '' }); S.slide++; sync(); render(); save(); };
   el.appendChild(add);
 }
+const flip = d => { const n = S.slide + d; if (n < 0 || n >= S.slides.length) return; S.slide = n; sync(); render(); save(); };
+$('prev').onclick = () => flip(-1); $('next').onclick = () => flip(1);
+document.addEventListener('keydown', e => { if (S.type !== 'carousel' || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; if (e.key === 'ArrowLeft') flip(-1); if (e.key === 'ArrowRight') flip(1); });
 $('slideDel').onclick = () => { if (S.slides.length < 2) return; S.slides.splice(S.slide, 1); S.slide = Math.min(S.slide, S.slides.length - 1); sync(); render(); save(); };
 $('slideLeft').onclick = () => { if (S.slide === 0) return; const s = S.slides; [s[S.slide - 1], s[S.slide]] = [s[S.slide], s[S.slide - 1]]; S.slide--; sync(); render(); save(); };
 $('slideRight').onclick = () => { if (S.slide >= S.slides.length - 1) return; const s = S.slides; [s[S.slide + 1], s[S.slide]] = [s[S.slide], s[S.slide + 1]]; S.slide++; sync(); render(); save(); };
@@ -763,6 +771,8 @@ function sync() {
   paintType(); paintFit(); paintOrder();
   $('size').value = S.size;
   $('carouselBox').hidden = !car; $('pdf').hidden = !car; $('pngAll').hidden = !car;
+  $('prev').hidden = $('next').hidden = !car;
+  $('prev').disabled = S.slide === 0; $('next').disabled = S.slide >= S.slides.length - 1;
   $('imageBox').hidden = S.type === 'statement';
   $('capture').disabled = !liveBox || S.type === 'statement';
   $('deckLabel').textContent = S.type === 'lesson' ? 'Deck' : S.type === 'statement' ? 'Under the headline' : S.type === 'hero' ? 'Second line' : 'Body';
