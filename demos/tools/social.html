@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<base href="/demos/tools/">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Social post layouts</title>
+
+<!-- ===================================================================
+     A POST IS THE FRONT DOOR, CROPPED. Three shapes (a lesson card, a
+     statement, a carousel) drawn in index.html's language: paper or a hue
+     ground, the display face with one coloured word, a Literata deck, the
+     drawn wordmark, the five motes. Every colour is read from brand.css at
+     load and the wordmark is parsed from /kodolab-wordmark.svg, so a post
+     cannot claim a colour or a mark the site does not have.
+
+     DRAWN ON A 2D CANVAS, NOT LAID OUT IN THE DOM. The export is the
+     preview: one buffer at the platform's pixel size, saved as PNG.
+     Rasterising DOM needs foreignObject or a library, and both drop web
+     fonts in Safari, which is the browser this is used in. The price is a
+     small text engine (wrap, *em* runs, tracked micro-caps, fit-to-box)
+     in the script below.
+
+     THE PICKER READS THE DEV SERVER'S FOLDER LISTING (media/screenshots,
+     media/og, media/components, media/molecules), so a still baked by the
+     other tools is in the menu without a list here going stale. Paste a
+     screenshot with cmd+V for anything else.
+
+     A carousel exports one PNG per slide or one PDF of all of them; the
+     PDF is written by hand (JPEG pages, DCTDecode), which is forty lines
+     and no dependency. INTERNAL TOOL, DEV SERVER ONLY. Nothing here deploys.
+     =================================================================== -->
+
+<link rel="stylesheet" href="../css/brand.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
+<style>
+  :root { --paper: var(--brand-paper); --ink: var(--brand-ink); --mute: var(--brand-mute); --rule: var(--brand-rule); --card: var(--brand-card); --accent: var(--brand-green); --spark: var(--brand-orange); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; display: grid; grid-template-columns: 380px 1fr; font: 14px/1.45 system-ui, -apple-system, sans-serif; color: var(--ink); background: var(--brand-paper-2); }
+  aside { background: var(--paper); border-right: 1px solid var(--rule); overflow: auto; padding: 1.2rem 1.2rem 3rem; }
+  h1 { font: 500 1.05rem/1.2 'Futura', 'Jost', sans-serif; margin: 0 0 .2rem; }
+  .sub { color: var(--mute); font-size: .8rem; margin: 0 0 1.2rem; }
+  .sub code { font-size: .78rem; }
+  fieldset { border: 0; padding: 0; margin: 0 0 1.1rem; min-width: 0; }
+  legend, label.cap { display: block; font: 600 10.5px/1 'Jost', system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; color: var(--mute); margin: 0 0 .45rem; padding: 0; }
+  .seg { display: flex; gap: 0; border: 1px solid var(--ink); border-radius: 999px; overflow: hidden; }
+  .seg button { flex: 1; font: 500 12px 'Jost', system-ui, sans-serif; letter-spacing: .06em; padding: .45rem .3rem; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  select, input[type=text], textarea { width: 100%; font: inherit; color: var(--ink); padding: .45rem .6rem; border: 1px solid var(--rule); border-radius: 8px; background: var(--card); }
+  textarea { resize: vertical; min-height: 3.4em; font-family: 'Literata', Georgia, serif; }
+  textarea.head { font: 500 1.05rem/1.3 'Futura', 'Jost', sans-serif; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: flex; gap: .6rem; align-items: center; }
+  .row > * { flex: 1; min-width: 0; }
+  .hint { color: var(--mute); font-size: .74rem; margin: .3rem 0 0; }
+  .swatches { display: flex; gap: .45rem; flex-wrap: wrap; }
+  .swatches button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(var(--brand-ink-t), .15); }
+  .swatches button[aria-pressed="true"] { border-color: var(--ink); }
+  .swatches button.auto { background: var(--card); font: 600 9px 'Jost', sans-serif; letter-spacing: .08em; }
+  .check { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+  .check input { margin: 0; }
+  .cta { font: 500 13px 'Jost', system-ui, sans-serif; letter-spacing: .06em; padding: .6rem 1.1rem; border-radius: 999px; border: 0; background: var(--ink); color: var(--paper); cursor: pointer; }
+  .cta.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px rgba(var(--brand-ink-t), .35); }
+  .cta:hover { background: var(--spark); color: #fff; box-shadow: none; }
+  .cta[disabled] { opacity: .45; cursor: default; }
+  .strip { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .strip button { min-width: 2rem; height: 2rem; border-radius: 999px; border: 1px solid var(--rule); background: var(--card); font: 500 12px 'Jost', sans-serif; cursor: pointer; }
+  .strip button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .strip button.add { border-style: dashed; color: var(--mute); }
+  .slideops { display: flex; gap: .4rem; margin-bottom: .8rem; }
+  .slideops button { font: 500 11px 'Jost', sans-serif; letter-spacing: .06em; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--rule); background: var(--card); cursor: pointer; }
+  [hidden] { display: none !important; }
+  main { display: grid; grid-template-rows: 1fr auto; min-width: 0; }
+  #fit { display: grid; place-items: center; padding: 2rem; overflow: hidden; }
+  canvas { display: block; box-shadow: 0 2px 4px rgba(var(--brand-ink-t), .06), 0 24px 60px -18px rgba(var(--brand-ink-t), .4); background: var(--paper); }
+  #bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 2rem; border-top: 1px solid var(--rule); background: var(--paper); }
+  #bar .dims { font: 500 12px 'Jost', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
+  #bar .acts { display: flex; gap: .5rem; }
+  #drop { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(var(--brand-ink-t), .35); color: #fff; font: 500 1.4rem 'Jost', sans-serif; pointer-events: none; opacity: 0; transition: opacity .15s; }
+  body.dragging #drop { opacity: 1; }
+</style>
+</head>
+<body>
+
+<aside>
+  <h1>Post layouts</h1>
+  <p class="sub">The front door, cropped to a post. Colours from <code>brand.css</code>, wordmark from the svg. Paste a screenshot with &#8984;V.</p>
+
+  <fieldset>
+    <legend>Shape</legend>
+    <div class="seg" data-seg="type">
+      <button data-v="lesson">Lesson card</button>
+      <button data-v="statement">Statement</button>
+      <button data-v="carousel">Carousel</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Size</legend>
+    <select id="size"></select>
+  </fieldset>
+
+  <fieldset>
+    <legend>Ground</legend>
+    <div class="swatches" id="grounds"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Coloured word</legend>
+    <div class="swatches" id="accents"></div>
+    <p class="hint">Auto follows the ground the way the front door's bands do.</p>
+  </fieldset>
+
+  <fieldset id="carouselBox" hidden>
+    <legend>Slides</legend>
+    <div class="strip" id="strip"></div>
+    <div class="slideops">
+      <button id="slideLeft">&larr; move</button>
+      <button id="slideRight">move &rarr;</button>
+      <button id="slideDel">remove</button>
+    </div>
+    <label class="check"><input type="checkbox" id="cta"> Last slide is the call to action</label>
+  </fieldset>
+
+  <fieldset>
+    <label class="cap" for="eyebrow">Eyebrow</label>
+    <input type="text" id="eyebrow" autocomplete="off">
+  </fieldset>
+
+  <fieldset>
+    <label class="cap" for="headline">Headline</label>
+    <textarea id="headline" class="head" rows="3"></textarea>
+    <p class="hint">*asterisks* colour a word. Return breaks a line.</p>
+  </fieldset>
+
+  <fieldset>
+    <label class="cap" for="deck" id="deckLabel">Deck</label>
+    <textarea id="deck" rows="3"></textarea>
+  </fieldset>
+
+  <fieldset id="imageBox">
+    <legend>Image</legend>
+    <select id="pick"><option value="">none</option></select>
+    <div class="row" style="margin-top:.5rem">
+      <input type="file" id="file" accept="image/*" style="font-size:.8rem">
+    </div>
+    <div class="row" style="margin-top:.6rem">
+      <div class="seg" data-seg="fit"><button data-v="cover">Cover</button><button data-v="contain">Contain</button></div>
+      <div class="seg" data-seg="order"><button data-v="text">Text first</button><button data-v="image">Image first</button></div>
+    </div>
+    <div class="row" style="margin-top:.6rem">
+      <input type="text" id="num" placeholder="01" style="flex:0 0 5rem">
+      <label class="check"><input type="checkbox" id="frame"> Card frame + number</label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Chrome</legend>
+    <div class="row">
+      <input type="text" id="url" placeholder="kodolab.org">
+    </div>
+    <div class="row" style="margin-top:.5rem">
+      <label class="check"><input type="checkbox" id="mark"> Wordmark</label>
+      <label class="check"><input type="checkbox" id="dots"> Motes</label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <button class="cta ghost" id="reset">Reset text</button>
+  </fieldset>
+</aside>
+
+<main>
+  <div id="fit"><canvas id="c"></canvas></div>
+  <div id="bar">
+    <span class="dims" id="dims"></span>
+    <div class="acts">
+      <button class="cta ghost" id="pdf" hidden>PDF of all slides</button>
+      <button class="cta ghost" id="pngAll" hidden>PNG of every slide</button>
+      <button class="cta" id="png">Download PNG</button>
+    </div>
+  </div>
+</main>
+<div id="drop">Drop the image</div>
+
+<script>
+/* ---- tokens: read, never typed ------------------------------------------ */
+const cs = getComputedStyle(document.documentElement);
+const tok = n => cs.getPropertyValue(n).trim();
+const T = {
+  paper: tok('--brand-paper'), paperT: tok('--brand-paper-t'), paper2: tok('--brand-paper-2'),
+  card: tok('--brand-card'), rule: tok('--brand-rule'),
+  ink: tok('--brand-ink'), inkT: tok('--brand-ink-t'), ink2: tok('--brand-ink-2'), ink3: tok('--brand-ink-3'), mute: tok('--brand-mute'),
+  green: tok('--brand-green'), orange: tok('--brand-orange'),
+  hue: { coral: tok('--hue-coral'), blue: tok('--hue-blue'), green: tok('--hue-green'), amber: tok('--hue-amber'), violet: tok('--hue-violet'), butter: tok('--hue-butter') },
+};
+const paperA = a => `rgba(${T.paperT},${a})`;
+const inkA = a => `rgba(${T.inkT},${a})`;
+
+/* The grounds a band takes on the front door, each with the ink it carries and
+   the hue its <em> falls to. Butter and coral carry ink at full strength; the
+   ink band writes in paper. */
+const GROUNDS = {
+  paper:  { fill: T.paper,      text: T.ink,  deck: T.ink2,       mute: T.mute,       em: T.hue.coral,  pill: T.ink,       pillText: T.paper, cardFill: T.card },
+  butter: { fill: T.hue.butter, text: T.ink,  deck: T.ink,        mute: inkA(.6),     em: T.hue.coral,  pill: T.ink,       pillText: T.paper, cardFill: T.card },
+  coral:  { fill: T.hue.coral,  text: T.card, deck: paperA(.92),  mute: paperA(.75),  em: T.ink,        pill: T.ink,       pillText: T.card,  cardFill: T.card },
+  ink:    { fill: T.ink,        text: T.card, deck: paperA(.75),  mute: paperA(.6),   em: T.hue.violet, pill: T.hue.coral, pillText: T.card,  cardFill: T.ink2 },
+};
+const ACCENTS = { auto: null, coral: T.hue.coral, blue: T.hue.blue, green: T.hue.green, amber: T.hue.amber, violet: T.hue.violet, butter: T.hue.butter, ink: T.ink };
+
+const SIZES = {
+  square:    [1080, 1080, 'Square 1:1 · LinkedIn, Instagram'],
+  portrait:  [1080, 1350, 'Portrait 4:5 · LinkedIn, Instagram, carousel'],
+  landscape: [1200,  627, 'Landscape 1.91:1 · LinkedIn link image'],
+  story:     [1080, 1920, 'Story 9:16 · Instagram'],
+};
+
+const DISPLAY = "'Futura', 'Jost', sans-serif";
+const SANS = "'Jost', system-ui, sans-serif";
+const SERIF = "'Literata', Georgia, serif";
+
+/* ---- state ----------------------------------------------------------------- */
+const DEFAULT = {
+  type: 'lesson', size: 'square', ground: 'paper', accent: 'auto',
+  eyebrow: 'Featured lesson',
+  headline: 'Where a tree’s *mass* comes from',
+  deck: 'Van Helmont weighed the soil. It hadn’t moved. The tree is built from air.',
+  image: '../media/screenshots/kodo-water.png', fit: 'cover', order: 'text', num: '01', frame: true,
+  url: 'kodolab.org', mark: true, dots: true, cta: true,
+  slide: 0,
+  slides: [
+    { headline: 'Five things water does *because* it is bent', deck: 'A carousel from the water lesson.', image: '' },
+    { headline: 'It sticks to *itself*', deck: 'Each molecule holds up to four neighbours by hydrogen bonds. That is surface tension, and a strider’s foot.', image: '' },
+    { headline: 'Try it in *3D*', deck: 'Every lesson is a live molecular scene you can turn, heat and salt.', image: '' },
+  ],
+};
+let S = load();
+function load() {
+  try { const s = JSON.parse(localStorage.getItem('social.v1')); if (s) return Object.assign({}, DEFAULT, s); } catch {}
+  return JSON.parse(JSON.stringify(DEFAULT));
+}
+function save() { const s = Object.assign({}, S); if (/^blob:/.test(s.image)) s.image = ''; s.slides = s.slides.map(x => Object.assign({}, x, { image: /^blob:/.test(x.image) ? '' : x.image })); localStorage.setItem('social.v1', JSON.stringify(s)); }
+/* The fields a slide owns; everything else is shared across the carousel. */
+const cur = () => S.type === 'carousel' ? S.slides[S.slide] : S;
+
+/* ---- images ---------------------------------------------------------------- */
+const imgs = new Map();
+function img(src) {
+  if (!src) return null;
+  if (imgs.has(src)) { const i = imgs.get(src); return i.complete && i.naturalWidth ? i : null; }
+  const i = new Image(); i.onload = render; i.onerror = () => imgs.set(src, {complete:true, naturalWidth:0}); i.src = src; imgs.set(src, i);
+  return null;
+}
+async function listFolder(dir) {
+  try {
+    const html = await fetch(dir).then(r => r.ok ? r.text() : '');
+    return [...html.matchAll(/href="([^"]+\.(?:png|webp|jpe?g))"/gi)].map(m => m[1]);
+  } catch { return []; }
+}
+async function fillPicker() {
+  const pick = document.getElementById('pick');
+  for (const dir of ['screenshots', 'og', 'components', 'molecules']) {
+    const files = await listFolder(`../media/${dir}/`);
+    if (!files.length) continue;
+    const g = document.createElement('optgroup'); g.label = `media/${dir}`;
+    for (const f of files) {
+      const o = document.createElement('option'); o.value = `../media/${dir}/${f.split('/').pop()}`;
+      o.textContent = f.split('/').pop().replace(/\.(png|webp|jpe?g)$/i, '').replace(/^kodo-/, '');
+      g.appendChild(o);
+    }
+    pick.appendChild(g);
+  }
+  pick.value = cur().image || '';
+}
+function useBlob(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  cur().image = URL.createObjectURL(file);
+  document.getElementById('pick').value = '';
+  render(); save();
+}
+document.addEventListener('paste', e => { for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) return useBlob(it.getAsFile()); });
+document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+document.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dragging'); useBlob(e.dataTransfer.files[0]); });
+document.getElementById('file').addEventListener('change', e => useBlob(e.target.files[0]));
+
+/* ---- the wordmark, parsed from the one file ------------------------------- */
+let MARK = null;           // { paths: [Path2D], w, h }
+fetch('/kodolab-wordmark.svg').then(r => r.text()).then(svg => {
+  const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  const [, , w, h] = doc.documentElement.getAttribute('viewBox').split(/\s+/).map(Number);
+  const paths = [];
+  for (const el of doc.querySelectorAll('rect, polygon, path')) {
+    const a = n => el.getAttribute(n);
+    if (el.tagName === 'rect') paths.push(new Path2D(`M${a('x')} ${a('y')}h${a('width')}v${a('height')}h-${a('width')}Z`));
+    else if (el.tagName === 'polygon') paths.push(new Path2D('M' + a('points').trim().split(/\s+/).join('L') + 'Z'));
+    else paths.push(new Path2D(a('d')));
+  }
+  MARK = { paths, w, h }; render();
+});
+function drawMark(ctx, x, y, h, color) {
+  if (!MARK) return 0;
+  const s = h / MARK.h;
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = color;
+  for (const p of MARK.paths) ctx.fill(p, 'evenodd');
+  ctx.restore();
+  return MARK.w * s;
+}
+const markW = h => MARK ? MARK.w * h / MARK.h : 4.2 * h;
+
+/* ---- text engine ------------------------------------------------------------ */
+function runs(text) {
+  const out = []; const re = /\*([^*]+)\*/g; let i = 0, m;
+  while ((m = re.exec(text))) { if (m.index > i) out.push({ t: text.slice(i, m.index), em: false }); out.push({ t: m[1], em: true }); i = m.index + m[0].length; }
+  if (i < text.length) out.push({ t: text.slice(i), em: false });
+  return out;
+}
+const mw = (ctx, t, sp) => ctx.measureText(t).width + (sp || 0) * t.length;
+function wrap(ctx, text, maxW, sp = 0) {
+  const words = [];
+  for (const r of runs(text)) r.t.split('\n').forEach((p, pi) => {
+    if (pi) words.push({ nl: true });
+    for (const w of p.split(/(\s+)/)) if (w) words.push({ t: w, em: r.em, sp: /^\s+$/.test(w) });
+  });
+  const lines = []; let line = [], w = 0;
+  const flush = () => { while (line.length && line[line.length - 1].sp) line.pop(); lines.push(line); line = []; w = 0; };
+  for (const k of words) {
+    if (k.nl) { flush(); continue; }
+    if (k.sp) { if (line.length) { line.push(k); w += mw(ctx, k.t, sp); } continue; }
+    const ww = mw(ctx, k.t, sp);
+    if (w + ww > maxW && line.length) flush();
+    line.push(k); w += ww;
+  }
+  flush();
+  return lines;
+}
+function drawTracked(ctx, t, x, y, sp) {
+  if (!sp) { ctx.fillText(t, x, y); return mw(ctx, t, 0); }
+  let dx = 0;
+  for (const ch of t) { ctx.fillText(ch, x + dx, y); dx += ctx.measureText(ch).width + sp; }
+  return dx;
+}
+/* Draws a wrapped block. Returns its height. `size` shrinks (never below
+   `min`) until the block fits maxH, so a long headline stays on the card. */
+function block(ctx, text, o) {
+  const { x, y, maxW, font, color, em, lh = 1.1, sp = 0, align = 'left', measure = false, upper = false } = o;
+  let size = o.size, lines;
+  if (upper) text = text.toUpperCase();
+  for (;; size -= 2) {
+    ctx.font = font(size);
+    lines = wrap(ctx, text, maxW, sp * size);
+    const h = (lines.length - 1) * size * lh + size;
+    if (!o.maxH || h <= o.maxH || size - 2 < (o.min || 12)) break;
+  }
+  const first = lines[0].map(k => k.t).join('') || 'H';
+  const asc = ctx.measureText(first).actualBoundingBoxAscent || size * .75;
+  const last = lines[lines.length - 1].map(k => k.t).join('') || 'g';
+  const desc = ctx.measureText(last).actualBoundingBoxDescent || size * .2;
+  const h = asc + (lines.length - 1) * size * lh + desc;
+  if (measure) return { h, size, lines: lines.length };
+  ctx.textBaseline = 'alphabetic';
+  lines.forEach((line, i) => {
+    const lw = line.reduce((a, k) => a + mw(ctx, k.t, sp * size), 0);
+    let cx = align === 'right' ? x - lw : align === 'center' ? x - lw / 2 : x;
+    const cy = y + asc + i * size * lh;
+    for (const k of line) { ctx.fillStyle = k.em ? em : color; cx += drawTracked(ctx, k.t, cx, cy, sp * size); }
+  });
+  return { h, size, lines: lines.length };
+}
+const F = {
+  display: s => `500 ${s}px ${DISPLAY}`,
+  serif: s => `400 ${s}px ${SERIF}`,
+  serifI: s => `italic 400 ${s}px ${SERIF}`,
+  cap: s => `600 ${s}px ${SANS}`,
+  sans: s => `500 ${s}px ${SANS}`,
+};
+
+/* ---- shapes ---------------------------------------------------------------- */
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+/* index.html's .card: white, 16px radius, a hairline and the long soft shadow,
+   the stage image inside, the number pill with its dot top-left. */
+function imageCard(ctx, im, x, y, w, h, u, G, accent) {
+  const r = 24 * u;
+  ctx.save();
+  if (S.frame) {
+    ctx.shadowColor = inkA(.28); ctx.shadowBlur = 40 * u; ctx.shadowOffsetY = 14 * u;
+    ctx.fillStyle = G.cardFill; rrect(ctx, x, y, w, h, r); ctx.fill();
+    ctx.shadowColor = 'transparent';
+  }
+  rrect(ctx, x, y, w, h, r); ctx.clip();
+  if (im) {
+    const cover = S.fit === 'cover';
+    const s = (cover ? Math.max : Math.min)(w / im.naturalWidth, h / im.naturalHeight);
+    const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+    if (!cover) { ctx.fillStyle = G.cardFill; ctx.fillRect(x, y, w, h); }
+    ctx.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  } else { ctx.fillStyle = T.paper2; ctx.fillRect(x, y, w, h); }
+  ctx.restore();
+  if (S.frame) {
+    ctx.strokeStyle = inkA(.08); ctx.lineWidth = 1.5 * u; rrect(ctx, x, y, w, h, r); ctx.stroke();
+    if (S.num) {
+      const fs = 20 * u, sp = .2 * fs; ctx.font = F.cap(fs);
+      const tw = mw(ctx, S.num, sp), px = x + 24 * u, py = y + 22 * u, ph = fs * 2.1, pw = tw + fs * 2.2;
+      ctx.fillStyle = 'rgba(255,255,255,.72)'; rrect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
+      ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(px + fs * .9, py + ph / 2, fs * .36, 0, 7); ctx.fill();
+      ctx.fillStyle = T.ink; ctx.textBaseline = 'middle'; drawTracked(ctx, S.num, px + fs * 1.6, py + ph / 2 + fs * .06, sp);
+    }
+  }
+}
+/* The hero's motes: the five discs echoed loose behind the word. */
+function motes(ctx, W, H, u) {
+  // in the gutters, never over the measure: the margin is 7% of the width
+  const M = [[.035, .09, 'coral', 14], [.965, .17, 'blue', 10], [.958, .9, 'green', 12], [.04, .94, 'amber', 8], [.5, .032, 'violet', 10]];
+  ctx.save(); ctx.globalAlpha = .55;
+  for (const [fx, fy, hue, r] of M) { ctx.fillStyle = T.hue[hue]; ctx.beginPath(); ctx.arc(fx * W, fy * H, r * u, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function pill(ctx, text, x, y, u, G, align = 'left') {
+  const fs = 28 * u, sp = .06 * fs; ctx.font = F.sans(fs);
+  const tw = mw(ctx, text, sp), pw = tw + fs * 2.8, ph = fs * 2.3;
+  const px = align === 'right' ? x - pw : align === 'center' ? x - pw / 2 : x;
+  ctx.save(); ctx.shadowColor = inkA(.5); ctx.shadowBlur = 20 * u; ctx.shadowOffsetY = 8 * u;
+  ctx.fillStyle = G.pill; rrect(ctx, px, y, pw, ph, ph / 2); ctx.fill(); ctx.restore();
+  ctx.fillStyle = G.pillText; ctx.textBaseline = 'middle'; drawTracked(ctx, text, px + fs * 1.4, y + ph / 2 + fs * .05, sp);
+  return ph;
+}
+/* Top bar: the wordmark left, a micro-cap right. Returns the y under it. */
+function topbar(ctx, W, P, u, G, right, mark = S.mark) {
+  const h = 34 * u;
+  if (mark) drawMark(ctx, P, P, h, G.text);
+  if (right) block(ctx, right, { x: W - P, y: P + h * .12, maxW: W, size: 20 * u, font: F.cap, color: G.mute, em: G.mute, sp: .18, align: 'right', upper: true });
+  return P + h;
+}
+function bottombar(ctx, W, H, P, u, G, right, mark = S.mark) {
+  const h = 34 * u;
+  if (mark) drawMark(ctx, P, H - P - h, h, G.text);
+  if (right) block(ctx, right, { x: W - P, y: H - P - h + h * .12, maxW: W, size: 20 * u, font: F.cap, color: G.mute, em: G.mute, sp: .18, align: 'right', upper: true });
+}
+
+/* ---- the three layouts ------------------------------------------------------ */
+function unit(W, H) { return Math.min(W / 1080, H / 900); }
+function accentFor(G) { return ACCENTS[S.accent] || G.em; }
+
+function drawLesson(ctx, W, H) {
+  const G = GROUNDS[S.ground], A = accentFor(G), u = unit(W, H), P = 76 * u, c = cur();
+  ctx.fillStyle = G.fill; ctx.fillRect(0, 0, W, H);
+  if (S.dots) motes(ctx, W, H, u);
+  let y = topbar(ctx, W, P, u, G, S.url) + 52 * u;
+  const im = img(c.image);
+  const landscape = W > H * 1.3;
+  const gap = 20 * u;
+  const text = (x, yy, maxW, maxH) => {
+    const eb = c.eyebrow ? block(ctx, c.eyebrow, { x, y: yy, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 22 * u : 0;
+    const dk = c.deck ? block(ctx, c.deck, { x, y: 0, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 22 * u : 0;
+    const hd = block(ctx, c.headline, { x, y: yy + eb, maxW, size: 80 * u, min: 40 * u, maxH: maxH - eb - dk, font: F.display, lh: 1.06, color: G.text, em: A });
+    if (c.deck) block(ctx, c.deck, { x, y: yy + eb + hd.h + 22 * u, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A });
+    return eb + hd.h + dk;
+  };
+  if (landscape) {
+    const colW = (W - 2 * P) * .46, ix = P + colW + 48 * u, iw = W - P - ix, ih = H - P - y;
+    if (c.image) imageCard(ctx, im, ix, y, iw, ih, u, G, A);
+    // measured first so the column can sit level with the card's middle
+    const th = (() => { ctx.save(); ctx.globalAlpha = 0; const h = text(P, y, c.image ? colW : W - 2 * P, ih); ctx.restore(); return h; })();
+    text(P, y + Math.max(0, (ih - th) / 2), c.image ? colW : W - 2 * P, ih);
+    return;
+  }
+  const avail = H - P - y, maxW = W - 2 * P;
+  if (!c.image) { text(P, y, maxW, avail); return; }
+  const textMax = avail * (H > W * 1.5 ? .42 : .5);
+  ctx.save(); ctx.globalAlpha = 0; const th = text(P, y, maxW, textMax); ctx.restore();
+  const ih = avail - th - gap - 28 * u;
+  if (S.order === 'image') { imageCard(ctx, im, P, y, maxW, ih, u, G, A); text(P, y + ih + gap + 28 * u, maxW, textMax); }
+  else { text(P, y, maxW, textMax); imageCard(ctx, im, P, y + th + gap + 28 * u, maxW, ih, u, G, A); }
+}
+
+function drawStatement(ctx, W, H) {
+  const G = GROUNDS[S.ground], A = accentFor(G), u = unit(W, H), P = 84 * u, c = cur();
+  ctx.fillStyle = G.fill; ctx.fillRect(0, 0, W, H);
+  if (S.dots) motes(ctx, W, H, u);
+  const maxW = W - 2 * P, barH = 34 * u, top = P + barH + 40 * u, bottom = H - P - barH - 40 * u;
+  const eb = c.eyebrow ? block(ctx, c.eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 28 * u : 0;
+  const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 30 * u : 0;
+  const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: 108 * u, min: 48 * u, maxH: bottom - top - eb - dk, font: F.display, lh: 1.04, color: G.text, em: A, measure: true });
+  let y = top + Math.max(0, (bottom - top - eb - hm.h - dk) / 2);
+  if (c.eyebrow) block(ctx, c.eyebrow, { x: P, y, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true });
+  y += eb;
+  block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.04, color: G.text, em: A });
+  y += hm.h + 30 * u;
+  if (c.deck) block(ctx, c.deck, { x: P, y, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A });
+  bottombar(ctx, W, H, P, u, G, S.url);
+}
+
+function drawSlide(ctx, W, H, i) {
+  const G = GROUNDS[S.ground], A = accentFor(G), u = unit(W, H), P = 76 * u, c = S.slides[i], n = S.slides.length;
+  const role = i === 0 ? 'cover' : (S.cta && i === n - 1) ? 'cta' : 'body';
+  ctx.fillStyle = G.fill; ctx.fillRect(0, 0, W, H);
+  if (S.dots && role !== 'body') motes(ctx, W, H, u);
+  const count = `${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
+  let y = topbar(ctx, W, P, u, G, count) + 52 * u;
+  const maxW = W - 2 * P, bottom = H - P;
+  const eyebrow = c.eyebrow || S.eyebrow;
+  if (role === 'body') {
+    const im = img(c.image);
+    if (eyebrow) y += block(ctx, eyebrow, { x: P, y, maxW, size: 22 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 24 * u;
+    const hd = block(ctx, c.headline, { x: P, y, maxW, size: 68 * u, min: 36 * u, maxH: (bottom - y) * .4, font: F.display, lh: 1.06, color: G.text, em: A });
+    y += hd.h + 26 * u;
+    if (c.deck) y += block(ctx, c.deck, { x: P, y, maxW: maxW * .9, size: 33 * u, font: F.serif, lh: 1.4, color: G.deck, em: A, maxH: c.image ? (bottom - y) * .45 : bottom - y }).h + 30 * u;
+    if (c.image && bottom - y > 160 * u) imageCard(ctx, im, P, y + 10 * u, maxW, bottom - y - 10 * u - 44 * u, u, G, A);
+    block(ctx, i < n - 1 ? 'swipe  →' : S.url, { x: W - P, y: H - P - 22 * u, maxW, size: 20 * u, font: F.cap, color: G.mute, em: G.mute, sp: .18, align: 'right', upper: true });
+    return;
+  }
+  // cover and cta: the statement layout, with the pill on the cta
+  const barH = 34 * u, top = y, low = H - P - barH - 40 * u;
+  const eb = eyebrow ? block(ctx, eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 28 * u : 0;
+  const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 30 * u : 0;
+  const pl = role === 'cta' ? 28 * u * 2.3 + 40 * u : 0;
+  const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: role === 'cover' ? 104 * u : 88 * u, min: 44 * u, maxH: low - top - eb - dk - pl, font: F.display, lh: 1.04, color: G.text, em: A, measure: true });
+  y = top + Math.max(0, (low - top - eb - hm.h - dk - pl) / 2);
+  if (eyebrow) block(ctx, eyebrow, { x: P, y, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true });
+  y += eb;
+  block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.04, color: G.text, em: A });
+  y += hm.h + 30 * u;
+  if (c.deck) { block(ctx, c.deck, { x: P, y, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A }); y += dk; }
+  if (role === 'cta') pill(ctx, S.url, P, y + 10 * u, u, G);
+  bottombar(ctx, W, H, P, u, G, role === 'cover' ? 'swipe  →' : S.url, false);
+}
+
+function paint(ctx, W, H, slide) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
+  if (S.type === 'lesson') drawLesson(ctx, W, H);
+  else if (S.type === 'statement') drawStatement(ctx, W, H);
+  else drawSlide(ctx, W, H, slide == null ? S.slide : slide);
+}
+
+/* ---- preview ----------------------------------------------------------------- */
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+function render() {
+  const [W, H] = SIZES[S.size];
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  paint(ctx, W, H);
+  const fit = document.getElementById('fit'), r = fit.getBoundingClientRect();
+  const s = Math.min((r.width - 64) / W, (r.height - 64) / H, 1);
+  canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
+  document.getElementById('dims').textContent = `${W} × ${H}` + (S.type === 'carousel' ? ` · slide ${S.slide + 1} of ${S.slides.length}` : '');
+}
+addEventListener('resize', render);
+Promise.all(['500 40px Jost', '600 40px Jost', '400 40px Literata', 'italic 400 40px Literata'].map(f => document.fonts.load(f))).then(render, render);
+
+/* ---- export ------------------------------------------------------------------ */
+const slug = t => (t || 'post').replace(/\*/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5e3); }
+function offscreen(slide) {
+  const [W, H] = SIZES[S.size]; const c = document.createElement('canvas'); c.width = W; c.height = H;
+  paint(c.getContext('2d'), W, H, slide); return c;
+}
+const toBlob = (c, type, q) => new Promise(res => c.toBlob(res, type, q));
+document.getElementById('png').onclick = async () => {
+  const c = offscreen(); const name = `${S.type}-${S.size}-${slug(cur().headline)}${S.type === 'carousel' ? '-' + (S.slide + 1) : ''}.png`;
+  download(await toBlob(c, 'image/png'), name);
+};
+document.getElementById('pngAll').onclick = async () => {
+  for (let i = 0; i < S.slides.length; i++) { download(await toBlob(offscreen(i), 'image/png'), `carousel-${slug(S.slides[0].headline)}-${i + 1}.png`); await new Promise(r => setTimeout(r, 400)); }
+};
+document.getElementById('pdf').onclick = async () => {
+  const pages = [];
+  for (let i = 0; i < S.slides.length; i++) { const c = offscreen(i); pages.push({ w: c.width, h: c.height, bytes: new Uint8Array(await (await toBlob(c, 'image/jpeg', .92)).arrayBuffer()) }); }
+  download(pdf(pages), `carousel-${slug(S.slides[0].headline)}.pdf`);
+};
+/* One JPEG per page, DCTDecode, sized in points 1:1 with the pixels: LinkedIn
+   reads the aspect and nothing else. */
+function pdf(pages) {
+  const enc = new TextEncoder(), parts = [], off = []; let len = 0;
+  const push = s => { const b = typeof s === 'string' ? enc.encode(s) : s; parts.push(b); len += b.length; };
+  const obj = (id, head, stream) => { off[id] = len; push(`${id} 0 obj\n${head}`); if (stream) { push('\nstream\n'); push(stream); push('\nendstream'); } push('\nendobj\n'); };
+  push('%PDF-1.4\n'); push(new Uint8Array([37, 226, 227, 207, 211, 10]));
+  const n = pages.length;
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, `<< /Type /Pages /Count ${n} /Kids [${pages.map((_, i) => `${3 + 3 * i} 0 R`).join(' ')}] >>`);
+  pages.forEach((p, i) => {
+    const pg = 3 + 3 * i, im = pg + 1, ct = pg + 2, content = `q ${p.w} 0 0 ${p.h} 0 0 cm /Im Do Q`;
+    obj(pg, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${p.w} ${p.h}] /Resources << /XObject << /Im ${im} 0 R >> >> /Contents ${ct} 0 R >>`);
+    obj(im, `<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>`, p.bytes);
+    obj(ct, `<< /Length ${content.length} >>`, enc.encode(content));
+  });
+  const xref = len, total = 3 + 3 * n;
+  let x = `xref\n0 ${total}\n0000000000 65535 f \n`;
+  for (let i = 1; i < total; i++) x += String(off[i]).padStart(10, '0') + ' 00000 n \n';
+  push(x); push(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+
+/* ---- form ------------------------------------------------------------------- */
+const $ = id => document.getElementById(id);
+function seg(name, get, set) {
+  const el = document.querySelector(`[data-seg="${name}"]`);
+  const paint = () => el.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === get()));
+  el.querySelectorAll('button').forEach(b => b.onclick = () => { set(b.dataset.v); paint(); sync(); render(); save(); });
+  paint(); return paint;
+}
+const paintType = seg('type', () => S.type, v => { S.type = v; if (v === 'carousel' && S.size === 'landscape') S.size = 'portrait'; });
+const paintFit = seg('fit', () => S.fit, v => S.fit = v);
+const paintOrder = seg('order', () => S.order, v => S.order = v);
+
+for (const [k, [w, h, label]] of Object.entries(SIZES)) { const o = document.createElement('option'); o.value = k; o.textContent = `${label}  ${w}×${h}`; $('size').appendChild(o); }
+function swatches(el, list, get, set) {
+  el.innerHTML = '';
+  for (const [k, colour] of list) {
+    const b = document.createElement('button'); b.title = k; b.dataset.v = k;
+    if (colour) b.style.background = colour; else { b.className = 'auto'; b.textContent = 'AUTO'; }
+    b.onclick = () => { set(k); [...el.children].forEach(x => x.setAttribute('aria-pressed', x.dataset.v === k)); render(); save(); };
+    b.setAttribute('aria-pressed', get() === k); el.appendChild(b);
+  }
+}
+swatches($('grounds'), Object.entries(GROUNDS).map(([k, g]) => [k, g.fill]), () => S.ground, v => S.ground = v);
+swatches($('accents'), Object.entries(ACCENTS), () => S.accent, v => S.accent = v);
+
+/* Text fields bind to the shared state, or to the active slide. */
+const SHARED = ['url', 'num'], OWN = ['headline', 'deck'];
+function bind(id, get, set, ev = 'input') { $(id).addEventListener(ev, e => { set(e.target.type === 'checkbox' ? e.target.checked : e.target.value); render(); save(); }); }
+bind('size', () => S.size, v => S.size = v, 'change');
+bind('eyebrow', null, v => { if (S.type === 'carousel' && S.slide > 0) cur().eyebrow = v; else S.eyebrow = v; });
+bind('headline', null, v => cur().headline = v);
+bind('deck', null, v => cur().deck = v);
+bind('pick', null, v => cur().image = v, 'change');
+for (const k of ['url', 'num']) bind(k, null, v => S[k] = v);
+for (const k of ['mark', 'dots', 'frame', 'cta']) bind(k, null, v => S[k] = v, 'change');
+$('reset').onclick = () => { const keep = { size: S.size, ground: S.ground, accent: S.accent }; S = Object.assign(JSON.parse(JSON.stringify(DEFAULT)), keep); sync(); render(); save(); };
+
+function strip() {
+  const el = $('strip'); el.innerHTML = '';
+  S.slides.forEach((_, i) => { const b = document.createElement('button'); b.textContent = i + 1; b.setAttribute('aria-pressed', i === S.slide); b.onclick = () => { S.slide = i; sync(); render(); save(); }; el.appendChild(b); });
+  const add = document.createElement('button'); add.className = 'add'; add.textContent = '+';
+  add.onclick = () => { S.slides.splice(S.slide + 1, 0, { headline: 'Next *point*', deck: '', image: '' }); S.slide++; sync(); render(); save(); };
+  el.appendChild(add);
+}
+$('slideDel').onclick = () => { if (S.slides.length < 2) return; S.slides.splice(S.slide, 1); S.slide = Math.min(S.slide, S.slides.length - 1); sync(); render(); save(); };
+$('slideLeft').onclick = () => { if (S.slide === 0) return; const s = S.slides; [s[S.slide - 1], s[S.slide]] = [s[S.slide], s[S.slide - 1]]; S.slide--; sync(); render(); save(); };
+$('slideRight').onclick = () => { if (S.slide >= S.slides.length - 1) return; const s = S.slides; [s[S.slide + 1], s[S.slide]] = [s[S.slide], s[S.slide + 1]]; S.slide++; sync(); render(); save(); };
+
+/* Pushes state into the form. Called after anything that changes which
+   object the text fields point at. */
+function sync() {
+  const car = S.type === 'carousel', c = cur();
+  paintType(); paintFit(); paintOrder();
+  $('size').value = S.size;
+  $('carouselBox').hidden = !car; $('pdf').hidden = !car; $('pngAll').hidden = !car;
+  $('imageBox').hidden = S.type === 'statement';
+  $('deckLabel').textContent = S.type === 'lesson' ? 'Deck' : S.type === 'statement' ? 'Under the headline' : 'Body';
+  $('eyebrow').value = car ? (S.slide > 0 && c.eyebrow != null ? c.eyebrow : S.eyebrow) : S.eyebrow;
+  $('eyebrow').placeholder = car && S.slide > 0 ? `shared: ${S.eyebrow}` : '';
+  $('headline').value = c.headline || ''; $('deck').value = c.deck || '';
+  $('pick').value = /^blob:/.test(c.image || '') ? '' : (c.image || '');
+  $('num').value = S.num; $('url').value = S.url;
+  for (const k of ['mark', 'dots', 'frame', 'cta']) $(k).checked = !!S[k];
+  if (car) strip();
+  [...$('grounds').children].forEach(x => x.setAttribute('aria-pressed', x.dataset.v === S.ground));
+  [...$('accents').children].forEach(x => x.setAttribute('aria-pressed', x.dataset.v === S.accent));
+}
+sync(); fillPicker().then(sync); render();
+</script>
+</body>
+</html>
