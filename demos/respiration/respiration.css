@@ -1,0 +1,57 @@
+/* respiration/respiration.css — the DOM that rides RespirationReaction's scene.
+   Copied from css/pathways.css's stage chrome and scoped to the host, so a
+   generated page carries none of the pathway lessons' layout. Z-order is the
+   claim here: the glow sits UNDER the canvas (the canvas is transparent), the
+   names over it, the click target over everything. */
+.rr-host { overflow: hidden; }
+.rr-host > canvas { position: relative; z-index: 2; }
+.rr-layer { position: absolute; inset: 0; pointer-events: none; }
+.rr-glow { z-index: 1; }
+.rr-plates { z-index: 5; }
+.rr-flyers { z-index: 5; }
+.rr-spots { z-index: 6; }
+
+/* ---- names over the lanes (kit/lanes.js places them) ---- */
+.rr-plate { position: absolute; transform: translate(-50%, -100%); transform-origin: 50% 100%;
+  text-align: center; white-space: nowrap; line-height: 1.15; transition: opacity .22s ease; }
+/* The name goes while the molecule is becoming something else: mid-beat the
+   thing on stage is between two molecules and the label is still the old name.
+   Opacity, never display: the label's height is the camera's top reserve. */
+.rr-plates.rr-mute .rr-plate { opacity: 0; }
+.rr-pn { font-family: var(--font-slab, Georgia, serif); font-weight: 700; font-size: 19px;
+  color: var(--ink, #1a1a1a); letter-spacing: .2px; }
+.rr-pf { font-family: var(--font-slab, Georgia, serif); font-weight: 500; font-size: 14px;
+  color: var(--muted, #6b6b6b); }
+/* ×2: the one piece of text saying everything after the split happens twice. */
+.rr-x2 { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 9px;
+  font-family: var(--font-sans, system-ui, sans-serif); font-weight: 600; font-size: 12px;
+  color: var(--ink, #1a1a1a); background: var(--hair, rgba(0,0,0,.08)); vertical-align: 2px; }
+@media (max-width: 920px) { .rr-pn { font-size: 16px; } .rr-pf { font-size: 12.5px; } }
+
+/* ---- a name on something in flight (reaction.js's `.flyplate`) ---- */
+.rr-host .flyplate { position: absolute; transform: translate(-50%, -100%); text-align: center;
+  white-space: nowrap; line-height: 1.15; opacity: 0; transition: opacity .25s ease; }
+.rr-host .flyplate .fn { font-family: var(--font-slab, Georgia, serif); font-weight: 700; font-size: 22px;
+  color: var(--phos, #b45f06); letter-spacing: .2px; }
+.rr-host .flyplate .ff { font-family: var(--font-slab, Georgia, serif); font-weight: 500; font-size: 15px;
+  color: var(--muted, #6b6b6b); }
+@media (prefers-reduced-motion: reduce) { .rr-host .flyplate { transition: none; } }
+
+/* ---- the click target on the bond (kit/hotspot.js) ---- */
+/* A flat disc with an edge, not a feathered glow: the edge reads as a target
+   you can hit rather than as lighting. Centred on margins, since the module
+   positions the corner. */
+.rr-sglow { position: absolute; width: var(--rr-spot, 64px); height: var(--rr-spot, 64px); border-radius: 50%;
+  margin: calc(var(--rr-spot, 64px) / -2) 0 0 calc(var(--rr-spot, 64px) / -2); background: rgba(107, 79, 216, .30);
+  animation: rrGlow 2.4s ease-in-out infinite; }
+@keyframes rrGlow {
+  0%, 100% { transform: scale(.86); opacity: .75; }
+  50%      { transform: scale(1.12); opacity: 1; } }
+/* The target itself is invisible: the glow underneath is the affordance. */
+.rr-spot { position: absolute; transform: translate(-50%, -50%); pointer-events: auto;
+  width: calc(var(--rr-spot, 64px) + 24px); height: calc(var(--rr-spot, 64px) + 24px); padding: 0; border: none; border-radius: 50%;
+  background: none; cursor: pointer; display: block; }
+.rr-spot:focus-visible { outline: 3px solid var(--ink, #1a1a1a); outline-offset: 2px; }
+/* The prompt is a callout (annotate.js), never text beside the disc. */
+.rr-shint:empty { display: none; }
+@media (prefers-reduced-motion: reduce) { .rr-sglow { animation: none; opacity: .85; } }

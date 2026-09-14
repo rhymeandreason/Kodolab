@@ -60,9 +60,18 @@
     'lib/diagram-2d.js',
     'lib/scene.js',
     'lib/molview.js',        // after scene.js; the three views of one molecule
+    // the pathway kit: side-by-side lanes, the click on a bond, departures.
+    // All after scene.js; leaving.js after motion.js.
+    'kit/motion.js',
+    'kit/molgraph.js',
+    'kit/fit.js',
+    'kit/lanes.js',
+    'kit/hotspot.js',
+    'kit/leaving.js',
     'lib/fx.js',
     'lib/geo.js',            // before card-stage.js
     'lib/atomkit.js',
+    'reaction/reaction.js',  // after leaving, motion, molgraph, fx and atomkit
     'lib/annotate.js',
     'kit/card-stage.js',
     'kit/ribbon.js',
@@ -92,6 +101,8 @@
     'macromolecule/peptide.js',
     'macromolecule/nucleoside.js',   // after glycosidic.js: it borrows quatOf
     'condense/condense.js',
+    'respiration/steps.js',
+    'respiration/respiration.js',   // after card-stage.js, annotate.js, reaction.js
     'cell/organelles.js',
     'cell/animalcell.js',
     'cell/plantcell.js',
@@ -159,6 +170,14 @@
                  'macromolecule/glycosidic.js', 'macromolecule/ester.js',
                  'macromolecule/peptide.js', 'macromolecule/nucleoside.js',
                  'lib/mol-nucleic.js', 'condense/condense.js'],
+    /* One step of a pathway on two molecules: the verbs are reaction/'s, the
+       stage is kit/'s, and every domain file a step can name. glucose is
+       mol-sugars.js's; water and CO₂ come from mol-small.js. */
+    RespirationReaction: ['lib/skel.js', 'lib/mol-small.js', 'lib/mol-sugars.js',
+                 'lib/mol-pathways.js', 'lib/mol-krebs.js', 'lib/mol-carriers.js',
+                 'lib/fx.js', 'lib/atomkit.js', 'kit/motion.js', 'kit/molgraph.js',
+                 'kit/fit.js', 'kit/lanes.js', 'kit/hotspot.js', 'kit/leaving.js',
+                 'reaction/reaction.js', 'respiration/steps.js', 'respiration/respiration.js'],
     Graph:      ['https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js',
                  'https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/dist/plot.umd.min.js',
                  'graph/graph.js'],
@@ -181,6 +200,7 @@
   };
 
   const CSS = { Proteinbox: ['kit/proteinbox.css'], Graph: ['graph/graph.css'],
+                RespirationReaction: ['respiration/respiration.css'],
                 Diagram: ['diagram/diagram.css'] };
 
   /* The list a page's data-use resolves to, or an Error naming what is wrong

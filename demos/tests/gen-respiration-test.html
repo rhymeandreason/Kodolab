@@ -1,0 +1,126 @@
+<!doctype html>
+<!-- requests
+1. Show a high school student the step of the Krebs cycle where CO2 leaves, then the one where FAD picks up hydrogens. Let them click the bond, and keep a small diagram of the cycle beside it that shows which step they're on.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decarboxylation and FAD in the Krebs Cycle</title>
+<style>
+  .cycle-bar {
+    display: flex;
+    gap: 4px;
+    margin: 10px 0 14px;
+  }
+  .cycle-step {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    padding: 4px 2px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: inherit;
+    cursor: pointer;
+  }
+  .cycle-step.is-active {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="RespirationReaction"></script>
+<script>
+function renderPathway(el, currentKey) {
+  const steps = RespirationReaction.steps('krebs');
+  el.innerHTML = '<div class="cycle-bar">' +
+    steps.map(s => `<button class="cycle-step ${s.key === currentKey ? 'is-active' : ''}" data-key="${s.id}">Step ${s.n}</button>`).join('') +
+    '</div>';
+}
+
+const shell = LessonShell.create({
+  brand: 'Krebs Cycle Steps',
+  hint: 'Click the glowing bond or the Run button',
+  steps: [
+    {
+      eyebrow: 'Step 3 · Oxidative Decarboxylation',
+      title: 'Where carbon leaves as CO₂',
+      body: '<p class="lead"><strong>A carbon atom is cleaved from isocitrate and released as carbon dioxide.</strong></p><p>Isocitrate dehydrogenase oxidizes the six-carbon substrate into five-carbon α-ketoglutarate, handing electrons over to NAD⁺ while releasing CO₂.</p>',
+      onEnter(ctx) {
+        R.set({ step: 'krebs/3' });
+        ctx.ui.controls(`
+          <div id="tracker"></div>
+          <div class="stats">
+            <div class="stat"><span class="stat-label">Substrate</span><span class="stat-value" id="sub-name" data-live>...</span></div>
+            <div class="stat"><span class="stat-label">Yield</span><span class="stat-value" id="yield-name" data-live>...</span></div>
+          </div>
+          <button class="btn primary" id="run-btn">Run Reaction</button>
+        `);
+        renderPathway(ctx.ui.q('#tracker'), '3');
+        ctx.ui.q('#run-btn').onclick = () => R.run();
+        ctx.ui.qa('.cycle-step').forEach(btn => {
+          btn.onclick = () => {
+            const id = btn.dataset.key;
+            if (id === 'krebs/3') shell.goTo(0);
+            else if (id === 'krebs/6') shell.goTo(1);
+          };
+        });
+
+        const s = R.state();
+        if (s) {
+          ctx.ui.q('#sub-name').textContent = s.substrate;
+          ctx.ui.q('#yield-name').textContent = 'NADH + CO₂';
+        }
+      }
+    },
+    {
+      eyebrow: 'Step 6 · FAD Reduction',
+      title: 'Transferring hydrogens to FAD',
+      body: '<p class="lead"><strong>Succinate dehydrogenase strips two hydrogens to form fumarate and FADH₂.</strong></p><p>Because the oxidation of a carbon-carbon single bond releases less free energy than NAD⁺ requires, the enzyme uses FAD as its electron carrier.</p>',
+      onEnter(ctx) {
+        R.set({ step: 'krebs/6' });
+        ctx.ui.controls(`
+          <div id="tracker"></div>
+          <div class="stats">
+            <div class="stat"><span class="stat-label">Substrate</span><span class="stat-value" id="sub-name" data-live>...</span></div>
+            <div class="stat"><span class="stat-label">Carrier</span><span class="stat-value" id="carrier-name" data-live>...</span></div>
+          </div>
+          <button class="btn primary" id="run-btn">Run Reaction</button>
+        `);
+        renderPathway(ctx.ui.q('#tracker'), '6');
+        ctx.ui.q('#run-btn').onclick = () => R.run();
+        ctx.ui.qa('.cycle-step').forEach(btn => {
+          btn.onclick = () => {
+            const id = btn.dataset.key;
+            if (id === 'krebs/3') shell.goTo(0);
+            else if (id === 'krebs/6') shell.goTo(1);
+          };
+        });
+
+        const s = R.state();
+        if (s) {
+          ctx.ui.q('#sub-name').textContent = s.substrate;
+          ctx.ui.q('#carrier-name').textContent = `${s.carrier ? s.carrier.in : 'FAD'} → ${s.carrier ? s.carrier.out : 'FADH₂'}`;
+        }
+      }
+    }
+  ]
+});
+
+const R = RespirationReaction.mount(shell.stage, {
+  step: 'krebs/3',
+  click: true,
+  fit: 'step',
+  x2: true,
+  viewOffset: shell.viewOffset
+});
+
+shell.goTo(0);
+</script>
+</body>
+</html>

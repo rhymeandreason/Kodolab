@@ -137,6 +137,9 @@ const SHOTS = [
 
   /* Mid-reaction, mounted there rather than set: `progress` glides over ~3 s,
      and a mount parameter lands the frame the card is for, the water leaving. */
+  { key: 'respiration', use: 'RespirationReaction', warm: 1,
+    mount: el => RespirationReaction.mount(el, { step: 'glycolysis/1' }) },
+
   { key: 'condense', use: 'Condense', warm: 1,
     mount: el => Condense.mount(el, { from: ['glucose', 'glucose'], progress: 0.55 }) },
 

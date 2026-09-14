@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RespirationReaction · component bench</title>
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
+<link rel="stylesheet" href="respiration.css">
+<style>
+  .bench-group { display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .bench-group:first-child { padding-top: 0; border-top: 0; }
+  .bench-hd { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .bench-out { font-family: var(--font-mono); font-size: 12px; line-height: 1.5; white-space: pre; overflow-x: auto;
+    background: var(--ink); color: #eceadf; border-radius: 14px; padding: 14px 16px; margin: 0; }
+  /* The diagram a page would draw beside the stage: one chip per step, off
+     steps(), bound both ways. is-on is the step on stage; is-done has run. */
+  .rr-map .chip.is-done { text-decoration: line-through; opacity: .7; }
+  .lshell-nav, .lshell-progress { display: none; }
+  /* Run/Reset/Back/Next sit where the shell's own nav does: a fixed row at
+     the foot of the panel, so they stay in reach however far the chips scroll. */
+  .bench-bar { display: flex; gap: 8px; align-items: center; padding: 14px 20px 18px; border-top: 1px solid var(--line); }
+  .bench-bar .spacer { flex: 1; }
+  .lshell-scroll { padding-bottom: 32px; }
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../lib/palette.js"></script>
+<script src="../lib/tokens-from-palette.js"></script>
+<script src="../lib/molecules.js"></script>
+<script src="../lib/skel.js"></script>
+<script src="../lib/mol-small.js"></script>
+<script src="../lib/mol-sugars.js"></script>
+<script src="../lib/mol-pathways.js"></script>
+<script src="../lib/mol-krebs.js"></script>
+<script src="../lib/mol-carriers.js"></script>
+<script src="../lib/scene.js"></script>
+<script src="../lib/fx.js"></script>
+<script src="../lib/atomkit.js"></script>
+<script src="../lib/annotate.js"></script>
+<script src="../kit/motion.js"></script>
+<script src="../kit/molgraph.js"></script>
+<script src="../kit/fit.js"></script>
+<script src="../kit/lanes.js"></script>
+<script src="../kit/hotspot.js"></script>
+<script src="../kit/leaving.js"></script>
+<script src="../kit/card-stage.js"></script>
+<script src="../kit/lesson-shell.js"></script>
+<script src="../reaction/reaction.js"></script>
+<script src="steps.js"></script>
+<script src="respiration.js"></script>
+<script>
+/* The bench for respiration/respiration.js: every pathway, every step, on the
+   lesson shell. The step chips are the pattern a page copies for a diagram
+   beside the stage: drawn from steps(), set by id, lit from state(). */
+const RR = RespirationReaction;
+const PATHWAYS = RR.pathways();
+
+const shell = LessonShell.create({
+  brand: 'RespirationReaction · component bench',
+  hint: 'Drag to orbit · Click the glowing bond',
+  steps: [{
+    eyebrow: 'respiration/respiration.js',
+    title: 'One step of respiration, on two molecules',
+    body: '<p>The substrate, the one molecule it reacts with, and the bond to click. Every control is a <strong>set()</strong> and every readout a <strong>state()</strong>. The chips are a diagram bound both ways.</p>',
+    onEnter: bench,
+  }],
+});
+
+const R = RR.mount(shell.stage, { viewOffset: shell.viewOffset, pathway: 'glycolysis', step: '1' });
+window.rr = R;   // the console is part of the bench: rr.set({step:'krebs/3'}), rr.run(), rr.state()
+
+function bench(ctx) {
+  const ui = ctx.ui;
+  ui.controls(`
+    <div class="bench-group">
+      <div class="bench-hd">pathway</div>
+      <div class="chips" id="pathways"></div>
+      <div class="bench-hd">step</div>
+      <div class="chips rr-map" id="map"></div>
+    </div>
+    <div class="bench-group">
+      <div class="bench-hd">options</div>
+      <div class="row">
+        <label class="switch"><input type="checkbox" id="x2" checked><span class="track"></span>×2 badge</label>
+        <label class="switch"><input type="checkbox" id="click" checked><span class="track"></span>click target</label>
+      </div>
+      <div class="seg" id="fit">
+        <button type="button" class="is-on" data-fit="step">fit this step</button>
+        <button type="button" data-fit="pathway">fit the pathway</button>
+      </div>
+    </div>
+    <div class="bench-group">
+      <div class="bench-hd">what the module says</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-label">step</span><span class="stat-value" id="rd-id" style="font-size:15px">—</span></div>
+        <div class="stat"><span class="stat-label">phase</span><span class="stat-value" id="rd-phase" style="font-size:15px">—</span></div>
+        <div class="stat"><span class="stat-label">enzyme</span><span class="stat-value" id="rd-enz" style="font-size:13px">—</span></div>
+        <div class="stat"><span class="stat-label">reaction</span><span class="stat-value" id="rd-rx" style="font-size:13px">—</span></div>
+        <div class="stat"><span class="stat-label">carrier</span><span class="stat-value" id="rd-car" style="font-size:13px">—</span></div>
+        <div class="stat"><span class="stat-label">yields</span><span class="stat-value" id="rd-y" style="font-size:13px">—</span></div>
+      </div>
+    </div>
+    <div class="bench-group">
+      <div class="bench-hd">the chips a step would offer</div>
+      <div id="bench-chips"></div>
+      <button class="btn ghost" type="button" id="all-notes" aria-pressed="false">Show every annotation</button>
+    </div>
+    <div class="bench-group">
+      <div class="bench-hd">a page would write</div>
+      <pre class="bench-out" id="out"></pre>
+    </div>`);
+
+  const chip = (host, text, on) => { const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = text; b.onclick = on; host.appendChild(b); return b; };
+
+  const pws = ui.q('#pathways');
+  PATHWAYS.forEach(p => chip(pws, p, () => R.set({ pathway: p })).dataset.p = p);
+
+  /* THE DIAGRAM: one chip per step, off steps(). Setting a chip sets the
+     step by id; the stage's own state lights the chip. Neither side types a
+     step name. */
+  const map = ui.q('#map');
+  let mapFor = null;
+  function drawMap(p) {
+    if (mapFor === p) return;
+    mapFor = p; map.innerHTML = '';
+    R.steps(p).forEach(s => {
+      const b = chip(map, (s.branch ? s.branch[0] + '·' : '') + (s.n || '•') + ' ' + s.name, () => R.set({ step: s.id }));
+      b.dataset.id = s.id;
+    });
+  }
+
+  // The fixed row, appended once to the panel below the scroll area.
+  let bar = shell.panel.querySelector('.bench-bar');
+  if (!bar) {
+    bar = document.createElement('div'); bar.className = 'bench-bar';
+    bar.innerHTML = `<button class="btn primary" type="button" id="run">Run</button>
+      <button class="btn secondary" type="button" id="reset">Reset</button><span class="spacer"></span>
+      <button class="btn ghost" type="button" id="prev">Back</button>
+      <button class="btn ghost" type="button" id="next">Next</button>`;
+    shell.panel.appendChild(bar);
+  }
+  const q = sel => bar.querySelector(sel);
+  q('#run').onclick = () => R.run();
+  q('#reset').onclick = () => R.reset();
+  q('#prev').onclick = () => R.prev();
+  q('#next').onclick = () => R.next();
+  ui.q('#x2').onchange = e => R.set({ x2: e.target.checked });
+  ui.q('#click').onchange = e => R.set({ click: e.target.checked });
+  ui.qa('#fit button').forEach(b => b.onclick = () => {
+    ui.qa('#fit button').forEach(x => x.classList.toggle('is-on', x === b));
+    R.set({ fit: b.dataset.fit });
+  });
+
+  CardStage.showPanel(ui.q('#bench-chips'), R, { notes: ['substrate', 'partner', 'bond'] });
+  let allNotes = false;
+  const all = ui.q('#all-notes');
+  all.onclick = () => {
+    allNotes = !allNotes;
+    all.setAttribute('aria-pressed', String(allNotes));
+    all.textContent = allNotes ? 'Hide annotations' : 'Show every annotation';
+    R.notes(allNotes ? R.anchors().filter(a => a.present).map(a => a.name) : false);
+  };
+
+  const done = new Set();
+  R.on('ran', s => done.add(s.id));
+  R.on('step', () => { /* a rebuild: a chip lit off state below */ });
+
+  const y = o => Object.entries(o).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k.toUpperCase()}`).join(' · ') || 'nothing counted';
+  R.on('frame', s => {
+    drawMap(s.pathway);
+    ui.qa('#pathways .chip').forEach(b => b.classList.toggle('is-on', b.dataset.p === s.pathway));
+    ui.qa('#map .chip').forEach(b => { b.classList.toggle('is-on', b.dataset.id === s.id);
+                                       b.classList.toggle('is-done', done.has(b.dataset.id)); });
+    ui.q('#rd-id').textContent = s.id + (s.x2Shown ? ' ×2' : '');
+    ui.q('#rd-phase').textContent = s.phase;
+    ui.q('#rd-enz').textContent = s.enzyme;
+    ui.q('#rd-rx').textContent = `${s.substrate}${s.partner ? ' + ' + s.partner.name : ''} → ${s.product}`
+      + (s.partner && s.partner.becomesName ? ' + ' + s.partner.becomesName : '')
+      + (s.linger.length ? ' + ' + s.linger.join(', ') : '');
+    ui.q('#rd-car').textContent = s.carrier ? `${s.carrier.in} → ${s.carrier.out}${s.offstage ? ' (off stage)' : ''}` : '—';
+    ui.q('#rd-y').textContent = y(s.yields) + (s.leaves.length ? ' · leaves ' + s.leaves.join(', ') : '') + (s.arrives.length ? ' · takes ' + s.arrives.join(', ') : '');
+    q('#run').disabled = s.phase !== 'ready';
+    q('#next').disabled = !s.next;
+    q('#prev').disabled = !s.prev;
+    ui.q('#out').textContent =
+      `const R = RespirationReaction.mount(shell.stage, {\n` +
+      `  viewOffset: shell.viewOffset, step: '${s.id}',\n` +
+      `  x2: ${ui.q('#x2').checked}, click: ${ui.q('#click').checked}, fit: '${ui.q('#fit .is-on').dataset.fit}',\n});\n` +
+      `R.on('ran', s => ...);   // the step landed\n` +
+      `R.set({ step: R.state().next });`;
+  });
+}
+shell.goTo(0);
+</script>
+</body>
+</html>

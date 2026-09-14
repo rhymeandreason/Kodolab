@@ -187,7 +187,7 @@ molecules · macromolecule · membrane · organelle · cell · tissue · organ �
 
 **At the cell rung, AnimalCell and PlantCell are the defaults.** They are what a reader pictures when they hear "a cell", and between them they carry a nucleus, organelles, a wall and a vacuole. BloodCell is a specialist with none of that, so it comes out when the subject really is blood, or as a second example after a general cell has made the point.
 
-**Respiration is three rungs and the middle one is Mitochondrion.** Where the reactions happen is a pathway lesson's business; WHERE IN THE CELL is AnimalCell; the architecture the gradient stands in is Mitochondrion; the gradient's own arithmetic is Membrane with `context:'mitochondrion'`. A step asking how chemiosmosis works wants the last two together — the organelle for where the protons go, the membrane for how much it buys.
+**Respiration is three rungs and the middle one is Mitochondrion.** The reactions themselves, one step on two molecules, are RespirationReaction; WHERE IN THE CELL is AnimalCell; the architecture the gradient stands in is Mitochondrion; the gradient's own arithmetic is Membrane with `context:'mitochondrion'`. A step asking how chemiosmosis works wants the last two together — the organelle for where the protons go, the membrane for how much it buys.
 
 **Two rungs are often the lesson, not a choice between them.** *Why does osmosis matter* is two boxes or two steps: Membrane for the mechanism (water crossing, counted) and BloodCell or PlantCell for the consequence (a cell bursting, a leaf wilting). Neither half answers it alone — the mechanism without a consequence is a headcount nobody asked for, and the consequence without the mechanism is a shape changing for no stated reason. The same holds for a pump and the cell it keeps alive, or a chloroplast and the tree it feeds. **When a question asks why something MATTERS, reach for the pair.**
 
@@ -459,6 +459,39 @@ Glides: `progress`. Snaps and rebuilds: `from`, `role`, `gap`, `turn`.
 Anchors for `note()`: `host`, `guest`, `bond`, `water`, `leavingH`. `bond` and `water` return null until they exist, so a callout on either appears only once the reaction has made it. Layers for `show()`: `water`.
 
 Good for: what a condensation IS — where the water in "dehydration synthesis" comes from, why a polymer loses one water per bond, α- vs β-1,4, what makes a peptide bond a bond, why a fat is not a polymer (glycerol runs out of hydroxyls). **Not for building a chain**: it does exactly one bond between exactly two molecules, so starch coiling or a polymer's shape is the wrong picture. Also not for anything that is not a condensation — a phosphodiester bond is not one, DNA's backbone releases pyrophosphate — nor rates, energy or equilibrium.
+
+## RespirationReaction — one step of respiration, on two molecules
+
+**Scale**: molecules, single. Real coordinates for the substrates; a carrier is drawn at the same scale beside them.
+
+One reaction of glycolysis, pyruvate oxidation, the Krebs cycle or fermentation: the substrate, the one molecule it reacts with, and the bond to click. Clicking runs the step as an animation on the molecules themselves: the phosphate crosses, the hydride hops, CO₂ assembles out of the carbon that left, the ring opens. No ledger, no tray, no pathway diagram: those are the page's, drawn from `steps()`.
+
+```js
+const R = RespirationReaction.mount(el, {
+  step: 'krebs/3',     // '<pathway>/<key>': glycolysis/1..10 · pyruvate-oxidation/1 · krebs/1..8 · fermentation/lactate, /acetaldehyde, /ethanol
+  x2: true,            // the ×2 badge where the reaction runs twice per glucose
+  click: true,         // the glowing target on the bond; false, and the page's own button calls run()
+  fit: 'step',         // 'pathway' keeps one camera for the whole pathway, so a molecule shrinking means it lost carbon
+});
+R.run();                          // runs the step (same as the click); ignored unless state().phase is 'ready'
+R.set({ step: R.state().next });  // the next step, its product now the substrate. null at the end
+R.next(); R.prev(); R.reset();    // the same, and the current step put back to 'ready'
+RespirationReaction.steps('krebs') // [{id, n, name, enzyme, substrate, product, partner, carrier, yields, perGlucose, rev, leaves, arrives}]
+```
+
+**A step is two molecules at most.** A carrier stands in the second lane and visibly turns over: ATP beside glucose becomes ADP as the phosphate crosses; NAD⁺ beside G3P becomes NADH when the hydride lands. When a step has a co-substrate and a carrier both (the two dehydrogenase complexes), the co-substrate is on stage and the hydride leaves the frame toward the carrier; `state().carrier` and `state().offstage` say which. **The ×2 is a badge, never a second copy**: after glycolysis's split everything happens twice per glucose, and `state().x2` is the number to print.
+
+**Draw the pathway from `steps()`, and bind it both ways.** A row of chips, a ring, a ladder: build it from the list, set `step` by each entry's `id` on click, and light the entry whose id `state().id` reports. Then the diagram and the stage cannot name different steps. `on('ran')` is when to mark a step done, and `state().next` is what Next should set. Pyruvate oxidation is its own pathway with one step, between glycolysis and Krebs; a lesson that crosses from one to the next sets `pyruvate-oxidation/1` and then `krebs/1`.
+
+**Print from state, not from memory**: `enzyme`, `substrate`, `product`, `partner.name` and `partner.becomesName`, `yields` (per single reaction: `atp`, `nadh`, `fadh2`, `co2`, signed), `leaves` and `arrives`. A tally across steps is the page's sum of `yields`, times `x2` where it applies, and a Graph beside the stage is how to show it.
+
+Rebuilds and snaps: `step`, `pathway`. Live: `x2`, `click`, `fit`. Nothing else moves except by `run()`.
+
+`state()`: `pathway`, `id`, `key`, `n`, `name`, `enzyme`, `branch` (fermentation: `lactic` · `alcoholic`), `phase` (`ready` · `running` · `done`), `substrate`, `product`, `from`, `to`, `linger`, `partner` `{key, becomes, name, becomesName}`, `offstage`, `carrier` `{in, out}`, `x2`, `x2Shown`, `lanes`, `click` `{on, at, say}`, `act`, `rev`, `yields`, `leaves`, `arrives`, `next`, `prev`. Events: `frame` (state) · `step` (state) after a rebuild · `pick` (lane) on the click · `ran` (state) when the step lands.
+
+Anchors for `note()`: `substrate`, `partner`, `bond` (null once the step has run), `product` (null until it has). No layers, no views.
+
+Good for: one step or a few, each on its own molecules, for a student who has not met the pathway before; what a carrier IS (one molecule, two states); where the CO₂ comes from; why the ×2. Not for: the whole pathway's bookkeeping on one screen (that is a Graph fed from `yields`), the electron transport chain (Membrane with `context:'mitochondrion'`), where in the cell it happens (AnimalCell, Mitochondrion), or a molecule on its own (Molecule).
 
 ## Tree — a tree, the air around it, and where its mass came from
 
