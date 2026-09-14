@@ -670,6 +670,7 @@
       { name: 'light', color: hex(PHO.photon) },
       { name: 'starch', color: hex((global.MolPalette || global.MolLib.PALETTE).organelles.amyloplast.starch) },
       { name: 'chloroplast DNA', color: hex(ORGP.dna) },
+      { name: 'ribosomes', color: hex(ORGP.ribosome) },
     ];
     const layersOf = () => ORDER.filter(n => n === 'proton' || n === 'oxygen' || n === 'photon' || n === 'water' || D.groups[n])
       .map(n => ({ name: n, label: LIBRARY[n].text, on: shown[n] !== false }));
@@ -789,7 +790,7 @@
       lumen: +(NM(LUM) / TRUE_NM.lumen).toFixed(1),
       gap: +(NM(GAP) / TRUE_NM.gap).toFixed(1),
       ims: +(NM(IMS) / TRUE_NM.ims).toFixed(1),
-      psii: 3, psi: 3, b6f: 3.5, synthase: 2.8, ribosome: 1.2, dna: 4, proton: 300, starch: 1,
+      psii: 3, psi: 3, b6f: 3.5, synthase: 2.8, ribosome: 2.8, dna: 4, proton: 300, starch: 1,
     },
     down: { thylakoid: 'Membrane', granum: 'Membrane', lamella: 'Membrane', synthase: 'Membrane', b6f: 'Membrane', psii: 'Membrane', psi: 'Membrane' },
   };

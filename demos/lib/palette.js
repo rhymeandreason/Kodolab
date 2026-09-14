@@ -254,6 +254,7 @@
       chloroplast:   { outer:0x4fc22e, inner:0x2f8f22, rim:0x8fe25a, head:0x4fc22e, tail:0xc4e79a,
                        thylakoid:0x178a2a, lamella:0x2f9c3e, stroma:0xa9d383,
                        envelopeInner:0x3ba828,
+                       ribosome:0x46923c,   // 70S, the bacterial kind: its own dark green, not the ER's maroon
                        /* `lumen` is the space INSIDE a thylakoid, one colour
                           for grana and lamellae alike: it is one space, the
                           way a mitochondrion's crista lumen and intermembrane

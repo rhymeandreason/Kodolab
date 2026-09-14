@@ -1765,11 +1765,21 @@
           gDna.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(loop, true), Math.round(44 * q), 0.06, 5, true), dnaMat));
         }
         const nR = Math.round((o.ribosomes === undefined ? 70 : o.ribosomes) * q);
-        const ribo = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 6, 5),
-          mat({ color: CH.inner, roughness: 0.6, clearcoat: 0.1 }), nR);
-        const m4 = new THREE.Matrix4();
-        for (let i = 0; i < nR; i++) { const p = stromaPt(); m4.makeTranslation(p.x, p.y, p.z); ribo.setMatrixAt(i, m4); }
-        gRibo.add(ribo);
+        /* A 70S ribosome is ~25 nm: drawn ~2.8× like the machines, so it is
+           not the smallest thing on stage when it is bigger than a
+           photosystem. Two unequal subunits. */
+        const riboMat = mat({ color: CH.ribosome, roughness: 0.6, clearcoat: 0.1 });
+        const big = new THREE.InstancedMesh(new THREE.SphereGeometry(0.3, 10, 8), riboMat, nR);
+        const small = new THREE.InstancedMesh(new THREE.SphereGeometry(0.21, 8, 6), riboMat, nR);
+        const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), off = new V3();
+        for (let i = 0; i < nR; i++) {
+          const p = stromaPt(0.7);
+          qt.setFromEuler(new THREE.Euler(rr(0, 2 * PI), rr(0, 2 * PI), rr(0, 2 * PI)));
+          m4.compose(p, qt, new V3(1, 0.8, 1)); big.setMatrixAt(i, m4);
+          off.set(0, 0.3, 0).applyQuaternion(qt).add(p);
+          m4.compose(off, qt, new V3(1, 0.75, 1)); small.setMatrixAt(i, m4);
+        }
+        gRibo.add(big, small);
       }
 
       /* Points inside each compartment, for the protons that live there. A
