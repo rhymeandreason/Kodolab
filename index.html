@@ -113,6 +113,31 @@
     text-decoration: none; color: var(--mute); }
   .mast a.lnk:hover { color: var(--coral); }
   .mast a.lnk[aria-current="page"] { color: var(--ink); }
+  /* The account, as lib/site.js paints it, in this page's ink: kodo.css's
+     `.sitelinks` rules are not loaded here, so the same shapes are restated. */
+  .mast .links .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
+  .mast .links a.acct:hover { color: var(--coral); }
+  .mast .links a.acct[aria-current="page"] { color: var(--ink); }
+  .mast .links .signin { padding: .35em .9em; border: 1.5px solid currentColor; border-radius: 999px; }
+  .mast .links .rule { width: 1px; height: 1.1rem; align-self: center; background: rgba(var(--ink-t), .18); }
+  .mast .links .menu { position: relative; display: inline-block; }
+  .mast .links .menu .summary { position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0; border: 0; background: none; cursor: pointer;
+    font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--mute); line-height: inherit; }
+  .mast .links .menu .summary:hover, .mast .links .menu .summary[aria-expanded="true"] { color: var(--ink); }
+  .mast .links .menu .summary:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 999px; }
+  .mast .links .avatar { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.7rem; height: 1.7rem; border-radius: 50%; overflow: hidden;
+    display: grid; place-items: center; background: var(--green); color: var(--paper); font-size: .8rem; letter-spacing: 0; }
+  .mast .links .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mast .links .menu .card { position: absolute; right: 0; top: calc(100% + .6rem); z-index: 20; min-width: 15rem; padding: .9rem 1rem;
+    background: var(--paper); border: 1px solid rgba(var(--ink-t), .12); border-radius: 10px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t), .45);
+    display: flex; flex-direction: column; gap: .75rem; font: 400 .9rem var(--sans); color: var(--ink-2); text-transform: none; letter-spacing: 0; }
+  .mast .links .menu .card[hidden] { display: none; }
+  .mast .links .menu .who { margin: 0; display: flex; flex-direction: column; gap: .15rem; line-height: 1.3; }
+  .mast .links .menu .who b { color: var(--ink); font-weight: 600; }
+  .mast .links .menu .who span { color: var(--mute); font-size: .8rem; overflow-wrap: anywhere; }
+  .mast .links .menu .card button { align-self: flex-start; cursor: pointer; padding: .4em 1em; border: 1.5px solid var(--ink); border-radius: 999px;
+    background: transparent; color: var(--ink); font: 600 .8rem var(--sans); }
+  .mast .links .menu .card button:hover { background: var(--ink); color: var(--paper); }
   .mast .sechead { display: flex; align-items: baseline; gap: 1.2rem; margin-top: 2.6rem; }
   .mast .sechead h2 { font: 500 1.3rem/1 var(--display); letter-spacing: -0.01em; }
   .mast .sechead .rule { display: none; }

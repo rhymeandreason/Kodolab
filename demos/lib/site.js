@@ -77,7 +77,7 @@
         var user = s.user || null;
         if (same(user, stored())) return;
         store(user);
-        var menu = document.querySelector('.sitelinks, header.bar > nav.links');
+        var menu = document.querySelector('.sitelinks, ' + OWN);
         if (menu) paintAccount(menu, user);
       })
       .catch(function () {});
@@ -192,10 +192,11 @@
   /* Only a page that already has a bar, and only on the document shell — a
      lesson on body.lshell-page is a full-window scene, and Design.md forbids a
      second masthead over it. Same rule the foot below follows. The builder's
-     own bar is the one exception: it writes the four links itself and is only
-     given the account. */
+     bar and the front door's mast are the two exceptions: each writes the four
+     links itself, in its own ink, and is only given the account. */
+  var OWN = 'header.bar > nav.links, .mast nav.links';
   function nav() {
-    var own = document.querySelector('header.bar > nav.links');
+    var own = document.querySelector(OWN);
     if (own) { paintAccount(own, stored()); reconcile(); return; }
     if (!document.body.classList.contains('kodo')) return;
     var bar = document.querySelector('.sitenav');
