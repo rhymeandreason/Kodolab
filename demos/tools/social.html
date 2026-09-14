@@ -124,6 +124,7 @@
       <button data-v="statement">Statement</button>
       <button data-v="carousel">Carousel</button>
       <button data-v="hero">Hero</button>
+      <button data-v="cards">Cards</button>
     </div>
   </fieldset>
 
@@ -146,6 +147,20 @@
     <legend>Coloured word</legend>
     <div class="swatches" id="accents"></div>
     <p class="hint">Auto follows the ground the way the front door's bands do.</p>
+  </fieldset>
+
+  <fieldset id="cardsBox" hidden>
+    <legend>Cards</legend>
+    <div class="strip" id="cardStrip"></div>
+    <div class="slideops">
+      <button id="cardLeft">&larr; move</button>
+      <button id="cardRight">move &rarr;</button>
+      <button id="cardDel">remove</button>
+    </div>
+    <label class="cap" for="cardsHead">Line above the cards</label>
+    <input type="text" id="cardsHead" autocomplete="off">
+    <p class="hint">Headline, deck and image below edit the selected card. Dot:</p>
+    <div class="swatches" id="cardHue"></div>
   </fieldset>
 
   <fieldset id="carouselBox" hidden>
@@ -281,6 +296,12 @@ const DEFAULT = {
   image: '../media/screenshots/kodo-water.png', fit: 'cover', order: 'text', num: '01', frame: true,
   url: 'kodolab.org', mark: true, dots: true, cta: true, zoom: 100,
   slide: 0,
+  card: 0, cardsHead: 'Six lessons, *live*',
+  cards: [
+    { headline: 'Structure of Water', deck: 'Hydrogen bonds, ice, and why salt falls apart in it.', image: '../media/components/watersim.webp', hue: 'blue' },
+    { headline: 'Covalent & Ionic Bonds', deck: 'Drag atoms together and let valence decide what you get.', image: '../media/components/molecule.webp', hue: 'green' },
+    { headline: 'Levels of Protein Structure', deck: 'Haemoglobin, from a chain of amino acids to four folded chains.', image: '../proteins/stills/hemoglobin.webp', hue: 'coral' },
+  ],
   slides: [
     { headline: 'Five things water does *because* it is bent', deck: 'A carousel from the water lesson.', image: '' },
     { headline: 'It sticks to *itself*', deck: 'Each molecule holds up to four neighbours by hydrogen bonds. That is surface tension, and a strider’s foot.', image: '' },
@@ -298,6 +319,17 @@ const PRESETS = [
     { name: 'Real structures', type: 'statement', ground: 'paper', eyebrow: 'Bio 101, in 3D', headline: 'Drawn from the *real* structures.', deck: 'Water, bonding, proteins, membranes, glycolysis, DNA. Every atom placed by data, not by an illustrator.', image: '' },
     { name: 'Build: a lesson that doesn’t exist yet', type: 'statement', ground: 'butter', eyebrow: 'Kodolab Build', headline: 'Ask for a lesson that *doesn’t exist yet.*', deck: 'Describe what you want to see. A model writes the lesson from Kodolab’s component library, and it runs in your browser.', image: '' },
     { name: 'Water to hemoglobin', type: 'statement', ground: 'coral', eyebrow: 'One platform', headline: 'From a water molecule to *hemoglobin*, one scale at a time.', deck: '', image: '' },
+    { name: 'The six homepage cards', type: 'cards', size: 'landscape', ground: 'paper', cardsHead: 'Six lessons, every one a *live* scene', cards: [
+      { headline: 'Structure of Water', deck: 'Hydrogen bonds, ice, and why salt falls apart in it.', image: '../media/components/watersim.webp', hue: 'blue' },
+      { headline: 'Covalent & Ionic Bonds', deck: 'Drag atoms together and let valence decide what you get.', image: '../media/components/molecule.webp', hue: 'green' },
+      { headline: 'Levels of Protein Structure', deck: 'Haemoglobin, from a chain of amino acids to four folded chains.', image: '../proteins/stills/hemoglobin.webp', hue: 'coral' },
+      { headline: 'The Membrane', deck: 'What gets through, what does not, and what a pump costs.', image: '../media/components/membrane.webp', hue: 'amber' },
+      { headline: 'Glycolysis', deck: 'Ten steps, every one drawn as the real molecule.', image: '../media/molecules/alphaGlucose.webp', hue: 'violet' },
+      { headline: 'Structure of DNA', deck: 'A helix from real coordinates, part by part.', image: '../proteins/stills/dna.webp', hue: 'blue' },
+    ] },
+    { name: 'One card, big', type: 'cards', size: 'square', ground: 'butter', cardsHead: 'New lesson', cards: [
+      { headline: 'Structure of Water', deck: 'Hydrogen bonds, ice, and why salt falls apart in it.', image: '../media/components/watersim.webp', hue: 'blue' },
+    ] },
     { name: 'Platform carousel', type: 'carousel', size: 'portrait', ground: 'paper', eyebrow: 'What Kodolab is', slides: [
       { headline: 'Biology you can *turn* in your hands', deck: 'Five slides on what Kodolab is.', image: '' },
       { headline: 'Every lesson is a *live* 3D scene', deck: 'Not a video of a molecule. The molecule, drawn from its real structure, running in the browser.', image: '../media/screenshots/kodo-water.png' },
@@ -320,9 +352,9 @@ function load() {
   return JSON.parse(JSON.stringify(DEFAULT));
 }
 const local = src => /^(blob|data):/.test(src || '');
-function save() { const s = Object.assign({}, S); if (local(s.image)) s.image = ''; s.slides = s.slides.map(x => Object.assign({}, x, { image: local(x.image) ? '' : x.image })); localStorage.setItem('social.v1', JSON.stringify(s)); }
+function save() { const s = Object.assign({}, S); if (local(s.image)) s.image = ''; s.slides = s.slides.map(x => Object.assign({}, x, { image: local(x.image) ? '' : x.image })); s.cards = s.cards.map(x => Object.assign({}, x, { image: local(x.image) ? '' : x.image })); localStorage.setItem('social.v1', JSON.stringify(s)); }
 /* The fields a slide owns; everything else is shared across the carousel. */
-const cur = () => S.type === 'carousel' ? S.slides[S.slide] : S;
+const cur = () => S.type === 'carousel' ? S.slides[S.slide] : S.type === 'cards' ? S.cards[S.card] : S;
 
 /* ---- images ---------------------------------------------------------------- */
 const imgs = new Map();
@@ -340,12 +372,12 @@ async function listFolder(dir) {
 }
 async function fillPicker() {
   const pick = document.getElementById('pick');
-  for (const dir of ['screenshots', 'og', 'components', 'molecules']) {
-    const files = await listFolder(`../media/${dir}/`);
+  for (const dir of ['media/components', 'proteins/stills', 'media/screenshots', 'media/og', 'media/molecules']) {
+    const files = await listFolder(`../${dir}/`);
     if (!files.length) continue;
-    const g = document.createElement('optgroup'); g.label = `media/${dir}`;
+    const g = document.createElement('optgroup'); g.label = dir;
     for (const f of files) {
-      const o = document.createElement('option'); o.value = `../media/${dir}/${f.split('/').pop()}`;
+      const o = document.createElement('option'); o.value = `../${dir}/${f.split('/').pop()}`;
       o.textContent = f.split('/').pop().replace(/\.(png|webp|jpe?g)$/i, '').replace(/^kodo-/, '');
       g.appendChild(o);
     }
@@ -653,9 +685,66 @@ function drawHero(ctx, W, H) {
   if (S.url) block(ctx, S.url, { x: W / 2, y: H - P - 14 * u, maxW: W, size: 18 * u, font: F.cap, color: G.mute, em: G.mute, sp: .24, align: 'center', upper: true });
 }
 
+/* index.html's lesson card, exactly: white, 16px radius, a 3:2 stage tinted by
+   the card's hue with the image contained in it and the number pill top-left,
+   then the title in the display face and an italic serif line. Sizes are the
+   homepage's at a 290px card, scaled by the card's width here. */
+function lessonCard(ctx, c, i, x, y, w, G) {
+  const k = w / 290, r = 16 * k, hue = T.hue[c.hue] || T.hue.coral, im = img(c.image);
+  ctx.save();
+  ctx.font = F.display(19 * k);
+  const title = block(ctx, c.headline || '', { x: 0, y: 0, maxW: w - 36 * k, size: 19 * k, font: F.display, lh: 1.2, color: T.ink, em: hue, sp: -.015, measure: true });
+  const deck = c.deck ? block(ctx, c.deck, { x: 0, y: 0, maxW: w - 36 * k, size: 14 * k, font: F.serifI, lh: 1.35, color: T.ink2, em: hue, measure: true }) : { h: 0 };
+  const sh = w * 2 / 3, th = 16 * k + title.h + (c.deck ? 6 * k + deck.h : 0) + 18 * k, h = sh + th;
+  ctx.shadowColor = inkA(.28); ctx.shadowBlur = 40 * k; ctx.shadowOffsetY = 14 * k;
+  ctx.fillStyle = T.card; rrect(ctx, x, y, w, h, r); ctx.fill(); ctx.shadowColor = 'transparent';
+  ctx.save(); rrect(ctx, x, y, w, h, r); ctx.clip();
+  ctx.fillStyle = hue; ctx.globalAlpha = .12; ctx.fillRect(x, y, w, sh); ctx.globalAlpha = 1;
+  if (im) { const s = Math.min(w / im.naturalWidth, sh / im.naturalHeight), dw = im.naturalWidth * s, dh = im.naturalHeight * s; ctx.drawImage(im, x + (w - dw) / 2, y + (sh - dh) / 2, dw, dh); }
+  ctx.fillStyle = inkA(.08); ctx.fillRect(x, y + sh, w, 1 * k);
+  ctx.restore();
+  ctx.strokeStyle = inkA(.08); ctx.lineWidth = k; rrect(ctx, x, y, w, h, r); ctx.stroke();
+  const num = String(i + 1).padStart(2, '0'), fs = 11 * k, sp = .2 * fs; ctx.font = F.cap(fs);
+  const pw = mw(ctx, num, sp) + 22 * k, ph = 23 * k, px = x + 14 * k, py = y + 12 * k;
+  ctx.fillStyle = 'rgba(255,255,255,.7)'; rrect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
+  ctx.fillStyle = hue; ctx.beginPath(); ctx.arc(px + 12 * k, py + ph / 2, 4 * k, 0, 7); ctx.fill();
+  ctx.fillStyle = T.ink; ctx.textBaseline = 'middle'; drawTracked(ctx, num, px + 20 * k, py + ph / 2 + fs * .06, sp);
+  let ty = y + sh + 16 * k;
+  block(ctx, c.headline || '', { x: x + 18 * k, y: ty, maxW: w - 36 * k, size: 19 * k, font: F.display, lh: 1.2, color: T.ink, em: hue, sp: -.015 });
+  if (c.deck) block(ctx, c.deck, { x: x + 18 * k, y: ty + title.h + 6 * k, maxW: w - 36 * k, size: 14 * k, font: F.serifI, lh: 1.35, color: T.ink2, em: hue });
+  ctx.restore();
+  return h;
+}
+function drawCards(ctx, W, H) {
+  const G = GROUNDS[S.ground], A = accentFor(G), u = unit(W, H), P = 76 * u, n = S.cards.length;
+  ctx.fillStyle = G.fill; ctx.fillRect(0, 0, W, H);
+  if (S.dots) motes(ctx, W, H, u);
+  let y = topbar(ctx, W, P, u, G, S.url) + 44 * u;
+  const maxW = W - 2 * P;
+  if (S.cardsHead) y += block(ctx, S.cardsHead, { x: P, y, maxW, size: 56 * u, min: 32 * u, maxH: H * .2, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A }).h + 40 * u;
+  const avail = H - P - y, wide = W > H * 1.2;
+  const cols = n === 1 ? 1 : wide ? Math.min(n, 3) : n === 2 && H > W * 1.2 ? 1 : 2;
+  const rows = Math.ceil(n / cols), gap = 22 * u;
+  // a card is w by roughly w*(2/3)+text; size the columns so the rows fit
+  let cw = (maxW - gap * (cols - 1)) / cols;
+  const est = w => w * 2 / 3 + w * .38;
+  if (rows * est(cw) + (rows - 1) * gap > avail) cw = (avail - (rows - 1) * gap) / rows / (2 / 3 + .38);
+  if (n === 1) cw = Math.min(cw, wide ? maxW * .5 : maxW * .8);
+  const gridW = cols * cw + (cols - 1) * gap, x0 = P + (maxW - gridW) / 2;
+  const hs = [];
+  for (let rrow = 0; rrow < rows; rrow++) {
+    const inRow = Math.min(cols, n - rrow * cols), rx = x0 + (cols - inRow) * (cw + gap) / 2;
+    let rowH = 0;
+    for (let ci = 0; ci < inRow; ci++) { const i = rrow * cols + ci; const h = lessonCard(ctx, S.cards[i], i, rx + ci * (cw + gap), y, cw, G); rowH = Math.max(rowH, h); }
+    y += rowH + gap;
+  }
+  slot = { w: cw, h: cw * 2 / 3 };
+}
+
 function paint(ctx, W, H, slide) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
   if (S.type === 'hero') drawHero(ctx, W, H);
+  else if (S.type === 'cards') drawCards(ctx, W, H);
   else if (S.type === 'lesson') drawLesson(ctx, W, H);
   else if (S.type === 'statement') drawStatement(ctx, W, H);
   else drawSlide(ctx, W, H, slide == null ? S.slide : slide);
@@ -764,6 +853,20 @@ for (const k of ['url', 'num']) bind(k, null, v => S[k] = v);
 for (const k of ['mark', 'dots', 'frame', 'cta']) bind(k, null, v => S[k] = v, 'change');
 $('reset').onclick = () => { const keep = { size: S.size, ground: S.ground, accent: S.accent }; S = Object.assign(JSON.parse(JSON.stringify(DEFAULT)), keep); sync(); render(); save(); };
 
+function cardStrip() {
+  const el = $('cardStrip'); el.innerHTML = '';
+  S.cards.forEach((_, i) => { const b = document.createElement('button'); b.textContent = i + 1; b.setAttribute('aria-pressed', i === S.card); b.onclick = () => { S.card = i; sync(); render(); save(); }; el.appendChild(b); });
+  const add = document.createElement('button'); add.className = 'add'; add.textContent = '+';
+  add.onclick = () => { if (S.cards.length >= 6) return; S.cards.splice(S.card + 1, 0, { headline: 'New lesson', deck: '', image: '', hue: ['coral', 'blue', 'green', 'amber', 'violet'][S.cards.length % 5] }); S.card++; sync(); render(); save(); };
+  el.appendChild(add);
+  [...$('cardHue').children].forEach(x => x.setAttribute('aria-pressed', x.dataset.v === cur().hue));
+}
+$('cardDel').onclick = () => { if (S.cards.length < 2) return; S.cards.splice(S.card, 1); S.card = Math.min(S.card, S.cards.length - 1); sync(); render(); save(); };
+$('cardLeft').onclick = () => { if (S.card === 0) return; const c = S.cards; [c[S.card - 1], c[S.card]] = [c[S.card], c[S.card - 1]]; S.card--; sync(); render(); save(); };
+$('cardRight').onclick = () => { if (S.card >= S.cards.length - 1) return; const c = S.cards; [c[S.card + 1], c[S.card]] = [c[S.card], c[S.card + 1]]; S.card++; sync(); render(); save(); };
+bind('cardsHead', null, v => S.cardsHead = v);
+swatches($('cardHue'), Object.entries(T.hue), () => cur().hue, v => { if (S.type === 'cards') cur().hue = v; });
+
 function strip() {
   const el = $('strip'); el.innerHTML = '';
   S.slides.forEach((_, i) => { const b = document.createElement('button'); b.textContent = i + 1; b.setAttribute('aria-pressed', i === S.slide); b.onclick = () => { S.slide = i; sync(); render(); save(); }; el.appendChild(b); });
@@ -785,6 +888,10 @@ function sync() {
   paintType(); paintFit(); paintOrder();
   $('size').value = S.size;
   $('carouselBox').hidden = !car; $('pdf').hidden = !car; $('pngAll').hidden = !car;
+  const cards = S.type === 'cards';
+  $('cardsBox').hidden = !cards; $('eyebrow').parentElement.hidden = cards;
+  if (cards) { $('cardsHead').value = S.cardsHead || ''; cardStrip(); }
+  $('deckLabel').textContent = cards ? 'Card line' : $('deckLabel').textContent;
   $('prev').hidden = $('next').hidden = !car;
   $('prev').disabled = S.slide === 0; $('next').disabled = S.slide >= S.slides.length - 1;
   $('imageBox').hidden = S.type === 'statement';
