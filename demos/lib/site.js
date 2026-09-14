@@ -147,7 +147,7 @@
       img.src = user.picture;
     }
     var nm = document.createElement('span');
-    nm.className = 'name';
+    nm.className = 'acct-name';  // not `.name`: the library styles that for its cards
     nm.textContent = (user.name || user.email || '').split(/\s+/)[0];
     sum.appendChild(av); sum.appendChild(nm);
 

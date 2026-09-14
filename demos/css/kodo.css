@@ -556,6 +556,8 @@ a.crumb:hover { color: var(--accent) }
 .bar .links .menu .summary[aria-expanded="true"] { color: var(--text-strong) }
 .sitelinks .menu .summary:focus-visible,
 .bar .links .menu .summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-pill); }
+.sitelinks .menu .acct-name,
+.bar .links .menu .acct-name { font: inherit; letter-spacing: inherit; text-transform: inherit; }
 .sitelinks .avatar,
 .bar .links .avatar {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
