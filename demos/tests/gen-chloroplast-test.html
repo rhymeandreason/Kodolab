@@ -1,0 +1,114 @@
+<!doctype html>
+<!-- requests
+1. Where do the light reactions of photosynthesis happen inside a chloroplast, and where does the oxygen come from?
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Where Light Reactions Happen</title>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Chloroplast"></script>
+<script>
+const shell = LessonShell.create({
+  brand: 'Photosynthesis: The Chloroplast',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [
+    {
+      eyebrow: 'Architecture',
+      title: 'Compartments of the chloroplast',
+      body: '<p class="lead"><strong>The chloroplast is enclosed by a double-membrane envelope that surrounds a gel-like stroma and an internal membrane system.</strong></p><p>Inside the stroma lies the thylakoid network, arranged into flattened discs stacked into columns called grana, linked together by unstacked stroma lamellae.</p>',
+      nextLabel: 'Explore the thylakoids',
+      onEnter(ctx) {
+        C.set({ light: 0.6 });
+        C.notes(['stroma', 'granum']);
+        ctx.ui.showPanel(C, { only: ['legend'] });
+      },
+      onExit() {
+        C.notes(false);
+      }
+    },
+    {
+      eyebrow: 'Membrane System',
+      title: 'One continuous internal lumen',
+      body: '<p class="lead"><strong>All grana stacks and interconnecting lamellae enclose a single, continuous fluid-filled space called the thylakoid lumen.</strong></p><p>Because the lumen is one continuous compartment, protons accumulated in any stack contribute to a single proton gradient driving ATP synthesis across the organelle.</p>',
+      nextLabel: 'See the machinery',
+      onEnter(ctx) {
+        C.notes(['thylakoid', 'lumen']);
+        ctx.ui.showPanel(C, { only: ['legend'] });
+      },
+      onExit() {
+        C.notes(false);
+      }
+    },
+    {
+      eyebrow: 'Light Reactions',
+      title: 'Water splitting and oxygen release',
+      body: '<p class="lead"><strong>Photosystem II absorbs light energy to extract electrons by splitting water molecules inside the thylakoid lumen.</strong></p><p>Splitting water releases protons (H⁺) into the lumen to build the gradient, while oxygen atoms combine and leave as molecular oxygen (O₂) gas, rising as a photosynthetic byproduct.</p>',
+      nextLabel: 'Adjust light',
+      onEnter(ctx) {
+        C.notes(['psii', 'oxygen', 'synthase']);
+        ctx.ui.showPanel(C, { only: ['legend'] });
+      },
+      onExit() {
+        C.notes(false);
+      }
+    },
+    {
+      eyebrow: 'Experiment',
+      title: 'Drive the light reactions',
+      body: '<p class="lead"><strong>Light intensity directly dictates the rate of water oxidation and oxygen production.</strong></p><p>Adjust the light intensity to observe how brightening accelerates water splitting, proton accumulation, and oxygen bubble release.</p>',
+      nextLabel: 'Restart',
+      onEnter(ctx) {
+        ctx.ui.controls(`
+          <div class="slider">
+            <div class="slider-head">
+              <span class="label">Light intensity</span>
+              <span class="value" id="light-val" data-live>60%</span>
+            </div>
+            <input type="range" id="light-slider" min="0" max="1" step="0.05" value="0.6">
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">O₂ released</div>
+              <div class="stat-value" id="o2-count" data-live>0</div>
+              <div class="stat-sub">molecules from water</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">ATP synthesized</div>
+              <div class="stat-value" id="atp-count" data-live>0</div>
+              <div class="stat-sub">in the stroma</div>
+            </div>
+          </div>
+        `);
+
+        const lightVal = ctx.ui.q('#light-val');
+        const lightSlider = ctx.ui.q('#light-slider');
+        const o2Count = ctx.ui.q('#o2-count');
+        const atpCount = ctx.ui.q('#atp-count');
+
+        ctx.ui.range(lightSlider, v => {
+          C.set({ light: v }, { snap: true });
+          lightVal.textContent = Math.round(v * 100) + '%';
+        });
+
+        ctx._unsub = C.on('frame', s => {
+          o2Count.textContent = s.ledger.o2Released;
+          atpCount.textContent = s.ledger.atpMade;
+        });
+      },
+      onExit(ctx) {
+        if (ctx._unsub) ctx._unsub();
+      }
+    }
+  ]
+});
+
+const C = Chloroplast.mount(shell.stage, { viewOffset: shell.viewOffset, light: 0.6 });
+shell.goTo(0);
+</script>
+</body>
+</html>

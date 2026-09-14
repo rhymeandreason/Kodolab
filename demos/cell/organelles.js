@@ -1399,6 +1399,412 @@
     }
 
 
+    /* =====================================================================
+       chloroplastDetail — the same plastid with its membranes resolved
+       =====================================================================
+       `chloroplast()` above is the organelle as one of several in a cut
+       leaf cell: a glass envelope, grana as opaque stacks, lamellae between.
+       This is the same organelle when it is the SUBJECT — what
+       cell/chloroplast.js mounts on its own, one rung above the thylakoid
+       membrane that membrane/membrane.js draws with context:'thylakoid'.
+       Cut open like the detailed mitochondrion rather than drawn as glass:
+       the reader is looking INTO it now, and a cut is how a bowl of stroma
+       with stacks standing in it reads.
+
+       WHAT THE DETAIL IS FOR is two claims about where things are:
+
+       · THE THYLAKOID IS ONE MEMBRANE ENCLOSING ONE SPACE. Every granum is
+         joined to its neighbours by stroma lamellae, so the lumen inside a
+         disc in one stack is the lumen inside every other, and a proton
+         gradient built anywhere in the system drives ATP synthase
+         everywhere in it. Separate piles of coins say the opposite, so no
+         granum is drawn without a lamella leaving it.
+
+       · THE MACHINES SORT THEMSELVES BY WHERE THEY FIT. Photosystem II sits
+         in the APPRESSED faces, where one disc presses against the next;
+         photosystem I and ATP synthase sit only where the membrane is open
+         to the stroma — the end discs of a stack, the rims, and the
+         lamellae — because both carry a bulk that hangs into the stroma and
+         there is no room for it between stacked discs. `APPRESSED` below
+         is the list of what an appressed face may hold, and
+         check-chloroplast.js reads it.
+
+       CUT ON THE BROAD FACE, THE STACKS STANDING. The discs lie flat,
+       parallel to the lens's two broad faces and stacked along its
+       thickness, which is where they really are, so every granum is a
+       column of coins standing on the floor of the bowl. From straight
+       above only the top coin shows; the default camera is oblique so the
+       stacking and the faces read together, the way every drawn
+       chloroplast shows them. Builder frame: x the long axis, y the thin
+       axis (the cut normal), z the width.
+
+       SCALE. One scene unit is 100 nm, the same as the mitochondrion's,
+       and the lens is honest to it: 5 µm long, 2.4 wide, 1.6 thick. A thylakoid
+       membrane, the lumen, the gap between stacked discs and the envelope
+       gap are exaggerated; cell/chloroplast.js declares the factors from the
+       numbers handed in here.
+
+       Returns a group whose `userData.detail` carries the named subgroups,
+       the machine sites (each with its stroma-facing `out` and a `lumen`
+       point behind the membrane), the grana, and pockets of points inside
+       each compartment. The geometry is here; the protons moving through
+       it, the rotors turning and everything a page can click are the
+       component's. */
+    const APPRESSED = ['psii', 'b6f'];
+    function chloroplastDetail(o = {}) {
+      const g = new THREE.Group();
+      const a = o.a || 25, b = o.b || 8, c = o.c || 12;   // long axis · thickness (the bowl's depth) · width
+      const q = o.detail === undefined ? 1 : o.detail;
+      const th = o.membrane === undefined ? 0.10 : o.membrane;        // one membrane, drawn — envelope and thylakoid alike
+      const lumenT = o.lumen === undefined ? 0.12 : o.lumen;           // the space inside a thylakoid
+      const gapT = o.gap === undefined ? 0.10 : o.gap;                 // the stroma between two stacked discs
+      const gapE = o.ims === undefined ? 0.25 : o.ims;                 // between the two envelope membranes
+      const discT = 2 * th + lumenT, rep = discT + gapT;               // one disc, and the stack's repeat
+      const open = clamp(o.open === undefined ? 1 : o.open, 0.3, 1);
+      const cutW = (PI / 2) * (1 + 0.5 * (1 - open));
+      const PHO = global.MolPalette ? global.MolPalette.photosynthesis : global.MolLib.PALETTE.photosynthesis;
+      const CH = ORG.chloroplast;
+
+      const sub = name => { const s = new THREE.Group(); s.userData.part = name; g.add(s); return s; };
+      const gOuter = sub('outer'), gInner = sub('inner'), gGranum = sub('granum'), gLamella = sub('lamella'),
+            gPsii = sub('psii'), gB6f = sub('b6f'), gPsi = sub('psi'), gSynthase = sub('synthase'),
+            gDna = sub('dna'), gRibo = sub('ribosome');
+
+      /* ---- the envelope: two membranes, a gap between ------------------
+         The same grain as plastidShell's, so the two levels of detail are
+         one object; w runs from the bottom pole to the cut. */
+      const radius = d => 1 + 0.035 * noise.fbm(d.x * 2.2 + 5, d.y * 2.2 + 2, d.z * 2.2, 2);
+      const lensS = (ax, by, cz) => (u, w) => { const d = dirUW(u, w); const r = radius(d); return new V3(d.x * ax * r, d.y * by * r, d.z * cz * r); };
+      const MEM_FINISH = { roughness: 0.42, clearcoat: 0.5 };
+      const shell = (S, colors) => new THREE.Mesh(buildShell(THREE, {
+        S, uRange: [0, 2 * PI], wRange: () => [0, cutW], uSeg: Math.round(160 * q), uPeriodic: true,
+        thickness: th, segs: { outer: Math.round(40 * q), rim: Math.max(4, Math.round(6 * q)), inner: Math.round(40 * q) },
+        colors,
+      }), mat(Object.assign({ vertexColors: true }, MEM_FINISH)));
+      gOuter.add(shell(lensS(a, b, c), shellOf(CH)));
+      /* The inner face of the inner envelope is the stroma: it is what the
+         bowl is full of, and the grana stand against it. */
+      const ai = a - th - gapE, bi = b - th - gapE, ci = c - th - gapE;
+      gInner.add(shell(lensS(ai, bi, ci), { outer: col(CH.envelopeInner), inner: col(CH.stroma), rim: col(CH.rim) }));
+      const aIn = ai - th, bIn = bi - th, cIn = ci - th;
+      // depth of the stroma floor under (x, z), ignoring the shell's grain
+      const floorAt = (x, z) => -bIn * Math.sqrt(Math.max(0, 1 - (x / aIn) ** 2 - (z / cIn) ** 2)) * 0.96;
+
+      /* ---- the grana ------------------------------------------------------
+         ONE LAYOUT, AUTHORED. There is no call for a different chloroplast
+         each time, and a packing left to chance put stacks where a reader
+         could not see them. Each entry is a granum standing on the floor of
+         the bowl: x and z in the cut plane, a disc radius, a disc count.
+         Stacks stand UP, their axis the lens's thin axis, so from an
+         oblique view both the stacking and the disc faces read, which is
+         how every drawn chloroplast shows them. LINKS says which stacks a
+         lamella joins, and every stack is in it at least once. */
+      const LAYOUT = [
+        [-19.0,  0.0, 1.6, 5], [-14.0,  3.5, 2.0, 7], [-13.0, -3.5, 1.9, 6],
+        [ -8.0,  0.5, 2.3, 9], [ -3.0,  4.5, 2.1, 8], [ -3.0, -4.5, 2.2, 8],
+        [  2.0,  0.0, 2.4, 10], [  7.0,  4.5, 2.1, 8], [  7.0, -4.5, 2.0, 7],
+        [ 12.0,  0.5, 2.3, 9], [ 16.5,  3.5, 1.9, 6], [ 16.5, -3.5, 1.9, 6],
+        [ 20.5,  0.0, 1.5, 5],
+      ];
+      const LINKS = [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4], [3, 5], [4, 6], [5, 6], [6, 7], [6, 8],
+                     [7, 9], [8, 9], [9, 10], [9, 11], [10, 12], [11, 12], [1, 4], [8, 11]];
+      const UP = new V3(0, 1, 0);
+      const grana = [];
+      for (const [x, z, rad0, n0] of LAYOUT) {
+        const depth = -floorAt(x, z);
+        // a stack must clear the cut by a little and the floor by a little
+        const n = Math.max(3, Math.min(n0, Math.floor((depth - 0.6) / rep)));
+        const rad = Math.min(rad0, depth * 0.45);
+        const h = n * rep;
+        const axis = new V3(rr(-0.05, 0.05), 1, rr(-0.05, 0.05)).normalize();
+        const side = new V3(1, 0, 0).addScaledVector(axis, -axis.x).normalize();
+        const up = new V3().crossVectors(axis, side).normalize();
+        const centre = new V3(x, floorAt(x, z) + 0.3 + h / 2, z);
+        const discs = [];
+        for (let k = 0; k < n; k++) discs.push(centre.clone().addScaledVector(axis, (k - (n - 1) / 2) * rep));
+        grana.push({ centre, axis, side, up, rad, n, h, foot: rad + 0.5, discs, lumen: [] });
+      }
+
+      /* Every disc is one instance of one lathed sac, stood on its side.
+         Faintly transparent so a proton that has gone INTO one still reads. */
+      /* Lit face of a disc: the granum colour, a lime the dark stroma floor
+         shows the gaps against. Opaque; the stacking is what has to read. */
+      const thyMat = mat(Object.assign({ color: CH.granum }, MEM_FINISH));
+      const nDiscs = grana.reduce((s, G) => s + G.n, 0);
+      {
+        const inst = new THREE.InstancedMesh(thylakoidDisc(1, 1, Math.max(12, Math.round(30 * q))), thyMat, nDiscs);
+        const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), sc = new V3();
+        let i = 0;
+        for (const G of grana) {
+          qt.setFromUnitVectors(UP, G.axis);
+          for (const d of G.discs) {
+            sc.set(G.rad * rr(0.97, 1.03), discT, G.rad * rr(0.97, 1.03));
+            m4.compose(d, qt, sc);
+            inst.setMatrixAt(i++, m4);
+          }
+        }
+        gGranum.add(inst);
+      }
+
+      /* ---- the lamellae: what makes it one membrane -----------------------
+         A flattened tube from the rim of each granum to the rim of its
+         nearest neighbours, sagging a little so it reads as a sheet and not
+         a strut. A granum with no neighbour in reach is joined to the
+         nearest one regardless: an island would say a separate lumen. */
+      const lamMat = mat(Object.assign({ color: CH.lamella, transparent: true, opacity: 0.9 }, MEM_FINISH));
+      const lamR = 0.6, LAM_FLAT = 0.16;
+      const lamellae = [];
+      const rimToward = (G, dir) => {
+        const rp = dir.clone().addScaledVector(G.axis, -dir.dot(G.axis));
+        if (rp.lengthSq() < 0.05) return G.centre.clone().addScaledVector(G.axis, Math.sign(dir.dot(G.axis)) * (G.h / 2 + 0.1));
+        rp.normalize();
+        return G.centre.clone().addScaledVector(rp, G.rad * 0.4).addScaledVector(G.axis, rr(-0.35, 0.2) * G.h);
+      };
+      {
+        const linked = new Set();
+        const join = (i, j) => {
+          const key = i < j ? i + ':' + j : j + ':' + i;
+          if (linked.has(key)) return;
+          linked.add(key);
+          const A = grana[i], B = grana[j];
+          const dir = new V3().subVectors(B.centre, A.centre); dir.y = 0; dir.normalize();
+          const p0 = rimToward(A, dir), p2 = rimToward(B, dir.clone().negate());
+          // stay on the stack's side: within its height, and above the floor
+          const onStack = (p, G) => clamp(p.y, Math.max(floorAt(p.x, p.z) + 0.4, G.centre.y - G.h / 2 + 0.2), Math.min(-0.5, G.centre.y + G.h / 2 - 0.2));
+          p0.y = onStack(p0, A); p2.y = onStack(p2, B);
+          const p1 = p0.clone().add(p2).multiplyScalar(0.5);
+          p1.y -= rr(0.1, 0.5);
+          p1.addScaledVector(new V3(-dir.z, 0, dir.x), rr(-0.15, 0.15) * p0.distanceTo(p2));
+          const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2);
+          const tSeg = Math.max(8, Math.round(24 * q)), rSeg = Math.max(6, Math.round(10 * q));
+          const geo = new THREE.TubeGeometry(curve, tSeg, lamR, rSeg, false);
+          // flatten each ring about its own centreline; a world-space scale pulls the sheet off the stacks
+          const pos = geo.attributes.position, c = new V3();
+          for (let t = 0; t <= tSeg; t++) {
+            curve.getPointAt(t / tSeg, c);
+            // flare at each end, wider and thinner, so the sheet fans into the disc it leaves
+            const e = Math.max(0, 1 - Math.min(t / tSeg, 1 - t / tSeg) / 0.3) ** 2;
+            const wide = 1 + 1.6 * e, flat = LAM_FLAT * (1 - 0.4 * e);
+            for (let r = 0; r <= rSeg; r++) {
+              const k = t * (rSeg + 1) + r;
+              pos.setXYZ(k, c.x + (pos.getX(k) - c.x) * wide, c.y + (pos.getY(k) - c.y) * flat, c.z + (pos.getZ(k) - c.z) * wide);
+            }
+          }
+          geo.computeVertexNormals();
+          gLamella.add(new THREE.Mesh(geo, lamMat));
+          lamellae.push({ curve, i, j });
+        };
+        for (let i = 0; i < grana.length; i++) {
+          const near = grana.map((G, j) => ({ j, d: G.centre.distanceTo(grana[i].centre) }))
+            .filter(x => x.j !== i).sort((p, q2) => p.d - q2.d);
+          const reach = (grana[i].foot + 2) * 2.2;
+          let made = 0;
+          for (const x of near) { if (x.d > reach && made > 0) break; join(i, x.j); if (++made >= 2) break; }
+        }
+      }
+
+      /* ---- where the machines go -----------------------------------------
+         Each site is a point ON a membrane with `out` pointing into the
+         stroma and `lumen` a point just behind it, inside the sac. An
+         appressed face — the gap between two stacked discs — may hold only
+         what APPRESSED lists. Everything open to the stroma may hold
+         anything, and that is where every synthase and every PSI goes. */
+      const sites = { psii: [], b6f: [], psi: [], synthase: [] };
+      const put = (kind, p, out, lumen, G) => sites[kind].push({ p, out, lumen, spin: rr(0, 2 * PI), granum: G ? grana.indexOf(G) : -1 });
+      const inPlane = (G, f, theta) => G.up.clone().multiplyScalar(Math.cos(theta) * f * G.rad).addScaledVector(G.side, Math.sin(theta) * f * G.rad);
+      for (const G of grana) {
+        /* Appressed faces: the gap between disc k-1 and disc k. The upper
+           half of the disc is the half the reader can see from above. */
+        for (let k = 1; k < G.n; k++) {
+          const gapC = G.centre.clone().addScaledVector(G.axis, (k - 0.5 - (G.n - 1) / 2) * rep);
+          const m = 1 + Math.floor(rand() * 2);
+          for (let s = 0; s < m; s++) {
+            const off = inPlane(G, rr(0.5, 0.9), rr(-1, 1) * PI);
+            const which = rand() < 0.5 ? -1 : 1;             // which of the two discs it belongs to
+            const p = gapC.clone().add(off);
+            const out = G.axis.clone().multiplyScalar(-which);   // into the gap, away from its own disc
+            const lumen = p.clone().addScaledVector(G.axis, which * (gapT / 2 + th + lumenT / 2));
+            const kind = APPRESSED[rand() < 0.72 ? 0 : 1];
+            put(kind, p, out, lumen, G);
+          }
+        }
+        /* The two end faces, open to the stroma. */
+        for (const e of [-1, 1]) {
+          const face = G.centre.clone().addScaledVector(G.axis, e * (G.h / 2 - th / 2));
+          const m = 2 + Math.floor(rand() * 2);
+          for (let s = 0; s < m; s++) {
+            const off = inPlane(G, rr(0.3, 0.85), rr(-1, 1) * PI);
+            const p = face.clone().add(off), out = G.axis.clone().multiplyScalar(e);
+            const lumen = p.clone().addScaledVector(G.axis, -e * (th + lumenT / 2));
+            const kind = ['psi', 'synthase', 'b6f'][s % 3];
+            put(kind, p, out, lumen, G);
+          }
+        }
+        /* The margins: the rim of every disc. Synthase rows and PSI live
+           here, where CF1 has stroma to hang into. */
+        const mm = 3 + Math.floor(rand() * 3);
+        for (let s = 0; s < mm; s++) {
+          const k = Math.floor(rand() * G.n), theta = rr(-1, 1) * PI;
+          const radial = inPlane(G, 1, theta).normalize();
+          const p = G.discs[k].clone().addScaledVector(radial, G.rad);
+          const lumen = G.discs[k].clone().addScaledVector(radial, G.rad - th - 0.15);
+          put(rand() < 0.6 ? 'synthase' : 'psi', p, radial, lumen, G);
+        }
+      }
+      /* Along each lamella, on its top face. */
+      for (const L of lamellae) {
+        const m = 2 + Math.floor(rand() * 3);
+        for (let s = 0; s < m; s++) {
+          const t = rr(0.15, 0.85);
+          const at = L.curve.getPoint(t);
+          const p = at.clone().addScaledVector(UP, lamR * LAM_FLAT);
+          put(['psi', 'synthase', 'b6f', 'psi'][s % 4], p, UP.clone(), at.clone(), null);
+        }
+      }
+
+      /* ---- the machines, as instances ------------------------------------
+         Iconic. PSII carries its water-splitting bulk on the LUMEN side, PSI
+         its ferredoxin-binding ridge on the STROMA side, so the two
+         silhouettes say which way each faces. b6f is a block through the
+         membrane. Each spans the sheet it sits in. */
+      {
+        const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), one = new V3(1, 1, 1), Y = new V3(0, 1, 0);
+        const place = (inst, i, p, dir) => { qt.setFromUnitVectors(Y, dir); m4.compose(p, qt, one); inst.setMatrixAt(i, m4); };
+        const body = (list, group, color, r, h, bump) => {
+          if (!list.length) return null;
+          const material = mat({ color, roughness: 0.42, clearcoat: 0.35 });
+          const cyl = new THREE.InstancedMesh(new THREE.CylinderGeometry(r, r * 0.9, h, 10), material, list.length);
+          list.forEach((s, i) => place(cyl, i, s.p, s.out));
+          group.add(cyl);
+          if (bump) {
+            const sph = new THREE.InstancedMesh(new THREE.SphereGeometry(bump.r, 10, 8), material, list.length);
+            list.forEach((s, i) => place(sph, i, s.p.clone().addScaledVector(s.out, bump.at), s.out));
+            group.add(sph);
+          }
+          return material;
+        };
+        const psiiMat = body(sites.psii, gPsii, PHO.psii, 0.20, 0.36, { r: 0.15, at: -0.24 });
+        body(sites.b6f, gB6f, PHO.b6f, 0.15, 0.36, null);
+        body(sites.psi, gPsi, PHO.psi, 0.19, 0.32, { r: 0.10, at: 0.22 });
+        g.userData.psiiMaterial = psiiMat;
+        /* ATP synthase: CFo in the membrane, a stalk, a CF1 head of three
+           lobes — one ATP per third of a turn, so the beats can be counted.
+           The head turns; the component drives it through spinRotors. */
+        const ns = sites.synthase.length;
+        if (ns) {
+          const gold = mat({ color: PHO.synthase, roughness: 0.38, clearcoat: 0.45 });
+          const stalkMat = mat({ color: PHO.stalk, roughness: 0.45, clearcoat: 0.3 });
+          const fo = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.17, 0.17, 0.26, 10), gold, ns);
+          const stalk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 0.30, 6), stalkMat, ns);
+          const f1 = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 10, 8), gold, ns * 3);
+          const rotors = [];
+          sites.synthase.forEach((s, i) => {
+            place(fo, i, s.p.clone(), s.out);
+            place(stalk, i, s.p.clone().addScaledVector(s.out, 0.27), s.out);
+            const u = new V3(0, 1, 0).cross(s.out);
+            if (u.lengthSq() < 1e-6) u.set(1, 0, 0);
+            u.normalize();
+            const v = s.out.clone().cross(u).normalize();
+            rotors.push({ i, centre: s.p.clone().addScaledVector(s.out, 0.50), u, v, lobeR: 0.15 });
+          });
+          gSynthase.add(fo, stalk, f1);
+          spinRotors(f1, rotors, 0);
+          g.userData.rotors = { mesh: f1, list: rotors };
+        }
+      }
+
+      /* ONE STARCH GRAIN, where the day's sugar is parked. The same layered
+         grain the amyloplast draws, off-centre hilum and all, and the same
+         starch colour, because it is the same substance. */
+      const gStarch = sub('starch');
+      {
+        const sx = -9, sz = -5, R0 = 1.7;
+        const cy = floorAt(sx, sz) + R0 * 0.85;
+        const grainMat = mat({ color: ORG.amyloplast.starch, roughness: 0.72, clearcoat: 0.12 });
+        const geo = displace(new THREE.SphereGeometry(1, 28, 20), (px, py, pz) => {
+          const d = 1 + 0.05 * noise.noise3(px * 3 + 2, py * 3, pz * 3); return [px * d, py * d, pz * d];
+        });
+        const grain = new THREE.Mesh(geo, grainMat);
+        grain.scale.set(R0 * 1.25, R0 * 0.8, R0);
+        grain.position.set(sx, cy, sz);
+        gStarch.add(grain);
+        g.userData.starch = grain.position.clone();
+      }
+
+      /* ---- the stroma ------------------------------------------------------
+         Its own genome, in several copies, and its own 70S ribosomes: a
+         cyanobacterium's, and the reason a chloroplast is read as one that
+         moved in. Placed where they clear the stacks. */
+      const clearsGrana = (x, y, z, m) => grana.every(G => {
+        const d = new V3(x, y, z).sub(G.centre);
+        const along = Math.abs(d.dot(G.axis)), across = d.clone().addScaledVector(G.axis, -d.dot(G.axis)).length();
+        return along > G.h / 2 + m || across > G.rad + m;
+      });
+      const stromaPt = (margin = 0.4) => {
+        for (let t = 0; t < 80; t++) {
+          const x = rr(-0.92, 0.92) * aIn, z = rr(-0.9, 0.9) * cIn;
+          if ((x / aIn) ** 2 + (z / cIn) ** 2 > 0.9) continue;
+          const fl = floorAt(x, z);
+          const y = rr(fl * 0.88, -0.35);
+          if (!clearsGrana(x, y, z, margin)) continue;
+          if (g.userData.starch && g.userData.starch.distanceTo(new V3(x, y, z)) < 2.4 + margin) continue;
+          return new V3(x, y, z);
+        }
+        return new V3(rr(-aIn, aIn) * 0.5, -0.6, 0);
+      };
+      {
+        const dnaMat = mat({ color: CH.dna, roughness: 0.55, clearcoat: 0.1 });
+        for (let i = 0; i < (o.dna === undefined ? 3 : o.dna); i++) {
+          const cc = stromaPt(0.9), loop = [];
+          for (let k = 0; k <= 24; k++) {
+            const A = (k / 24) * 2 * PI, wob = 1 + 0.34 * Math.sin(A * 3 + i) + 0.2 * Math.sin(A * 5 + i * 2);
+            loop.push(new V3(cc.x + Math.cos(A) * 0.55 * wob, cc.y + 0.18 * Math.sin(A * 2 + i), cc.z + Math.sin(A) * 0.55 * wob));
+          }
+          gDna.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(loop, true), Math.round(44 * q), 0.06, 5, true), dnaMat));
+        }
+        const nR = Math.round((o.ribosomes === undefined ? 70 : o.ribosomes) * q);
+        const ribo = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 6, 5),
+          mat({ color: CH.inner, roughness: 0.6, clearcoat: 0.1 }), nR);
+        const m4 = new THREE.Matrix4();
+        for (let i = 0; i < nR; i++) { const p = stromaPt(); m4.makeTranslation(p.x, p.y, p.z); ribo.setMatrixAt(i, m4); }
+        gRibo.add(ribo);
+      }
+
+      /* Points inside each compartment, for the protons that live there. A
+         lumen point is INSIDE a disc — in its plane, short of its rim — and
+         is kept on the granum so a proton pumped into one stack collects in
+         that stack. */
+      const pockets = { stroma: [], lumen: [], ims: [] };
+      for (let i = 0; i < 90; i++) pockets.stroma.push(stromaPt(0.3));
+      for (const G of grana)
+        for (let i = 0; i < 4 + G.n; i++) {
+          const k = Math.floor(rand() * G.n);
+          const p = G.discs[k].clone().add(inPlane(G, rr(0.1, 0.8), rr(-0.7, 0.7) * PI));
+          G.lumen.push(p); pockets.lumen.push(p);
+        }
+      for (const L of lamellae) for (let i = 0; i < 3; i++) { const p = L.curve.getPoint(rr(0.1, 0.9)); pockets.lumen.push(p); }
+      {
+        const S = lensS(a, b, c);
+        for (let i = 0; i < 40; i++) {
+          const u = rr(0, 2 * PI), w = rr(0.12 * PI, cutW - 0.08 * PI);
+          const p = S(u, w), nn = surfaceNormal(THREE, S, new V3(), u, w);
+          pockets.ims.push(p.addScaledVector(nn, -(th + gapE / 2)));
+        }
+      }
+
+      g.userData.parts = { shell: gOuter.children[0] };
+      g.userData.detail = {
+        groups: { outer: gOuter, inner: gInner, granum: gGranum, lamella: gLamella,
+                  psii: gPsii, b6f: gB6f, psi: gPsi, synthase: gSynthase, starch: gStarch, dna: gDna, ribosome: gRibo },
+        sites, pockets, grana, lamellae,
+        dims: { a, b, c, th, lumenT, gapT, gapE, rep, cutW,
+                grana: grana.length, thylakoids: nDiscs, lamellae: lamellae.length,
+                psii: sites.psii.length, b6f: sites.b6f.length, psi: sites.psi.length, synthases: sites.synthase.length,
+                granumRad: grana.length ? grana.reduce((s, G) => s + G.rad, 0) / grana.length : 0 },
+      };
+      return g;
+    }
+
     /* ---- parts: anchors, layers and a palette off the registered list ----
        Both cells register every organelle they build under a reader's name,
        and both owe a component's four part-facing things off that one list.
@@ -1432,7 +1838,7 @@
     }
 
     return { rand, rr, noise, col, mat, shellOf, bilayerOf, dirUW, partsOf, ORG,
-             nucleus, mitochondrion, mitochondrionDetail, spinRotors, golgi, roughER, chloroplast, amyloplast, vacuole };
+             nucleus, mitochondrion, mitochondrionDetail, spinRotors, golgi, roughER, chloroplast, chloroplastDetail, amyloplast, vacuole };
   }
 
   global.CellOrganelles = {

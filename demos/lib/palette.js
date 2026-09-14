@@ -253,7 +253,18 @@
          FLUID they sit in, which is why it is the pale one. */
       chloroplast:   { outer:0x4fc22e, inner:0x2f8f22, rim:0x8fe25a, head:0x4fc22e, tail:0xc4e79a,
                        thylakoid:0x178a2a, lamella:0x2f9c3e, stroma:0xa9d383,
-                       envelopeInner:0x3ba828 },
+                       envelopeInner:0x3ba828,
+                       /* `lumen` is the space INSIDE a thylakoid, one colour
+                          for grana and lamellae alike: it is one space, the
+                          way a mitochondrion's crista lumen and intermembrane
+                          space are one. `dna` is set below to the
+                          mitochondrion's: both are a bacterium's genome and
+                          a reader who has met one should recognise the other. */
+                       lumen:0xe4f3c6, dna:null,
+                       /* `granum` is the lit face of a stacked disc in the detailed
+                          organelle, a lime against which the dark gaps between coins
+                          read; the cut cell keeps its darker `thylakoid`. */
+                       granum:0x6cc93f },
       /* Deeper than it looks it should be: the envelope is drawn TRANSLUCENT
          (organelles.js's amyloplast), so a near-white here washes out to
          nothing over the pale grains and the organelle loses its edge. */
@@ -385,6 +396,25 @@
   };
 
   PALETTE.respiration.proton = PALETTE.atoms.H;
+  PALETTE.organelles.chloroplast.dna = PALETTE.organelles.mitochondrion.dna;
+
+  /* THE LIGHT REACTIONS, at cell/chloroplast.js's rung. Three machines where
+     respiration draws one family: the two photosystems are the parts a
+     photosynthesis lesson names, so each gets a hue of its own. THE PUMP IS
+     MEMBRANE'S COMPLEX: cytochrome b6f is the thing membrane/membrane.js draws
+     as its one indigo machine in a thylakoid, so it is read from
+     `respiration.complex` rather than typed, and the synthase is the same
+     gold in all three boxes. Set after the literal for the same reason the
+     proton is. */
+  PALETTE.photosynthesis = {
+    psii: 0x2b7f9c,      // splits water: teal, on the blue side of the chain
+    psi:  0x7a5aa6,      // lifts the electron again for NADPH: violet
+    b6f: PALETTE.respiration.complex,
+    synthase: PALETTE.respiration.synthase,
+    stalk: PALETTE.respiration.stalk,
+    proton: PALETTE.atoms.H,
+    oxygen: PALETTE.atoms.O,
+  };
 
   global.MolPalette = PALETTE;
   if(typeof module==='object' && module.exports) module.exports = { PALETTE };

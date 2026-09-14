@@ -108,6 +108,7 @@
     'cell/animalcell.js',
     'cell/plantcell.js',
     'cell/mitochondrion.js',
+    'cell/chloroplast.js',
     'sickle/sickle-fibre.js',
     'sickle/hbcrowd.js',
     'graph/graph.js',
@@ -161,6 +162,7 @@
        organelle loads it for one thing: the rotor's stoichiometry, so this
        box and a Membrane beside it cannot disagree about what an ATP costs. */
     Mitochondrion: ['membrane/chemiosmosis.js', 'cell/organelles.js', 'cell/mitochondrion.js'],
+    Chloroplast: ['membrane/chemiosmosis.js', 'cell/organelles.js', 'cell/chloroplast.js'],
     PlantCell:  ['lib/mol-small.js', 'cell/organelles.js', 'cell/plantcell.js'],
     /* fx.js is optional to the component and listed anyway: without it the
        reaction still runs and simply marks no bonds, which reads as a beat

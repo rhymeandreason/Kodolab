@@ -189,6 +189,8 @@ molecules · macromolecule · membrane · organelle · cell · tissue · organ �
 
 **Respiration is three rungs and the middle one is Mitochondrion.** The reactions themselves, one step on two molecules, are RespirationReaction; WHERE IN THE CELL is AnimalCell; the architecture the gradient stands in is Mitochondrion; the gradient's own arithmetic is Membrane with `context:'mitochondrion'`. A step asking how chemiosmosis works wants the last two together — the organelle for where the protons go, the membrane for how much it buys.
 
+**Photosynthesis is the same three rungs, and the middle one is Chloroplast.** WHERE IN THE CELL is PlantCell with `tissue:'leaf'`; the architecture the gradient stands in is Chloroplast; the gradient's own arithmetic is Membrane with `context:'thylakoid'`. Neither organelle draws the reactions that feed it or spend it.
+
 **Two rungs are often the lesson, not a choice between them.** *Why does osmosis matter* is two boxes or two steps: Membrane for the mechanism (water crossing, counted) and BloodCell or PlantCell for the consequence (a cell bursting, a leaf wilting). Neither half answers it alone — the mechanism without a consequence is a headcount nobody asked for, and the consequence without the mechanism is a shape changing for no stated reason. The same holds for a pump and the cell it keeps alive, or a chloroplast and the tree it feeds. **When a question asks why something MATTERS, reach for the pair.**
 
 Where a real size matters, say it as a fact about the real thing ("a red blood cell is about 8 µm across"), never as a measurement of the picture.
@@ -685,6 +687,31 @@ Glides: `flow` (pass `{snap:true}` for a slider under a thumb). Snaps: `uncouple
 Parts, each with a card: `outer`, `porin`, `ims`, `inner`, `crista`, `junction`, `complex`, `synthase`, `matrix`, `dna`, `ribosome`, `proton`. **Four of them can be pointed at but not hidden** — `crista` and `junction` are places on the inner membrane and `ims` and `matrix` are spaces, so they take a `notes` chip and never appear under `layers`. **`crista`, `junction`, `synthase`, `complex`, `proton` and `porin` declare a view**, so a `zoom` chip for one of those travels; a `notes` chip only labels.
 
 Good for: what a mitochondrion IS, the two membranes and why only one holds a gradient, cristae and surface area, where the electron transport chain sits, why an uncoupler makes heat, mitochondria as ex-bacteria. Not for: the Krebs cycle or glycolysis (a pathway lesson), the numbers on the gradient (Membrane), or a cell with other organelles in it (AnimalCell).
+
+## Chloroplast — one organelle, cut open, membrane by membrane
+
+**Scale**: organelle, single. **Measured along, drawn thick**: one scene unit is 100 nm, so `state().lengthNm`, `.widthNm` and `.granumNm` are real and printable. Membranes, the lumen, the stacking gap and the machines are exaggerated — `Chloroplast.SCALE.exag` has the factors, and a page prints those rather than typing one.
+
+```js
+const C = Chloroplast.mount(el, {
+  light: 0.6,         // 0..1 how bright; 0 is dark and everything stops. Glides
+  uncoupler: false,   // protons leave the lumen without a synthase: no ATP, all heat
+});
+```
+
+Two envelope membranes, and inside them **one thylakoid membrane**: grana as columns of flattened sacs standing in the stroma, stroma lamellae joining every stack to the next, photosystem II in the faces between stacked discs, photosystem I and ATP synthase only where the membrane is open to the stroma, a starch grain, plastid DNA and ribosomes in the stroma, and protons making the round trip: into the lumen at cytochrome b6f and from water at PSII, back out through a synthase. Every fourth proton from water releases an O₂, which drifts up out of the cut.
+
+**Reach for this the moment a step says "in the chloroplast" and means it**, and as the step between PlantCell and Membrane in a photosynthesis lesson: the cell for where, this for the architecture, Membrane with `context:'thylakoid'` for how much. Two claims it exists to carry, both of which a diagram of separate green coins gets wrong: **the thylakoid is one membrane around one lumen**, so a gradient built in any stack drives every synthase in the organelle; and **the machines sort by where they fit**, PSII between stacked discs, PSI and synthase never there because both hang a bulk into the stroma. A third the picture shows without a caption: the gradient is built twice, by a pump and by water splitting, and the oxygen is the waste. **The pump is Membrane's indigo complex and the synthase the mitochondrion's gold**, so the three boxes can sit in one lesson; the two photosystems have colours of their own.
+
+**It is not the arithmetic and refuses to be.** No pH, no proton-motive force, no spectrum, **no Calvin cycle**: the gradient is Membrane with `context:'thylakoid'`, one rung down, and what the ATP and NADPH buy is a pathway lesson. Mount both when a step asks how much. The rotor's stoichiometry is the one number they share, read from the same place.
+
+Glides: `light` (pass `{snap:true}` for a slider under a thumb). Snaps: `uncoupler`. One model: the layout of grana is authored, so there is no seed.
+
+`state()`: `light`, `uncoupler`, counts (`grana`, `thylakoids`, `lamellae`, `psii`, `b6f`, `psi`, `synthases`, `thylakoidsPerGranum`), `protons.lumen / .stroma`, the ledger as `ledger.pumped`, `.fromWater`, `.throughSynthase`, `.leaked`, `.rotorTurns`, `.atpMade`, `.nadphMade`, `.o2Released` (each also flat on `state()`), `stoichiometry` (protons per turn and per ATP from the rotor; per O₂ and per NADPH from water), and the sizes (`lengthNm`, `widthNm`, `thicknessNm`, `granumNm`, `membraneNm`, `lumenNm`, `gapNm`). **Printable: one of `atpMade`, `o2Released` or `protons.lumen`, and `lengthNm` or `granumNm`.** The rest drives the page. A drawn proton stands for a great many, so nothing here is a concentration. Events: `frame`, `hover`, `pick`, `turn`, `oxygen`.
+
+Parts, each with a card: `outer`, `inner`, `ims`, `stroma`, `granum`, `thylakoid`, `lamella`, `lumen`, `psii`, `b6f`, `psi`, `synthase`, `starch`, `dna`, `ribosome`, `proton`, `oxygen`. **Four can be pointed at but not hidden** — `ims`, `stroma` and `lumen` are spaces and `thylakoid` is one disc of a granum — so they take a `notes` chip and never appear under `layers`. **`granum`, `thylakoid`, `lamella`, `psii`, `b6f`, `psi`, `synthase`, `proton` and `oxygen` declare a view**, so a `zoom` chip for one of those travels; a `notes` chip only labels.
+
+Good for: what a chloroplast IS, the envelope against the thylakoid and why only one holds a gradient, grana and why stacking, where the light reactions sit, where the oxygen comes from, why an uncoupler makes heat, chloroplasts as ex-cyanobacteria. Not for: the Calvin cycle or a pigment's spectrum (a pathway lesson), the numbers on the gradient (Membrane), or a cell with other organelles in it (PlantCell).
 
 ## The sandbox shell
 

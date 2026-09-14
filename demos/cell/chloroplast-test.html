@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Served at /library/chloroplast by a vercel.json rewrite, which does not move the file. -->
+<base href="/demos/cell/">
+<script defer src="/demos/lib/site.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chloroplast: Grana, Thylakoids and the Light Reactions in 3D — Kodolab</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="One chloroplast cut open, membrane by membrane: grana and lamellae, the light reactions, placed, protons, and the oxygen.">
+<link rel="canonical" href="https://www.kodolab.org/library/chloroplast">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/library/chloroplast">
+<meta property="og:title" content="Chloroplast: Grana, Thylakoids and the Light Reactions in 3D — Kodolab">
+<meta property="og:description" content="One chloroplast cut open, membrane by membrane: grana and lamellae, the light reactions, placed, protons, and the oxygen.">
+<meta name="robots" content="noindex">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
+<style>
+  .bench-group { display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .bench-group:first-child { padding-top: 0; border-top: 0; }
+  .bench-hd { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .bench-out { font-family: var(--font-mono); font-size: 12px; line-height: 1.5; white-space: pre; overflow-x: auto;
+    background: var(--ink); color: #eceadf; border-radius: 14px; padding: 14px 16px; margin: 0; }
+  .lshell-panel .show-panel .show-chip { font-family: var(--display); font-weight: 500; }
+  /* A bench is one screen, not a sequence. */
+  .lshell-nav, .lshell-progress { display: none; }
+  .lshell-scroll { padding-bottom: 32px; }
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../lib/palette.js"></script>
+<script src="../lib/tokens-from-palette.js"></script>
+<script src="../lib/molecules.js"></script>
+<script src="../lib/scene.js"></script>
+<script src="../lib/annotate.js"></script>
+<script src="../kit/card-stage.js"></script>
+<script src="../kit/lesson-shell.js"></script>
+<script src="../membrane/chemiosmosis.js"></script>
+<script src="../cell/organelles.js"></script>
+<script src="../cell/chloroplast.js"></script>
+<script>
+/* The bench for cell/chloroplast.js: every parameter live on the organelle,
+   every readout off state(). On the lesson shell, so the component is judged
+   in the chrome a student meets it in. */
+
+const D = Chloroplast.DEFAULTS;
+const CHIPS = { notes: ['granum', 'lamella', 'lumen', 'psii', 'synthase', 'proton'],
+                zoom:  ['granum', 'lamella', 'psii', 'synthase'],
+                layers: ['granum', 'lamella', 'psii', 'b6f', 'psi', 'synthase', 'proton', 'oxygen', 'starch', 'dna'] };
+
+const shell = LessonShell.create({
+  brand: 'Chloroplast · component bench',
+  hint: 'Drag to orbit · Click a part to select it',
+  steps: [{
+    eyebrow: 'cell/chloroplast.js',
+    title: 'One chloroplast, cut open',
+    body: '<p>Two envelope membranes, and inside them one thylakoid membrane: grana as stacks of sacs, lamellae joining every stack to the next, the light reactions on it, and protons making the round trip. Everything below is a <strong>set()</strong> and every number a <strong>state()</strong>.</p>',
+    onEnter: bench,
+  }],
+});
+
+const M = Chloroplast.mount(shell.stage, { viewOffset: shell.viewOffset });
+let allNotes = false;
+M.on('pick', n => { if (!allNotes) M.notes(n ? [n] : false); });
+/* The console is part of the bench: `chl.set({...})`, `chl.lookAt('granum')`,
+   `chl.state()`, and `chl.pump(1/60)` when a backgrounded tab has stopped rAF. */
+window.chl = M;
+
+function bench(ctx) {
+  const ui = ctx.ui;
+  ui.controls(`
+    <div class="bench-group">
+      <div class="bench-hd">the light</div>
+      <div class="slider"><div class="slider-head"><span class="label">light</span><span class="value" data-v="light"></span></div>
+        <input type="range" id="light" min="0" max="1" step="0.01" value="${D.light}"></div>
+      <div class="row">
+        <label class="switch"><input type="checkbox" id="unc"><span class="track"></span>uncoupler</label>
+      </div>
+      <p class="foot">An uncoupler is a hole, not a machine: protons leave the lumen without touching a synthase, the rotor stops, and the light all leaves as heat.</p>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">what the component says</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-label">length</span><span class="stat-value" id="rd-len">—</span></div>
+        <div class="stat"><span class="stat-label">grana</span><span class="stat-value" id="rd-gr">—</span></div>
+        <div class="stat"><span class="stat-label">thylakoids</span><span class="stat-value" id="rd-th">—</span></div>
+        <div class="stat"><span class="stat-label">lamellae</span><span class="stat-value" id="rd-la">—</span></div>
+        <div class="stat"><span class="stat-label">PSII · b6f · PSI</span><span class="stat-value" id="rd-ps" style="font-size:15px">—</span></div>
+        <div class="stat"><span class="stat-label">synthases</span><span class="stat-value" id="rd-sy">—</span></div>
+        <div class="stat"><span class="stat-label">H⁺ in lumen</span><span class="stat-value" id="rd-lum">—</span></div>
+        <div class="stat"><span class="stat-label">pumped · from water</span><span class="stat-value" id="rd-src" style="font-size:15px">—</span></div>
+        <div class="stat"><span class="stat-label">rotor turns</span><span class="stat-value" id="rd-turn">—</span></div>
+        <div class="stat"><span class="stat-label">ATP</span><span class="stat-value" id="rd-atp">—</span></div>
+        <div class="stat"><span class="stat-label">NADPH</span><span class="stat-value" id="rd-nadph">—</span></div>
+        <div class="stat"><span class="stat-label">O₂</span><span class="stat-value" id="rd-o2">—</span></div>
+        <div class="stat"><span class="stat-label">leaked</span><span class="stat-value" id="rd-leak">—</span></div>
+        <div class="stat"><span class="stat-label">selected</span><span class="stat-value" id="rd-sel" style="font-size:15px">—</span></div>
+      </div>
+      <p class="foot" id="rd-stoich"></p>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">the chips a step would offer</div>
+      <div id="bench-chips"></div>
+      <button class="btn ghost" type="button" id="all-notes" aria-pressed="false">Show every annotation</button>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">paste into chloroplast.js</div>
+      <pre class="bench-out" id="out"></pre>
+      <button class="btn secondary" type="button" id="copy">Copy</button>
+    </div>`);
+
+  const out = ui.q('#out');
+  const snippet = () => {
+    out.textContent =
+      `const DEFAULTS = {\n` +
+      `  light: ${(+ui.q('#light').value).toFixed(2)}, uncoupler: ${ui.q('#unc').checked},\n` +
+      `  protons: ${D.protons}, detail: ${D.detail},\n};\n\n` +
+      `ctx.ui.showPanel(c, ${JSON.stringify(CHIPS)});`;
+  };
+  ui.q('#copy').onclick = () => navigator.clipboard.writeText(out.textContent);
+
+  /* Every slider snaps: a drag a 0.7s glide is chasing feels broken. */
+  ui.range(ui.q('#light'), v => {
+    M.set({ light: v }, { snap: true });
+    ui.q('[data-v=light]').textContent = v === 0 ? 'dark' : v.toFixed(2);
+    snippet();
+  });
+  ui.q('#unc').onchange = e => { M.set({ uncoupler: e.target.checked }); snippet(); };
+
+  CardStage.showPanel(ui.q('#bench-chips'), M, CHIPS);
+
+  /* Every anchor at once, which no lesson should do: the bench is where you
+     find out what the component can label before a step picks two. */
+  const all = ui.q('#all-notes');
+  all.onclick = () => {
+    const on = all.getAttribute('aria-pressed') !== 'true';
+    allNotes = on;
+    all.setAttribute('aria-pressed', String(on));
+    all.textContent = on ? 'Hide annotations' : 'Show every annotation';
+    M.notes(on ? M.anchors().map(a => a.name) : false);
+  };
+
+  const NAMES = Chloroplast.LIBRARY;
+  M.on('frame', s => {
+    ui.q('#rd-len').textContent = (s.lengthNm / 1000).toFixed(1) + ' µm';
+    ui.q('#rd-gr').textContent = s.grana;
+    ui.q('#rd-th').textContent = s.thylakoids;
+    ui.q('#rd-la').textContent = s.lamellae;
+    ui.q('#rd-ps').textContent = s.psii + ' · ' + s.b6f + ' · ' + s.psi;
+    ui.q('#rd-sy').textContent = s.synthases;
+    ui.q('#rd-lum').textContent = s.protons.lumen + ' / ' + s.protons.total;
+    ui.q('#rd-src').textContent = s.pumped + ' · ' + s.fromWater;
+    ui.q('#rd-turn').textContent = s.rotorTurns.toFixed(1);
+    ui.q('#rd-atp').textContent = s.atpMade;
+    ui.q('#rd-nadph').textContent = s.nadphMade;
+    ui.q('#rd-o2').textContent = s.o2Released;
+    ui.q('#rd-leak').textContent = s.leaked;
+    ui.q('#rd-sel').textContent = s.selected ? NAMES[s.selected].text : '—';
+    ui.q('#rd-stoich').textContent =
+      `${s.stoichiometry.protonsPerTurn} H⁺ a turn, ${s.stoichiometry.atpPerTurn} ATP a turn, read from membrane/chemiosmosis.js. ` +
+      `${s.stoichiometry.protonsPerO2} H⁺ from water per O₂, ${s.stoichiometry.protonsPerNADPH} per NADPH. ` +
+      `Grana about ${Math.round(s.granumNm)} nm across, ${s.thylakoidsPerGranum} thylakoids each; ` +
+      `membranes drawn at ${Math.round(s.membraneNm)} nm against a real 4.`;
+  });
+  snippet();
+}
+
+shell.goTo(0);
+</script>
+</body>
+</html>
