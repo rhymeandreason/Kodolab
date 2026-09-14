@@ -547,11 +547,12 @@ function drawLesson(ctx, W, H) {
   const im = img(c.image);
   const landscape = W > H * 1.3;
   const gap = 20 * u;
+  const g = c.image ? 1 : 1.7;      // no image: the text is the whole post, so it breathes
   const text = (x, yy, maxW, maxH) => {
-    const eb = c.eyebrow ? block(ctx, c.eyebrow, { x, y: yy, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 30 * u : 0;
-    const dk = c.deck ? block(ctx, c.deck, { x, y: 0, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 22 * u : 0;
+    const eb = c.eyebrow ? block(ctx, c.eyebrow, { x, y: yy, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 30 * u * g : 0;
+    const dk = c.deck ? block(ctx, c.deck, { x, y: 0, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 22 * u * g : 0;
     const hd = block(ctx, c.headline, { x, y: yy + eb, maxW, size: 80 * u, min: 40 * u, maxH: maxH - eb - dk, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A });
-    if (c.deck) block(ctx, c.deck, { x, y: yy + eb + hd.h + 22 * u, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A });
+    if (c.deck) block(ctx, c.deck, { x, y: yy + eb + hd.h + 22 * u * g, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A });
     return eb + hd.h + dk;
   };
   if (landscape) {
@@ -563,7 +564,10 @@ function drawLesson(ctx, W, H) {
     return;
   }
   const avail = H - P - y, maxW = W - 2 * P;
-  if (!c.image) { text(P, y, maxW, avail); return; }
+  if (!c.image) {
+    ctx.save(); ctx.globalAlpha = 0; const th = text(P, y, maxW, avail * .8); ctx.restore();
+    text(P, y + Math.max(0, (avail - th) / 2 - 40 * u), maxW, avail * .8); return;
+  }
   const textMax = avail * (H > W * 1.5 ? .42 : .5);
   ctx.save(); ctx.globalAlpha = 0; const th = text(P, y, maxW, textMax); ctx.restore();
   const ih = avail - th - gap - 28 * u;
@@ -576,14 +580,14 @@ function drawStatement(ctx, W, H) {
   ctx.fillStyle = G.fill; ctx.fillRect(0, 0, W, H);
   if (S.dots) motes(ctx, W, H, u);
   const maxW = W - 2 * P, barH = 34 * u, top = P + barH + 40 * u, bottom = H - P - barH - 40 * u;
-  const eb = c.eyebrow ? block(ctx, c.eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 34 * u : 0;
-  const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 30 * u : 0;
+  const eb = c.eyebrow ? block(ctx, c.eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 48 * u : 0;
+  const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 52 * u : 0;
   const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: 108 * u, min: 48 * u, maxH: bottom - top - eb - dk, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A, measure: true });
   let y = top + Math.max(0, (bottom - top - eb - hm.h - dk) / 2);
   if (c.eyebrow) block(ctx, c.eyebrow, { x: P, y, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true });
   y += eb;
   block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A });
-  y += hm.h + 30 * u;
+  y += hm.h + 52 * u;
   if (c.deck) block(ctx, c.deck, { x: P, y, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A });
   bottombar(ctx, W, H, P, u, G, S.url);
 }
@@ -609,17 +613,17 @@ function drawSlide(ctx, W, H, i) {
   }
   // cover and cta: the statement layout, with the pill on the cta
   const barH = 34 * u, top = y, low = H - P - barH - 40 * u;
-  const eb = eyebrow ? block(ctx, eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 34 * u : 0;
-  const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 30 * u : 0;
+  const eb = eyebrow ? block(ctx, eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 48 * u : 0;
+  const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 52 * u : 0;
   const pl = role === 'cta' ? 28 * u * 2.3 + 40 * u : 0;
   const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: role === 'cover' ? 104 * u : 88 * u, min: 44 * u, maxH: low - top - eb - dk - pl, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A, measure: true });
   y = top + Math.max(0, (low - top - eb - hm.h - dk - pl) / 2);
   if (eyebrow) block(ctx, eyebrow, { x: P, y, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true });
   y += eb;
   block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A });
-  y += hm.h + 30 * u;
+  y += hm.h + 52 * u;
   if (c.deck) { block(ctx, c.deck, { x: P, y, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A }); y += dk; }
-  if (role === 'cta') pill(ctx, S.url, P, y + 10 * u, u, G);
+  if (role === 'cta') pill(ctx, S.url, P, y + 20 * u, u, G);
   bottombar(ctx, W, H, P, u, G, role === 'cover' ? 'swipe  →' : S.url, false);
 }
 
