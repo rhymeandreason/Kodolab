@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Site-wide chrome: analytics + the foot. Absolute src, because the
+     featured pages set <base href>. lib/site.js -->
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at a short URL by a vercel.json rewrite, which does not move the
+     file: every ../../ path below resolves against this. docs/deploy.md. -->
+<base href="/demos/proteins/prion/">
+<title>Prion protein — Kodolab</title>
+<meta name="description" content="The prion protein in 3D, from real coordinates: one sequence that folds two ways, and the disease fold stacked into the fibre that templates its own shape.">
+
+<!-- ===================================================================
+     THE PRION PROTEIN, IN THE GLOSSARY SHAPE. dna-structure.html's page,
+     as proteins/myoglobin/myoglobin-structure.html wears it: one molecule
+     fixed on the left, the parts scrolling past on the right.
+
+     THREE VIEWS, ONE BOX, and they are the bench's three. The healthy fold
+     (1QLZ, NMR) and one rung of the disease fibril (6LNI, cryo-EM) are
+     the same human sequence, and the stack is the same 6LNI with all ten
+     chains drawn. The bench (prion-test.html) settled which files; this
+     page tells the story in them and nothing else.
+
+     WHAT THIS PAGE CANNOT SHOW: the conversion. Both ends are deposited
+     and the path between them has never been imaged, so the page says so
+     rather than animating a guess.
+
+     EVERY NUMBER IS READ FROM THE BAKE AT RENDER TIME: helix and strand
+     fractions off the ss string, extents off the CA atoms, the rung
+     spacing off consecutive chains of the stack.
+     =================================================================== -->
+
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="../../css/kodo.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+<style>
+  :root{--stage-w:62vw}
+  #stage{position:fixed;top:0;left:0;width:var(--stage-w);height:100vh;z-index:1;
+    background:var(--surface-stage);background-image:none;
+    border-right:1px solid var(--border-hair)}
+  #stage canvas{display:block;width:100%;height:100%}
+  #specimen{position:absolute;left:26px;bottom:22px;z-index:6;max-width:44ch;
+    font-family:var(--font-editorial);font-size:13px;line-height:1.45;
+    color:var(--text-muted)}
+  #specimen .pdb{font-family:var(--font-ui);letter-spacing:.06em;
+    color:var(--text-strong)}
+  #specimen a{color:var(--text-muted)}
+
+  #read{position:relative;z-index:2;margin-left:var(--stage-w);
+    background:var(--surface-page);
+    padding:0 clamp(28px,4vw,56px)}
+  #read .col{max-width:46ch;margin:0 auto}
+
+  #read section:first-of-type{padding-top:14vh}
+  #read section:first-of-type h3{font-size:clamp(32px,3.6vw,44px)}
+  #read .deck{margin:14px 0 0;font-family:var(--font-editorial);font-size:18px;
+    line-height:1.55;color:var(--text-muted)}
+  #read .hint{margin:36px 0 0;font-family:var(--font-ui);font-size:12px;
+    letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
+
+  #read section{padding:22vh 0;border-top:1px solid var(--border-hair)}
+  #read section:first-of-type{border-top:0}
+  #read section{opacity:.34;transition:opacity .45s ease}
+  #read section[aria-current="true"]{opacity:1}
+
+  #read .num{font-family:var(--font-ui);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--text-dim)}
+  #read h3{margin:8px 0 0;font-family:var(--font-display);
+    font-weight:var(--weight-regular);font-size:clamp(24px,2.6vw,32px);
+    line-height:1.15;letter-spacing:-.2px;color:var(--text-strong)}
+  #read .gloss{margin:4px 0 0;font-family:var(--font-editorial);font-size:14px;
+    font-style:italic;color:var(--text-muted)}
+  #read .claim{margin:18px 0 0;font-family:var(--font-editorial);font-size:18px;
+    line-height:1.6;color:var(--text-body)}
+  #read .claim b{font-weight:600;color:var(--text-strong)}
+  #read .claim a{color:var(--text-strong)}
+
+  /* QUICK STATS, under the text of every part that switches file: this
+     protein's three views are three different experiments, so each one earns
+     its own row. */
+  #read .measure{display:flex;flex-wrap:wrap;gap:1.1rem 1.75rem;margin:40px 0 0;
+    padding:28px 0 8px;border-top:1px solid var(--border-hair)}
+  #read .measure div{min-width:7rem}
+  #read .measure .n{display:block;font-family:var(--font-display);font-size:22px;
+    line-height:1.1;color:var(--text-strong)}
+  #read .measure .l{display:block;margin-top:3px;font-family:var(--font-ui);
+    font-size:12.5px;color:var(--text-muted)}
+
+  #read dl{margin:20px 0 0;padding-left:14px;
+    border-left:1px solid var(--border-hair)}
+  #read dt{font-family:var(--font-ui);font-size:12.5px;font-weight:600;
+    letter-spacing:.01em;color:var(--text-strong);margin-top:12px}
+  #read dt:first-child{margin-top:0}
+  #read dt a{color:inherit;text-decoration:none;border-bottom:1px solid var(--border-hair)}
+  #read dd{margin:2px 0 0;font-family:var(--font-editorial);font-size:14px;
+    line-height:1.5;color:var(--text-muted)}
+
+  #read .tail{height:52vh}
+
+  @media (max-width:900px){
+    #stage{width:100%;height:52vh;border-right:0;
+      border-bottom:1px solid var(--border-hair)}
+    #read{margin-left:0;padding-top:52vh}
+    #read section:first-of-type{padding-top:8vh}
+    #read section{padding:12vh 0}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <p id="specimen"></p>
+</div>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  <a class="crumb" href="/proteins">proteins</a>
+</nav>
+
+<div id="read"><div class="col">
+  <div id="sections"></div>
+  <div class="tail"></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../lib/annotate.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script>
+'use strict';
+
+const ME = ProteinLib.byKey('prion');
+const stage = document.getElementById('stage');
+const $ = id => document.getElementById(id);
+
+/* One box, re-fed. Each bake carries its own measured basis (a fibril has a
+   convention, axis vertical, and the baker solves it), so no view is passed. */
+const box = Proteinbox.create({
+  mount: stage,
+  orbit: true,
+  stage: { ortho: false, turn: 'trackball' },
+  pad: 1.15,
+  sub: 10,
+});
+const TWEEN = 620;
+
+const NOTES = Annot.create(THREE, stage, box.camera, { mode:'on' });
+(function tick(){ NOTES.step(); requestAnimationFrame(tick); })();
+
+const traces = {};
+let shownId = null;
+
+/* Where a CA atom is NOW, in world: the chain group carries the view basis,
+   and the box moves its root, so the anchor is asked each frame. */
+const worldAt = p => () => {
+  const g = box.group;
+  g.updateWorldMatrix(true, false);
+  return g.localToWorld(new THREE.Vector3(p[0], p[1], p[2]));
+};
+const ch = t => t.chains[t.order[0]];
+const centroid = P => [0, 1, 2].map(k => P.reduce((s, p) => s + p[k], 0) / P.length);
+
+/* ---- measured off the bake ------------------------------------------------ */
+const frac = (t, letter) => {
+  const s = ch(t).ss;
+  return Math.round(100 * [...s].filter(c => c === letter).length / s.length);
+};
+/* Runs of one ss letter, as [start, end] indices into CA: a helix is a run of
+   H, and its label hangs on the CA at the middle of it. */
+const runs = (t, letter) => {
+  const out = [], s = ch(t).ss;
+  for(let i = 0; i < s.length; i++){
+    if(s[i] !== letter) continue;
+    let j = i; while(j + 1 < s.length && s[j + 1] === letter) j++;
+    out.push([i, j]); i = j;
+  }
+  return out;
+};
+const runMid = (t, [a, b]) => ch(t).CA[Math.round((a + b) / 2)];
+
+/* Extents along the chain's own principal axes: a deposition's frame is
+   wherever the depositor left it, so x, y, z would report orientation rather
+   than shape. Three axes by power iteration, deflated in turn. */
+function principal(P){
+  const n = P.length, c = centroid(P);
+  const Q = P.map(p => p.map((v, i) => v - c[i]));
+  let C = [0, 1, 2].map(i => [0, 1, 2].map(j => Q.reduce((s, q) => s + q[i] * q[j], 0) / n));
+  const out = [];
+  for(let k = 0; k < 3; k++){
+    let v = [1, 0.3, 0.1];
+    for(let it = 0; it < 200; it++){
+      const w = C.map(row => row.reduce((s, a, j) => s + a * v[j], 0));
+      const m = Math.hypot(...w) || 1;
+      v = w.map(x => x / m);
+    }
+    const proj = Q.map(q => q.reduce((s, x, i) => s + x * v[i], 0));
+    out.push(Math.max(...proj) - Math.min(...proj));
+    const lam = v.reduce((s, x, i) => s + x * C[i].reduce((t, a, j) => t + a * v[j], 0), 0);
+    C = C.map((row, i) => row.map((a, j) => a - lam * v[i] * v[j]));
+  }
+  return out.sort((a, b) => b - a);
+}
+const extents = t => principal(ch(t).CA);
+
+/* RUNG SPACING: the median centre-to-centre distance between consecutive
+   chains. Median, because the deposition holds two protofilaments and the
+   step from the last chain of one to the first of the other is not a rung. */
+function rungs(t){
+  const cs = t.order.map(id => centroid(t.chains[id].CA));
+  const d = cs.slice(1).map((c, i) => Math.hypot(...c.map((v, k) => v - cs[i][k])));
+  const gap = d.slice().sort((a, b) => a - b)[Math.floor(d.length / 2)];
+  /* A step several rungs long is the jump from one protofilament to the next. */
+  const stacks = 1 + d.filter(x => x > 3 * gap).length;
+  return { gap, stacks, per: t.order.length / stacks };
+}
+
+const fileStats = (id, t) => {
+  const v = ProteinLib.variantOf(ME, id), c = t.meta.counts[0];
+  const per = t.order.length > 1 ? ` × ${t.order.length} chains` : '';
+  return [
+    [v.species, 'species'],
+    [`${c.modelled} of ${c.declared}`, `residues${per}, ${Math.round(100 * c.modelled / c.declared)}%`],
+    [t.meta.resolution ? t.meta.resolution.toFixed(1) + ' Å' : 'NMR', v.read.method],
+  ];
+};
+
+/* =============================================================================
+ *  THE PARTS
+ * ========================================================================== */
+const PARTS = [
+  { key:'whole', id:'1QLZ', title:'Prion protein', sub:'one sequence, two shapes',
+    deck:'Rendered from real data.',
+    hint:'Scroll to examine each part',
+    stats:t=>fileStats('1QLZ', t),
+    note:t=>`A small protein carried on the outside of nerve cells. Nobody is `
+      + `sure what its normal job is. What it does when it misfolds is the `
+      + `whole story: <b>the same chain of amino acids can fold two ways</b>, `
+      + `and the wrong way is infectious.\n\n This is the healthy fold. The `
+      + `chain's first ${ch(t).nums[0] - 1} residues are floppy and were not `
+      + `modelled, so what you see starts at residue ${ch(t).nums[0]}.`,
+    notes:()=>[] },
+
+  { key:'healthy', id:'1QLZ', title:'The healthy fold', sub:'PrPᶜ, mostly helix',
+    note:t=>`Three α-helices, ${frac(t, 'H')}% of the chain, packed into a `
+      + `compact bundle, with a small two-strand β-sheet tucked against them. `
+      + `This is the shape the cell makes and the shape it lives with.\n\n It is `
+      + `soluble, it is single, and it is broken down when the cell is finished `
+      + `with it. <b>Nothing about the sequence says it has to be this shape.</b>`,
+    notes:t=>{
+      const H = runs(t, 'H'), E = runs(t, 'E');
+      return [
+        { text:'Helix 1', card:'The shortest of the three. In the disease fold none of them survive.',
+          at:worldAt(runMid(t, H[0])), offset:[-80, -60] },
+        { text:'Helix 2', card:'Helices 2 and 3 are tied together by the one disulfide bond in the protein.',
+          at:worldAt(runMid(t, H[1])), offset:[90, 40] },
+        { text:'Helix 3', card:'The longest. It runs the full height of the bundle.',
+          at:worldAt(runMid(t, H[2])), offset:[70, -70] },
+        { text:'β-sheet', card:'Two short strands. A hint of what the whole chain will become.',
+          at:worldAt(runMid(t, E[0])), offset:[-90, 60] },
+      ];
+    } },
+
+  { key:'disease', id:'6LNI', title:'The disease fold', sub:'PrPˢᶜ, one rung',
+    stats:t=>fileStats('6LNI', t),
+    note:t=>{
+      const e = extents(t);
+      return `The same human sequence, refolded. <b>${frac(t, 'H')}% helix.</b> Every `
+      + `helix is gone and the chain has laid itself out flat as β-strands, `
+      + `${e[0].toFixed(0)} Å long and ${e[2].toFixed(1)} Å thick: one molecule deep.\n\n `
+      + `It is flat because it is not meant to be alone. This is one layer of a `
+      + `stack, and its strand partners are the copies above and below it. `
+      + `Only the middle ${ch(t).nums.length} residues are ordered enough to see; `
+      + `the rest hangs off the core as a disordered fringe.`;
+    },
+    notes:t=>[
+      { text:'N-terminus', card:`Residue ${ch(t).nums[0]}. Everything before it is disordered and not in the model.`,
+        at:worldAt(ch(t).CA[0]), offset:[80, -70] },
+      { text:'C-terminus', card:`Residue ${ch(t).nums.at(-1)}. The chain that was three helices is now one flat serpentine.`,
+        at:worldAt(ch(t).CA.at(-1)), offset:[80, 50] },
+    ] },
+
+  { key:'stack', id:'stack', title:'The fibril', sub:'a ladder that does not end',
+    stats:t=>fileStats('stack', t),
+    note:t=>{ const r = rungs(t);
+      return `All ${t.order.length} chains of the deposition: ${r.stacks} stacks of `
+      + `${r.per} rungs, lying side by side. Each rung sits ${r.gap.toFixed(1)} Å `
+      + `above the one below it, the spacing of a β-sheet, and the sheet runs the `
+      + `length of the fibre: <b>every molecule `
+      + `is hydrogen-bonded to its neighbours, not to itself.</b>\n\n The real `
+      + `fibre is thousands of rungs long. Nothing stops it growing, because `
+      + `nothing in a cell knows how to take it apart.`; },
+    notes:t=>[
+      { text:'One rung', card:'The molecule from the previous part, in place. Its strands pair with the rungs above and below.',
+        at:worldAt(centroid(t.chains[t.order[7]].CA)), offset:[100, -80] },
+    ] },
+
+  { key:'template', id:'stack', title:'Why it spreads', sub:'a shape that copies itself',
+    note:()=>`A healthy protein that touches the end of the fibre is pulled into `
+      + `the disease fold and becomes the next rung. <b>The fibre is the template. `
+      + `No gene, no enzyme, no virus: the information is the shape.</b>\n\n That `
+      + `is what makes a prion infectious, and why the diseases it causes, `
+      + `Creutzfeldt-Jakob in people and BSE in cattle, can be inherited, arise `
+      + `on their own, or be caught. How one molecule converts the next has `
+      + `never been imaged. Both ends are here; the path between is not.`,
+    notes:()=>[] },
+
+  { key:'sources', id:'1QLZ', title:'The two structures', sub:'and the idea behind them',
+    note:()=>`The healthy fold was solved by NMR in solution, where the protein `
+      + `is free to move. The fibril was solved by cryo-electron microscopy, `
+      + `grown in a test tube from the same human protein, not taken from a sick `
+      + `brain.\n\n The idea that a protein alone could be infectious was Stanley `
+      + `Prusiner's, and it was resisted for years. The 1997 Nobel Prize was for `
+      + `the idea; these files are what it looks like.`,
+    dl:[
+      ['https://doi.org/10.1073/pnas.97.1.145', 'Zahn et al., PNAS 97, 145 (2000)', 'The healthy human fold, 1QLZ, by NMR.'],
+      ['https://doi.org/10.1038/s41594-020-0403-y', 'Glynn et al., Nat. Struct. Mol. Biol. 27, 417 (2020)', 'The human fibril, 6LNI, by cryo-EM.'],
+      ['https://www.nobelprize.org/prizes/medicine/1997/prusiner/lecture/', 'Prusiner’s Nobel lecture (1997)', 'The prion hypothesis, told by the person who paid for it.'],
+    ],
+    notes:()=>[] },
+];
+
+const SAYS = {
+  '1QLZ': 'the healthy fold',
+  '6LNI': 'one rung of the disease fibril',
+  'stack': 'the disease fibril, all ten chains',
+};
+
+let current = null;
+function show(part){
+  if(current === part) return;
+  const first = current === null;
+  current = part;
+  const t = traces[part.id];
+  const v = ProteinLib.variantOf(ME, part.id);
+
+  if(shownId !== part.id){
+    shownId = part.id;
+    /* Healthy against disease, in colour: rust is the disease side, the
+       registry's call, so the bench and this page agree. */
+    box.setData(t, { keep:true, colors: ProteinLib.colorsOf(ME, v) });
+    $('specimen').innerHTML =
+      `<span class="pdb">${v.source.id}</span> · ${SAYS[part.id]} · `
+      + `<a href="${ProteinLib.urls(v).entry}" target="_blank" rel="noopener">at the PDB →</a>`;
+  }
+  box.focus(null, first ? 0 : TWEEN);
+
+  NOTES.clear();
+  for(const n of part.notes(t)) if(n.at) NOTES.add(n);
+  for(const el of secs) el.setAttribute('aria-current', String(el.dataset.key === part.key));
+}
+
+const claim = t => t.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean)
+  .map(x => `<p class="claim">${x}</p>`).join('');
+const tiles = st => !st ? '' : '<div class="measure">' + st.map(([n, l]) =>
+  `<div><span class="n">${n}</span><span class="l">${l}</span></div>`).join('') + '</div>';
+const terms = dl => !dl ? '' : '<dl>' + dl.map(([href, name, why]) =>
+  `<dt><a href="${href}" target="_blank" rel="noopener">${name}</a></dt><dd>${why}</dd>`).join('') + '</dl>';
+
+let secs = [];
+const NEEDED = [...new Set(PARTS.map(p => p.id))];
+Promise.all(NEEDED.map(id => {
+  const v = ProteinLib.variantOf(ME, id);
+  return fetch(`data/${v.read.baked}`).then(r => r.json()).then(t => { traces[id] = t; });
+})).then(() => {
+  const host = $('sections');
+  secs = PARTS.map((part, i) => {
+    const el = document.createElement('section');
+    el.dataset.key = part.key;
+    el.innerHTML =
+      `<p class="num">${String(i + 1).padStart(2, '0')} / ${String(PARTS.length).padStart(2, '0')}</p>`
+      + `<h3>${part.title}</h3>`
+      + `<p class="gloss">${part.sub}</p>`
+      + (part.deck ? `<p class="deck">${part.deck}</p>` : '')
+      + claim(part.note(traces[part.id]))
+      + tiles(part.stats && part.stats(traces[part.id]))
+      + terms(part.dl)
+      + (part.hint ? `<p class="hint">${part.hint}</p>` : '');
+    host.appendChild(el);
+    return el;
+  });
+
+  show(PARTS[0]);
+
+  const lenis = new Lenis({ autoRaf:true, duration:1.1 });
+  const seen = new IntersectionObserver(entries => {
+    for(const e of entries) if(e.isIntersecting) show(PARTS[secs.indexOf(e.target)]);
+  }, { root:null, rootMargin:'-50% 0px -50% 0px', threshold:0 });
+  for(const el of secs) seen.observe(el);
+
+  const settleTo = el => el.offsetTop + el.offsetHeight / 2 - innerHeight / 2;
+  const SETTLE_MS = 150, SNAP_SLOP = 8;
+  let settleTimer = null, settling = false;
+  lenis.on('scroll', () => {
+    if(settling) return;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      let best = null, bestD = Infinity;
+      for(const el of secs){
+        const d = Math.abs(settleTo(el) - lenis.scroll);
+        if(d < bestD){ bestD = d; best = el; }
+      }
+      if(!best || bestD <= SNAP_SLOP) return;
+      settling = true;
+      lenis.scrollTo(settleTo(best), {
+        duration:0.6, easing:t => 1 - Math.pow(1 - t, 3),
+        onComplete:() => { settling = false; },
+      });
+    }, SETTLE_MS);
+  });
+});
+
+window.page = { box, traces, get showing(){ return current && current.key; } };
+</script>
+</body>
+</html>
