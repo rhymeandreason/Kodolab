@@ -350,13 +350,13 @@ function show(part){
 /* =============================================================================
  *  THE STACK-UP
  * =============================================================================
- *  setData has just put the stack on stage at its own basis and framing. Wind
- *  the frame back to where the rung was (its basis, its camera distance) and
- *  let focus() tween forward from there — that is the turn. The slide is this
- *  page's: every chain but the rung's starts displaced onto the rung and eases
- *  to zero, bottom rung first. Chains arrive one per frame while the box
- *  builds, so each is caught and displaced the frame it appears, before it is
- *  ever drawn in place.
+ *  Three moves, one after another, the way myoglobin's site view changes:
+ *  the rung TURNS from face-on to side-on at the distance it was seen at;
+ *  the other chains APPEAR in place, bottom rung first; then the camera
+ *  PULLS BACK to frame the fibril. setData has already put the stack on
+ *  stage, so the page winds the frame back to the rung's and plays forward.
+ *  Chains arrive one per frame while the box builds, so each is hidden the
+ *  frame it appears, before it is drawn.
  * ========================================================================== */
 const basisQ = b => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().set(
   b[0][0], b[0][1], b[0][2], 0,  b[1][0], b[1][1], b[1][2], 0,
@@ -364,36 +364,36 @@ const basisQ = b => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matri
 let stackRun = 0;
 function stackUp(t, was, done){
   const run = ++stackRun;
-  const TURN = 1400, SLIDE = 900, STAGGER = 90;
-  box.group.quaternion.copy(basisQ(traces['6LNI'].view));
-  box.root.position.copy(was.pos);
-  box.cam.r = was.r;
-  box.focus(null, TURN);
+  const TURN = 900, STAGGER = 70, PAUSE = 200;
+  const qFrom = basisQ(traces['6LNI'].view), qTo = basisQ(t.view);
 
   const rung = t.order[0];
-  const home = centroid(t.chains[rung].CA);
-  const offsetOf = {};
-  t.order.forEach((id, i) => {
-    const c = centroid(t.chains[id].CA);
-    offsetOf[id] = { v: new THREE.Vector3(home[0] - c[0], home[1] - c[1], home[2] - c[2]),
-                     start: 250 + i * STAGGER };
-  });
+  const rank = {}; t.order.forEach((id, i) => { rank[id] = i; });
+  const shown = new Set([rung]);
   const t0 = performance.now();
   (function step(){
     if(run !== stackRun) return;
     const now = performance.now() - t0;
-    let busy = box.building;
+    /* The rung's own framing, HELD: the box re-fits the camera for the whole
+       stack as each chain lands, and the turn has to happen where the rung
+       was seen from or the pull-back has already happened. */
+    box.root.position.copy(was.pos);
+    box.cam.r = was.r;
+    // 1. the turn
+    const k = Math.min(1, now / TURN), e = k * k * (3 - 2 * k);
+    box.group.quaternion.copy(qFrom).slerp(qTo, e);
+    // 2. the rungs, in order, once the turn is done
+    const due = Math.floor((now - TURN - PAUSE) / STAGGER) + 1;
     for(const m of box.group.children){
       const id = m.userData && m.userData.chain;
-      if(!id || id === rung) continue;
-      const o = offsetOf[id];
-      const k = Math.min(1, Math.max(0, (now - o.start) / SLIDE));
-      const e = 1 - Math.pow(1 - k, 3);
-      m.position.copy(o.v).multiplyScalar(1 - e);
-      if(k < 1) busy = true;
+      if(!id) continue;
+      if(!shown.has(id) && rank[id] < due) shown.add(id);
+      m.visible = shown.has(id);
     }
+    box.applyCam();
     box.draw();
-    if(busy) requestAnimationFrame(step); else done();
+    if(box.building || shown.size < t.order.length) requestAnimationFrame(step);
+    else { box.focus(null, TWEEN); done(); }     // 3. the pull-back
   })();
 }
 
