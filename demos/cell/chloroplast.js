@@ -60,7 +60,7 @@
  *               oxygen (an O₂ released)
  *      parts    outer · inner · ims · stroma · granum · thylakoid · lamella ·
  *               lumen · psii · b6f · psi · synthase · starch · dna ·
- *               ribosome · proton · oxygen · photon. LIBRARY is the teaching text. NOT ALL ARE
+ *               ribosome · proton · oxygen · water · photon. LIBRARY is the teaching text. NOT ALL ARE
  *               MESHES: `ims`, `stroma` and `lumen` are spaces and
  *               `thylakoid` is one disc of a granum — they carry an anchor
  *               and a card and no show chip.
@@ -96,7 +96,7 @@
   const TRUE_NM = { membrane: 4, lumen: 10, gap: 3.5, ims: 15 };
   /* WATER SPLITTING: 2 H₂O → O₂ + 4 H⁺ + 4 e⁻, and two electrons make one
      NADPH. So one O₂ per four protons from water, and two NADPH per O₂. */
-  const H_PER_O2 = 4, H_PER_NADPH = 2;
+  const H_PER_O2 = 4, H_PER_NADPH = 2, H_PER_WATER = 2;   // 2 H₂O → O₂ + 4 H⁺ + 4 e⁻
 
   const DEFAULTS = {
     light: 0.6,         // 0..1 how bright; 0 is dark and everything stops. Glides
@@ -117,10 +117,11 @@
     proton:    { theta: 0.45, phi: 1.00, r: 16 },
     oxygen:    { theta: 0.60, phi: 0.95, r: 22 },
     photon:    { theta: 0.50, phi: 0.85, r: 20 },
+    water:     { theta: 0.80, phi: 1.20, r: 11 },
   };
 
   const ORDER = ['outer', 'inner', 'ims', 'stroma', 'granum', 'thylakoid', 'lamella', 'lumen',
-                 'psii', 'b6f', 'psi', 'synthase', 'starch', 'dna', 'ribosome', 'proton', 'oxygen', 'photon'];
+                 'psii', 'b6f', 'psi', 'synthase', 'starch', 'dna', 'ribosome', 'proton', 'oxygen', 'water', 'photon'];
   const PLACES = ['ims', 'stroma', 'thylakoid', 'lumen'];   // an anchor and a card, no chip
 
   /* The component's own teaching text: a label and two sentences per part,
@@ -143,6 +144,7 @@
     dna:       { text: 'chloroplast DNA', offset: [-44, -20], card: 'Circles of the organelle\'s own genome, in many copies, bacterial in shape and inherited from one parent. The plainest evidence that a chloroplast was once a free-living cyanobacterium.' },
     ribosome:  { text: 'plastid ribosomes', offset: [46, 26], card: 'Ribosomes of the bacterial kind, not the cell\'s own. They build the core subunits of both photosystems and of Rubisco here, from the genome beside them.' },
     proton:    { text: 'protons', offset: [-46, 24], card: 'Into the lumen at b6f and from water at PSII; out of it only through ATP synthase. The whole payoff of the light reactions is in that round trip, which is why an uncoupler leaves the light making nothing but heat.' },
+    water:     { text: 'water', offset: [-44, 22], card: 'Inside the sac, PSII pulls electrons out of water. Two waters give up four protons, which stay in the lumen, and one O₂, which leaves. The water is the electron source for everything downstream; the oxygen is what is left over.' },
     photon:    { text: 'light', offset: [-44, -24], card: 'Each flash is a photon caught by a photosystem. PSII needs one for every electron it pulls from water, and PSI needs another to lift that same electron again, so both are hit. Dim the light and the protons slow, because nothing else here pays for them.' },
     oxygen:    { text: 'oxygen', offset: [44, 22], card: 'One O₂ for every two waters split, leaving the lumen and drifting out of the organelle. It is a by-product: photosynthesis keeps the hydrogens and throws the oxygen away.' },
   };
@@ -172,6 +174,7 @@
 
     let K = null, group = null, D = null, protonMesh = null, protons = [], rand = null;
     let o2Mesh = null, o2 = [];
+    let wOMesh = null, wHMesh = null, water = [], waterDue = 0, waterSplit = 0;
     let phMesh = null, ph = [], flMesh = null, fl = [], phDue = 0;
     let hovered = null, selected = null;
     const shown = {};
@@ -180,7 +183,7 @@
 
     const rr = (a, b) => a + (b - a) * rand();
     const pickOne = arr => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
-    const O2_POOL = 8;
+    const O2_POOL = 8, WATER_POOL = 60;   // ~5 splits a second at full light, each out of the lumen ~6 s
     const PH_POOL = 40, PH_RATE = 9, PH_DUR = 1.2, FL_DUR = 0.6, PH_LEN = 50;   // PH_RATE: absorptions per second at full light
     const SUN = new V3(-0.3, 1, 0.25).normalize();   // toward the light, out through the cut
 
@@ -231,9 +234,22 @@
       ph = []; fl = [];
       for (let i = 0; i < PH_POOL; i++) { ph.push({ on: false, to: new V3(), t: 0 }); fl.push({ on: false, pos: new V3(), t: 0 }); }
       phDue = 0;
+      /* The water: a pool of bent molecules in the lumen, O and H in the
+         atoms' own colours so O₂ and H⁺ visibly come out of them. */
+      const AT = (global.MolPalette || global.MolLib.PALETTE).atoms;
+      wOMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 10, 8), K.mat({ color: AT.O, roughness: 0.5, clearcoat: 0.3 }), WATER_POOL);
+      wHMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.09, 8, 6), K.mat({ color: AT.H, roughness: 0.6, clearcoat: 0.2 }), WATER_POOL * 2);
+      wOMesh.userData.part = wHMesh.userData.part = 'water';
+      group.add(wOMesh, wHMesh);
+      water = [];
+      for (let i = 0; i < WATER_POOL; i++) {
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rr(0, 2 * PI), rr(0, 2 * PI), rr(0, 2 * PI)));
+        water.push({ mode: 'idle', pos: pickOne(D.pockets.lumen).clone(), from: new V3(), to: null, t: 0, dur: 1, q, grow: 1 });
+      }
+      waterDue = 0; waterSplit = 0;
       pumped = fromWater = through = leaked = 0; rotorAngle = 0; turnsSeen = 0; o2Seen = 0;
       for (const n in shown) if (shown[n] === false) applyShow(n, false);
-      writeProtons(); writeO2(); writeLight();
+      writeProtons(); writeO2(); writeLight(); writeWater();
     }
 
     function dispose(g) {
@@ -274,7 +290,8 @@
           p.jump = 2;
           p.dur = (1.6 + rr(0, 1.0)) / speed;
           shine(s); shine(a);
-          p.done = () => { p.mode = 'lumen'; fromWater++; if (fromWater % H_PER_O2 === 0) releaseO2(s); };
+          if (++waterDue % H_PER_WATER === 1) sendWater(s, p.dur * 0.5);   // one water per two protons
+          p.done = () => { p.mode = 'lumen'; fromWater++; if (fromWater % H_PER_WATER === 0) waterSplit++; if (fromWater % H_PER_O2 === 0) releaseO2(s); };
         }
       } else if (P.uncoupler && rand() < 0.8) {
         /* An uncoupler is a hole, not a machine: straight out of the sac
@@ -336,6 +353,71 @@
         if (u >= 1) o.on = false;
       }
       writeO2();
+    }
+
+    /* ---- the water ---------------------------------------------------------
+       Timed to the proton it feeds: a water leaves for the PSII's lumen face
+       as the route starts and is gone as the proton appears there. Its
+       replacement comes in from outside: through both envelope membranes,
+       across the stroma, through the thylakoid membrane between machines
+       rather than through one, since water crosses a bilayer on its own
+       (aquaporins only speed it). Real water crosses both ways far faster
+       than PSII uses it; only the net supply is drawn, so the lumen never
+       seems to run dry. */
+    function sendWater(site, dur) {
+      let best = null, bd = Infinity;
+      for (const m of water) if (m.mode === 'idle') { const d = m.pos.distanceToSquared(site.lumen); if (d < bd) { bd = d; best = m; } }
+      if (!best) return;
+      best.mode = 'going'; best.from.copy(best.pos); best.to = site.lumen.clone(); best.t = 0; best.dur = Math.max(0.3, dur);
+    }
+    function comeIn(m) {
+      const sp = pickOne(D.pockets.stroma);
+      const k = 1 / Math.hypot(sp.x / A, sp.y / B, sp.z / C);
+      const outside = sp.clone().multiplyScalar(k * 1.08), inside = sp.clone().multiplyScalar(Math.min(k * 0.9, 1));
+      const s = pickOne(D.sites.psi.concat(D.sites.synthase));
+      const beside = new V3(-s.out.z, 0, s.out.x);
+      if (beside.lengthSq() < 0.01) beside.set(1, 0, 0);
+      beside.normalize().multiplyScalar(0.7);
+      m.mode = 'coming'; m.t = 0; m.dur = rr(4.5, 6.5); m.grow = 0;
+      m.path = [outside, inside, sp.clone(), s.p.clone().add(beside).addScaledVector(s.out, 0.8),
+                s.lumen.clone().add(beside), lumenNear(s)];
+      m.pos.copy(outside);
+    }
+    function stepWater(dt) {
+      for (const m of water) {
+        if (m.mode === 'going') {
+          m.t += dt / m.dur;
+          m.pos.lerpVectors(m.from, m.to, Math.min(1, m.t));
+          if (m.t >= 1) { m.mode = 'gone'; m.t = 0; }
+        } else if (m.mode === 'gone') {
+          if ((m.t += dt) > 0.5) comeIn(m);
+        } else if (m.mode === 'coming') {
+          m.t += dt / m.dur;
+          const u = Math.min(1, m.t), n = m.path.length - 1, f = u * n, i = Math.min(n - 1, Math.floor(f));
+          m.pos.copy(m.path[i]).lerp(m.path[i + 1], f - i);
+          m.grow = Math.min(1, u * 8);
+          if (u >= 1) { m.mode = 'idle'; m.grow = 1; }
+        } else {
+          m.pos.x += (rand() - 0.5) * 0.4 * dt * 4; m.pos.y += (rand() - 0.5) * 0.4 * dt * 4; m.pos.z += (rand() - 0.5) * 0.4 * dt * 4;
+          m.grow = Math.min(1, m.grow + dt * 1.5);
+        }
+      }
+      writeWater();
+    }
+    // O at the vertex, the two H 0.2 out at 104.5° apart
+    const H_OFF = [-1, 1].map(sg => new V3(Math.sin(sg * 0.912) * 0.2, Math.cos(0.912) * 0.2, 0));
+    function writeWater() {
+      if (!wOMesh) return;
+      water.forEach((m, i) => {
+        const k = m.mode === 'gone' ? 0 : m.mode === 'going' ? 1 - Math.max(0, m.t - 0.8) / 0.2 : m.grow;
+        _s.setScalar(k);
+        _m4.compose(m.pos, m.q, _s); wOMesh.setMatrixAt(i, _m4);
+        H_OFF.forEach((off, j) => {
+          _m4.compose(_v.copy(off).multiplyScalar(k).applyQuaternion(m.q).add(m.pos), m.q, _s);
+          wHMesh.setMatrixAt(i * 2 + j, _m4);
+        });
+      });
+      wOMesh.instanceMatrix.needsUpdate = wHMesh.instanceMatrix.needsUpdate = true;
     }
 
     /* ---- the light --------------------------------------------------------
@@ -462,6 +544,7 @@
     function applyShow(name, on) {
       if (name === 'proton') { if (protonMesh) protonMesh.visible = on; return; }
       if (name === 'oxygen') { if (o2Mesh) o2Mesh.visible = on; return; }
+      if (name === 'water') { if (wOMesh) wOMesh.visible = wHMesh.visible = on; return; }
       if (name === 'photon') { if (phMesh) phMesh.visible = flMesh.visible = on; return; }
       const g = D.groups[name];
       if (g) g.visible = on;
@@ -474,6 +557,7 @@
       stepProtons(dt);
       stepO2(dt);
       stepLight(dt);
+      stepWater(dt);
       /* PSII glows faintly with the light, under the flashes. */
       const pm = group.userData.psiiMaterial;
       if (pm) { pm.emissive.copy(pm.color); pm.emissiveIntensity = 0.55 * P.light; }
@@ -502,7 +586,7 @@
          generated page reached for the second. */
       const ledger = { pumped, fromWater, throughSynthase: through, leaked,
                        rotorTurns: through / PPT, atpMade: LEDGER.atp(through, PPT, APT),
-                       nadphMade: LEDGER.nadph(fromWater), o2Released: LEDGER.o2(fromWater) };
+                       nadphMade: LEDGER.nadph(fromWater), o2Released: LEDGER.o2(fromWater), waterSplit: LEDGER.water(fromWater) };
       return Object.assign({
         light: P.light, uncoupler: !!P.uncoupler,
         grana: d.grana, thylakoids: d.thylakoids, lamellae: d.lamellae,
@@ -511,7 +595,7 @@
         protons: { lumen, stroma: protons.length - lumen, total: protons.length },
         ledger,
         stoichiometry: { protonsPerTurn: PPT, atpPerTurn: APT, protonsPerATP: PPT / APT,
-                         protonsPerO2: H_PER_O2, protonsPerNADPH: H_PER_NADPH },
+                         protonsPerO2: H_PER_O2, protonsPerNADPH: H_PER_NADPH, protonsPerWater: H_PER_WATER },
         /* Real, because the lens is drawn to a unit: 1 scene unit is 100 nm.
            The thicknesses are drawn and SCALE.exag says by how much. */
         lengthNm: NM(2 * A), widthNm: NM(2 * C), thicknessNm: NM(2 * B),
@@ -561,6 +645,7 @@
       ribosome:  () => w(D.pockets.stroma[7]),
       proton:    () => { const p = protons.find(x => x.mode === 'lumen'); return p ? w(p.pos) : null; },
       oxygen:    () => { const o = o2.find(x => x.on); return o ? w(o.pos) : null; },
+      water:     () => { const m = water.find(x => x.mode === 'idle'); return m ? w(m.pos) : null; },
       photon:    () => { const f = fl.find(x => x.on) || ph.find(x => x.on); return f ? w(f.pos || f.to) : null; },
     };
     /* Only the envelope's outside can turn away from the reader; everything
@@ -581,11 +666,12 @@
       { name: 'ATP synthase', color: hex(PHO.synthase) },
       { name: 'protons', color: hex(PHO.proton) },
       { name: 'oxygen', color: hex(PHO.oxygen) },
+      { name: 'water', color: hex((global.MolPalette || global.MolLib.PALETTE).atoms.O) },
       { name: 'light', color: hex(PHO.photon) },
       { name: 'starch', color: hex((global.MolPalette || global.MolLib.PALETTE).organelles.amyloplast.starch) },
       { name: 'chloroplast DNA', color: hex(ORGP.dna) },
     ];
-    const layersOf = () => ORDER.filter(n => n === 'proton' || n === 'oxygen' || n === 'photon' || D.groups[n])
+    const layersOf = () => ORDER.filter(n => n === 'proton' || n === 'oxygen' || n === 'photon' || n === 'water' || D.groups[n])
       .map(n => ({ name: n, label: LIBRARY[n].text, on: shown[n] !== false }));
     const show = (n, on) => { shown[n] = !!on; applyShow(n, !!on); return api; };
     const select = n => { selected = n; emit('pick', n); return api; };
@@ -606,6 +692,7 @@
   const LEDGER = {
     atp: (through, ppt, apt) => Math.floor((through / ppt) * apt),
     o2: fromWater => Math.floor(fromWater / H_PER_O2),
+    water: fromWater => Math.floor(fromWater / H_PER_WATER),
     nadph: fromWater => Math.floor(fromWater / H_PER_NADPH),
   };
 
@@ -687,7 +774,7 @@
     };
   }
 
-  global.Chloroplast = { create, mount, DEFAULTS, VIEWS, ORDER, PLACES, LIBRARY, LEDGER, A, B, C, UNIT, H_PER_O2, H_PER_NADPH };
+  global.Chloroplast = { create, mount, DEFAULTS, VIEWS, ORDER, PLACES, LIBRARY, LEDGER, A, B, C, UNIT, H_PER_O2, H_PER_NADPH, H_PER_WATER };
   /* Scale (kit/scale.js). MEASURED ALONG, DRAWN THICK: one scene unit is
      100 nm, so the lens's 5 by 2.4 µm is real and a page may print it. The
      four thin things are exaggerated, and their factors are computed from

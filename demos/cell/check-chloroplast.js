@@ -70,6 +70,7 @@ const LADDER = load('kit/scale.js').ScaleLadder;
   ok(CH.H_PER_NADPH === 2, `H_PER_NADPH is ${CH.H_PER_NADPH}; two electrons make one NADPH.`);
   ok(CH.LEDGER.o2(4) === 1 && CH.LEDGER.o2(3) === 0, 'the O₂ ledger does not wait for four protons.');
   ok(CH.LEDGER.nadph(4) === 2 * CH.LEDGER.o2(4), 'two NADPH per O₂ is not what the ledger prints.');
+  ok(CH.LEDGER.water(4) === 2 * CH.LEDGER.o2(4), 'two waters per O₂ is not what the ledger prints.');
 }
 
 /* 3. what an appressed face may hold */
