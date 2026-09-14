@@ -243,30 +243,12 @@ const PARTS = [
     note:t=>`A small protein carried on the outside of nerve cells. Nobody is `
       + `sure what its normal job is. What it does when it misfolds is the `
       + `whole story: <b>the same chain of amino acids can fold two ways</b>, `
-      + `and the wrong way is infectious.\n\n This is the healthy fold. The `
-      + `chain's first ${ch(t).nums[0] - 1} residues are floppy and were not `
-      + `modelled, so what you see starts at residue ${ch(t).nums[0]}.`,
+      + `and the wrong way is infectious.\n\n This is the healthy fold, PrPᶜ: three `
+      + `α-helices, ${frac(t, 'H')}% of the chain, packed into a compact bundle `
+      + `with a small β-sheet tucked against them. The chain's first `
+      + `${ch(t).nums[0] - 1} residues are floppy and were not modelled, so what `
+      + `you see starts at residue ${ch(t).nums[0]}.`,
     notes:()=>[] },
-
-  { key:'healthy', id:'1QLZ', title:'The healthy fold', sub:'PrPᶜ, mostly helix',
-    note:t=>`Three α-helices, ${frac(t, 'H')}% of the chain, packed into a `
-      + `compact bundle, with a small two-strand β-sheet tucked against them. `
-      + `This is the shape the cell makes and the shape it lives with.\n\n It is `
-      + `soluble, it is single, and it is broken down when the cell is finished `
-      + `with it. <b>Nothing about the sequence says it has to be this shape.</b>`,
-    notes:t=>{
-      const H = runs(t, 'H'), E = runs(t, 'E');
-      return [
-        { text:'Helix 1', card:'The shortest of the three. In the disease fold none of them survive.',
-          at:worldAt(runMid(t, H[0])), offset:[-80, -60] },
-        { text:'Helix 2', card:'Helices 2 and 3 are tied together by the one disulfide bond in the protein.',
-          at:worldAt(runMid(t, H[1])), offset:[90, 40] },
-        { text:'Helix 3', card:'The longest. It runs the full height of the bundle.',
-          at:worldAt(runMid(t, H[2])), offset:[70, -70] },
-        { text:'β-sheet', card:'Two short strands. A hint of what the whole chain will become.',
-          at:worldAt(runMid(t, E[0])), offset:[-90, 60] },
-      ];
-    } },
 
   { key:'disease', id:'6LNI', title:'The disease fold', sub:'PrPˢᶜ, one rung',
     stats:t=>fileStats('6LNI', t),
