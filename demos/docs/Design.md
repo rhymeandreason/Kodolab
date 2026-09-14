@@ -99,7 +99,10 @@ them, which is the one thing nobody does while building one.
 `.crumb` says where this page sits. A `<span>` when the page **is** that place,
 an `<a>` when it is a level up. Same size either way, so the bar keeps its shape.
 It is the way back: a page that also prints its own "← all proteins" link is
-saying it twice.
+saying it twice. **A crumb that repeats the page's own `h1` is left out**: the
+heading already says where you are, so `/login`, `/teach` and the design page
+have none. Write one only when it names something the heading does not (the
+collection a molecule sits in, the subject a lesson belongs to).
 
 **The four links on the right of the bar are written by `lib/site.js`, not by
 the page** — Lessons, Library, Contribute, Build, with `aria-current="page"` on
