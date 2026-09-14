@@ -22,14 +22,10 @@ body {
    .btn--text  no box at all: a verb on a list row, coloured only on hover. */
 .btn--ink { color: var(--text-body); border-color: var(--border-hair); background: var(--surface-card); }
 .btn--ink:hover:not([disabled]) { color: var(--text-strong); border-color: var(--text-strong); background: var(--surface-card); }
-.btn--soft { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
-.btn--soft:hover:not([disabled]) { color: var(--text-inverse); border-color: var(--accent); background: var(--accent); }
+/* .btn--soft and .btn--hot: shelf.css, which every page with the shelf loads. */
 .btn--fill { color: var(--text-inverse); border-color: var(--accent); background: var(--accent); }
 .btn--fill:hover:not([disabled]) { color: var(--text-inverse); border-color: var(--spark); background: var(--spark); }
 .btn--text { border-color: transparent; background: transparent; color: var(--text-dim); padding-inline: 6px; }
-/* The one destructive verb on the page. */
-.btn--hot { color: var(--text-inverse); border-color: var(--accent-hot); background: var(--accent-hot); }
-.btn--hot:hover:not([disabled]) { filter: brightness(1.08); }
 .btn--text:hover:not([disabled]) { color: var(--accent); border-color: transparent; background: color-mix(in srgb, var(--accent) 10%, transparent); }
 
 /* ---- bar -------------------------------------------------------------- */
@@ -424,131 +420,6 @@ body.work.norail .rail { transform: translateX(100%); width: 0; padding: 0; over
 .history .meta { color: var(--text-muted); font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .1em; text-transform: uppercase; margin-top: 10px; font-variant-numeric: tabular-nums; }
 .history li.bad .meta { color: var(--accent-hot); }
 
-/* My apps: its own section below the fold on the fresh page. The thumb is a slot for an image
-   the app row may carry; without one it is the stage paper. */
-.mine { margin-top: 0; font-size: .85rem; color: var(--text-muted); }
-.mine h2 {
-  margin: 0; font-family: var(--font-editorial); font-weight: 400;
-  font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.15; letter-spacing: -.015em;
-  color: var(--text-strong);
-}
-/* The header sits on a hairline, so the grid below reads as its own field. */
-.mine ul {
-  margin: 1.4rem 0 0; padding: 1.8rem 0 0; list-style: none; border-top: 1px solid var(--border-hair);
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 1.2rem; row-gap: 1.2rem;
-}
-.mine a { display: block; text-decoration: none; color: var(--text-dim); }
-.mine .thumb {
-  display: block; aspect-ratio: 16 / 10; border-radius: 8px; border: 1px solid var(--border-hair);
-  background: var(--surface-stage) center / cover no-repeat;
-  background-image: radial-gradient(var(--surface-rule) 1px, transparent 1.2px); background-size: 12px 12px;
-}
-/* A live card: the app rendered at laptop size and scaled to the slot, inert.
-   The slot's own size decides the scale, so the frame is laid out at a fixed
-   960 wide and shrunk by the ratio. */
-.mine .thumb { position: relative; overflow: hidden; }
-.mine .live, .mine .card {
-  position: absolute; left: 0; top: 0; width: 960px; height: 600px;
-  transform-origin: 0 0; transform: scale(var(--k, .16));
-}
-.mine .live { border: 0; pointer-events: none; background: var(--surface-card); }
-
-/* A still card: the same box with the frame swapped for the stored scene, and
-   the shell's own first card rebuilt over it in DOM. The panel is never
-   rasterised, so it stays sharp at any size and re-themes with the page.
-
-   THE SHELL'S STYLESHEET CANNOT BE REUSED HERE. Its panel is position:fixed
-   and sized in vw, and both resolve against the window rather than this 960
-   box, so the measurements it uses at 960 wide are restated. That makes this a
-   miniature and not a replica: it tracks the card's SHAPE, and a restyle of
-   the shell will not reach it. Keep it to shape, and let the live cards above
-   carry the detail. */
-/* No background COLOUR: an app whose words are stored but whose scene never
-   captured falls through to the slot's own paper rather than a flat fill. */
-.mine .card {
-  display: block; background: center / cover no-repeat;
-  --panel-fill: color-mix(in srgb, #fff 86%, transparent);
-}
-.mine .s-top {
-  position: absolute; left: 24px; right: 24px; top: 22px; height: 28px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.mine .s-brand {
-  font-family: var(--font-display); font-weight: 500; font-size: 15px;
-  letter-spacing: .04em; color: var(--text-strong);
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 60%;
-}
-.mine .s-dots { display: flex; gap: 6px; }
-.mine .s-dots i { width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--text-strong) 22%, transparent); }
-.mine .s-dots i:first-child { background: var(--accent); }
-.mine .s-panel {
-  position: absolute; left: 24px; top: 76px; bottom: 24px; width: 430px;
-  display: flex; flex-direction: column; border-radius: 24px;
-  background: var(--panel-fill); border: 1px solid rgba(255,255,255,.7);
-  backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3);
-  box-shadow: 0 30px 70px -40px color-mix(in srgb, var(--brand-ink) 45%, transparent);
-}
-.mine .s-scroll { flex: 1; overflow: hidden; padding: 36px 36px 16px; }
-.mine .s-eyebrow {
-  display: block; font-family: var(--font-display); font-weight: 500; font-size: 12px;
-  letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
-}
-.mine .s-title {
-  display: block; font-family: var(--font-display); font-weight: 500; font-size: 28px;
-  line-height: 1.08; letter-spacing: -.012em; color: var(--text-strong); margin-bottom: 20px;
-}
-.mine .s-body { display: block; font-family: var(--font-editorial); font-size: 17px; line-height: 1.55; color: #2a2c30; }
-.mine .s-nav {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 20px 18px; border-top: 1px solid var(--border-hair);
-}
-.mine .s-nav i { display: block; width: 62px; height: 30px; border-radius: 999px; border: 1px solid var(--border-hair); }
-.mine .s-nav i.primary { background: var(--accent); border-color: var(--accent); }
-/* Each app is one card: the thumb is its picture, the title and the action row
-   its body. The lift and the hairline belong to the card, not to the picture
-   inside it. */
-.mine li {
-  min-width: 0; display: flex; flex-direction: column;
-  padding: .75rem .75rem .7rem; box-sizing: border-box;
-  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 14px;
-  box-shadow: 0 10px 20px -18px color-mix(in srgb, var(--brand-ink) 50%, transparent);
-  transition: transform var(--dur-base), border-color var(--dur-base), box-shadow var(--dur-base);
-}
-.mine li:hover {
-  transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  box-shadow: 0 18px 34px -22px color-mix(in srgb, var(--brand-ink) 60%, transparent);
-}
-/* Title and date share one block so the date hangs off the title's baseline
-   rather than floating a second gap below the thumb. */
-.mine .meta { display: block; margin-top: .65rem; }
-.mine .name {
-  display: block; font-family: var(--font-editorial); font-size: 1.05rem; line-height: 1.25;
-  letter-spacing: -.005em; color: var(--text-strong);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  transition: color var(--dur-base);
-}
-/* Plainest thing on the card: the UI face, small, unstyled. It is a stamp on the
-   title, not a second label competing with it. */
-.mine .when {
-  display: block; margin-top: .2rem; font-family: system-ui, sans-serif; font-size: .78rem;
-  font-weight: 400; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--text-muted);
-}
-/* The row under a card. View and Edit are named because they are what the card
-   is for; the link and the bin are icons, and the bin is the only thing here
-   that cannot be undone, so it only colours on hover. */
-.mine .acts { display: flex; align-items: center; gap: .4rem; margin-top: auto; padding-top: .7rem; }
-.mine .acts .spacer { flex: 1; }
-.mine .acts .btn { padding: 3px 10px; font-size: .78rem; }
-.mine .acts .iconbtn { width: 28px; height: 28px; font-size: 15px; color: var(--text-muted); }
-.mine .acts .iconbtn:hover { color: var(--accent); }
-.mine .acts .iconbtn.is-done { color: var(--accent); }
-.mine .acts .iconbtn[data-act="del"]:hover { color: var(--accent-hot); }
-
-dialog.confirm:focus { outline: none; }
-dialog.confirm .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-dialog.confirm .bad { color: var(--accent-hot); }
-
-.mine li:hover .name { color: var(--accent); }
 
 @media (max-width: 860px) {
   .split { flex-direction: column; }
@@ -556,7 +427,6 @@ dialog.confirm .bad { color: var(--accent-hot); }
   body.work.norail .rail { transform: translateY(100%); max-height: 0; width: auto; }
   .preview { padding: 10px; }
   .hero form .row { flex-wrap: wrap; }
-  .mine ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 540px) {
   .mine ul { grid-template-columns: 1fr; }
@@ -568,11 +438,7 @@ body.nofx .hero, body.nofx .rail, body.nofx .preview, body.nofx .bar { transitio
 }
 
 /* ---- dialogs ---------------------------------------------------------- */
-dialog.beta { border: 1px solid var(--border-hair); border-radius: 12px; padding: 20px 24px; max-width: 26em; background: var(--surface-card); color: var(--text-body); }
-dialog.beta::backdrop { background: color-mix(in srgb, var(--brand-ink) 45%, transparent); }
-dialog.beta h2 { margin: 0 0 8px; font-size: 18px; color: var(--text-strong); }
-dialog.beta p { margin: 0 0 14px; font-size: 14px; }
-dialog.beta form { text-align: right; }
+/* dialog.beta: shelf.css. */
 dialog.settings { max-width: 34em; }
 dialog.settings h3 { margin: 16px 0 6px; font-size: 14px; color: var(--text-strong); }
 dialog.settings .linkrow { display: flex; gap: 6px; }

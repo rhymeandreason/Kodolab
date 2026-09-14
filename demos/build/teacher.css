@@ -76,7 +76,6 @@ tr.off code { text-decoration: line-through; color: var(--text-muted); }
 li.bad .s { color: var(--hue-coral); }
 
 /* ---- app lists ---- */
-.mine { margin-top: 3rem; }
 .appgrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .8rem; }
 .appgrid li > button, .appgrid li > a {
   display: flex; flex-direction: column; gap: .25rem; width: 100%; height: 100%; box-sizing: border-box; text-align: left;

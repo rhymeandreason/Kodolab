@@ -85,13 +85,6 @@
         </section>
       </div>
 
-      <section class="mine">
-        <div class="sechead"><h2>your apps</h2><span class="rule"></span>
-          <a class="more" id="buildLink" href="build.html">Build one</a></div>
-        <ul class="appgrid" id="myApps"></ul>
-        <p class="empty" id="noMine" hidden>Apps you build while signed in here show up in this list.</p>
-      </section>
-
       <p class="signout"><button class="textbtn" id="signout" type="button">Sign out of this browser</button></p>
     </section>
   </main>
@@ -171,10 +164,9 @@
     $('dash').hidden = false;
     $('newClass').hidden = false;
     $('buildUrl').textContent = BUILD.replace(/^https?:\/\//, '');
-    $('buildLink').href = BUILD;
     const want = new URLSearchParams(location.hash.slice(1)).get('class');
     classId = (data.classes.find(c => c.id === want) || data.classes[0] || {}).id || null;
-    paintClasses(); paintMine();
+    paintClasses();
     if (classId) await openClass(classId);
     return true;
   }
@@ -308,14 +300,6 @@
   $('closeStudent').addEventListener('click', () => $('student').close());
   // A click on the backdrop is outside the box: close it.
   $('student').addEventListener('click', e => { if (e.target === $('student')) $('student').close(); });
-
-  function paintMine() {
-    const list = data.apps || [];
-    $('noMine').hidden = !!list.length;
-    $('myApps').innerHTML = list.map(a => `<li><a href="${esc(BUILD + '?id=' + a.id)}">
-      <span class="name">${esc(a.title || 'untitled')}</span><span class="dim">${esc(ago(a.edited))}</span>
-      ${a.thumb_meta && a.thumb_meta.body ? `<span class="body">${esc(a.thumb_meta.body)}</span>` : ''}</a></li>`).join('');
-  }
 
   /* ---- the viewer ------------------------------------------------------- */
   let viewing = null;

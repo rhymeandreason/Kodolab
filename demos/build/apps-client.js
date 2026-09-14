@@ -168,7 +168,7 @@ const Apps = (() => {
 
   /* The site's own pages, in whichever spelling this world uses. */
   function page(name) {
-    const file = { build: 'build/build.html', teach: 'build/teacher.html', login: 'build/login.html' }[name];
+    const file = { build: 'build/build.html', apps: 'build/apps.html', teach: 'build/teacher.html', login: 'build/login.html' }[name];
     return fileForm ? `/demos/${file}` : `/${name}`;
   }
   /* The sign-in page, told to come back here. `why` names a refused class code. */

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My apps — Kodolab</title>
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at /apps by a vercel.json rewrite. -->
+<base href="/demos/build/">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="shelf.css">
+<!-- =========================================================================
+     EVERY APP THIS PERSON MADE, as the cards the builder's own shelf draws
+     (build/shelf.js). Who "this person" is comes from /api/build: a class
+     seat, a teacher, or a signed-in account. Anyone else is sent to /login and
+     comes back here.
+     ========================================================================= -->
+<style>
+  .shelfwrap { padding-bottom: 5rem; }
+  .empty { font-family: var(--font-editorial); font-size: 1.05rem; color: var(--text-muted); }
+  .empty a { color: var(--accent); }
+</style>
+</head>
+<body class="kodo">
+<div class="page">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  </nav>
+
+  <header class="pagehead">
+    <h1>my apps</h1>
+    <span class="meta" id="count" hidden></span>
+  </header>
+
+  <main class="shelfwrap">
+    <div id="mine" hidden></div>
+    <p class="empty" id="empty" hidden>Nothing yet. <a id="buildLink" href="build.html">Build one</a>.</p>
+  </main>
+</div>
+
+<script src="apps-client.js"></script>
+<script src="shelf.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  $('buildLink').href = Apps.page('build');
+
+  const shelf = Shelf.mount($('mine'), {
+    limit: 60,
+    account: () => account,
+    onPaint: n => {
+      $('empty').hidden = !!n;
+      $('count').hidden = !n;
+      $('count').textContent = n + (n === 1 ? ' app' : ' apps');
+    },
+  });
+  let account = false;
+
+  (async () => {
+    try {
+      const cfg = await Apps.api('../../api/build');
+      account = !!(cfg.who && cfg.who.account);
+      if (cfg.who && cfg.who.account) Apps.account.note(cfg.who.user);
+    } catch (err) {
+      if (err.status === 401) {
+        const code = err.body && err.body.code;
+        if (code === 'invalid' || code === 'revoked') Apps.codes.setSeat(null);
+        return location.replace(Apps.login(code === 'invalid' || code === 'revoked' ? code : ''));
+      }
+    }
+    shelf.refresh();
+  })();
+})();
+</script>
+</body>
+</html>

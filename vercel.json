@@ -57,6 +57,7 @@
   ],
   "rewrites": [
     { "source": "/build",      "destination": "/demos/build/build.html" },
+    { "source": "/apps",       "destination": "/demos/build/apps.html" },
     { "source": "/app/:id",    "destination": "/demos/build/app.html?id=:id" },
     { "source": "/teach",      "destination": "/demos/build/teacher.html" },
     { "source": "/login",      "destination": "/demos/build/login.html" },

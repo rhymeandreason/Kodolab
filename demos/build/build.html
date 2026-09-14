@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
 <link rel="stylesheet" href="../css/kodo.css">
 <link rel="stylesheet" href="build.css">
+<link rel="stylesheet" href="shelf.css">
 </head>
 <body class="fresh">
 <script>
@@ -47,19 +48,6 @@
     <button class="iconbtn" id="railToggle" type="button" title="Hide the panel" aria-pressed="false"><i class="ph-bold ph-sidebar-simple"></i></button>
   </span>
 </header>
-
-<!-- tabindex so the dialog itself takes the opening focus: otherwise the
-     browser rings Cancel, and Enter is then a keystroke away from nothing
-     happening while the ring reads as a recommendation. -->
-<dialog class="beta confirm" id="delModal" tabindex="-1">
-  <h2>Delete this app?</h2>
-  <p>“<span id="delName"></span>” and all its versions go for good, and any link you have shared stops working.</p>
-  <p class="small bad" id="delErr" hidden></p>
-  <div class="row">
-    <button class="btn" id="delCancel" type="button">Cancel</button>
-    <button class="btn btn--hot" id="delGo" type="button"><i class="ph-bold ph-trash"></i>Delete</button>
-  </div>
-</dialog>
 
 <dialog class="beta settings" id="settingsModal">
   <h2>Edit link</h2>
@@ -194,6 +182,7 @@
 
 <script src="wordmark.js"></script>
 <script src="apps-client.js"></script>
+<script src="shelf.js"></script>
 <script>
 (() => {
   'use strict';
@@ -787,8 +776,6 @@
   }
 
   function paintSettings() { $('editLink').value = Apps.link('edit', app.id, token); $('previewLink').href = Apps.link('preview', app.id); $('copied').hidden = true; }
-  $('delCancel').addEventListener('click', () => $('delModal').close());
-  $('delGo').addEventListener('click', doDelete);
   $('settings').addEventListener('click', () => { paintSettings(); $('settingsModal').showModal(); });
   $('copyEdit').addEventListener('click', async () => {
     const link = $('editLink').value;
@@ -815,174 +802,14 @@
     } catch (err) { notice(err.message, true); }
   });
 
-  // Last edited, read from the newest version's time when the shelf answers and
-  // from this browser's own store until then. Days, then a date: an app is
-  // worked on in sittings, so an hour count says less than "3 days ago".
-  function ago(t) {
-    if (!t) return '';
-    const d = new Date(t), days = Math.floor((Date.now() - d) / 864e5);
-    if (days <= 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return days + ' days ago';
-    const y = d.getFullYear() === new Date().getFullYear();
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(y ? {} : { year: 'numeric' }) });
-  }
-
-  // The shelf. The first few cards are the apps themselves, live in a scaled,
-  // inert frame; six is the cap, since each is a WebGL context. Beyond that a
-  // card is the same box with the frame swapped for a still: the scene as the
-  // stored image, the shell's own card rebuilt over it from the words stored
-  // beside it. Same 960x600 layout, same scale, so the two halves of the shelf
-  // read as one set. With neither, paper.
-  const LIVE = 6;
-
-  // The icon says it landed: the link goes to a check for a moment and back.
-  async function copyLink(btn, id) {
-    try { await navigator.clipboard.writeText(Apps.link('view', id)); } catch { return; }
-    btn.classList.add('is-done');
-    btn.innerHTML = '<i class="ph-bold ph-check"></i>';
-    setTimeout(() => { btn.classList.remove('is-done'); btn.innerHTML = '<i class="ph-bold ph-link"></i>'; }, 1600);
-  }
-
-  // Deleting takes the app off the server, so the link anyone holds stops
-  // working. Said plainly in the dialog, and the app is named in it.
-  let pendingDelete = null;
-  function askDelete(m) {
-    pendingDelete = m;
-    $('delName').textContent = m.title || 'untitled';
-    $('delErr').hidden = true;
-    $('delModal').showModal();
-    $('delModal').focus();
-  }
-  async function doDelete() {
-    const m = pendingDelete; if (!m) return;
-    try {
-      await Apps.api('../../api/app', { method: 'POST', token: m.token, body: { action: 'remove', id: m.id } });
-    } catch (err) {
-      // A row already gone is a delete that got what it wanted.
-      if (err.status !== 404) { $('delErr').textContent = err.message; $('delErr').hidden = false; return; }
-    }
-    Apps.forget(m.id);
-    pendingDelete = null;
-    $('delModal').close();
-    paintMine();
-  }
-
-  // With a class or teacher code the shelf is that code's apps, read from the
-  // server, and nothing from this browser's store: on a shared Chromebook the
-  // store holds whoever sat here last.
-  let shelfList = [];
-  async function paintMine() {
-    const coded = !!(Apps.codes.seat() || Apps.codes.teacher() || (whoNow && whoNow.account));
-    let list;
-    if (coded) {
-      try {
-        const r = await Apps.api('../../api/app?mine=1');
-        list = (r.apps || []).map(a => ({ id: a.id, title: a.title, thumb: a.thumb, meta: a.thumb_meta,
-                                          edited: a.edited, token: Apps.tokenFor(a.id), mine: true }));
-      } catch (err) { console.warn('[shelf] ' + err.message); list = []; }
-      list = list.filter(m => !app || m.id !== app.id).slice(0, 12);
-    } else {
-      list = Apps.mine().filter(m => !app || m.id !== app.id).slice(0, 12);
-    }
-    shelfList = list;
-    const box = $('mine');
-    if (!list.length) { box.hidden = true; return; }
-    box.hidden = false; $('down').hidden = false;
-    // The panel, as the shell draws it. `nav` is the Back/Next row the sandbox
-    // shell does without; the dots are one per step.
-    const still = m => {
-      const t = m.meta;
-      if (!m.thumb && !t) return '';
-      // A thumb is only laid down when it is known to be scene-only. A capture
-      // from before the shelf drew its own panel has one rasterised into it,
-      // and the words go over the top of it; the picture is dropped rather than
-      // the panel, since that baked panel is the blank one this replaced. Such
-      // a card is words on paper until its app is next opened and recaptured.
-      const scene = m.thumb && (!t || t.scene);
-      return `<span class="card"${scene ? ` style="background-image:url(${esc(m.thumb)})"` : ''}>`
-        + (t ? `<span class="s-top"><span class="s-brand">${esc(t.brand || '')}</span>`
-             + `<span class="s-dots">${'<i></i>'.repeat(Math.min(t.steps || 0, 12))}</span></span>`
-             + `<span class="s-panel"><span class="s-scroll">`
-             + (t.eyebrow ? `<span class="s-eyebrow">${esc(t.eyebrow)}</span>` : '')
-             + `<span class="s-title">${esc(t.title || '')}</span>`
-             + (t.body ? `<span class="s-body">${esc(t.body)}</span>` : '')
-             + `</span>`
-             + (t.nav ? `<span class="s-nav"><i class="ghost"></i><i class="primary"></i></span>` : '')
-             + `</span>` : '')
-        + `</span>`;
-    };
-    // The card opens the editor; the row under it names the three things that
-    // are not that. Delete needs the edit token, so it is only offered on an app
-    // this browser can still edit.
-    const card = (m, i) => `<li data-id="${esc(m.id)}"><a class="open" href="${esc(Apps.link('edit', m.id))}"><span class="thumb">`
-      + (i < LIVE ? `<iframe class="live" data-id="${esc(m.id)}" title="" tabindex="-1" aria-hidden="true"></iframe>` : still(m))
-      + `</span><span class="meta"><span class="name">${esc(m.title || 'untitled')}</span>`
-      + `<time class="when" datetime="${new Date(m.edited || m.at || Date.now()).toISOString()}">${esc(ago(m.edited || m.at))}</time>`
-      + `</span></a>`
-      + `<span class="acts">`
-      + `<a class="btn btn--soft" href="${esc(Apps.link('view', m.id))}" target="_blank" rel="noopener"><i class="ph-bold ph-arrow-square-out"></i>View</a>`
-      + `<a class="btn btn--soft" href="${esc(Apps.link('edit', m.id))}"><i class="ph-bold ph-pencil-simple"></i>Edit</a>`
-      + `<span class="spacer"></span>`
-      + `<button class="iconbtn" data-act="copy" type="button" title="Copy the public link" aria-label="Copy the public link"><i class="ph-bold ph-link"></i></button>`
-      + (m.token || m.mine ? `<button class="iconbtn" data-act="del" type="button" title="Delete this app" aria-label="Delete this app"><i class="ph-bold ph-trash"></i></button>` : '')
-      + `</span></li>`;
-    const paint = () => { box.innerHTML = `<h2>Continue building</h2><ul>${list.map(card).join('')}</ul>`; };
-    paint();
-    if (!box._acts) {
-      box._acts = true;
-      box.addEventListener('click', e => {
-        const b = e.target.closest('button[data-act]'); if (!b) return;
-        const id = b.closest('li').dataset.id;
-        const m = shelfList.find(x => x.id === id) || { id };
-        if (b.dataset.act === 'copy') return copyLink(b, id);
-        askDelete(m);
-      });
-    }
-    if (!coded) try {
-      const r = await Apps.api(`../../api/app?ids=${list.map(m => m.id).join(',')}`);
-      const by = Object.fromEntries((r.apps || []).map(a => [a.id, a]));
-      for (const m of list) { const a = by[m.id]; if (a) { m.thumb = a.thumb; m.meta = a.thumb_meta; m.edited = a.edited; if (a.title) m.title = a.title; } }
-      paint();
-    } catch (err) {
-      // The shelf still paints from the browser's own store, so a card keeps its
-      // title and date. Said out loud because the silent version turned one
-      // missing column into twelve blank thumbs with nothing to go on.
-      console.warn('[shelf] no stored thumbs: ' + err.message);
-    }
-    const fit = () => { for (const t of box.querySelectorAll('.thumb')) t.style.setProperty('--k', (t.clientWidth / 960).toFixed(4)); };
-    fit(); if (!box._ro) { box._ro = new ResizeObserver(fit); box._ro.observe(box); }
-    // A live card is a WebGL app, and the shelf sits below the fold: mounting six
-    // of them at load fought the intro animation for the main thread. Nothing
-    // loads until a card is actually scrolled to, and then one at a time.
-    //
-    // The margin is zero on purpose. The first screen is exactly the height of
-    // the scroller, so the shelf's top edge rests on the fold: any positive
-    // rootMargin is satisfied without scrolling, which is the whole bug.
-    const queue = [];
-    let pumping = false;
-    async function pump() {
-      if (pumping) return;
-      pumping = true;
-      while (queue.length) {
-        const f = queue.shift();
-        try { const r = await Apps.api(`../../api/app?id=${f.dataset.id}`); Apps.preview(f, r.html); }
-        catch { /* a card that will not load stays paper */ }
-        await new Promise(done => setTimeout(done, 120));
-      }
-      pumping = false;
-    }
-    const io = new IntersectionObserver((entries, obs) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue;
-        obs.unobserve(e.target);
-        queue.push(e.target);
-      }
-      pump();
-      // The fresh page scrolls the document, so the viewport is the root.
-    }, { root: null, rootMargin: '0px', threshold: 0.2 });
-    for (const f of box.querySelectorAll('iframe.live')) io.observe(f);
-  }
+  // The shelf is build/shelf.js; the row is the same cards /apps draws.
+  const shelf = Shelf.mount($('mine'), {
+    heading: 'Continue building',
+    account: () => !!(whoNow && whoNow.account),
+    exclude: () => app && app.id,
+    onPaint: n => { $('down').hidden = !n; },
+  });
+  const paintMine = () => shelf.refresh();
 
   /* ---- who is building ---------------------------------------------------- */
   function paintWho(who) {

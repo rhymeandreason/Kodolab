@@ -114,12 +114,11 @@
       return;
     }
 
-    // My apps is the builder's shelf, so Build alone is marked current there.
     // The person's own places sit right of a hairline, apart from the site's.
     var rule = document.createElement('span');
     rule.className = 'acct rule';
     links.appendChild(rule);
-    var own = [{ text: 'My apps', href: '/build#mine', at: /(?!)/ }];
+    var own = [{ text: 'My apps', href: '/apps', at: /^\/(apps|build\/apps)$/ }];
     if (user.teacher) own.unshift({ text: 'Teach', href: '/teach', at: /^\/(teach|build\/teacher)$/ });
     own.forEach(function (n) {
       var a = document.createElement('a');

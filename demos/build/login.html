@@ -80,7 +80,7 @@
   // Only a builder page is somewhere to come back to. Anything else, /login itself
   // included, lands on /teach or /build; and an absolute `next` would be an open redirect.
   const raw = params.get('next') || '';
-  const next = /^\/(build|teach|app)([?#\/]|$)|^\/demos\/build\/(build|teacher|app)\.html([?#]|$)/.test(raw) ? raw : null;
+  const next = /^\/(build|apps|teach|app)([?#\/]|$)|^\/demos\/build\/(build|apps|teacher|app)\.html([?#]|$)/.test(raw) ? raw : null;
   const wantsTeach = !!next && /^\/(teach|demos\/build\/teacher\.html)([?#\/]|$)/.test(next);
   const home = user => next || Apps.page(user && user.teacher ? 'teach' : 'build');
 
