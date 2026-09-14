@@ -19,6 +19,11 @@ demos/questions-cms.html
 # IS deployed — door-map.html reads it — but nothing that writes it is.
 demos/map-cms.html
 
+# The access-code admin: reads and writes the live database through an
+# endpoint that exists only in tools/dev-server.js, and only for loopback.
+demos/tools/codes.html
+demos/tools/codes-api.js
+
 # The clip shelf, same reason and the same kind of endpoint (/api/clips, also
 # only in tools/dev-server.js). It reaches the network and shells out to ffmpeg,
 # neither of which a Vercel function here does. What it WRITES is deployed:

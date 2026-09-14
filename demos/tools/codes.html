@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Access codes</title>
+<script defer src="/demos/lib/site.js"></script>
+<link rel="stylesheet" href="../css/kodo.css">
+<!-- =========================================================================
+     EVERY ACCESS CODE, on one page: teachers and their dashboard codes, each
+     class's seat codes, the invites that admit Google accounts, and the
+     accounts themselves. Localhost only: it reads and writes the live database
+     through /api/codes, which exists only in tools/dev-server.js and answers
+     only loopback. Not deployed (.vercelignore). The same operations from the
+     terminal are `node demos/tools/db.js teacher|invite|user`.
+
+     A teacher's dashboard code is shown ONCE, when minted or reissued: it is
+     stored hashed, so there is no looking it up later.
+     ========================================================================= -->
+<style>
+  main { padding-bottom: 5rem; }
+  section { margin-top: 2.6rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--border-hair); vertical-align: top; }
+  th { font-family: var(--font-ui); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .95em; letter-spacing: .06em; }
+  .dim { color: var(--text-muted); }
+  .off, .off code { color: var(--text-muted); text-decoration: line-through; }
+  .mint { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1rem; }
+  .mint input { padding: .45rem .8rem; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-page); font: inherit; }
+  .mint input.n { width: 5.5rem; }
+  .fresh { margin: 1rem 0 0; padding: .9rem 1.1rem; background: var(--surface-card); border: 1px solid var(--accent); border-radius: 10px; font-size: .95rem; }
+  .fresh code { font-size: 1.1rem; user-select: all; }
+  .err { color: var(--hue-coral); margin: .6rem 0 0; }
+  .sub { margin-left: 1.5rem; }
+  .sub table { margin-top: .4rem; }
+  .textbtn { cursor: pointer; }
+  .acts { white-space: nowrap; }
+</style>
+</head>
+<body class="kodo">
+<div class="page">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <span class="crumb">localhost</span>
+  </nav>
+  <header class="pagehead">
+    <h1>access codes</h1>
+    <p class="deck">Who may build, and how they get in. This machine only.</p>
+  </header>
+  <main>
+    <p class="err" id="err" hidden></p>
+    <div class="fresh" id="fresh" hidden></div>
+
+    <section>
+      <div class="sechead"><h2>teachers</h2><span class="rule"></span><span class="count" id="nTeachers"></span></div>
+      <p class="dim">A dashboard code opens /teach without an account. A teacher who signs in with Google redeems it once and the code retires. Each class below lists its seat codes, which students type on /build.</p>
+      <form class="mint" id="newTeacher">
+        <input id="teacherName" placeholder="Teacher's name" required>
+        <button class="btn" type="submit">New teacher + code</button>
+      </form>
+      <div id="teachers"></div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>invites</h2><span class="rule"></span><span class="count" id="nInvites"></span></div>
+      <p class="dim">Redeemed after Google sign-in. A teacher invite is single use and makes the account a teacher. A member invite admits builders under a label, for as many uses as you set.</p>
+      <form class="mint" id="newInvite">
+        <select id="inviteKind"><option value="member">Member</option><option value="teacher">Teacher</option></select>
+        <input id="inviteLabel" placeholder="Label, e.g. bio101-fall">
+        <input class="n" id="inviteMax" type="number" min="1" placeholder="uses">
+        <input id="inviteNote" placeholder="Note (optional)">
+        <button class="btn" type="submit">New invite</button>
+      </form>
+      <table><thead><tr><th>Code</th><th>Kind</th><th>Label</th><th class="num">Used</th><th>Note</th><th>Made</th><th></th></tr></thead><tbody id="invites"></tbody></table>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>accounts</h2><span class="rule"></span><span class="count" id="nUsers"></span></div>
+      <p class="dim">Google accounts that have signed in. Pending means signed in but no invite redeemed yet. Disabling ends every session and refuses sign-in.</p>
+      <table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Invite</th><th>Joined</th><th></th></tr></thead><tbody id="users"></tbody></table>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const day = t => t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+  async function api(body) {
+    const r = await fetch('/api/codes', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+    const j = await r.json().catch(() => ({ error: 'HTTP ' + r.status }));
+    if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+    return j;
+  }
+  function fail(e) { $('err').textContent = e.message; $('err').hidden = false; }
+  function fresh(html) { $('fresh').innerHTML = html; $('fresh').hidden = false; }
+
+  function paint(d) {
+    $('err').hidden = true;
+    $('nTeachers').textContent = d.teachers.length;
+    $('teachers').innerHTML = d.teachers.map(t => `
+      <table><thead><tr><th>${esc(t.name)}</th><th>${t.user_email ? 'Google · ' + esc(t.user_email) : t.has_code ? 'dashboard code' : 'no code'}</th><th class="dim">${esc(t.id)}</th>
+        <th class="acts"><button class="textbtn" data-act="teacher.reissue" data-id="${esc(t.id)}">${t.has_code ? 'Reissue code' : 'Issue code'}</button></th></tr></thead></table>
+      ${t.classes.map(c => `<div class="sub"><b>${esc(c.name)}</b> <span class="dim">· ${c.seats.length} seat${c.seats.length === 1 ? '' : 's'}</span>
+        <table><tbody>${c.seats.map(s => `<tr class="${s.revoked_at ? 'off' : ''}"><td>${esc(s.label)}</td><td><code>${esc(s.code)}</code></td>
+          <td class="num">${s.apps} app${s.apps === 1 ? '' : 's'}</td>
+          <td class="acts"><button class="textbtn" data-act="${s.revoked_at ? 'seat.unrevoke' : 'seat.revoke'}" data-id="${esc(s.id)}">${s.revoked_at ? 'Restore' : 'Revoke'}</button></td></tr>`).join('')}</tbody></table></div>`).join('')}`).join('')
+      || '<p class="dim">No teachers yet.</p>';
+
+    $('nInvites').textContent = d.invites.length;
+    $('invites').innerHTML = d.invites.map(i => `<tr class="${i.revoked_at ? 'off' : ''}">
+      <td><code>${esc(i.code)}</code></td><td>${esc(i.kind)}</td><td>${esc(i.label)}</td>
+      <td class="num">${i.uses}${i.max_uses ? ' / ' + i.max_uses : ''}</td><td class="dim">${esc(i.note)}</td><td class="dim">${day(i.created_at)}</td>
+      <td class="acts"><button class="textbtn" data-act="${i.revoked_at ? 'invite.restore' : 'invite.revoke'}" data-code="${esc(i.code)}">${i.revoked_at ? 'Restore' : 'Revoke'}</button></td></tr>`).join('')
+      || '<tr><td colspan="7" class="dim">No invites yet.</td></tr>';
+
+    $('nUsers').textContent = d.users.length;
+    $('users').innerHTML = d.users.map(u => `<tr class="${u.disabled_at ? 'off' : ''}">
+      <td>${esc(u.email)}</td><td>${esc(u.name)}</td>
+      <td>${u.disabled_at ? 'disabled' : u.teacher_id ? 'teacher' : u.admitted_at ? 'member' : 'pending'}</td>
+      <td class="dim">${esc(u.invite_label)}</td><td class="dim">${day(u.created_at)}</td>
+      <td class="acts"><button class="textbtn" data-act="${u.disabled_at ? 'user.enable' : 'user.disable'}" data-id="${esc(u.id)}">${u.disabled_at ? 'Enable' : 'Disable'}</button></td></tr>`).join('')
+      || '<tr><td colspan="6" class="dim">No accounts yet.</td></tr>';
+  }
+
+  const load = () => api().then(paint).catch(fail);
+
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const act = b.dataset.act;
+    if (act === 'teacher.reissue' && !confirm('Issue a new dashboard code? Any old one stops working.')) return;
+    if (act === 'user.disable' && !confirm('Disable this account? Their sessions end now.')) return;
+    try {
+      const r = await api({ action: act, id: b.dataset.id, code: b.dataset.code });
+      if (r.code) fresh(`Dashboard code for teacher <b>${esc(b.dataset.id)}</b>, shown once: <code>${esc(r.code)}</code>`);
+      load();
+    } catch (err) { fail(err); }
+  });
+
+  $('newTeacher').addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      const r = await api({ action: 'teacher.new', name: $('teacherName').value });
+      fresh(`<b>${esc($('teacherName').value)}</b> is teacher <b>${esc(r.id)}</b>. Dashboard code, shown once: <code>${esc(r.code)}</code>`);
+      $('teacherName').value = '';
+      load();
+    } catch (err) { fail(err); }
+  });
+
+  $('inviteKind').addEventListener('change', () => {
+    const t = $('inviteKind').value === 'teacher';
+    $('inviteLabel').disabled = t; $('inviteMax').disabled = t;
+  });
+  $('newInvite').addEventListener('submit', async e => {
+    e.preventDefault();
+    const teacher = $('inviteKind').value === 'teacher';
+    try {
+      const r = await api({ action: teacher ? 'invite.teacher' : 'invite.member', label: $('inviteLabel').value, max: $('inviteMax').value, note: $('inviteNote').value });
+      fresh(`${teacher ? 'Teacher' : 'Member'} invite: <code>${esc(r.code)}</code>. Redeemed on /login after Google sign-in.`);
+      $('inviteLabel').value = ''; $('inviteMax').value = ''; $('inviteNote').value = '';
+      load();
+    } catch (err) { fail(err); }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>

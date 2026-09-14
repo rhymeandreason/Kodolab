@@ -677,6 +677,11 @@ function api(url, req, res) {
   // `api/_local.js` is still asked, because "the dev server" is not the claim
   // as "the machine running it" the day this port is forwarded somewhere.
   if (url === '/api/questions') return questions(req, res, json);
+  // Every access code, for tools/codes.html. Local only, and not deployed.
+  if (url === '/api/codes') {
+    delete require.cache[require.resolve('./codes-api.js')];
+    return require('./codes-api.js').handler(req, res, json, require(path.join(ROOT, 'api/_local.js')).local);
+  }
   if (url === '/api/mapcontent') return editable(req, res, json, 'mapcontent');
   if (url === '/api/clips') return clips(req, res, json);
   if (url === '/api/images') return images(req, res, json);
