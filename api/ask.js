@@ -18,7 +18,8 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
   // Only this machine gets the bench: the prompt is readable and rewritable
-  // there, and neither is for the public. Deployed, `local` is never true.
+  // there, and neither is for the public. `_local.js` says why a deployed
+  // function is never local, even though its socket is loopback.
   const bench = local(req);
 
   // Which class this link belongs to, or null. Refused before anything else, so
