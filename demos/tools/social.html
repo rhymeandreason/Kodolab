@@ -396,7 +396,12 @@ function runs(text) {
   if (i < text.length) out.push({ t: text.slice(i), em: false });
   return out;
 }
-const mw = (ctx, t, sp) => ctx.measureText(t).width + (sp || 0) * t.length;
+const NATIVE_LS = 'letterSpacing' in CanvasRenderingContext2D.prototype;
+function mw(ctx, t, sp) {
+  if (!sp) return ctx.measureText(t).width;
+  if (NATIVE_LS) { ctx.letterSpacing = sp + 'px'; const w = ctx.measureText(t).width; ctx.letterSpacing = '0px'; return w; }
+  return ctx.measureText(t).width + sp * t.length;
+}
 function wrap(ctx, text, maxW, sp = 0) {
   const words = [];
   for (const r of runs(text)) r.t.split('\n').forEach((p, pi) => {
@@ -417,6 +422,7 @@ function wrap(ctx, text, maxW, sp = 0) {
 }
 function drawTracked(ctx, t, x, y, sp) {
   if (!sp) { ctx.fillText(t, x, y); return mw(ctx, t, 0); }
+  if (NATIVE_LS) { ctx.letterSpacing = sp + 'px'; ctx.fillText(t, x, y); const w = ctx.measureText(t).width; ctx.letterSpacing = '0px'; return w; }
   let dx = 0;
   for (const ch of t) { ctx.fillText(ch, x + dx, y); dx += ctx.measureText(ch).width + sp; }
   return dx;
@@ -432,6 +438,10 @@ function block(ctx, text, o) {
     lines = wrap(ctx, text, maxW, sp * size);
     const h = (lines.length - 1) * size * lh + size;
     if (!o.maxH || h <= o.maxH || size - 2 < (o.min || 12)) break;
+  }
+  if (o.balance && lines.length > 1) {
+    const n = lines.length; let w = maxW;
+    for (let t = maxW * .98; t > maxW * .5; t -= maxW * .02) { const l = wrap(ctx, text, t, sp * size); if (l.length !== n) break; w = t; lines = l; }
   }
   const first = lines[0].map(k => k.t).join('') || 'H';
   const asc = ctx.measureText(first).actualBoundingBoxAscent || size * .75;
@@ -538,9 +548,9 @@ function drawLesson(ctx, W, H) {
   const landscape = W > H * 1.3;
   const gap = 20 * u;
   const text = (x, yy, maxW, maxH) => {
-    const eb = c.eyebrow ? block(ctx, c.eyebrow, { x, y: yy, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 22 * u : 0;
+    const eb = c.eyebrow ? block(ctx, c.eyebrow, { x, y: yy, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 30 * u : 0;
     const dk = c.deck ? block(ctx, c.deck, { x, y: 0, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 22 * u : 0;
-    const hd = block(ctx, c.headline, { x, y: yy + eb, maxW, size: 80 * u, min: 40 * u, maxH: maxH - eb - dk, font: F.display, lh: 1.06, color: G.text, em: A });
+    const hd = block(ctx, c.headline, { x, y: yy + eb, maxW, size: 80 * u, min: 40 * u, maxH: maxH - eb - dk, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A });
     if (c.deck) block(ctx, c.deck, { x, y: yy + eb + hd.h + 22 * u, maxW, size: 31 * u, font: F.serif, lh: 1.35, color: G.deck, em: A });
     return eb + hd.h + dk;
   };
@@ -566,13 +576,13 @@ function drawStatement(ctx, W, H) {
   ctx.fillStyle = G.fill; ctx.fillRect(0, 0, W, H);
   if (S.dots) motes(ctx, W, H, u);
   const maxW = W - 2 * P, barH = 34 * u, top = P + barH + 40 * u, bottom = H - P - barH - 40 * u;
-  const eb = c.eyebrow ? block(ctx, c.eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 28 * u : 0;
+  const eb = c.eyebrow ? block(ctx, c.eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 34 * u : 0;
   const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 30 * u : 0;
-  const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: 108 * u, min: 48 * u, maxH: bottom - top - eb - dk, font: F.display, lh: 1.04, color: G.text, em: A, measure: true });
+  const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: 108 * u, min: 48 * u, maxH: bottom - top - eb - dk, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A, measure: true });
   let y = top + Math.max(0, (bottom - top - eb - hm.h - dk) / 2);
   if (c.eyebrow) block(ctx, c.eyebrow, { x: P, y, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true });
   y += eb;
-  block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.04, color: G.text, em: A });
+  block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A });
   y += hm.h + 30 * u;
   if (c.deck) block(ctx, c.deck, { x: P, y, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A });
   bottombar(ctx, W, H, P, u, G, S.url);
@@ -589,8 +599,8 @@ function drawSlide(ctx, W, H, i) {
   const eyebrow = c.eyebrow || S.eyebrow;
   if (role === 'body') {
     const im = img(c.image);
-    if (eyebrow) y += block(ctx, eyebrow, { x: P, y, maxW, size: 22 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 24 * u;
-    const hd = block(ctx, c.headline, { x: P, y, maxW, size: 68 * u, min: 36 * u, maxH: (bottom - y) * .4, font: F.display, lh: 1.06, color: G.text, em: A });
+    if (eyebrow) y += block(ctx, eyebrow, { x: P, y, maxW, size: 22 * u, font: F.cap, color: A, em: A, sp: .22, upper: true }).h + 30 * u;
+    const hd = block(ctx, c.headline, { x: P, y, maxW, size: 68 * u, min: 36 * u, maxH: (bottom - y) * .4, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A });
     y += hd.h + 26 * u;
     if (c.deck) y += block(ctx, c.deck, { x: P, y, maxW: maxW * .9, size: 33 * u, font: F.serif, lh: 1.4, color: G.deck, em: A, maxH: c.image ? (bottom - y) * .45 : bottom - y }).h + 30 * u;
     if (c.image && bottom - y > 160 * u) imageCard(ctx, im, P, y + 10 * u, maxW, bottom - y - 10 * u - 44 * u, u, G, A);
@@ -599,14 +609,14 @@ function drawSlide(ctx, W, H, i) {
   }
   // cover and cta: the statement layout, with the pill on the cta
   const barH = 34 * u, top = y, low = H - P - barH - 40 * u;
-  const eb = eyebrow ? block(ctx, eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 28 * u : 0;
+  const eb = eyebrow ? block(ctx, eyebrow, { x: P, y: 0, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true, measure: true }).h + 34 * u : 0;
   const dk = c.deck ? block(ctx, c.deck, { x: P, y: 0, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A, measure: true }).h + 30 * u : 0;
   const pl = role === 'cta' ? 28 * u * 2.3 + 40 * u : 0;
-  const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: role === 'cover' ? 104 * u : 88 * u, min: 44 * u, maxH: low - top - eb - dk - pl, font: F.display, lh: 1.04, color: G.text, em: A, measure: true });
+  const hm = block(ctx, c.headline, { x: P, y: 0, maxW, size: role === 'cover' ? 104 * u : 88 * u, min: 44 * u, maxH: low - top - eb - dk - pl, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A, measure: true });
   y = top + Math.max(0, (low - top - eb - hm.h - dk - pl) / 2);
   if (eyebrow) block(ctx, eyebrow, { x: P, y, maxW, size: 24 * u, font: F.cap, color: A, em: A, sp: .22, upper: true });
   y += eb;
-  block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.04, color: G.text, em: A });
+  block(ctx, c.headline, { x: P, y, maxW, size: hm.size, font: F.display, lh: 1.12, sp: -.015, balance: true, color: G.text, em: A });
   y += hm.h + 30 * u;
   if (c.deck) { block(ctx, c.deck, { x: P, y, maxW: maxW * .86, size: 34 * u, font: F.serif, lh: 1.35, color: G.deck, em: A }); y += dk; }
   if (role === 'cta') pill(ctx, S.url, P, y + 10 * u, u, G);
@@ -621,8 +631,8 @@ function drawHero(ctx, W, H) {
   if (S.dots) motes(ctx, W, H, u);
   const im = img(c.image);
   const mh = Math.min(W * (im ? .42 : .62) / (MARK ? MARK.w / MARK.h : 4.2), (im ? 100 : 150) * u);
-  const dk = c.deck ? block(ctx, c.deck, { x: W / 2, y: 0, maxW: W - 2 * P, size: 34 * u, font: F.serifI, lh: 1.3, color: G.deck, em: A, align: 'center', measure: true }).h + 26 * u : 0;
-  const hd = c.headline ? block(ctx, c.headline, { x: W / 2, y: 0, maxW: W - 2 * P, size: 44 * u, min: 24 * u, font: F.serifI, lh: 1.3, color: G.text, em: A, align: 'center', measure: true }).h + 22 * u : 0;
+  const dk = c.deck ? block(ctx, c.deck, { x: W / 2, y: 0, maxW: W - 2 * P, size: 34 * u, font: F.serifI, lh: 1.3, color: G.deck, em: A, align: 'center', balance: true, measure: true }).h + 26 * u : 0;
+  const hd = c.headline ? block(ctx, c.headline, { x: W / 2, y: 0, maxW: W - 2 * P, size: 44 * u, min: 24 * u, font: F.serifI, lh: 1.3, color: G.text, em: A, align: 'center', balance: true, measure: true }).h + 22 * u : 0;
   const urlH = S.url ? 40 * u : 0, avail = H - 2 * P - urlH, content = mh + 44 * u + hd + dk;
   let ih = im ? Math.max(0, avail - content - 40 * u) : 0;
   slot = { w: W - 2 * P, h: Math.max(80 * u, avail - content - 40 * u) };
@@ -634,8 +644,8 @@ function drawHero(ctx, W, H) {
     ctx.drawImage(im, (W - dw) / 2, y + (ih - dh) / 2, dw, dh); y += ih + 40 * u;
   }
   drawMark(ctx, (W - markW(mh)) / 2, y, mh, G.text); y += mh + 44 * u;
-  if (c.headline) { block(ctx, c.headline, { x: W / 2, y, maxW: W - 2 * P, size: 44 * u, min: 24 * u, font: F.serifI, lh: 1.3, color: G.text, em: A, align: 'center' }); y += hd; }
-  if (c.deck) block(ctx, c.deck, { x: W / 2, y, maxW: W - 2 * P, size: 34 * u, font: F.serifI, lh: 1.3, color: G.deck, em: A, align: 'center' });
+  if (c.headline) { block(ctx, c.headline, { x: W / 2, y, maxW: W - 2 * P, size: 44 * u, min: 24 * u, font: F.serifI, lh: 1.3, color: G.text, em: A, align: 'center', balance: true }); y += hd; }
+  if (c.deck) block(ctx, c.deck, { x: W / 2, y, maxW: W - 2 * P, size: 34 * u, font: F.serifI, lh: 1.3, color: G.deck, em: A, align: 'center', balance: true });
   if (S.url) block(ctx, S.url, { x: W / 2, y: H - P - 14 * u, maxW: W, size: 18 * u, font: F.cap, color: G.mute, em: G.mute, sp: .24, align: 'center', upper: true });
 }
 
