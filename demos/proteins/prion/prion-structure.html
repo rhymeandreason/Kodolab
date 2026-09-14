@@ -323,7 +323,17 @@ function show(part){
   const t = traces[part.id];
   const v = ProteinLib.variantOf(ME, part.id);
 
+  NOTES.clear();
+  const notes = () => { for(const n of part.notes(t)) if(n.at) NOTES.add(n); };
+  for(const el of secs) el.setAttribute('aria-current', String(el.dataset.key === part.key));
+
   if(shownId !== part.id){
+    /* ONE RUNG BECOMES THE STACK. The rung and the stack are one file in one
+       frame, so the stack's other nine chains can start where the rung is
+       and slide up into place, while the frame turns from the rung's face-on
+       basis to the fibril's side-on one. */
+    const stacking = shownId === '6LNI' && part.id === 'stack';
+    const was = { r: box.cam.r, pos: box.root.position.clone() };
     shownId = part.id;
     /* Healthy against disease, in colour: rust is the disease side, the
        registry's call, so the bench and this page agree. */
@@ -331,12 +341,60 @@ function show(part){
     $('specimen').innerHTML =
       `<span class="pdb">${v.source.id}</span> · ${SAYS[part.id]} · `
       + `<a href="${ProteinLib.urls(v).entry}" target="_blank" rel="noopener">at the PDB →</a>`;
+    if(stacking){ stackUp(t, was, notes); return; }
   }
   box.focus(null, first ? 0 : TWEEN);
+  notes();
+}
 
-  NOTES.clear();
-  for(const n of part.notes(t)) if(n.at) NOTES.add(n);
-  for(const el of secs) el.setAttribute('aria-current', String(el.dataset.key === part.key));
+/* =============================================================================
+ *  THE STACK-UP
+ * =============================================================================
+ *  setData has just put the stack on stage at its own basis and framing. Wind
+ *  the frame back to where the rung was (its basis, its camera distance) and
+ *  let focus() tween forward from there — that is the turn. The slide is this
+ *  page's: every chain but the rung's starts displaced onto the rung and eases
+ *  to zero, bottom rung first. Chains arrive one per frame while the box
+ *  builds, so each is caught and displaced the frame it appears, before it is
+ *  ever drawn in place.
+ * ========================================================================== */
+const basisQ = b => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().set(
+  b[0][0], b[0][1], b[0][2], 0,  b[1][0], b[1][1], b[1][2], 0,
+  b[2][0], b[2][1], b[2][2], 0,  0, 0, 0, 1));
+let stackRun = 0;
+function stackUp(t, was, done){
+  const run = ++stackRun;
+  const TURN = 1400, SLIDE = 900, STAGGER = 90;
+  box.group.quaternion.copy(basisQ(traces['6LNI'].view));
+  box.root.position.copy(was.pos);
+  box.cam.r = was.r;
+  box.focus(null, TURN);
+
+  const rung = t.order[0];
+  const home = centroid(t.chains[rung].CA);
+  const offsetOf = {};
+  t.order.forEach((id, i) => {
+    const c = centroid(t.chains[id].CA);
+    offsetOf[id] = { v: new THREE.Vector3(home[0] - c[0], home[1] - c[1], home[2] - c[2]),
+                     start: 250 + i * STAGGER };
+  });
+  const t0 = performance.now();
+  (function step(){
+    if(run !== stackRun) return;
+    const now = performance.now() - t0;
+    let busy = box.building;
+    for(const m of box.group.children){
+      const id = m.userData && m.userData.chain;
+      if(!id || id === rung) continue;
+      const o = offsetOf[id];
+      const k = Math.min(1, Math.max(0, (now - o.start) / SLIDE));
+      const e = 1 - Math.pow(1 - k, 3);
+      m.position.copy(o.v).multiplyScalar(1 - e);
+      if(k < 1) busy = true;
+    }
+    box.draw();
+    if(busy) requestAnimationFrame(step); else done();
+  })();
 }
 
 const claim = t => t.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean)
