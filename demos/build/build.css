@@ -51,14 +51,15 @@ body.fresh .bar .links { display: flex; }
    over butter that grey is cold and reads dirty. Mixed rather than blended,
    because `.bar` is its own stacking context (position + z-index) with no
    backdrop inside it, so mix-blend-mode multiplies against nothing. */
-.bar .lnk {
+.bar .lnk,
+.bar .links .acct {
   font-family: var(--font-ui); font-size: .74rem; font-weight: var(--cap-weight);
   letter-spacing: .18em; text-transform: uppercase;
   color: color-mix(in srgb, var(--brand-ink) 55%, var(--hue-butter));
   text-decoration: none;
 }
-.bar .lnk:hover { color: var(--accent); }
-.bar .lnk[aria-current="page"] { color: var(--brand-ink); }
+.bar .lnk:hover, .bar .links a.acct:hover { color: var(--accent); }
+.bar .lnk[aria-current="page"], .bar .links a.acct[aria-current="page"] { color: var(--brand-ink); }
 /* Centred on the bar, not on what is left between the mark and the tools, so
    folding the rail's button away cannot shift it. */
 .bar .title {

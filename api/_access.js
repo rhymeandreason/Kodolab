@@ -120,13 +120,15 @@ function refusal(who) {
 }
 
 /* What a page may show about who it is. `account` says there is a Google
-   session to sign out of. */
+   session to sign out of, and `user` is that session as /api/auth describes
+   it, so the page can hand lib/site.js's bar the same shape. */
 function describe(who) {
   if (!who) return null;
   const account = !!who.user;
+  const user = who.user ? require('./_accounts.js').describeUser(who.user) : null;
   if (who.kind === 'seat') return { kind: 'seat', label: who.seat.label, className: who.klass.name };
-  if (who.kind === 'teacher') return { kind: 'teacher', name: who.teacher.name, account };
-  if (who.kind === 'user' || who.kind === 'pending') return { kind: who.kind, name: who.user.name || who.user.email, account };
+  if (who.kind === 'teacher') return { kind: 'teacher', name: who.teacher.name, account, user };
+  if (who.kind === 'user' || who.kind === 'pending') return { kind: who.kind, name: who.user.name || who.user.email, account, user };
   if (who.kind === 'key') return { kind: 'key', cohort: who.cohort };
   return null;
 }

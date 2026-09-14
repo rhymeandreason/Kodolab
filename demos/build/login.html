@@ -26,7 +26,6 @@
 <div class="page">
   <nav class="sitenav">
     <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-    <span class="crumb">sign in</span>
   </nav>
 
   <header class="pagehead">
@@ -139,7 +138,7 @@
 
   /* ---- accounts --------------------------------------------------------- */
   function paint(user) {
-    Apps.account.note(user && user.name);
+    Apps.account.note(user);
     if (!user) {
       $('out').hidden = false; $('in').hidden = true;
       Apps.account.button($('gbtn'), signedIn, () => busy('Signing in…'))

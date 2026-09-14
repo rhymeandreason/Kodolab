@@ -526,6 +526,72 @@ a.crumb:hover { color: var(--accent) }
 .sitelinks a[aria-current="page"] { color: var(--text-strong) }
 .sitelinks a:hover { color: var(--accent) }
 
+/* ---- the account, at the bar's right end ----------------------------------
+   lib/site.js paints it: "Sign in", or the person's own links and an avatar +
+   first name that opens a small card (full name, email, sign out). The
+   builder's bar takes the same rules, so `.bar .links` is listed with it.
+   THE NAME ALONE SETS THE BASELINE: the avatar is taller than the text and is
+   taken out of flow and centred on the name, so the pair sits on the bar's
+   line in every browser (Safari synthesises a baseline for a flex or details
+   box, which put it a few pixels low). */
+.sitelinks .signin,
+.bar .links .signin {
+  padding: .35em .9em; border: 1.5px solid currentColor; border-radius: var(--radius-pill);
+}
+.sitelinks .rule,
+.bar .links .rule { width: 1px; height: 1.1rem; align-self: center; background: var(--border-hair); }
+.sitelinks .menu,
+.bar .links .menu { position: relative; display: inline-block; }
+.sitelinks .menu .summary,
+.bar .links .menu .summary {
+  position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0;
+  border: 0; background: none; cursor: pointer;
+  font-family: var(--font-ui); font-size: .74rem; font-weight: var(--cap-weight);
+  letter-spacing: .18em; text-transform: uppercase; color: var(--text-muted);
+  line-height: inherit; transition: color var(--dur-fast);
+}
+.sitelinks .menu .summary:hover,
+.sitelinks .menu .summary[aria-expanded="true"],
+.bar .links .menu .summary:hover,
+.bar .links .menu .summary[aria-expanded="true"] { color: var(--text-strong) }
+.sitelinks .menu .summary:focus-visible,
+.bar .links .menu .summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-pill); }
+.sitelinks .avatar,
+.bar .links .avatar {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 1.7rem; height: 1.7rem; border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center;
+  background: var(--accent); color: var(--surface-page);
+  font-size: .8rem; letter-spacing: 0;
+}
+.sitelinks .avatar img,
+.bar .links .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sitelinks .menu .card,
+.bar .links .menu .card {
+  position: absolute; right: 0; top: calc(100% + .6rem); z-index: 20;
+  min-width: 15rem; padding: .9rem 1rem;
+  background: var(--surface-card); border: 1px solid var(--border-hair);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-panel);
+  display: flex; flex-direction: column; gap: .75rem;
+  font-family: var(--font-ui); color: var(--text-body); text-transform: none; letter-spacing: 0;
+}
+.sitelinks .menu .who,
+.bar .links .menu .who { margin: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .9rem; line-height: 1.3; }
+.sitelinks .menu .who b,
+.bar .links .menu .who b { color: var(--text-strong); font-weight: 600; }
+.sitelinks .menu .who span,
+.bar .links .menu .who span { color: var(--text-muted); font-size: .8rem; overflow-wrap: anywhere; }
+.sitelinks .menu .card button,
+.bar .links .menu .card button {
+  align-self: flex-start; cursor: pointer;
+  padding: .4em 1em; border: 1.5px solid var(--border-strong); border-radius: var(--radius-pill);
+  background: transparent; color: var(--text-strong);
+  font: inherit; font-size: .8rem; font-weight: 600;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.sitelinks .menu .card button:hover,
+.bar .links .menu .card button:hover { background: var(--border-strong); color: var(--surface-page); }
+
 /* ---- the masthead --------------------------------------------------------
    The 2px rule under it is the one heavy line in the system, and it means "the
    page's own name stops here". A reading page, where the deck runs straight

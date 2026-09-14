@@ -50,17 +50,131 @@
     { text: 'Build',      href: '/build',      at: /^\/build(\/build)?$/ },
   ];
 
-  /* The account, as the builder's pages last saw it. A name in storage, not a
-     request per page view: the session cookie is HttpOnly and a stale name only
-     costs a click, since /login shows the truth. */
-  function account() {
-    var name = null;
-    try { name = localStorage.getItem('ss.account'); } catch (e) {}
-    return {
-      text: name ? name.split(/\s+/)[0] : 'Sign in',
-      href: '/login',
-      at: /^\/(login|join|build\/login)(\/|$)/,
-    };
+  /* THE ACCOUNT. Storage is what the builder's pages last saw (`ss.account`,
+     the user as /api/auth describes it), painted at once so the bar does not
+     flicker; then one GET reconciles it with the cookie, which is HttpOnly and
+     the truth. A server with no database answers 503 and storage stands. */
+  var ACCOUNT_KEY = 'ss.account';
+  var TEACHER_KEY = 'ss.teacher.code';
+
+  function stored() {
+    var raw = null;
+    try { raw = localStorage.getItem(ACCOUNT_KEY); } catch (e) {}
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return { name: raw }; }  // a bare name is the older shape
+  }
+  function store(user) {
+    try { user ? localStorage.setItem(ACCOUNT_KEY, JSON.stringify(user)) : localStorage.removeItem(ACCOUNT_KEY); }
+    catch (e) {}
+  }
+  function same(a, b) { return JSON.stringify(a || null) === JSON.stringify(b || null); }
+
+  function reconcile() {
+    fetch('/api/auth', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s) return;
+        var user = s.user || null;
+        if (same(user, stored())) return;
+        store(user);
+        var menu = document.querySelector('.sitelinks, header.bar > nav.links');
+        if (menu) paintAccount(menu, user);
+      })
+      .catch(function () {});
+  }
+
+  function signOut() {
+    try { localStorage.removeItem(ACCOUNT_KEY); localStorage.removeItem(TEACHER_KEY); } catch (e) {}
+    fetch('/api/auth', { method: 'POST', credentials: 'same-origin',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'logout' }) })
+      .catch(function () {})
+      .then(function () { location.href = '/'; });
+  }
+
+  function initial(user) {
+    var src = (user.name || user.email || '?').trim();
+    return src.charAt(0).toUpperCase();
+  }
+
+  /* A signed-in person's own links, then the avatar and name that open the
+     menu. Everything the account adds is marked `.acct` so a repaint can clear
+     it without touching the site's four links. */
+  function paintAccount(links, user) {
+    Array.prototype.slice.call(links.querySelectorAll('.acct')).forEach(function (n) { n.remove(); });
+    var here = place();
+
+    if (!user) {
+      var a = document.createElement('a');
+      a.className = 'acct signin';
+      a.href = '/login';
+      a.textContent = 'Sign in';
+      if (/^\/(login|join|build\/login)(\/|$)/.test(here)) a.setAttribute('aria-current', 'page');
+      links.appendChild(a);
+      return;
+    }
+
+    // My apps is the builder's shelf, so Build alone is marked current there.
+    // The person's own places sit right of a hairline, apart from the site's.
+    var rule = document.createElement('span');
+    rule.className = 'acct rule';
+    links.appendChild(rule);
+    var own = [{ text: 'My apps', href: '/build#mine', at: /(?!)/ }];
+    if (user.teacher) own.unshift({ text: 'Teach', href: '/teach', at: /^\/(teach|build\/teacher)$/ });
+    own.forEach(function (n) {
+      var a = document.createElement('a');
+      a.className = 'acct';
+      a.href = n.href;
+      a.textContent = n.text;
+      if (n.at.test(here)) a.setAttribute('aria-current', 'page');
+      links.appendChild(a);
+    });
+
+    var d = document.createElement('span');
+    d.className = 'acct menu';
+    var sum = document.createElement('button');
+    sum.type = 'button';
+    sum.className = 'summary';
+    sum.setAttribute('aria-label', 'Account menu');
+    sum.setAttribute('aria-expanded', 'false');
+    var av = document.createElement('span');
+    av.className = 'avatar';
+    av.textContent = initial(user);
+    if (user.picture) {
+      var img = document.createElement('img');
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';  // Google's photo host refuses some referrers
+      img.onerror = function () { img.remove(); };
+      img.onload  = function () { av.textContent = ''; av.appendChild(img); };
+      img.src = user.picture;
+    }
+    var nm = document.createElement('span');
+    nm.className = 'name';
+    nm.textContent = (user.name || user.email || '').split(/\s+/)[0];
+    sum.appendChild(av); sum.appendChild(nm);
+
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.hidden = true;
+    var who = document.createElement('p');
+    who.className = 'who';
+    var full = document.createElement('b'); full.textContent = user.name || '';
+    var mail = document.createElement('span'); mail.textContent = user.email || '';
+    who.appendChild(full); who.appendChild(mail);
+    var out = document.createElement('button');
+    out.type = 'button';
+    out.textContent = 'Sign out';
+    out.addEventListener('click', signOut);
+    card.appendChild(who); card.appendChild(out);
+    d.appendChild(sum); d.appendChild(card);
+    links.appendChild(d);
+
+    // A button and a panel rather than <details>: Safari gives a details
+    // element no text baseline, so it sat below the bar's other links.
+    function open(on) { card.hidden = !on; sum.setAttribute('aria-expanded', String(on)); }
+    sum.addEventListener('click', function () { open(card.hidden); });
+    document.addEventListener('click', function (e) { if (!card.hidden && !d.contains(e.target)) open(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !card.hidden) { open(false); sum.focus(); } });
   }
 
   /* ONE SPELLING TO MATCH AGAINST. A featured page is served at a short URL by
@@ -78,8 +192,12 @@
 
   /* Only a page that already has a bar, and only on the document shell — a
      lesson on body.lshell-page is a full-window scene, and Design.md forbids a
-     second masthead over it. Same rule the foot below follows. */
+     second masthead over it. Same rule the foot below follows. The builder's
+     own bar is the one exception: it writes the four links itself and is only
+     given the account. */
   function nav() {
+    var own = document.querySelector('header.bar > nav.links');
+    if (own) { paintAccount(own, stored()); reconcile(); return; }
     if (!document.body.classList.contains('kodo')) return;
     var bar = document.querySelector('.sitenav');
     if (!bar || bar.querySelector('.sitelinks')) return;
@@ -88,7 +206,7 @@
     var links = document.createElement('nav');
     links.className = 'sitelinks';
     links.setAttribute('aria-label', 'Site');
-    NAV.concat(account()).forEach(function (n) {
+    NAV.forEach(function (n) {
       var a = document.createElement('a');
       a.href = n.href;
       a.textContent = n.text;
@@ -104,6 +222,8 @@
       bar.appendChild(sp);
     }
     bar.appendChild(links);
+    paintAccount(links, stored());
+    reconcile();
   }
 
   function foot() {

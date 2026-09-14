@@ -25,8 +25,6 @@
 <div class="page">
   <nav class="sitenav">
     <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-    <span class="crumb">teach</span>
-    <span class="who-me" id="meta" hidden></span>
   </nav>
 
   <header class="pagehead">
@@ -171,7 +169,7 @@
       return true;
     }
     $('dash').hidden = false;
-    $('meta').hidden = false; $('newClass').hidden = false; $('meta').textContent = data.teacher.name;
+    $('newClass').hidden = false;
     $('buildUrl').textContent = BUILD.replace(/^https?:\/\//, '');
     $('buildLink').href = BUILD;
     const want = new URLSearchParams(location.hash.slice(1)).get('class');

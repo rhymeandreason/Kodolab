@@ -987,24 +987,17 @@
   /* ---- who is building ---------------------------------------------------- */
   function paintWho(who) {
     const el = $('who');
-    if (who && who.account) Apps.account.note(who.name);
+    if (who && who.account) Apps.account.note(who.user || { name: who.name, teacher: who.kind === 'teacher' });
     if (!who || who.kind === 'key') { el.hidden = true; return; }
     el.hidden = false;
-    const out = who.account ? ` <button class="textbtn" data-signout type="button">Sign out</button>` : '';
     el.innerHTML = who.kind === 'seat'
       ? `Building as <b>${esc(who.label)}</b> · ${esc(who.className)} <button class="textbtn" id="notMe" type="button">Not you?</button>`
       : who.kind === 'teacher'
-      ? `Teacher · <b>${esc(who.name)}</b> <a class="textbtn" href="${esc(Apps.page('teach'))}">Dashboard</a>${out}`
-      : `Signed in as <b>${esc(who.name)}</b>${out}`;
+      ? `Teacher · <b>${esc(who.name)}</b> <a class="textbtn" href="${esc(Apps.page('teach'))}">Dashboard</a>`
+      : `Signed in as <b>${esc(who.name)}</b>`;
     const b = $('notMe');
     if (b) b.addEventListener('click', () => { Apps.codes.setSeat(null); location.href = Apps.page('login'); });
   }
-  document.addEventListener('click', async e => {
-    if (!e.target.closest('[data-signout]')) return;
-    await Apps.account.logout();
-    location.href = Apps.page('login');
-  });
-
   (async () => {
     try {
       const cfg = await Apps.api('../../api/build');

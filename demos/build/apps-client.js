@@ -39,7 +39,7 @@ const Apps = (() => {
   const VISITOR_KEY = 'ss.tutor.visitor';
   const STORE_KEY   = 'ss.apps';            // { id: { token, title, at } }
   const SEAT_KEY    = 'ss.class.code';
-  const ACCOUNT_KEY = 'ss.account';         // the signed-in name, for lib/site.js's bar; the cookie is the truth
+  const ACCOUNT_KEY = 'ss.account';         // the signed-in user as /api/auth described it, for lib/site.js's bar; the cookie is the truth
   const TEACHER_KEY = 'ss.teacher.code';
 
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
@@ -141,7 +141,7 @@ const Apps = (() => {
     },
     redeem: code => api('../../api/auth', { method: 'POST', body: { action: 'redeem', code } }),
     logout: () => { del(ACCOUNT_KEY); return api('../../api/auth', { method: 'POST', body: { action: 'logout' } }).catch(() => null); },
-    note: name => (name ? set(ACCOUNT_KEY, name) : del(ACCOUNT_KEY)),
+    note: user => (user ? set(ACCOUNT_KEY, JSON.stringify(user)) : del(ACCOUNT_KEY)),
     /* The apps this browser made on a testing link become the account's. Only
        unowned ones move, so running it again is harmless. */
     claimLocal() {

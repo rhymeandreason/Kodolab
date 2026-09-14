@@ -341,3 +341,5 @@ CREATE TABLE IF NOT EXISTS invites (
 );
 
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS user_id text UNIQUE REFERENCES users(id) ON DELETE SET NULL;
+-- Google's profile photo URL, refreshed on every sign-in; the nav draws it.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS picture text;

@@ -76,10 +76,10 @@ async function upsertUser(claims) {
   // The teacher row comes back in the same statement, so sign-in can answer without reading again.
   const [u] = await db`
     WITH u AS (
-      INSERT INTO users (id, google_sub, email, name)
-      VALUES (${mintId()}, ${claims.sub}, ${claims.email || null}, ${claims.name || null})
-      ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name
-      RETURNING id, email, name, admitted_at, disabled_at)
+      INSERT INTO users (id, google_sub, email, name, picture)
+      VALUES (${mintId()}, ${claims.sub}, ${claims.email || null}, ${claims.name || null}, ${claims.picture || null})
+      ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture
+      RETURNING id, email, name, picture, admitted_at, disabled_at)
     SELECT u.*, t.id AS teacher_id FROM u LEFT JOIN teachers t ON t.user_id = u.id`;
   return u;
 }
@@ -108,7 +108,7 @@ async function userFrom(req) {
   const token = readCookie(req);
   if (!token || !log.enabled()) return null;
   const [u] = await log.sql()`
-    SELECT u.id, u.email, u.name, u.admitted_at, u.invite_label, t.id AS teacher_id, t.name AS teacher_name
+    SELECT u.id, u.email, u.name, u.picture, u.admitted_at, u.invite_label, t.id AS teacher_id, t.name AS teacher_name
     FROM sessions s JOIN users u ON u.id = s.user_id
     LEFT JOIN teachers t ON t.user_id = u.id
     WHERE s.token_hash = ${hash(token)} AND s.expires_at > now() AND u.disabled_at IS NULL`;
@@ -121,7 +121,7 @@ async function endSession(req) {
 }
 
 function describeUser(u) {
-  return u ? { name: u.name || u.email, email: u.email, admitted: !!u.admitted_at, teacher: !!u.teacher_id } : null;
+  return u ? { name: u.name || u.email, email: u.email, picture: u.picture || null, admitted: !!u.admitted_at, teacher: !!u.teacher_id } : null;
 }
 
 /* ---- invites -------------------------------------------------------------- */
