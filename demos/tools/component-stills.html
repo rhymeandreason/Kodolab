@@ -44,6 +44,7 @@
      looking at: a transform does not touch the drawing buffer. */
   #mount{width:268px;height:179px;margin:1.2rem 0;border:1px solid #e4e0d7;background:#fff;
          transform:scale(2);transform-origin:top left}
+  #mount.bare .rr-plates, #mount.bare .rr-spots, #mount.bare .rr-glow{display:none}
   #wrap{height:400px}
   #mount iframe{width:100%;height:100%;border:0;display:block}
   #log{font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre-wrap}
@@ -56,6 +57,9 @@
 <button id="go">Bake all</button>
 <select id="pick"></select>
 <button id="one">Bake selected</button>
+<button id="bare" onclick="mount.classList.toggle('bare')">Labels &amp; spot on/off</button>
+<button id="reset">Reset view</button>
+<span style="font-size:12px;opacity:.6">wheel zoom · shift-drag pan</span>
 <div id="wrap"><div id="mount"></div></div>
 <div id="log"></div>
 
@@ -215,6 +219,7 @@ let live = null, liveKey = null;
 async function loadShot(shot) {
   if (live) { try { live.destroy(); } catch (e) {} live = null; liveKey = null; }
   mountEl.innerHTML = '';
+  Object.assign(view, { z: 1, x: 0, y: 0 });
 
   await loadFor(shot);
 
@@ -290,6 +295,42 @@ pickEl.addEventListener('change', () => {
   if (shot.skip) { mountEl.innerHTML = ''; say(`${shot.key} — ${shot.skip}`); return; }
   loadShot(shot).catch(e => say(`${shot.key} — ${e.message}`, true));
 });
+
+/* ---- framing by hand ------------------------------------------------------
+   Wheel zooms, shift-drag pans, plain drag stays the component's own orbit.
+   Done on the camera (zoom + view offset), not the component's cam, so it
+   works on one that turned zoom off or refits its own target. Captured on
+   the mount so a component's own wheel handler never sees it.
+   #mount is scale(2): screen pixels are halved into canvas pixels. */
+const view = { z: 1, x: 0, y: 0 };
+function applyView() {
+  const box = live && (live.box || live); if (!box || !box.camera) return;
+  const c = box.camera, W = box.canvas.clientWidth, H = box.canvas.clientHeight;
+  c.zoom = view.z;
+  if (view.x || view.y) c.setViewOffset(W, H, view.x, view.y, W, H);
+  else if (c.view) c.clearViewOffset();
+  c.updateProjectionMatrix();
+  box.draw();
+}
+mountEl.addEventListener('wheel', e => {
+  e.preventDefault(); e.stopPropagation();
+  view.z = Math.min(20, Math.max(0.2, view.z * Math.exp(-e.deltaY * 0.002)));
+  applyView();
+}, { capture: true, passive: false });
+let panFrom = null;
+mountEl.addEventListener('pointerdown', e => {
+  if (!e.shiftKey) return;
+  e.stopPropagation(); panFrom = { x: e.clientX, y: e.clientY };
+  mountEl.setPointerCapture(e.pointerId);
+}, true);
+mountEl.addEventListener('pointermove', e => {
+  if (!panFrom) return;
+  e.stopPropagation();
+  view.x -= (e.clientX - panFrom.x) / 2; view.y -= (e.clientY - panFrom.y) / 2;
+  panFrom = { x: e.clientX, y: e.clientY }; applyView();
+}, true);
+mountEl.addEventListener('pointerup', () => { panFrom = null; }, true);
+document.getElementById('reset').addEventListener('click', () => { Object.assign(view, { z: 1, x: 0, y: 0 }); applyView(); });
 
 /* ?key=<component> preselects and loads it. */
 const wantKey = new URLSearchParams(location.search).get('key');

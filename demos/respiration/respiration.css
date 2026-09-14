@@ -3,7 +3,9 @@
    generated page carries none of the pathway lessons' layout. Z-order is the
    claim here: the glow sits UNDER the canvas (the canvas is transparent), the
    names over it, the click target over everything. */
-.rr-host { overflow: hidden; }
+/* Width container: the names size to the stage, so a 268px card is not
+   captioned in lesson type. */
+.rr-host { overflow: hidden; container-type: inline-size; }
 .rr-host > canvas { position: relative; z-index: 2; }
 .rr-layer { position: absolute; inset: 0; pointer-events: none; }
 .rr-glow { z-index: 1; }
@@ -18,15 +20,14 @@
    thing on stage is between two molecules and the label is still the old name.
    Opacity, never display: the label's height is the camera's top reserve. */
 .rr-plates.rr-mute .rr-plate { opacity: 0; }
-.rr-pn { font-family: var(--font-slab, Georgia, serif); font-weight: 700; font-size: 19px;
+.rr-pn { font-family: var(--font-slab, Georgia, serif); font-weight: 700; font-size: clamp(10px, 2.6cqw, 19px);
   color: var(--ink, #1a1a1a); letter-spacing: .2px; }
-.rr-pf { font-family: var(--font-slab, Georgia, serif); font-weight: 500; font-size: 14px;
+.rr-pf { font-family: var(--font-slab, Georgia, serif); font-weight: 500; font-size: clamp(8px, 1.9cqw, 14px);
   color: var(--muted, #6b6b6b); }
 /* ×2: the one piece of text saying everything after the split happens twice. */
 .rr-x2 { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 9px;
-  font-family: var(--font-sans, system-ui, sans-serif); font-weight: 600; font-size: 12px;
+  font-family: var(--font-sans, system-ui, sans-serif); font-weight: 600; font-size: clamp(7px, 1.6cqw, 12px);
   color: var(--ink, #1a1a1a); background: var(--hair, rgba(0,0,0,.08)); vertical-align: 2px; }
-@media (max-width: 920px) { .rr-pn { font-size: 16px; } .rr-pf { font-size: 12.5px; } }
 
 /* ---- a name on something in flight (reaction.js's `.flyplate`) ---- */
 .rr-host .flyplate { position: absolute; transform: translate(-50%, -100%); text-align: center;
