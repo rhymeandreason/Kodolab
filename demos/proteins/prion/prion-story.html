@@ -9,12 +9,21 @@
 <!-- Served at a short URL by a vercel.json rewrite, which does not move the
      file: every ../../ path below resolves against this. docs/deploy.md. -->
 <base href="/demos/proteins/prion/">
-<title>Prion protein — Kodolab</title>
-<meta name="description" content="The prion protein in 3D, from real coordinates: one sequence that folds two ways, and the disease fold stacked into the fibre that templates its own shape.">
+<title>Prion Protein Structure in 3D — Kodolab</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="The prion protein, carried on the surface of nerve cells, whose normal job is still unknown. One sequence folds two ways, and the misfolded form stacks into fibres that template their own shape…">
+<link rel="canonical" href="https://www.kodolab.org/proteins/prion">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/proteins/prion">
+<meta property="og:title" content="Prion Protein Structure in 3D — Kodolab">
+<meta property="og:description" content="The prion protein, carried on the surface of nerve cells, whose normal job is still unknown. One sequence folds two ways, and the misfolded form stacks into fibres that template their own shape…">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
 
 <!-- ===================================================================
      THE PRION PROTEIN, IN THE GLOSSARY SHAPE. dna-structure.html's page,
-     as proteins/myoglobin/myoglobin-structure.html wears it: one molecule
+     as proteins/myoglobin/myoglobin-story.html wears it: one molecule
      fixed on the left, the parts scrolling past on the right.
 
      THREE VIEWS, ONE BOX, and they are the bench's three. The healthy fold
@@ -34,78 +43,10 @@
 
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
 <link rel="stylesheet" href="../../css/kodo.css">
+<link rel="stylesheet" href="../../css/story.css">
 <link rel="stylesheet" href="../../kit/proteinbox.css">
 <style>
-  :root{--stage-w:62vw}
-  #stage{position:fixed;top:0;left:0;width:var(--stage-w);height:100vh;z-index:1;
-    background:var(--surface-stage);background-image:none;
-    border-right:1px solid var(--border-hair)}
-  #stage canvas{display:block;width:100%;height:100%}
-  #specimen{position:absolute;left:26px;bottom:22px;z-index:6;max-width:44ch;
-    font-family:var(--font-editorial);font-size:13px;line-height:1.45;
-    color:var(--text-muted)}
-  #specimen .pdb{font-family:var(--font-ui);letter-spacing:.06em;
-    color:var(--text-strong)}
-  #specimen a{color:var(--text-muted)}
-
-  #read{position:relative;z-index:2;margin-left:var(--stage-w);
-    background:var(--surface-page);
-    padding:0 clamp(28px,4vw,56px)}
-  #read .col{max-width:46ch;margin:0 auto}
-
-  #read section:first-of-type{padding-top:14vh}
-  #read section:first-of-type h3{font-size:clamp(32px,3.6vw,44px)}
-  #read .deck{margin:14px 0 0;font-family:var(--font-editorial);font-size:18px;
-    line-height:1.55;color:var(--text-muted)}
-  #read .hint{margin:36px 0 0;font-family:var(--font-ui);font-size:12px;
-    letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
-
-  #read section{padding:22vh 0;border-top:1px solid var(--border-hair)}
-  #read section:first-of-type{border-top:0}
-  #read section{opacity:.34;transition:opacity .45s ease}
-  #read section[aria-current="true"]{opacity:1}
-
-  #read .num{font-family:var(--font-ui);font-size:11px;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--text-dim)}
-  #read h3{margin:8px 0 0;font-family:var(--font-display);
-    font-weight:var(--weight-regular);font-size:clamp(24px,2.6vw,32px);
-    line-height:1.15;letter-spacing:-.2px;color:var(--text-strong)}
-  #read .gloss{margin:4px 0 0;font-family:var(--font-editorial);font-size:14px;
-    font-style:italic;color:var(--text-muted)}
-  #read .claim{margin:18px 0 0;font-family:var(--font-editorial);font-size:18px;
-    line-height:1.6;color:var(--text-body)}
-  #read .claim b{font-weight:600;color:var(--text-strong)}
-  #read .claim a{color:var(--text-strong)}
-
-  /* QUICK STATS, under the text of every part that switches file: this
-     protein's three views are three different experiments, so each one earns
-     its own row. */
-  #read .measure{display:flex;flex-wrap:wrap;gap:1.1rem 1.75rem;margin:40px 0 0;
-    padding:28px 0 8px;border-top:1px solid var(--border-hair)}
-  #read .measure div{min-width:7rem}
-  #read .measure .n{display:block;font-family:var(--font-display);font-size:22px;
-    line-height:1.1;color:var(--text-strong)}
-  #read .measure .l{display:block;margin-top:3px;font-family:var(--font-ui);
-    font-size:12.5px;color:var(--text-muted)}
-
-  #read dl{margin:20px 0 0;padding-left:14px;
-    border-left:1px solid var(--border-hair)}
-  #read dt{font-family:var(--font-ui);font-size:12.5px;font-weight:600;
-    letter-spacing:.01em;color:var(--text-strong);margin-top:12px}
-  #read dt:first-child{margin-top:0}
-  #read dt a{color:inherit;text-decoration:none;border-bottom:1px solid var(--border-hair)}
-  #read dd{margin:2px 0 0;font-family:var(--font-editorial);font-size:14px;
-    line-height:1.5;color:var(--text-muted)}
-
-  #read .tail{height:52vh}
-
-  @media (max-width:900px){
-    #stage{width:100%;height:52vh;border-right:0;
-      border-bottom:1px solid var(--border-hair)}
-    #read{margin-left:0;padding-top:52vh}
-    #read section:first-of-type{padding-top:8vh}
-    #read section{padding:12vh 0}
-  }
+  #stage{background-image:none}
 </style>
 </head>
 <body>
@@ -124,6 +65,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="../../lib/story.js"></script>
 <script src="../../lib/palette.js"></script>
 <script src="../../lib/tokens-from-palette.js"></script>
 <script src="../../lib/molecules.js"></script>
@@ -434,32 +376,7 @@ Promise.all(NEEDED.map(id => {
 
   show(PARTS[0]);
 
-  const lenis = new Lenis({ autoRaf:true, duration:1.1 });
-  const seen = new IntersectionObserver(entries => {
-    for(const e of entries) if(e.isIntersecting) show(PARTS[secs.indexOf(e.target)]);
-  }, { root:null, rootMargin:'-50% 0px -50% 0px', threshold:0 });
-  for(const el of secs) seen.observe(el);
-
-  const settleTo = el => el.offsetTop + el.offsetHeight / 2 - innerHeight / 2;
-  const SETTLE_MS = 150, SNAP_SLOP = 8;
-  let settleTimer = null, settling = false;
-  lenis.on('scroll', () => {
-    if(settling) return;
-    clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => {
-      let best = null, bestD = Infinity;
-      for(const el of secs){
-        const d = Math.abs(settleTo(el) - lenis.scroll);
-        if(d < bestD){ bestD = d; best = el; }
-      }
-      if(!best || bestD <= SNAP_SLOP) return;
-      settling = true;
-      lenis.scrollTo(settleTo(best), {
-        duration:0.6, easing:t => 1 - Math.pow(1 - t, 3),
-        onComplete:() => { settling = false; },
-      });
-    }, SETTLE_MS);
-  });
+  Story.scroll(secs, i => show(PARTS[i]));
 });
 
 window.page = { box, traces, get showing(){ return current && current.key; } };

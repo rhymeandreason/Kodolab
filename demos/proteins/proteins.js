@@ -1101,6 +1101,7 @@
     },
     {
       key: 'prion', name: 'Prion protein', dir: 'proteins/prion',
+      story: 'proteins/prion/prion-story.html',
       blurb: 'The prion protein, carried on the surface of nerve cells, whose '
            + 'normal job is still unknown. One sequence folds two ways, and the '
            + 'misfolded form stacks into fibres that template their own shape '
@@ -1604,6 +1605,7 @@
     },
     {
       key: 'myoglobin', name: 'Myoglobin', dir: 'proteins/myoglobin',
+      story: 'proteins/myoglobin/myoglobin-story.html',
       blurb: 'The oxygen store of muscle: one chain wrapped around one iron. It '
            + 'was the first protein structure anyone ever solved, and it is '
            + 'still the clearest look at how a molecule is held in a binding '

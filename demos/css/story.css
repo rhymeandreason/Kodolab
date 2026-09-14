@@ -1,0 +1,82 @@
+/* THE STORY PAGE: a fixed 3D stage on the left, a scrolling essay on the
+   right, the section on the reading line is the part the model shows. Loaded
+   after kodo.css by dna-structure.html and proteins/<name>/<name>-story.html. */
+/* EDITORIAL SPLIT. The model holds the left and never scrolls; the writing
+   runs down the right. The WINDOW is what scrolls, so the stage is FIXED
+   beside the column. */
+:root{--stage-w:62vw}
+#stage{position:fixed;top:0;left:0;width:var(--stage-w);height:100vh;z-index:1;
+  background:var(--surface-stage);
+  border-right:1px solid var(--border-hair)}
+#stage canvas{display:block;width:100%;height:100%}
+/* WHICH FILE IS ON SCREEN, under it. A reader three sections in is looking
+   at a different deposition than they started on, and a caption that says
+   which is the difference between a demo and evidence. */
+#specimen{position:absolute;left:26px;bottom:22px;z-index:6;max-width:44ch;
+  font-family:var(--font-editorial);font-size:13px;line-height:1.45;
+  color:var(--text-muted)}
+#specimen .pdb{font-family:var(--font-ui);letter-spacing:.06em;
+  color:var(--text-strong)}
+#specimen a{color:var(--text-muted)}
+
+#read{position:relative;z-index:2;margin-left:var(--stage-w);
+  background:var(--surface-page);
+  padding:0 clamp(28px,4vw,56px)}
+#read .col{max-width:46ch;margin:0 auto}
+
+/* THE FIRST SECTION IS THE MASTHEAD. */
+#read section:first-of-type{padding-top:14vh}
+#read section:first-of-type h3{font-size:clamp(32px,3.6vw,44px)}
+#read .deck{margin:14px 0 0;font-family:var(--font-editorial);font-size:18px;
+  line-height:1.55;color:var(--text-muted)}
+#read .hint{margin:36px 0 0;font-family:var(--font-ui);font-size:12px;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
+
+/* A PART IS A SECTION, tall enough that only one is ever near the reading
+   line. Off the line the whole section recedes. */
+#read section{padding:22vh 0;border-top:1px solid var(--border-hair)}
+#read section:first-of-type{border-top:0}
+#read section{opacity:.34;transition:opacity .45s ease}
+#read section[aria-current="true"]{opacity:1}
+
+#read .num{font-family:var(--font-ui);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--text-dim)}
+#read h3{margin:8px 0 0;font-family:var(--font-display);
+  font-weight:var(--weight-regular);font-size:clamp(24px,2.6vw,32px);
+  line-height:1.15;letter-spacing:-.2px;color:var(--text-strong)}
+#read .gloss{margin:4px 0 0;font-family:var(--font-editorial);font-size:14px;
+  font-style:italic;color:var(--text-muted)}
+#read .claim{margin:18px 0 0;font-family:var(--font-editorial);font-size:18px;
+  line-height:1.6;color:var(--text-body)}
+#read .claim b{font-weight:600;color:var(--text-strong)}
+#read .claim a{color:var(--text-strong)}
+
+/* QUICK STATS: three figures about the file on screen, read off the bake,
+   under the part that introduces that file. */
+#read .measure{display:flex;flex-wrap:wrap;gap:1.1rem 1.75rem;margin:40px 0 0;
+  padding:28px 0 8px;border-top:1px solid var(--border-hair)}
+#read .measure div{min-width:7rem}
+#read .measure .n{display:block;font-family:var(--font-display);font-size:22px;
+  line-height:1.1;color:var(--text-strong)}
+#read .measure .l{display:block;margin-top:3px;font-family:var(--font-ui);
+  font-size:12.5px;color:var(--text-muted)}
+
+/* A TERM LIST IN A SECTION: the sources, on the last part. */
+#read dl{margin:20px 0 0;padding-left:14px;
+  border-left:1px solid var(--border-hair)}
+#read dt{font-family:var(--font-ui);font-size:12.5px;font-weight:600;
+  letter-spacing:.01em;color:var(--text-strong);margin-top:12px}
+#read dt:first-child{margin-top:0}
+#read dt a{color:inherit;text-decoration:none;border-bottom:1px solid var(--border-hair)}
+#read dd{margin:2px 0 0;font-family:var(--font-editorial);font-size:14px;
+  line-height:1.5;color:var(--text-muted)}
+
+#read .tail{height:52vh}
+
+@media (max-width:900px){
+  #stage{width:100%;height:52vh;border-right:0;
+    border-bottom:1px solid var(--border-hair)}
+  #read{margin-left:0;padding-top:52vh}
+  #read section:first-of-type{padding-top:8vh}
+  #read section{padding:12vh 0}
+}

@@ -122,6 +122,7 @@ General plumbing. A page loads the ones its mechanic needs; none of them knows w
 | `molview.js` | `MolView.create` → `show`, `setMode`, `setHighlight`, `setOptionalH`, `step`, `fit`, `snap`, `viewEuler`, `resetPose`, `setSpin`, `atDeclaredView`, plus `usableAround`, `flatPose`, `VIEW_FIELD`. Three views of one molecule and the morph between them. `defaultView()` is the ONLY source of an opening angle. After `scene.js`; `smiles-drawer` only for the Diagram view | own header |
 | `lib/embed.js` | puts `bare` on `<html>` when the page is FRAMED (or `?chrome=bare` forces it). The page marks its own `.chrome-title` | own header |
 | `kit/lesson-shell.js` | `LessonShell.create({brand,hint,steps,ctx,onStep})` → `stage` (mount the scene here) · `ui` · `goTo` · `panelRect` · `theme`. **The step-through shell every generated app runs in.** Owns the DOM and the step index and nothing about the scene. A step's optional `onLeave(ctx,to)` returns seconds to hold before the swap | own header |
+| `lib/story.js` | `Story.scroll(sections, onPart)` → the Lenis instance. A story page's scroll: momentum, which section is on the reading line, and the settle onto it. Pairs with `css/story.css`; after Lenis | own header |
 | `lib/geo.js` | `Geo.capsule` · `Geo.roundedBox` · `Geo.merge` — the three geometries the r128 global build lacks. After `scene.js`, before `leaf/` or `tree/` | own header |
 
 ### Molecule data — the specs and what builds them

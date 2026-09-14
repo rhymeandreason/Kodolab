@@ -12,6 +12,7 @@ Disallow: /demos/tests/
 Disallow: /join
 Disallow: /login
 Disallow: /proteins/myoglobin/bench
+Disallow: /proteins/prion/bench
 Disallow: /teach
 
 Sitemap: https://www.kodolab.org/sitemap.xml

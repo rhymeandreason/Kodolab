@@ -218,6 +218,7 @@ maybe `lesson-shell.css`, maybe its own.
 | `css/brand.css` | the colour values, and nothing else | never links it — `kodo.css` imports it |
 | `css/kodo.css` | **the site sheet.** Maps the roles onto brand.css and carries the reset, type, buttons and document shell | always, first |
 | `css/lesson-shell.css` | **the other shell**: full-window scene, glass panel, progress dots. Its own tokens on `body.lshell-page` | only a lesson or bench on that shell, after `kodo.css` |
+| `css/story.css` | **the story page**: fixed 3D stage left, scrolling essay right, sections dim off the reading line | dna-structure and each `proteins/<name>/<name>-story.html`, after `kodo.css` |
 | `css/annotate.css` | the look of a callout | never links it — `kodo.css` imports it |
 | `pathways.css` · `proteins/protein-test.css` · `kit/enzyme-blob.css` | **folder chrome**, shared by the pages of one folder: a step-through pathway's rail and lane plates, a protein bench's stage-and-panel grid, the blob's two sways | only a page in that folder, after `kodo.css` |
 | the page's own `.css` | **its chrome only** — `build.css`, `graph.css`, `energy/energy.css`. Never a token, never a colour, never a type step `kodo.css` already sets | only if the page has chrome no other page has |
@@ -236,7 +237,7 @@ still being reworked, and that is a decision, not an omission.
 
 ## The pages on this shell
 
-`proteins/index.html` · `proteins/myoglobin/myoglobin.html` ·
+`proteins/index.html` · `proteins/myoglobin/myoglobin-story.html` ·
 `nodegraph/nodegraph.html` (the `.sitenav.floating` case). Copy the closest one.
 **The repo-root `index.html` and `contribute.html` are NOT on it** — they link
 `brand.css` alone and draw their own chrome, which is the section above.

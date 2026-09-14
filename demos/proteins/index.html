@@ -280,6 +280,7 @@ const $ = id => document.getElementById(id);
    and the bench's own `<base>` tag; docs/deploy.md is the procedure. */
 const benchOf = p => `/proteins/${p.key}`;
 const lessonOf = p => p.lesson ? '../' + p.lesson : null;
+const storyOf = p => p.story ? '../' + p.story : null;
 
 /* Every protein's data sits under its own `dir`, which is not always beside
    this page — haemoglobin lives outside `proteins/` because its bakes belong
@@ -374,7 +375,7 @@ function card(p) {
       <p class="does"></p>
       <p class="blurb"></p>
       <div class="facts"></div>
-      ${lessonOf(p) ? `<div class="links"><a class="open" href="${lessonOf(p)}">the lesson &rarr;</a></div>` : ''}
+      ${lessonOf(p) || storyOf(p) ? `<div class="links">${lessonOf(p) ? `<a class="open" href="${lessonOf(p)}">the lesson &rarr;</a>` : ''}${storyOf(p) ? `<a class="open" href="${storyOf(p)}">Learn More &rarr;</a>` : ''}</div>` : ''}
     </div>`;
 
   /* THE WHOLE CARD OPENS THE MODAL. The stage is included, so the handler has
@@ -462,21 +463,15 @@ const MODAL_KEY = '\u2318modal';        // cannot collide with a protein key
 const modal = $('modal');
 let openKey = null;
 
-/* WHERE THE READER GOES FROM HERE, in the order they should read it. The bench
-   is every protein's, and it is derived; the lesson is the registry's, and only
-   haemoglobin has one. Myoglobin's own page IS what `benchOf` resolves to, so
-   the difference between these two and the rest is the WORD, not a second
-   route: `vercel.json` rewrites /proteins/myoglobin onto myoglobin.html and
-   /proteins/<key> onto a bench for everyone else. A page that stored the
-   destination would be the second copy of that table. */
-const HAS_PAGE = new Set(['myoglobin']);
+/* WHERE THE READER GOES FROM HERE, in the order they should read it. The
+   lesson and the story are the registry's; a protein with a story sends the
+   reader there and not to its bench, which `vercel.json` moves to
+   /proteins/<key>/bench. */
 function linksFor(p) {
   const out = [];
   if (p.lesson) out.push([lessonOf(p), 'the lesson \u2192']);
-  out.push([benchOf(p),
-            HAS_PAGE.has(p.key) ? 'the myoglobin page \u2192'
-          : p.lesson            ? 'every structure we hold \u2192'
-          :                       'open the bench \u2192']);
+  if (p.story) out.push([storyOf(p), 'Learn More \u2192']);
+  else out.push([benchOf(p), p.lesson ? 'every structure we hold \u2192' : 'open the bench \u2192']);
   return out;
 }
 

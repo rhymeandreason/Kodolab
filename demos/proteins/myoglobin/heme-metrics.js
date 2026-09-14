@@ -7,7 +7,7 @@
  *  change.
  *
  *  IT IS SHARED BECAUSE TWO PAGES PRINT THE SAME NUMBER. The bench
- *  (myoglobin-test.html) and the student page (myoglobin.html) both say how
+ *  (myoglobin-test.html) and the student page (myoglobin-story.html) both say how
  *  far the CO in 1ABS has moved off the iron, and two implementations of that
  *  is two answers waiting to disagree in front of a reader.
  *
