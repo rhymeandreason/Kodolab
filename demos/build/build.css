@@ -91,34 +91,6 @@ body.fresh .bar .links { display: flex; }
 .notice.bad { color: var(--accent-hot); }
 
 #ask[hidden] { display: none; }
-.locked {
-  margin: 28px auto 0; max-width: 30rem; padding: 28px 32px; text-align: center;
-  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 16px;
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--brand-ink) 10%, transparent);
-}
-.locked > i { font-size: 28px; color: var(--accent); display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.locked h2 { margin: 14px 0 8px; font-size: 20px; color: var(--text-strong); }
-.locked p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text-body); }
-.locked .cta { display: inline-block; margin-top: 18px; text-decoration: none; }
-.locked p.sub { margin-top: 18px; font-size: 13px; color: var(--text-muted); }
-.locked p.sub a { color: inherit; }
-.hero .locked .codeform { display: flex; flex-direction: row; gap: 10px; margin-top: 18px; }
-.codeform input {
-  flex: 1; min-width: 0; padding: 10px 14px; border: 1px solid var(--border-strong); border-radius: 999px;
-  background: var(--surface-page); color: var(--text-strong);
-  font-family: var(--font-display); font-size: 18px; letter-spacing: .12em; text-align: center; text-transform: lowercase;
-}
-.codeform input:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
-.codeform .cta { margin: 0; }
-.locked p.codeerr { margin-top: 10px; font-size: 13px; color: var(--hue-coral); }
-.locked .acct { margin-top: 18px; }
-.locked .or { display: flex; align-items: center; gap: .8em; margin: 0 0 14px; font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--text-muted); }
-.locked .or::before, .locked .or::after { content: ''; flex: 1; border-top: 1px solid var(--border-hair); }
-.locked .gbtn { display: flex; justify-content: center; min-height: 44px; }
-.locked .gbtn[hidden], .locked form[hidden], .locked .acct[hidden] { display: none; }
-.locked p.acctline { font-size: 14px; }
-.locked p.acctline b { color: var(--text-strong); }
-
 /* Who the builder thinks this is, under the box: a shared machine is the case. */
 .hero .who { margin: .9rem 0 0; font-size: .9rem; color: color-mix(in srgb, var(--play-ink) 72%, transparent); }
 .hero .who[hidden], body.work .who { display: none; }

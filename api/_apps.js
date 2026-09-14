@@ -195,10 +195,18 @@ async function mayEdit(id, token, owner) {
   return (!!owner && row.owner_id === owner) || (!!token && sameHash(token, row.token_hash));
 }
 
-/* An app nobody owns becomes this owner's. False when someone already does. */
-async function adopt(id, owner) {
-  const rows = await log.sql()`UPDATE apps SET owner_id = ${owner} WHERE id = ${id} AND owner_id IS NULL RETURNING id`;
-  return rows.length > 0;
+/* The apps among [{id, token}] whose token matches and that nobody owns become
+   this owner's. Two statements whatever the count: sign-in waits on this. */
+async function adopt(pairs, owner) {
+  const list = pairs.filter(p => p && validId(p.id) && p.token);
+  if (!list.length) return 0;
+  const db = log.sql();
+  const rows = await db`SELECT id, token_hash FROM apps WHERE id = ANY(${list.map(p => p.id)}) AND owner_id IS NULL`;
+  const stored = Object.fromEntries(rows.map(r => [r.id, r.token_hash]));
+  const ok = list.filter(p => stored[p.id] && sameHash(p.token, stored[p.id])).map(p => p.id);
+  if (!ok.length) return 0;
+  const done = await db`UPDATE apps SET owner_id = ${owner} WHERE id = ANY(${ok}) AND owner_id IS NULL RETURNING id`;
+  return done.length;
 }
 
 async function rotate(id) {

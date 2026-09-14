@@ -43,11 +43,7 @@ module.exports = async function handler(req, res) {
       const u = await accounts.upsertUser(claims);
       if (u.disabled_at) return res.status(403).json({ error: 'This account has been turned off.' });
       res.setHeader('Set-Cookie', accounts.cookie(await accounts.startSession(u.id), { secure }));
-      // Read back through the session path, so the reply is what every later request will see.
-      const [full] = await log.sql()`
-        SELECT u.id, u.email, u.name, u.admitted_at, t.id AS teacher_id
-        FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ${u.id}`;
-      return res.status(200).json({ user: accounts.describeUser(full) });
+      return res.status(200).json({ user: accounts.describeUser(u) });
     }
 
     if (action === 'logout') {
@@ -68,11 +64,7 @@ module.exports = async function handler(req, res) {
     if (action === 'claim') {
       if (!u.admitted_at) return res.status(403).json({ error: 'Redeem an invite first.' });
       const list = (Array.isArray(body.apps) ? body.apps : []).slice(0, MAX_CLAIM);
-      let claimed = 0;
-      for (const a of list) {
-        if (await apps.mayEdit(a && a.id, a && a.token) && await apps.adopt(a.id, 'user:' + u.id)) claimed++;
-      }
-      return res.status(200).json({ claimed });
+      return res.status(200).json({ claimed: await apps.adopt(list, 'user:' + u.id) });
     }
 
     return res.status(400).json({ error: 'action must be google, redeem, claim or logout' });

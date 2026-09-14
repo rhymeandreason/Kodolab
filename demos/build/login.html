@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in — Kodolab</title>
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at /login, /join and /join/<code> by vercel.json rewrites. -->
+<base href="/demos/build/">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="login.css">
+<!-- =========================================================================
+     THE ONE WAY IN. Two doors: a class code (a student, no account) and
+     Google (everyone else, admitted by an invite the first time).
+
+     Pages that refuse someone send them here with ?next=<where they were>,
+     and this page sends them back only when they now qualify for it: a
+     signed-in non-teacher sent from /teach is asked for a teacher invite
+     rather than bounced back to a page that will refuse them again.
+
+     /join/<code> is a student's personal link: the code is read from the
+     path, since a rewrite's query never reaches the browser, and joined at once.
+     ========================================================================= -->
+</head>
+<body class="kodo">
+<div class="page">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <span class="crumb">sign in</span>
+  </nav>
+
+  <header class="pagehead">
+    <h1>sign in</h1>
+  </header>
+
+  <p class="busy" id="busy" hidden></p>
+
+  <main class="doors">
+    <section class="door">
+      <h2 class="cap">Students</h2>
+      <p class="say">Type the class code your teacher gave you.</p>
+      <form class="code" id="codeForm">
+        <input id="classCode" aria-label="Class code" placeholder="abcd-efgh" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="12">
+        <button class="cta" type="submit">Join</button>
+      </form>
+      <p class="err" id="codeErr" hidden></p>
+      <p class="sub" id="seatNow" hidden></p>
+    </section>
+
+    <section class="door">
+      <h2 class="cap">Teachers and builders</h2>
+      <div class="stack" id="out">
+        <p class="say">Sign in with Google. The first time, you enter the invite code you were given.</p>
+        <div class="gbtn" id="gbtn"></div>
+        <p class="sub" id="noGoogle" hidden>Google sign-in is not set up on this server.</p>
+      </div>
+      <div class="stack" id="in" hidden>
+        <p class="say" id="inLine"></p>
+        <form class="code" id="inviteForm" hidden>
+          <input id="inviteCode" aria-label="Invite code" placeholder="invite code" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64">
+          <button class="cta" type="submit">Redeem</button>
+        </form>
+        <div class="line" id="go" hidden></div>
+        <p class="sub"><button class="textbtn" id="signout" type="button">Sign out</button></p>
+      </div>
+      <p class="err" id="acctErr" hidden></p>
+      <p class="sub">No invite? <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>.</p>
+    </section>
+  </main>
+</div>
+
+<script src="apps-client.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const show = (id, text) => { $(id).textContent = text || ''; $(id).hidden = !text; };
+
+  const params = new URLSearchParams(location.search);
+  // Only a builder page is somewhere to come back to. Anything else, /login itself
+  // included, lands on /teach or /build; and an absolute `next` would be an open redirect.
+  const raw = params.get('next') || '';
+  const next = /^\/(build|teach|app)([?#\/]|$)|^\/demos\/build\/(build|teacher|app)\.html([?#]|$)/.test(raw) ? raw : null;
+  const wantsTeach = !!next && /^\/(teach|demos\/build\/teacher\.html)([?#\/]|$)/.test(next);
+  const home = user => next || Apps.page(user && user.teacher ? 'teach' : 'build');
+
+  const WHY = {
+    invalid: 'That class code is not right. Check it against your card.',
+    revoked: 'That class code has been turned off. Ask your teacher for a new one.',
+  };
+  if (WHY[params.get('why')]) show('codeErr', WHY[params.get('why')]);
+
+  /* ---- the wait --------------------------------------------------------- *
+   * Everything but the header goes, and one line says what is happening: a
+   * form left on screen reads as one that did nothing. */
+  function busy(text) {
+    document.querySelector('.doors').hidden = !!text;
+    $('busy').hidden = !text;
+    $('busy').textContent = text || '';
+  }
+  function leave(url) {
+    busy(/teach/.test(url) ? 'Opening your dashboard…' : 'Opening the builder…');
+    location.replace(url);
+  }
+
+  /* ---- students --------------------------------------------------------- */
+  async function join(code) {
+    show('codeErr', '');
+    Apps.codes.setSeat(code);
+    busy('Joining…');
+    try {
+      const r = await Apps.api('../../api/build');
+      // A wrong code with a testing link or an account beside it still answers 200, as that other admission.
+      if (r.who && r.who.kind === 'seat') return leave(next && !wantsTeach ? next : Apps.page('build'));
+      Apps.codes.setSeat(null); busy(''); show('codeErr', WHY.invalid);
+    } catch (err) {
+      Apps.codes.setSeat(null); busy('');
+      show('codeErr', err.status === 401 ? err.message : 'Could not check the code: ' + err.message);
+    }
+  }
+  $('codeForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const code = $('classCode').value.trim();
+    if (code) join(code);
+  });
+
+  const fromPath = (/^\/join\/([A-Za-z0-9-]+)\/?$/.exec(location.pathname) || [])[1];
+  if (fromPath) { $('classCode').value = fromPath; join(fromPath); }
+  else if (Apps.codes.seat()) {
+    Apps.api('../../api/build').then(r => {
+      if (!r.who || r.who.kind !== 'seat') return;
+      $('seatNow').hidden = false;
+      $('seatNow').innerHTML = `This browser is joined as <b>${esc(r.who.label)}</b> · ${esc(r.who.className)}. `
+        + `<a href="${esc(Apps.page('build'))}">Continue</a> · <button class="textbtn" id="notMe" type="button">Not you?</button>`;
+      $('notMe').addEventListener('click', () => { Apps.codes.setSeat(null); $('seatNow').hidden = true; $('classCode').focus(); });
+    }).catch(() => {});
+  }
+
+  /* ---- accounts --------------------------------------------------------- */
+  function paint(user) {
+    Apps.account.note(user && user.name);
+    if (!user) {
+      $('out').hidden = false; $('in').hidden = true;
+      Apps.account.button($('gbtn'), signedIn, () => busy('Signing in…'))
+        .then(s => { if (!s.clientId) $('noGoogle').hidden = false; })
+        .catch(err => show('acctErr', err.message));
+      return false;
+    }
+    $('out').hidden = true; $('in').hidden = false;
+    const needTeacher = wantsTeach && !user.teacher;
+    const needInvite = !user.admitted || needTeacher;
+    $('inLine').innerHTML = `Signed in as <b>${esc(user.name)}</b>.`
+      + (needTeacher ? ' The dashboard is for teachers. Enter your teacher invite code, or a pilot teacher code.'
+        : !user.admitted ? ' Enter the invite code you were given.' : '');
+    $('inviteForm').hidden = !needInvite;
+    $('go').hidden = needInvite;
+    $('go').innerHTML = user.teacher
+      ? `<a class="cta" href="${esc(Apps.page('teach'))}">Dashboard</a><a class="cta cta--ghost" href="${esc(Apps.page('build'))}">Build</a>`
+      : `<a class="cta" href="${esc(Apps.page('build'))}">Build</a>`;
+    if (needInvite) $('inviteCode').focus();
+    return !needInvite;
+  }
+
+  // The apps this browser made on a testing link move into the account before it leaves.
+  async function signedIn(user, err) {
+    if (err) { busy(''); return show('acctErr', err.message); }
+    if (!paint(user)) return busy('');
+    await Apps.account.claimLocal();
+    leave(home(user));
+  }
+
+  $('inviteForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const code = $('inviteCode').value.trim(); if (!code) return;
+    show('acctErr', '');
+    busy('Checking your invite…');
+    try {
+      const r = await Apps.account.redeem(code);
+      await Apps.account.claimLocal();
+      if (wantsTeach && !r.teacher) { busy(''); paint(r.user); return show('acctErr', 'That invite lets you build, but it is not a teacher invite.'); }
+      leave(home(r.user));
+    } catch (err) { busy(''); show('acctErr', err.message); }
+  });
+
+  $('signout').addEventListener('click', async () => {
+    Apps.codes.setTeacher(null);
+    await Apps.account.logout();
+    location.reload();
+  });
+
+  Apps.account.state().then(s => {
+    // Sent here by a page, and already let in: straight back.
+    if (paint(s.user) && next) leave(next);
+  });
+})();
+</script>
+</body>
+</html>

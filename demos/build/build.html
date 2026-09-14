@@ -85,27 +85,6 @@
     <div class="hero-in">
       <h1 class="sr-only">Build</h1>
       <div class="wordmark" id="wordmark"></div>
-      <div class="locked" id="locked" hidden>
-        <i class="ph-bold ph-lock-key"></i>
-        <h2>Got a class code?</h2>
-        <p>Your teacher gave you one. Type it here to start building.</p>
-        <form class="codeform" id="codeForm">
-          <input id="classCode" aria-label="Class code" placeholder="abcd-efgh" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="12">
-          <button class="cta" type="submit">Join</button>
-        </form>
-        <p class="codeerr" id="codeErr" hidden></p>
-        <div class="acct">
-          <p class="or"><span>or</span></p>
-          <div class="gbtn" id="gbtn"></div>
-          <p class="acctline" id="acctLine" hidden></p>
-          <form class="codeform" id="inviteForm" hidden>
-            <input id="inviteCode" aria-label="Invite code" placeholder="invite code" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64">
-            <button class="cta" type="submit">Redeem</button>
-          </form>
-          <p class="codeerr" id="inviteErr" hidden></p>
-        </div>
-        <p class="sub">No code? The builder is open to invited testers for now. <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>, or open your personal access link once in this browser.</p>
-      </div>
       <form id="ask">
         <div class="refs" id="refs" hidden></div>
         <textarea id="request" maxlength="600" rows="2" autofocus></textarea>
@@ -1005,53 +984,25 @@
     for (const f of box.querySelectorAll('iframe.live')) io.observe(f);
   }
 
-  /* ---- class codes ---------------------------------------------------- */
-  function codeError(text) { $('codeErr').textContent = text || ''; $('codeErr').hidden = !text; }
+  /* ---- who is building ---------------------------------------------------- */
   function paintWho(who) {
     const el = $('who');
+    if (who && who.account) Apps.account.note(who.name);
     if (!who || who.kind === 'key') { el.hidden = true; return; }
     el.hidden = false;
     const out = who.account ? ` <button class="textbtn" data-signout type="button">Sign out</button>` : '';
     el.innerHTML = who.kind === 'seat'
       ? `Building as <b>${esc(who.label)}</b> · ${esc(who.className)} <button class="textbtn" id="notMe" type="button">Not you?</button>`
       : who.kind === 'teacher'
-      ? `Teacher · <b>${esc(who.name)}</b> <a class="textbtn" href="teacher.html">Dashboard</a>${out}`
+      ? `Teacher · <b>${esc(who.name)}</b> <a class="textbtn" href="${esc(Apps.page('teach'))}">Dashboard</a>${out}`
       : `Signed in as <b>${esc(who.name)}</b>${out}`;
     const b = $('notMe');
-    if (b) b.addEventListener('click', () => { Apps.codes.setSeat(null); location.href = location.pathname; });
+    if (b) b.addEventListener('click', () => { Apps.codes.setSeat(null); location.href = Apps.page('login'); });
   }
   document.addEventListener('click', async e => {
     if (!e.target.closest('[data-signout]')) return;
     await Apps.account.logout();
-    location.href = location.pathname;
-  });
-  // Signed in: the apps this browser made on a testing link move into the account, then the page starts over as that account.
-  async function signedIn(user, err) {
-    if (err) { $('inviteErr').textContent = err.message; $('inviteErr').hidden = false; return; }
-    if (user && user.admitted) await Apps.account.claimLocal();
-    location.reload();
-  }
-  function pending(who) {
-    $('gbtn').hidden = true;
-    $('acctLine').hidden = false;
-    $('acctLine').innerHTML = `Signed in as <b>${esc(who.name)}</b>. Enter the invite code you were given. <button class="textbtn" data-signout type="button">Sign out</button>`;
-    $('inviteForm').hidden = false;
-  }
-  $('inviteForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const code = $('inviteCode').value.trim(); if (!code) return;
-    $('inviteErr').hidden = true;
-    try { await Apps.account.redeem(code); await Apps.account.claimLocal(); location.reload(); }
-    catch (err) { $('inviteErr').textContent = err.message; $('inviteErr').hidden = false; }
-  });
-  $('codeForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const raw = $('classCode').value.trim();
-    if (!raw) return;
-    codeError('');
-    Apps.codes.setSeat(raw);
-    try { await Apps.api('../../api/build'); location.reload(); }
-    catch (err) { Apps.codes.setSeat(null); codeError(err.status === 401 ? err.message : 'Could not check the code: ' + err.message); }
+    location.href = Apps.page('login');
   });
 
   (async () => {
@@ -1064,13 +1015,11 @@
     } catch (err) {
       if (err.status === 401) {
         const code = err.body && err.body.code;
-        // A code that was turned off or mistyped is dropped, so the page asks again.
-        if (code === 'invalid' || code === 'revoked') { Apps.codes.setSeat(null); codeError(err.message); }
-        $('locked').hidden = false; $('ask').hidden = true;
-        if (code === 'invite') pending(err.body.who);
-        else Apps.account.button($('gbtn'), signedIn)
-          .then(s => { if (!s.clientId) document.querySelector('.locked .acct').hidden = true; })
-          .catch(e => console.warn('[google] ' + e.message));
+        const bad = code === 'invalid' || code === 'revoked';
+        if (bad) Apps.codes.setSeat(null);
+        // An app opened by its link still shows, read-only. Anything else signs in first.
+        if (!Apps.ID) return location.replace(Apps.login(bad ? code : ''));
+        notice('Sign in to build or remix.', true);
       }
       else notice(err.message, true);
       $('send').disabled = true;

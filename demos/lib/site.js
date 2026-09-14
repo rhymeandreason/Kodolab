@@ -47,8 +47,21 @@
     // should still be able to see where they are.
     { text: 'Library',    href: '/library',    at: /^\/(library|molecules|proteins)(\/|$)/ },
     { text: 'Contribute', href: '/contribute', at: /^\/contribute$/ },
-    { text: 'Build',      href: '/build',      at: /^\/build(\/|$)/ },
+    { text: 'Build',      href: '/build',      at: /^\/build(\/build)?$/ },
   ];
+
+  /* The account, as the builder's pages last saw it. A name in storage, not a
+     request per page view: the session cookie is HttpOnly and a stale name only
+     costs a click, since /login shows the truth. */
+  function account() {
+    var name = null;
+    try { name = localStorage.getItem('ss.account'); } catch (e) {}
+    return {
+      text: name ? name.split(/\s+/)[0] : 'Sign in',
+      href: '/login',
+      at: /^\/(login|join|build\/login)(\/|$)/,
+    };
+  }
 
   /* ONE SPELLING TO MATCH AGAINST. A featured page is served at a short URL by
      a vercel.json rewrite and at its own path under /demos, and either can be
@@ -75,7 +88,7 @@
     var links = document.createElement('nav');
     links.className = 'sitelinks';
     links.setAttribute('aria-label', 'Site');
-    NAV.forEach(function (n) {
+    NAV.concat(account()).forEach(function (n) {
       var a = document.createElement('a');
       a.href = n.href;
       a.textContent = n.text;

@@ -73,11 +73,14 @@ async function verifyGoogle(credential) {
 
 async function upsertUser(claims) {
   const db = log.sql();
+  // The teacher row comes back in the same statement, so sign-in can answer without reading again.
   const [u] = await db`
-    INSERT INTO users (id, google_sub, email, name)
-    VALUES (${mintId()}, ${claims.sub}, ${claims.email || null}, ${claims.name || null})
-    ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name
-    RETURNING id, disabled_at`;
+    WITH u AS (
+      INSERT INTO users (id, google_sub, email, name)
+      VALUES (${mintId()}, ${claims.sub}, ${claims.email || null}, ${claims.name || null})
+      ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name
+      RETURNING id, email, name, admitted_at, disabled_at)
+    SELECT u.*, t.id AS teacher_id FROM u LEFT JOIN teachers t ON t.user_id = u.id`;
   return u;
 }
 

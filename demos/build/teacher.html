@@ -38,26 +38,6 @@
   </header>
 
   <main>
-    <!-- Signed out -->
-    <section class="signin" id="signin" hidden>
-      <div class="card">
-        <div id="tSignedOut">
-          <label>Sign in to manage your classes</label>
-          <div id="tGbtn"></div>
-        </div>
-        <form id="tInvite" hidden>
-          <p class="acct" id="tAcct"></p>
-          <label for="tInviteCode">Teacher invite code</label>
-          <div class="line">
-            <input id="tInviteCode" autocomplete="off" spellcheck="false">
-            <button class="cta" type="submit">Redeem</button>
-          </div>
-          <p class="sub">A pilot teacher code works here too, and moves its classes onto this account.</p>
-        </form>
-        <p class="err" id="signinErr" hidden></p>
-      </div>
-    </section>
-
     <!-- Signed in -->
     <section id="dash" hidden>
       <div class="classbar">
@@ -171,23 +151,12 @@
   const show = (id, text) => { $(id).textContent = text || ''; $(id).hidden = !text; };
 
   /* ---- signing in ------------------------------------------------------- */
-  // A teacher is a Google account with a teacher row. A browser still holding
-  // the pilot's code is let in on it until that code is redeemed on an account.
-  $('tInvite').addEventListener('submit', async e => {
-    e.preventDefault();
-    const code = $('tInviteCode').value.trim(); if (!code) return;
-    show('signinErr', '');
-    try {
-      const r = await Apps.account.redeem(code);
-      if (!r.teacher) return show('signinErr', 'That is a builder invite, not a teacher invite. You can build at /build.');
-      Apps.codes.setTeacher(null);
-      location.reload();
-    } catch (err) { show('signinErr', err.message); }
-  });
+  // A teacher is a Google account with a teacher row; /login is where one gets
+  // made. A browser still holding the pilot's code is let in on it here.
   $('signout').addEventListener('click', async () => {
     Apps.codes.setTeacher(null);
     await Apps.account.logout();
-    location.href = location.pathname;
+    location.href = Apps.page('login');
   });
 
   async function load() {
@@ -195,12 +164,13 @@
     catch (err) {
       if (err.status === 401) {
         if (Apps.codes.teacher()) Apps.codes.setTeacher(null);
-        signedOut(err.body && err.body.who);
+        location.replace(Apps.login());
         return false;
       }
-      signedOut(null); show('signinErr', err.message); return true;
+      document.querySelector('main').insertAdjacentHTML('afterbegin', `<p class="err">${esc(err.message)}</p>`);
+      return true;
     }
-    $('signin').hidden = true; $('dash').hidden = false;
+    $('dash').hidden = false;
     $('meta').hidden = false; $('newClass').hidden = false; $('meta').textContent = data.teacher.name;
     $('buildUrl').textContent = BUILD.replace(/^https?:\/\//, '');
     $('buildLink').href = BUILD;
@@ -210,19 +180,6 @@
     if (classId) await openClass(classId);
     return true;
   }
-  function signedOut(who) {
-    $('signin').hidden = false; $('dash').hidden = true; $('meta').hidden = true; $('newClass').hidden = true;
-    if (who && who.account) {
-      $('tSignedOut').hidden = true; $('tInvite').hidden = false;
-      $('tAcct').innerHTML = `Signed in as <b>${esc(who.name)}</b>. <button class="textbtn" id="tOut" type="button">Sign out</button>`;
-      $('tOut').addEventListener('click', () => $('signout').click());
-      $('tInviteCode').focus();
-    } else {
-      Apps.account.button($('tGbtn'), (user, err) => err ? show('signinErr', err.message) : location.reload())
-        .catch(e => show('signinErr', e.message));
-    }
-  }
-
   /* ---- classes ---------------------------------------------------------- */
   function paintClasses() {
     $('classTabs').innerHTML = data.classes.map(c =>

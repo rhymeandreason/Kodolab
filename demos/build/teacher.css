@@ -24,14 +24,6 @@ input, textarea {
 }
 input:focus-visible, textarea:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
 
-/* ---- sign in ---- */
-.signin { max-width: 28rem; margin: 2rem 0; }
-.signin input { flex: 1; min-width: 0; }
-.signin .sub { margin: .8rem 0 0; }
-.signin .acct { margin: 0 0 1rem; }
-.signin .acct b { color: var(--text-strong); }
-#tGbtn { min-height: 44px; }
-
 /* ---- classes ---- */
 .classbar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin: 0 0 2rem; }
 .classbar .segmented { flex-wrap: wrap; }

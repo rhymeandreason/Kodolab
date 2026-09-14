@@ -1,0 +1,44 @@
+/* The sign-in page's chrome. Tokens only; kodo.css owns type and paper. */
+
+[hidden] { display: none !important; }
+
+.doors {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.5rem); max-width: 60rem; padding-bottom: 4rem; align-items: start;
+}
+.door {
+  display: flex; flex-direction: column; gap: 1rem;
+  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 16px;
+  padding: clamp(1.25rem, 3vw, 1.9rem);
+}
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+.door p { margin: 0; }
+.cap {
+  margin: 0; font-family: var(--font-display); font-size: var(--cap-sm); font-weight: var(--cap-weight);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim);
+}
+.say { font-family: var(--font-editorial); font-size: 1.05rem; line-height: 1.45; color: var(--text-body); }
+.say b, .sub b { color: var(--text-strong); }
+
+.code { display: flex; gap: .6rem; }
+.code input {
+  flex: 1; min-width: 0; padding: .65rem 1rem; box-sizing: border-box;
+  border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-page); color: var(--text-strong);
+  font-family: var(--font-display); font-size: 1.15rem; letter-spacing: .1em; text-align: center;
+}
+.code input:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+.code .cta { margin: 0; flex: none; }
+
+.gbtn { min-height: 44px; }
+
+.busy {
+  margin: clamp(2rem, 6vw, 4rem) 0 8rem; font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; color: var(--text-strong);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+@keyframes breathe { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .busy { animation: none; } }
+.line { display: flex; gap: .6rem; flex-wrap: wrap; }
+.sub { font-size: .85rem; color: var(--text-muted); }
+.sub a { color: inherit; }
+.err { font-size: .9rem; color: var(--hue-coral); }

@@ -39,6 +39,7 @@ const Apps = (() => {
   const VISITOR_KEY = 'ss.tutor.visitor';
   const STORE_KEY   = 'ss.apps';            // { id: { token, title, at } }
   const SEAT_KEY    = 'ss.class.code';
+  const ACCOUNT_KEY = 'ss.account';         // the signed-in name, for lib/site.js's bar; the cookie is the truth
   const TEACHER_KEY = 'ss.teacher.code';
 
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
@@ -121,14 +122,16 @@ const Apps = (() => {
   }
   const account = {
     state: () => api('../../api/auth').catch(() => ({ clientId: null, user: null })),
-    /* Google's own button, drawn into `el`. `done(user, err)` runs once the cookie is set. */
-    async button(el, done) {
+    /* Google's own button, drawn into `el`. `start()` runs the moment Google hands
+       back a token, `done(user, err)` once the cookie is set. */
+    async button(el, done, start) {
       const s = await account.state();
       if (!s.clientId) { el.hidden = true; return s; }
       await loadScript('https://accounts.google.com/gsi/client');
       window.google.accounts.id.initialize({
         client_id: s.clientId,
         callback: async r => {
+          if (start) start();
           try { done((await api('../../api/auth', { method: 'POST', body: { action: 'google', credential: r.credential } })).user); }
           catch (err) { done(null, err); }
         },
@@ -137,7 +140,8 @@ const Apps = (() => {
       return s;
     },
     redeem: code => api('../../api/auth', { method: 'POST', body: { action: 'redeem', code } }),
-    logout: () => api('../../api/auth', { method: 'POST', body: { action: 'logout' } }).catch(() => null),
+    logout: () => { del(ACCOUNT_KEY); return api('../../api/auth', { method: 'POST', body: { action: 'logout' } }).catch(() => null); },
+    note: name => (name ? set(ACCOUNT_KEY, name) : del(ACCOUNT_KEY)),
     /* The apps this browser made on a testing link become the account's. Only
        unowned ones move, so running it again is harmless. */
     claimLocal() {
@@ -160,6 +164,17 @@ const Apps = (() => {
     if (kind === 'preview') return view + (fileForm ? '&' : '?') + 'preview=1';
     const base = fileForm ? `${o}/demos/build/build.html?id=${id}` : `${o}/build?id=${id}`;
     return kind === 'edit' && token ? `${base}&e=${token}` : base;
+  }
+
+  /* The site's own pages, in whichever spelling this world uses. */
+  function page(name) {
+    const file = { build: 'build/build.html', teach: 'build/teacher.html', login: 'build/login.html' }[name];
+    return fileForm ? `/demos/${file}` : `/${name}`;
+  }
+  /* The sign-in page, told to come back here. `why` names a refused class code. */
+  function login(why) {
+    return page('login') + '?next=' + encodeURIComponent(location.pathname + location.search + location.hash)
+      + (why ? '&why=' + encodeURIComponent(why) : '');
   }
 
   /* ---- the sandbox -------------------------------------------------------- */
@@ -321,12 +336,12 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
       d = document.createElement('dialog');
       d.id = 'betaModal';
       d.className = 'beta';
-      d.innerHTML = '<h2>Private beta</h2><p>Building and remixing apps is open to invited testers for now. Join the waitlist and we will send you a link.</p>'
-        + '<form method="dialog"><button class="btn btn--tint" type="submit">OK</button></form>';
+      d.innerHTML = '<h2>Private beta</h2><p>Building and remixing apps is open to invited testers for now. Sign in with your class code or invite, or join the waitlist.</p>'
+        + `<form method="dialog"><a class="btn" href="${login()}">Sign in</a> <button class="btn btn--tint" type="submit">OK</button></form>`;
       document.body.appendChild(d);
     }
     d.showModal();
   }
 
-  return { KEY, VISITOR, ID, codes, account, api, link, mount, preview, editMode, outline, exportFile, remember, forget, tokenFor, mine, beta };
+  return { KEY, VISITOR, ID, codes, account, api, link, page, login, mount, preview, editMode, outline, exportFile, remember, forget, tokenFor, mine, beta };
 })();
