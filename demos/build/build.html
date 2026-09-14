@@ -73,6 +73,18 @@
     <div class="hero-in">
       <h1 class="sr-only">Build</h1>
       <div class="wordmark" id="wordmark"></div>
+      <!-- The gate: shown instead of the ask box when nobody is admitted. A
+           class code typed here joins on the spot and the ask box takes its
+           place; teachers and builders go to /login. -->
+      <form class="gate" id="gate" hidden>
+        <p class="hint">Add your class code to start building.</p>
+        <div class="code">
+          <input id="gateCode" aria-label="Class code" placeholder="abcd-efgh" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="12">
+          <button class="cta" type="submit">Join</button>
+        </div>
+        <p class="errs" id="gateErr" hidden></p>
+        <p class="sub">Teacher or builder? <a id="gateLogin" href="login.html">Sign in</a>.</p>
+      </form>
       <form id="ask">
         <div class="refs" id="refs" hidden></div>
         <textarea id="request" maxlength="600" rows="2" autofocus></textarea>
@@ -821,21 +833,57 @@
     el.innerHTML = `Building as <b>${esc(who.label)}</b> · ${esc(who.className)} <button class="textbtn" id="notMe" type="button">Not you?</button>`;
     $('notMe').addEventListener('click', () => { Apps.codes.setSeat(null); location.href = Apps.page('login'); });
   }
-  (async () => {
+  /* ---- the gate ----------------------------------------------------------- */
+  const GATE_WHY = {
+    invalid: 'That class code is not right. Check it against your card.',
+    revoked: 'That class code has been turned off. Ask your teacher for a new one.',
+  };
+  function gate(on, why) {
+    document.body.classList.toggle('gated', on);
+    $('gate').hidden = !on;
+    $('ask').hidden = on;
+    $('gateErr').textContent = why || ''; $('gateErr').hidden = !why;
+    if (on) $('gateCode').focus();
+  }
+  $('gateLogin').href = Apps.login();
+  $('gate').addEventListener('submit', async e => {
+    e.preventDefault();
+    const code = $('gateCode').value.trim(); if (!code) return;
+    Apps.codes.setSeat(code);
+    $('gateErr').hidden = true;
     try {
       const cfg = await Apps.api('../../api/build');
-      if (!cfg.ok) notice('The builder is not configured here: it needs a database and a model key.', true);
-      whoNow = cfg.who;
-      paintWho(cfg.who);
-      if (cfg.who && cfg.who.account) Apps.account.claimLocal();
+      // A wrong code beside a testing link still answers 200, as that other admission.
+      if (!cfg.who || cfg.who.kind !== 'seat') { Apps.codes.setSeat(null); return gate(true, GATE_WHY.invalid); }
+      admitted(cfg);
+      gate(false);
+      paintMine();
+      $('request').focus();
+    } catch (err) {
+      Apps.codes.setSeat(null);
+      gate(true, err.status === 401 ? (GATE_WHY[err.body && err.body.code] || err.message) : 'Could not check the code: ' + err.message);
+    }
+  });
+  function admitted(cfg) {
+    if (!cfg.ok) notice('The builder is not configured here: it needs a database and a model key.', true);
+    whoNow = cfg.who;
+    $('send').disabled = false;
+    paintWho(cfg.who);
+    if (cfg.who && cfg.who.account) Apps.account.claimLocal();
+  }
+
+  (async () => {
+    try {
+      admitted(await Apps.api('../../api/build'));
     } catch (err) {
       if (err.status === 401) {
         const code = err.body && err.body.code;
         const bad = code === 'invalid' || code === 'revoked';
         if (bad) Apps.codes.setSeat(null);
-        // An app opened by its link still shows, read-only. Anything else signs in first.
-        if (!Apps.ID) return location.replace(Apps.login(bad ? code : ''));
-        notice('Sign in to build or remix.', true);
+        // An app opened by its link still shows, read-only. Anything else
+        // meets the gate, on this page: no redirect.
+        if (!Apps.ID) gate(true, bad ? GATE_WHY[code] : '');
+        else notice('Sign in to build or remix.', true);
       }
       else notice(err.message, true);
       $('send').disabled = true;
