@@ -830,6 +830,9 @@
       // `linear` is scoped to the flavin's own atoms — see below.
       topology:{ rings:[5,5,6,6,6,6], fused:true, linear:f.ring },
       krebs:{ carrier:true, flavin:f.ring, redox:[f.h1, f.h5], phosphates:2,
+              // the pair succinate dehydrogenase put on, named the way succinate
+              // names its own so the same verb can take them off again at complex II
+              dehydroC:[f.n1, f.n5], dehydroH:[f.h1, f.h5],
               pa:f.pa, pb:f.pb, reduced:true } });
   }
   {
@@ -879,6 +882,128 @@
 
 
 
+
+  /* ================================================================
+   *  THE ELECTRON TRANSPORT CHAIN'S CARRIERS — FMN and ubiquinone
+   * ================================================================
+   *  Two more one-molecule-two-states pairs, for the chain a lesson runs
+   *  after the cycle. Both are built the way FAD is: the REDUCED form is the
+   *  geometry, the oxidised form is that skeleton minus the hydrogens the step
+   *  moves, so `redox` on the reduced spec is exactly the pair missing on the
+   *  other and nothing can disagree about where they go. The bond orders are
+   *  not redrawn on oxidation, the simplification FAD states and for the
+   *  same reason.
+   */
+  function buildFMN(){
+    /* — riboflavin-5′-phosphate: FAD's front half, ending at one TERMINAL
+     *   phosphate instead of the pyrophosphate bridge to AMP. The flavin, the
+     *   ribityl chain and its three hydroxyls are the same calls buildFAD
+     *   makes, in the same order, so the flavin's indices and stereocentres
+     *   are the ones tools/check-handedness.js holds for FADH₂. */
+    const f = buildFlavin();
+    const s = f.s;
+    const rib = extendedChain(['C','C','C','C','C'],
+                              [GL.CN, GL.CC, GL.CC, GL.CC, GL.CC]);
+    const slot = vnorm(vmul(s.nbrs(f.n10).reduce(vadd, V(0,0,0)), -1));
+    const R = SkelLib.absorb(s, SkelLib.fitOnto(rib.s, 0,
+      vsub(rib.s.at(1), rib.s.at(0)), slot,
+      vadd(s.at(f.n10), vmul(slot, GL.CN)), 0));
+    const rc = rib.idx.map(i => i + R);
+    s.link(f.n10, rc[0]);
+    [1, 2, 3].forEach(k => s.hydroxyl(rc[k], 1));
+    const o5 = s.grow(rc[4], 'O', GL.CO, 'sp3', 0);
+    const a1 = s.phosphoUnit(o5, { terminal:true });
+    return Object.assign(f, { s, p:a1.p });
+  }
+  {
+    const f = buildFMN();
+    CARRIERS.fmnh2 = f.s.spec({
+      view:VIEW.flatRing,
+      name:'FMNH₂', short:'FMNH₂', formula:'C₁₇H₂₁N₄O₉P²⁻', charge:-2,
+      smiles:'', class:'carrier',
+      topology:{ rings:[6,6,6], fused:true, linear:f.ring },
+      // Complex I's prosthetic group, the head that takes NADH's hydride.
+      // `accept` is N5, where the hydride lands; `redox` is the pair that
+      // distinguishes the two states, as on FADH₂.
+      etc:{ carrier:true, flavin:f.ring, redox:[f.h1, f.h5], accept:f.n5,
+            dehydroC:[f.n1, f.n5], dehydroH:[f.h1, f.h5], phosphates:1, p:f.p, reduced:true } });
+  }
+  {
+    const f = buildFMN();
+    const s = f.s;
+    let m = f.s.atoms.map((_, i) => i);
+    [f.h1, f.h5].sort((a, b) => b - a).forEach(h => {
+      const step = dropAtom(s, h);
+      m = m.map(i => (i === h ? null : step[i]));
+    });
+    CARRIERS.fmn = s.spec({
+      view:VIEW.flatRing,
+      name:'FMN', short:'FMN', formula:'C₁₇H₁₉N₄O₉P²⁻', charge:-2,
+      smiles:'', class:'carrier',
+      topology:{ rings:[6,6,6], fused:true, linear:f.ring.map(i => m[i]) },
+      etc:{ carrier:true, flavin:f.ring.map(i => m[i]), accept:m[f.n5],
+            phosphates:1, p:m[f.p], reduced:false } });
+  }
+
+  function buildUbiquinol(){
+    /* — ubiquinol-1: the benzoquinol ring with its two methoxy groups, the
+     *   ring methyl, and ONE isoprene unit where the mitochondrial molecule
+     *   carries ten. Q1 is a real compound and a declared stand-in
+     *   (MolecularGeometry.md §1.6): the fifty-carbon tail is what anchors
+     *   Q10 in the bilayer, and nothing this lesson shows happens on it.
+     *   Ring numbering follows the quinone: C1 and C4 carry the redox
+     *   hydroxyls, C2 and C3 the methoxys, C5 the methyl, C6 the tail. */
+    const s = flatRing(6, ['C','C','C','C','C','C']);
+    s.order(0, 1, 2).order(2, 3, 2).order(4, 5, 2);
+    const ringAtom = (i, dist, el) => { const a = flatH(s, i, dist); s.atoms[a].el = el; return a; };
+    // aryl C–O 1.36 Å (phenol, anisole); the ring C–C(methyl) 1.51 Å
+    const o1 = ringAtom(0, 1.36, 'O'), o4 = ringAtom(3, 1.36, 'O');
+    const o2 = ringAtom(1, 1.36, 'O'), o3 = ringAtom(2, 1.36, 'O');
+    const me5 = ringAtom(4, 1.51, 'C');
+    const t1 = ringAtom(5, 1.51, 'C');                         // tail CH₂
+    const me2 = s.grow(o2, 'C', GL.CO, 'sp3', 0);
+    const me3 = s.grow(o3, 'C', GL.CO, 'sp3', 0);
+    const t2 = s.grow(t1, 'C', GL.CC, 'sp3', 0);               // =CH–
+    const t3 = s.grow(t2, 'C', GL.CdC, 'sp2', 0, 2);           // =C(CH₃)₂
+    const t4 = s.grow(t3, 'C', GL.CC, 'sp2', 0);
+    const t5 = s.grow(t3, 'C', GL.CC, 'sp2', 0);
+    // hydrogens LAST, so every index above survives: the two redox O–H first,
+    // named, then the rest
+    const h1 = s.grow(o1, 'H', GL.OH, 'sp3', 0);
+    const h4 = s.grow(o4, 'H', GL.OH, 'sp3', 0);
+    [me2, me3, me5, t4, t5].forEach(c => { for (let k = 0; k < 3; k++) s.grow(c, 'H', GL.CH, 'sp3', 0); });
+    for (let k = 0; k < 2; k++) s.grow(t1, 'H', GL.CH, 'sp3', 0);
+    flatH(s, t2, GL.CH);
+    return { s, o1, o4, h1, h4, ring:[0,1,2,3,4,5], tail:[t1,t2,t3,t4,t5] };
+  }
+  {
+    const q = buildUbiquinol();
+    CARRIERS.ubiquinol = q.s.spec({
+      view:VIEW.flatRing,
+      name:'Ubiquinol', short:'QH₂', formula:'C₁₄H₂₀O₄', charge:0,
+      smiles:'', class:'carrier',
+      topology:{ rings:[6], fused:false },
+      // `redox` is the two hydroxyl hydrogens complex III takes off, and
+      // `eFrom` the ring carbon the electron is drawn leaving from.
+      etc:{ carrier:true, ring:q.ring, redox:[q.h1, q.h4], redoxH:q.h1, oh:[q.o1, q.o4], eFrom:0,
+            tail:q.tail, reduced:true } });
+  }
+  {
+    const q = buildUbiquinol();
+    const s = q.s;
+    let m = s.atoms.map((_, i) => i);
+    [q.h1, q.h4].sort((a, b) => b - a).forEach(h => {
+      const step = dropAtom(s, h);
+      m = m.map(i => (i === h ? null : step[i]));
+    });
+    CARRIERS.ubiquinone = s.spec({
+      view:VIEW.flatRing,
+      name:'Ubiquinone', short:'Q', formula:'C₁₄H₁₈O₄', charge:0,
+      smiles:'', class:'carrier',
+      topology:{ rings:[6], fused:false },
+      etc:{ carrier:true, ring:q.ring.map(i => m[i]), oh:[m[q.o1], m[q.o4]], eFrom:0,
+            tail:q.tail.map(i => m[i]), reduced:false } });
+  }
 
   {
     /* — atpSkel: ATP from ideal geometry.

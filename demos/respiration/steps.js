@@ -1,6 +1,7 @@
 /* =============================================================================
  *  respiration/steps.js — every step of glycolysis, pyruvate oxidation, the
- *  Krebs cycle and fermentation, as data RespirationReaction drives
+ *  Krebs cycle, fermentation and the electron transport chain, as data
+ *  RespirationReaction drives
  * =============================================================================
  *  One record per reaction. No prose: the page that mounts the component says
  *  what a step means; this says what happens to which molecule, in the words
@@ -34,9 +35,11 @@
  *    spot       the click — `on` which lane, `at` the spec's own name for
  *               the atom or bond, `say` the prompt beside it
  *    act        the button's words when a page runs the step without a click
- *    perGlucose how many times this reaction happens per glucose
+ *    perGlucose how many times this reaction happens per glucose; 1 on the
+ *               chain, whose steps run once per carrier that arrives
  *    rev        near-equilibrium, runs both ways
- *    yields     per single reaction: atp, nadh, fadh2, co2, as signed counts
+ *    yields     per single reaction: atp, nadh, fadh2, co2, as signed counts;
+ *               on the chain, `protons` pumped across the inner membrane
  *    leaves     what departs (CO₂, H₂O); arrives — what comes from solution
  *
  *  Partner keys `adp`, `nad` and `fad` are DRAWN as the charged spec with the
@@ -58,6 +61,11 @@ const NADH = { key: 'nadh', becomes: 'nad'   };
 const FAD  = { key: 'fad',  becomes: 'fadh2' };
 const COA  = { key: 'coa',  becomes: null    };   // consumed into the product
 const OAA  = { key: 'oaa',  becomes: null    };
+// the chain's carriers: each a lane, each one molecule in two states
+const FMN  = { key: 'fmn',  becomes: 'fmnh2' };
+const Q    = { key: 'q',    becomes: 'qh2'   };
+const CYTC = { key: 'cytcOx', becomes: 'cytcRed' };
+const O2   = { key: 'o2',   becomes: null    };   // leaves as two waters
 
 const PATHWAYS = {
   glycolysis: {
@@ -216,6 +224,39 @@ const PATHWAYS = {
         yields: { nadh: -1 } },
     ],
   },
+
+  'electron-transport': {
+    name: 'Electron transport chain', where: 'inner mitochondrial membrane',
+    // two doors in: NADH at complex I, FADH₂ at complex II
+    start: ['nadh'], starts: [['nadh'], ['fadh2']],
+    steps: [
+      { key: 'complex-i', n: 1, branch: 'nadh', name: 'NADH hands over', enzyme: 'Complex I (NADH dehydrogenase)',
+        from: ['nadh'], to: ['nad'], partner: FMN,
+        fx: 'red',
+        spot: { at: 'hydride', say: 'Hand the hydride to FMN' },
+        act: 'Unload NADH', perGlucose: 1, rev: false,
+        yields: { nadh: -1, protons: 4 } },
+      { key: 'complex-ii', n: 2, branch: 'fadh2', name: 'FADH₂ hands over, lower down', enzyme: 'Complex II (succinate dehydrogenase)',
+        from: ['fadh2'], to: ['fad'], partner: Q,
+        fx: 'dehydro', couple: true,
+        spot: { at: 'dehydroC', say: 'Hand both hydrogens to Q' },
+        act: 'Unload FADH₂', perGlucose: 1, rev: false,
+        // no protons: complex II pumps none, which is why FADH₂ is worth less
+        yields: { fadh2: -1, protons: 0 } },
+      { key: 'complex-iii', n: 3, name: 'One electron at a time', enzyme: 'Complex III (cytochrome bc₁)',
+        from: ['qh2'], to: ['q'], partner: CYTC,
+        fx: 'electron', couple: true,
+        spot: { at: 'redoxH', say: 'Take the electrons off ubiquinol' },
+        act: 'Oxidise ubiquinol', perGlucose: 1, rev: false,
+        yields: { protons: 4 }, leaves: ['2 H⁺'] },
+      { key: 'complex-iv', n: 4, name: 'Oxygen takes the electron', enzyme: 'Complex IV (cytochrome c oxidase)',
+        from: ['cytcRed'], to: ['cytcOx'], partner: O2,
+        fx: 'reduce', couple: true,
+        spot: { on: 'partner', at: 'oo', say: 'Give O₂ the electron' },
+        act: 'Reduce oxygen', perGlucose: 1, rev: false,
+        yields: { protons: 2 }, leaves: ['H₂O'], arrives: ['4 H⁺'] },
+    ],
+  },
 };
 
 /* ---- lookup ---------------------------------------------------------- */
@@ -256,6 +297,11 @@ function carrierOf(s) {
   const c = (s.partner && s.partner.becomes) ? s.partner : s.offstage;
   return c ? { in: c.key, out: c.becomes } : null;
 }
+/* Everything standing after a step: products, what lingers, and what the
+   partner became. The chain's next step starts on a PARTNER's product (the
+   ubiquinol complex II made), so continuity is checked against this. */
+const afterOf = s => s.to.concat(s.linger || [])
+  .concat(s.partner && s.partner.becomes ? [s.partner.becomes] : []);
 /* The step after, in the same branch; null at the end of a pathway. */
 function next(id) {
   const [p] = split(id), st = get(id), pw = pathway(p);
@@ -277,7 +323,7 @@ const x2Before = st => st.perGlucose > 1;
 const x2After = st => st.perGlucose > 1 || !!st.x2After;
 
 global.RespirationSteps = { PATHWAYS, get, list, next, prev, split, idOf, pathwayOf,
-                            carrierOf, x2Before, x2After };
+                            carrierOf, afterOf, x2Before, x2After };
 if (typeof module === 'object' && module.exports) module.exports = global.RespirationSteps;
 
 })(typeof globalThis !== 'undefined' ? globalThis : this);

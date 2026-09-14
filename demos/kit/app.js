@@ -49,6 +49,7 @@
     'lib/mol-pathways.js',
     'lib/mol-krebs.js',
     'lib/mol-carriers.js',
+    'lib/mol-heme.js',
     'lib/mol-sugars.js',
     'lib/mol-glycans.js',
     'lib/mol-aminoacids.js',
@@ -175,6 +176,7 @@
        mol-sugars.js's; water and CO₂ come from mol-small.js. */
     RespirationReaction: ['lib/skel.js', 'lib/mol-small.js', 'lib/mol-sugars.js',
                  'lib/mol-pathways.js', 'lib/mol-krebs.js', 'lib/mol-carriers.js',
+                 'lib/mol-heme.js',
                  'lib/fx.js', 'lib/atomkit.js', 'kit/motion.js', 'kit/molgraph.js',
                  'kit/fit.js', 'kit/lanes.js', 'kit/hotspot.js', 'kit/leaving.js',
                  'reaction/reaction.js', 'respiration/steps.js', 'respiration/respiration.js'],

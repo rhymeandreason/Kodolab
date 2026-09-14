@@ -102,6 +102,11 @@ const T0 = {
 const H_LEAVE = 0x8fb6d8;
 // A bond coming apart, the repo's violet (water-lab's NaCl dissociation).
 const CLEAVE = 0x9a3fe0;
+// AN ELECTRON ON ITS OWN, which no atom colour can stand for: it is not a
+// hydrogen (steel) and not a bond (violet). A clear blue, so a hydride (an
+// electron pair riding a proton) and a bare electron read as different
+// particles crossing the same gap.
+const ELECTRON = 0x2f6fd6;
 // BIGGER THAN THE BUILDER DRAWS IT — a deviation worth naming. atomkit's
 // default 0.62 world units reads fine where the frame holds three atoms; a
 // pathway frame holds a whole sugar, so it lands 11 px against a 34 px
@@ -653,13 +658,16 @@ function create(host) {
      * this changes, found by asking specs rather than by index — `join` finds
      * coenzyme A the same way. NEAREST, because a page may stand more than one
      * pair on the stage and the hydride crosses to the molecule beside it. */
-    const ls = lanesNow().filter(l => meta(specOf(l.key)).oxC != null);
+    // WHERE IT LANDS: a carbonyl carbon (`oxC`) on an acid, or the atom a
+    // carrier names as `accept` — FMN's N5, which is not a carbon at all.
+    const site = m => m.oxC != null ? m.oxC : m.accept;
+    const ls = lanesNow().filter(l => site(meta(specOf(l.key))) != null);
     if (!ls.length) return;
     const x = c.lane.g.position.x;
     const acc = ls.reduce((a, b) =>
       Math.abs(b.g.position.x - x) < Math.abs(a.g.position.x - x) ? b : a);
     const from = atomOn(c.lane, mol.hydride);
-    const to = atomOn(acc, meta(specOf(acc.key)).oxC);
+    const to = atomOn(acc, site(meta(specOf(acc.key))));
     shedAtoms(c.lane, [mol.hydride]);
     /* RING BOTH ENDS, which `ox` argues for at length: the carrier turning over
      * is half the step, and on a page about regenerating one it is the half the
@@ -1562,6 +1570,101 @@ function create(host) {
         k != null && pos[k] ? Stage.doublePerp(pos[i], pos[j], pos[k]) : null);
     });
   }
+
+  /* =============================================================
+   *  THE ELECTRON TRANSPORT CHAIN — a charge moves and no atom does
+   * =============================================================
+   * Every verb above moves ATOMS. The chain's two new events are about an
+   * electron on its own: it leaves a reduced carrier for an oxidised one, and
+   * at the end four of them and four protons turn O₂ into two waters. The
+   * courier is fx.js's proton hop wearing an e⁻ badge in the electron's own
+   * colour, so a hydride (proton plus two electrons) and a bare electron are
+   * visibly different particles.
+   */
+  const eBadge = () => KIT.charge('e⁻', '#' + ELECTRON.toString(16).padStart(6, '0'), 'H', BADGE_SCALE);
+  const eHop = (from, to, onArrive) =>
+    FX.protonHop(from, to, onArrive || null, {color: ELECTRON, dur: T.HOP / 1000, carry: eBadge()});
+  /* AN ELECTRON LEAVING FOR SOMEWHERE THE STAGE DOES NOT SHOW: complex III's
+   * second electron goes round the Q cycle to a second cytochrome c, and the
+   * stage holds one. It crosses the frame and fades rather than landing on a
+   * molecule it would be lying about. */
+  const eAway = from => FX.protonHop(from, from.clone().add(acrossFrame()), null,
+    {color: ELECTRON, dur: T.H_LEAVE_MS / 1000, away: true, carry: eBadge()});
+
+  /* ---- A REDUCED CARRIER HANDING ONE ELECTRON TO THE NEXT ---------------
+   * Ubiquinol at complex III: two electrons and two protons leave it. One
+   * electron reaches the cytochrome on stage (the carrier seat), the other
+   * leaves the frame for the Q cycle, and the two hydroxyl protons go to the
+   * intermembrane side — up and out, the way a departing proton always goes
+   * here. `redox` names the hydrogens, `eFrom` the ring atom the charge is
+   * drawn leaving from; both are the spec's.
+   */
+  verb('electron', {
+    dur: () => T.HOP + T.OX_GAP + T.HOP,
+    lane(c) {
+      const m = meta(c.spec), u = c.lane.g.userData;
+      if (m.eFrom == null) return;
+      const from = u.atomWorld(m.eFrom).clone();
+      const seat = c.carrier(from) || V(c.lane.g.position.x, OFFSCREEN, 0);
+      FX.spawnRing(from, ELECTRON);
+      eHop(from, seat, () => {
+        host.onCarrierTaken(c.j); host.popCarrier(c.j); FX.spawnRing(seat, ELECTRON);
+      });
+      // the protons: shed, and away — they are what the gradient is made of
+      (m.redox || []).forEach(h => {
+        if (!u.atomMeshes[h]) return;
+        const at = u.atomWorld(h).clone();
+        shedAtoms(c.lane, [h]);
+        protonAway(at);
+      });
+      later(() => eAway(u.atomWorld(m.eFrom).clone()), T.OX_GAP);
+    }});
+
+  /* ---- OXYGEN TAKING ELECTRONS AND BECOMING WATER ---------------------
+   * Complex IV. The cytochrome on stage gives up its electron to the O₂
+   * beside it; then the O=O breaks, and each oxygen collects two protons out
+   * of the matrix and leaves as a water. Four electrons and four protons are
+   * what two waters cost, and the stage shows one cytochrome deliver one:
+   * the count is the step's `state()` to print, not something the picture
+   * can multiply.
+   *
+   * The waters are assembled the way a dehydration's is (expel): loose atoms
+   * converging into real H–O–H geometry, bonds drawn only once they have
+   * arrived, then the molecule drifts off frame.
+   */
+  verb('reduce', {
+    dur: () => T.HOP + T.OX_GAP + T.WATER_FORM + T.WATER_DRIFT,
+    lane(c) {
+      const m = meta(c.spec), u = c.lane.g.userData;
+      if (m.fe == null) return;
+      const from = u.atomWorld(m.fe).clone();
+      const seat = c.carrier(from) || V(c.lane.g.position.x, OFFSCREEN, 0);
+      FX.spawnRing(from, ELECTRON);
+      eHop(from, seat, () => {
+        host.onCarrierTaken(c.j); FX.spawnRing(seat, ELECTRON);
+        // the O=O comes apart: the partner lane's own atoms, asked of the host
+        const o2 = host.oxygenLane && host.oxygenLane();
+        if (!o2) return;
+        const os = o2.g.userData.atomMeshes.map((mm, i) => mm ? i : -1).filter(i => i >= 0);
+        const pO = os.map(i => o2.g.userData.atomWorld(i).clone());
+        if (pO.length === 2) FX.spawnRing(pO[0].clone().lerp(pO[1], 0.5), CLEAVE);
+        later(() => {
+          GO.shed(o2.g, os);
+          const OHW = SkelLib.GL.OH * MolLib.SCALE;
+          pO.forEach((p, k) => {
+            // two protons arrive from solution, one from each side of the
+            // frame edge above the oxygen, and fold to the real angle
+            const d1 = screenRight(1).normalize().multiplyScalar(k ? -1 : 1);
+            const nrm = V(0, 0, 1);
+            const t1 = p.clone().add(d1.clone().multiplyScalar(OHW));
+            const t2 = p.clone().add(d1.clone().applyAxisAngle(nrm, HOH).multiplyScalar(OHW));
+            const h1 = offstage(t1), h2 = offstage(t2, 1.2);
+            expel(c.lane, [{el: 'O', at: p}, {el: 'H', at: h1}, {el: 'H', at: h2}],
+                  {gather: [t1, t2], bonds: [[p, t1], [p, t2]]});
+          });
+        }, T.OX_GAP);
+      });
+    }});
 
   /* =============================================================
    *  DISPATCH

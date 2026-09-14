@@ -286,6 +286,7 @@
 <script src="lib/molecules.js"></script>
 <script src="lib/skel.js"></script>
 <script src="lib/mol-carriers.js"></script>
+<script src="lib/mol-heme.js"></script>
 <script src="lib/mol-krebs.js"></script>
 <script src="lib/mol-sugars.js"></script>
 <script src="lib/mol-lipids.js"></script>
@@ -456,6 +457,67 @@ const SHELF=[
                + 'molecule with exactly these two atoms gone — which is why both '
                + 'are built from one skeleton and neither is drawn twice.',
             atoms:s=>s.krebs.redox||[] },
+  },
+
+  /* THE CHAIN'S CARRIERS — three more one-molecule-two-states pairs, on the
+   * shelf for FADH₂'s reason: each is its own oxidation state, registered as
+   * its own spec, and the focus names the atoms that are the whole difference.
+   * None has a `view:` yet; this is the page where one is chosen. */
+  { key:'fmnh2', card:'FMNH₂',
+    blurb:'Complex I’s flavin: FAD’s front half, ending at one phosphate instead '
+        + 'of the bridge to AMP. It is the first thing NADH’s hydride lands on '
+        + 'in the electron transport chain.',
+    focus:{ title:'The two hydrogens',
+            body:'N1 and N5, as on FADH₂. <b>FMN</b> is this molecule without them; '
+               + 'the hydride from NADH puts one back and a proton from the matrix '
+               + 'the other.',
+            atoms:s=>s.etc.redox||[] },
+  },
+  { key:'fmn', card:'FMN',
+    blurb:'FMNH₂ with the two redox hydrogens gone — the state that waits for the '
+        + 'next NADH. Derived from the FMNH₂ skeleton by dropping exactly that pair.',
+    focus:{ title:'Where the hydride lands',
+            body:'N5, the ring nitrogen between the two outer rings.',
+            atoms:s=>[s.etc.accept] },
+  },
+  { key:'ubiquinol', card:'Ubiquinol (Q₁H₂)',
+    blurb:'The chain’s mobile carrier, reduced: two hydroxyls on the ring, two '
+        + 'methoxys, a methyl, and <b>one isoprene unit</b> where the mitochondrial '
+        + 'molecule carries ten. Q₁ is a real compound and a declared stand-in: '
+        + 'the fifty-carbon tail anchors Q₁₀ in the membrane and takes no part '
+        + 'in the chemistry.',
+    focus:{ title:'The two hydrogens complex III takes',
+            body:'One off each hydroxyl. The electrons go one at a time to '
+               + 'cytochrome c; the protons go to the intermembrane space, which '
+               + 'is where the gradient comes from.',
+            atoms:s=>s.etc.redox||[] },
+  },
+  { key:'ubiquinone', card:'Ubiquinone (Q₁)',
+    blurb:'Ubiquinol without the two hydroxyl hydrogens: the oxidised state, '
+        + 'ready to take two from FADH₂ or from complex I. Derived from the '
+        + 'ubiquinol skeleton, so the two cannot disagree about where they go.',
+    focus:{ title:'The two oxygens',
+            body:'Carbonyls in the real molecule, drawn here on the same ring '
+               + 'geometry as the quinol — the same stated simplification FAD makes.',
+            atoms:s=>s.etc.oh||[] },
+  },
+  { key:'heme', card:'Heme · Fe²⁺',
+    blurb:'Heme b from myoglobin’s pocket (1A6M), real ångströms, hydrogens '
+        + 'grown by atom name. Cytochrome c carries this ring with its two vinyls '
+        + 'joined to cysteines; the electron it passes sits on the <b>iron</b>.',
+    focus:{ title:'The iron',
+            body:'Fe²⁺ here, Fe³⁺ on the oxidised twin. Nothing else about the '
+               + 'molecule changes when the electron leaves, which is why the two '
+               + 'are one set of coordinates.',
+            atoms:s=>[s.etc.fe] },
+  },
+  { key:'hemeOx', card:'Heme · Fe³⁺',
+    blurb:'The same heme with the electron gone from the iron: cytochrome c as it '
+        + 'waits at complex III.',
+    focus:{ title:'The iron and its four nitrogens',
+            body:'The porphyrin holds the iron in a plane; the electron comes and '
+               + 'goes without moving an atom.',
+            atoms:s=>[s.etc.fe, ...s.etc.n] },
   },
 
   /* NO `alt:`, no `smiles`, no `flat2d` — this one is here for the 3D view

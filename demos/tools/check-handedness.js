@@ -135,6 +135,10 @@ const REF = {
    * check-molecules.js passed it, and nothing inside the repo could see it —
    * exactly the sugars' failure of molecule-pipeline.md item 5, repeated. */
   fadh2: 'FADH2',
+  /* FMN's ribityl is FAD's front half from the same calls, so the row is the
+   * same claim on the shorter molecule; it is here because a builder edit
+   * that broke one and not the other would otherwise go unseen. */
+  fmnh2: 'FMNH2',
 };
 
 /* THE HAND-BUILT CONTROLS REFERENCE THEMSELVES.

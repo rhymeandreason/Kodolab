@@ -276,6 +276,9 @@
                            //   and the two thioesters, plus atpSkel/nadhSkel.
                            //   No page draws a pathway without its carriers, so
                            //   they are one file rather than four.
+    'mol-heme.js',         // written by tools/bake-heme.js from a deposited
+                           //   pocket, hydrogens grown by skel.js — heme b as a
+                           //   molecule, for the chain lesson only
     'mol-sugars.js',       // needs skel.js — the monosaccharides, split OUT of
                            //   the old mol-contrast.js: four pages wanted one
                            //   sugar each and were parsing proline to get it.

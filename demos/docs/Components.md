@@ -468,7 +468,7 @@ One reaction of glycolysis, pyruvate oxidation, the Krebs cycle or fermentation:
 
 ```js
 const R = RespirationReaction.mount(el, {
-  step: 'krebs/3',     // '<pathway>/<key>': glycolysis/1..10 · pyruvate-oxidation/1 · krebs/1..8 · fermentation/lactate, /acetaldehyde, /ethanol
+  step: 'krebs/3',     // '<pathway>/<key>': glycolysis/1..10 · pyruvate-oxidation/1 · krebs/1..8 · fermentation/lactate, /acetaldehyde, /ethanol · electron-transport/complex-i, /complex-ii, /complex-iii, /complex-iv
   x2: true,            // the ×2 badge where the reaction runs twice per glucose
   click: true,         // the glowing target on the bond; false, and the page's own button calls run()
   fit: 'step',         // 'pathway' keeps one camera for the whole pathway, so a molecule shrinking means it lost carbon
@@ -483,7 +483,9 @@ RespirationReaction.steps('krebs') // [{id, n, name, enzyme, substrate, product,
 
 **Draw the pathway from `steps()`, and bind it both ways.** A row of chips, a ring, a ladder: build it from the list, set `step` by each entry's `id` on click, and light the entry whose id `state().id` reports. Then the diagram and the stage cannot name different steps. `on('ran')` is when to mark a step done, and `state().next` is what Next should set. Pyruvate oxidation is its own pathway with one step, between glycolysis and Krebs; a lesson that crosses from one to the next sets `pyruvate-oxidation/1` and then `krebs/1`.
 
-**Print from state, not from memory**: `enzyme`, `substrate`, `product`, `partner.name` and `partner.becomesName`, `yields` (per single reaction: `atp`, `nadh`, `fadh2`, `co2`, signed), `leaves` and `arrives`. A tally across steps is the page's sum of `yields`, times `x2` where it applies, and a Graph beside the stage is how to show it.
+**The electron transport chain is the fifth pathway, on the same frame.** Each complex is a step on two molecules: NADH hands its hydride to FMN at complex I, FADH₂ its two hydrogens to ubiquinone at complex II, ubiquinol gives an electron to cytochrome c at complex III and its protons leave the frame for the intermembrane space, and at complex IV the cytochrome's electron goes to O₂, which leaves as two waters. `yields.protons` is what each complex pumps, and summing it along a branch gives the 10 per NADH and 6 per FADH₂; complex II's zero is why FADH₂ is worth less. The gradient those protons make and the synthase that spends it are Membrane with `context:'mitochondrion'` in a second box, which is the lesson.
+
+**Print from state, not from memory**: `enzyme`, `substrate`, `product`, `partner.name` and `partner.becomesName`, `yields` (per single reaction: `atp`, `nadh`, `fadh2`, `co2`, `protons`, signed), `leaves` and `arrives`. A tally across steps is the page's sum of `yields`, times `x2` where it applies, and a Graph beside the stage is how to show it.
 
 Rebuilds and snaps: `step`, `pathway`. Live: `x2`, `click`, `fit`. Nothing else moves except by `run()`.
 
@@ -491,7 +493,7 @@ Rebuilds and snaps: `step`, `pathway`. Live: `x2`, `click`, `fit`. Nothing else 
 
 Anchors for `note()`: `substrate`, `partner`, `bond` (null once the step has run), `product` (null until it has). No layers, no views.
 
-Good for: one step or a few, each on its own molecules, for a student who has not met the pathway before; what a carrier IS (one molecule, two states); where the CO₂ comes from; why the ×2. Not for: the whole pathway's bookkeeping on one screen (that is a Graph fed from `yields`), the electron transport chain (Membrane with `context:'mitochondrion'`), where in the cell it happens (AnimalCell, Mitochondrion), or a molecule on its own (Molecule).
+Good for: one step or a few, each on its own molecules, for a student who has not met the pathway before; what a carrier IS (one molecule, two states); where the CO₂ comes from; why the ×2; what an electron carrier passes along. Not for: the whole pathway's bookkeeping on one screen (that is a Graph fed from `yields`), the proton gradient and ATP synthase (Membrane with `context:'mitochondrion'`), where in the cell it happens (AnimalCell, Mitochondrion), or a molecule on its own (Molecule).
 
 ## Tree — a tree, the air around it, and where its mass came from
 

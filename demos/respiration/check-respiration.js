@@ -37,7 +37,7 @@ vm.createContext(ctx);
 const load = f => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
 ['lib/palette.js', 'lib/tokens-from-palette.js', 'lib/molecules.js', 'lib/skel.js',
  'lib/mol-small.js', 'lib/mol-sugars.js', 'lib/mol-pathways.js', 'lib/mol-krebs.js',
- 'lib/mol-carriers.js', 'kit/molgraph.js', 'respiration/steps.js'].forEach(load);
+ 'lib/mol-carriers.js', 'lib/mol-heme.js', 'kit/molgraph.js', 'respiration/steps.js'].forEach(load);
 const M = ctx.MolLib.MOLECULES, MolGraph = ctx.MolGraph, STEPS = ctx.RespirationSteps;
 // The aliases the component builds, run rather than re-typed: respiration.js
 // exports `aliases` for exactly this.
@@ -45,7 +45,7 @@ const RSRC = fs.readFileSync(path.join(HERE, 'respiration.js'), 'utf8');
 load('respiration/respiration.js');
 const ALIAS = ctx.RespirationReaction.aliases(ctx.MolLib, MolGraph);
 const specOf = k => ALIAS[k] || M[k];
-const meta = s => (s && (s.krebs || s.gly)) || {};
+const meta = s => (s && (s.etc || s.krebs || s.gly)) || {};
 
 /* ---- 1. verbs ------------------------------------------------------- */
 console.log('== 1. every fx is a registered verb');
@@ -104,12 +104,16 @@ bad = 0;
 for (const p of Object.keys(STEPS.PATHWAYS)) {
   const pw = STEPS.PATHWAYS[p];
   const first = pw.steps.filter(s => !STEPS.prev(`${p}/${s.key}`));
-  for (const s of first) if (String(s.from) !== String(pw.start)) { bad++; fail(`${p}/${s.key}: from ${s.from} but the pathway starts on ${pw.start}`); }
+  const starts = (pw.starts || [pw.start]).map(String);
+  for (const s of first) if (!starts.includes(String(s.from))) { bad++; fail(`${p}/${s.key}: from ${s.from} but the pathway starts on ${starts.join(' or ')}`); }
   for (const s of pw.steps) {
     const id = `${p}/${s.key}`, pv = STEPS.prev(id);
     if (!pv) continue;
     const before = STEPS.get(pv);
-    if (String(before.to) !== String(s.from)) { bad++; fail(`${id}: from ${s.from} but ${pv} makes ${before.to}`); }
+    // the substrate is something the last step left standing: its product,
+    // or (on the chain) the carrier it charged
+    const left = STEPS.afterOf(before);
+    if (!s.from.every(k => left.includes(k))) { bad++; fail(`${id}: from ${s.from} but ${pv} leaves ${left}`); }
     if ((before.perGlucose > 1 || before.x2After) && s.perGlucose < 2) { bad++; fail(`${id}: perGlucose drops after ${pv}`); }
   }
 }
@@ -118,6 +122,11 @@ const ids = all.map(a => a.id);
 is(new Set(ids).size === ids.length, `${ids.length} ids, all unique`);
 is(STEPS.PATHWAYS['pyruvate-oxidation'] && !STEPS.PATHWAYS.krebs.steps.some(s => /bridge/i.test(s.name)),
    'pyruvate oxidation is its own pathway, not the first step of krebs');
+// The chain's arithmetic, read off the data rather than typed in a lesson:
+// 10 protons per NADH, 6 per FADH₂.
+const etc = STEPS.PATHWAYS['electron-transport'];
+const pumped = branch => etc.steps.filter(s => !s.branch || s.branch === branch).reduce((n, s) => n + (s.yields.protons || 0), 0);
+is(pumped('nadh') === 10 && pumped('fadh2') === 6, `the chain pumps ${pumped('nadh')} H⁺ per NADH and ${pumped('fadh2')} per FADH₂`);
 // The lanes rule the component is built on.
 bad = 0;
 for (const { id, s } of all) {

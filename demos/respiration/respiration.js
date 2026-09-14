@@ -22,7 +22,8 @@
  *  it: the stage draws the reaction once and the substrate's plate says ×2.
  *
  *  PARAMS
- *    pathway   'glycolysis' · 'pyruvate-oxidation' · 'krebs' · 'fermentation'
+ *    pathway   'glycolysis' · 'pyruvate-oxidation' · 'krebs' · 'fermentation' ·
+ *              'electron-transport'
  *    step      a key or number in that pathway, or a full id 'krebs/3'.
  *              Rebuilds the stage: the substrate, its partner, the target
  *    x2        true: the ×2 badge where the reaction runs twice per glucose
@@ -80,6 +81,10 @@ function aliases(MolLib, MolGraph) {
   const hyd = N.gly.hydride != null ? N.gly.hydride : h[1];
   const redox = F.krebs.redox;
   const spent = (s, k) => (s.gly && s.gly.spent && s.gly.spent[k]) || s[k];
+  // the chain's: FMN over FMNH₂ and Q over ubiquinol, FAD's way; cytochrome c
+  // is heme b with the charge on the iron, so the seat is the iron and nothing
+  // is hidden; O₂ is its own spec, aliased only to name the bond to click
+  const FM = M.fmnh2, Q = M.ubiquinol, HR = M.heme, HO = M.hemeOx;
   return {
     atp:   mk(A, { name: 'ATP', short: 'ATP' }, { seat: [pg], bond: pBond }),
     adp:   mk(A, { name: 'ADP', short: 'ADP', formula: spent(A, 'formula') },
@@ -90,6 +95,15 @@ function aliases(MolLib, MolGraph) {
     fadh2: mk(F, { name: 'FADH₂', short: 'FADH₂' }, { seat: redox }),
     fad:   mk(F, { name: 'FAD', short: 'FAD', formula: M.fad.formula },
               { hide: redox, seat: redox }),
+    fmnh2: mk(FM, {}, { seat: FM.etc.redox }),
+    fmn:   mk(FM, { name: 'FMN', short: 'FMN', formula: M.fmn.formula },
+              { hide: FM.etc.redox, seat: FM.etc.redox }),
+    qh2:   mk(Q, {}, { seat: Q.etc.redox }),
+    q:     mk(Q, { name: 'Ubiquinone', short: 'Q', formula: M.ubiquinone.formula },
+              { hide: Q.etc.redox, seat: Q.etc.redox }),
+    cytcRed: mk(HR, { name: 'Cytochrome c · Fe²⁺', short: 'cyt c · Fe²⁺' }, { seat: [HR.etc.fe] }),
+    cytcOx:  mk(HO, { name: 'Cytochrome c · Fe³⁺', short: 'cyt c · Fe³⁺' }, { seat: [HO.etc.fe] }),
+    o2:    mk(M.o2, { etc: { oo: [0, 1] } }, { seat: [0, 1] }),
   };
 }
 
@@ -107,7 +121,7 @@ function create(THREE, root, camera, opts) {
   const PAL = MolLib.PALETTE, M = MolLib.MOLECULES;
   const ALIAS = aliases(MolLib, MolGraph);
   const specOf = k => ALIAS[k] || M[k];
-  const meta = spec => (spec && (spec.krebs || spec.gly)) || {};
+  const meta = spec => (spec && (spec.etc || spec.krebs || spec.gly)) || {};
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
   const MO = global.Motion.create();
@@ -275,6 +289,8 @@ function create(THREE, root, camera, opts) {
     // charged name once the step lands and the lane is re-rendered
     popCarrier: () => { const l = partnerLane(); const rr = l && specOf(l.key).rr;
       if (rr && rr.hide) GO.unshed(l.g, rr.hide); },
+    // complex IV: the O₂ that becomes two waters is the partner lane
+    oxygenLane: () => partnerLane(),
     donorSpec: () => ALIAS.atp,
     freeSpec: () => M.pi,
     waterSpec: () => M.water,
