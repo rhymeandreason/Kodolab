@@ -119,6 +119,13 @@
   </main>
 </div>
 
+<dialog class="confirm" id="delTeacher" tabindex="-1">
+  <h2>Delete this teacher?</h2>
+  <p><b id="delTWho"></b> and everything under them: <span id="delTWhat"></span>. Every seat code stops working. This cannot be undone.</p>
+  <p class="err" id="delTErr" hidden></p>
+  <div class="row"><button class="btn" id="delTCancel" type="button">Cancel</button><button class="btn hot" id="delTGo" type="button">Delete teacher</button></div>
+</dialog>
+
 <dialog class="confirm" id="delUser" tabindex="-1">
   <h2>Delete this account?</h2>
   <p><b id="delWho"></b> and everything with it: <span id="delWhat"></span>. The person can sign in again with Google, but arrives as new. This cannot be undone.</p>
@@ -154,7 +161,9 @@
       return `<details class="teacher" data-id="${esc(t.id)}"${openNow.has(t.id) ? ' open' : ''}>
         <summary><span class="chev">&#9654;</span><span class="nm">${esc(t.name)}</span><span class="how">${how}</span>
           <span class="cnt">${t.classes.length} class${t.classes.length === 1 ? '' : 'es'} · ${seats} seat${seats === 1 ? '' : 's'}</span>
-          <button class="textbtn" data-act="teacher.reissue" data-id="${esc(t.id)}">${t.has_code ? 'Reissue code' : 'Issue code'}</button></summary>
+          <button class="textbtn" data-act="teacher.reissue" data-id="${esc(t.id)}">${t.has_code ? 'Reissue code' : 'Issue code'}</button>
+          <button class="textbtn hot" data-del-teacher="${esc(t.id)}" data-who="${esc(t.name)}" data-classes="${t.classes.length}" data-seats="${seats}"
+            data-apps="${t.apps + t.classes.reduce((n, c) => n + c.seats.reduce((m, x) => m + x.apps, 0), 0)}" data-linked="${t.user_email ? 1 : ''}">Delete</button></summary>
         <div class="body">${t.classes.map(c => `<div class="klass"><h3>${esc(c.name)}<span>${c.seats.length} seat${c.seats.length === 1 ? '' : 's'}</span></h3>
           <table><thead><tr><th>Student</th><th>Code</th><th class="num">Apps</th><th></th></tr></thead><tbody>${c.seats.map(s => `<tr class="${s.revoked_at ? 'off' : ''}"><td>${esc(s.label)}</td><td><code>${esc(s.code)}</code></td>
             <td class="num">${s.apps}</td>
@@ -212,6 +221,24 @@
   $('delGo').addEventListener('click', async () => {
     try { await api({ action: 'user.delete', id: delId }); $('delUser').close(); load(); }
     catch (err) { $('delErr').textContent = err.message; $('delErr').hidden = false; }
+  });
+
+  let delTId = null;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-del-teacher]'); if (!b) return;
+    e.preventDefault();
+    delTId = b.dataset.delTeacher;
+    const n = (k, one, many) => `${b.dataset[k]} ${b.dataset[k] === '1' ? one : many}`;
+    $('delTWho').textContent = b.dataset.who;
+    $('delTWhat').textContent = `${n('classes', 'class', 'classes')}, ${n('seats', 'seat', 'seats')}, and ${n('apps', 'app', 'apps')} built on them`
+      + (b.dataset.linked ? '. Their Google account stays, as a plain member' : '');
+    $('delTErr').hidden = true;
+    $('delTeacher').showModal(); $('delTeacher').focus();
+  });
+  $('delTCancel').addEventListener('click', () => $('delTeacher').close());
+  $('delTGo').addEventListener('click', async () => {
+    try { await api({ action: 'teacher.delete', id: delTId }); $('delTeacher').close(); load(); }
+    catch (err) { $('delTErr').textContent = err.message; $('delTErr').hidden = false; }
   });
 
   $('newTeacher').addEventListener('submit', async e => {

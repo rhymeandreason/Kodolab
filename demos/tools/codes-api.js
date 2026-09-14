@@ -13,6 +13,9 @@
  *                                 user.delete {id}   the account, its sessions and its apps;
  *                                                    a linked teacher row stays, unlinked
  *                                 seat.revoke {id} · seat.unrevoke {id}
+ *                                 teacher.delete {id} the teacher, their classes and seats,
+ *                                                    and every app those made; a linked
+ *                                                    Google account stays, as a member
  *
  *  A teacher code is stored hashed and comes back in the reply once, the way
  *  `db.js teacher new` prints it once. Seat codes are stored plain (the
@@ -29,7 +32,8 @@ async function list() {
   const sql = log.sql();
   const teachers = await sql`
     SELECT t.id, t.name, t.email, t.created_at, t.code_hash IS NOT NULL AS has_code,
-           u.email AS user_email
+           u.email AS user_email,
+           (SELECT count(*) FROM apps a WHERE a.owner_id = 'teacher:' || t.id)::int AS apps
     FROM teachers t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.created_at`;
   const classes = await sql`SELECT id, teacher_id, name FROM classes ORDER BY created_at`;
   const seats = await sql`
@@ -84,6 +88,17 @@ async function act(body) {
                            WHERE id = ${String(body.id || '')} RETURNING id`;
     if (!rows.length) throw new Error('no such account');
     if (a === 'user.disable') await sql`DELETE FROM sessions WHERE user_id = ${rows[0].id}`;
+    return { ok: true };
+  }
+  if (a === 'teacher.delete') {
+    const id = String(body.id || '');
+    const [t] = await sql`SELECT id FROM teachers WHERE id = ${id}`;
+    if (!t) throw new Error('no such teacher');
+    // Seats cascade from classes, classes from the teacher; the apps those
+    // owners made do not, so they go first.
+    await sql`DELETE FROM apps WHERE owner_id = ${'teacher:' + id}
+              OR owner_id IN (SELECT 'seat:' || s.id FROM seats s JOIN classes c ON c.id = s.class_id WHERE c.teacher_id = ${id})`;
+    await sql`DELETE FROM teachers WHERE id = ${id}`;
     return { ok: true };
   }
   if (a === 'user.delete') {
