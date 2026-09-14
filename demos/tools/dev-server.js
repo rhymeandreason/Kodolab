@@ -396,7 +396,7 @@ function images(req, res, json) {
   if (req.method === 'OPTIONS') {
     // The clipper is an extension, so its preflight has nowhere else to go.
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': req.headers.origin || '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     });
@@ -663,12 +663,33 @@ server.listen(PORT);
  * calls the very handler that ships, and sends back the JSON. Requiring the
  * handler is deliberately deferred and deliberately uncached, so editing
  * `api/_tutor.js` takes effect on the next request with no restart. */
+/* ---- who may talk to a local endpoint ---------------------------------------
+ * `api/_local.js` answers "is the peer this machine", and a browser on this
+ * machine is. So every page open in that browser could reach these endpoints
+ * too: a cross-site form post lands (JSON is parsed whatever the content type)
+ * and DNS rebinding reads the replies, since the browser cannot tell a page's
+ * own origin from a stranger's. Two headers the browser writes and a page
+ * cannot forge settle it. Host must name loopback, and a request that carries
+ * an Origin must have come from loopback or from the clipper extension. No
+ * Origin means curl or a same-origin GET, which is what the check is for.
+ */
+const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+function fromThisOrigin(req) {
+  const h = String(req.headers.host || '');
+  if (!LOOPBACK_HOST.test(h)) return false;
+  const o = req.headers.origin;
+  if (!o) return true;
+  if (/^chrome-extension:\/\//.test(o)) return true;
+  try { return LOOPBACK_HOST.test(new URL(o).host); } catch { return false; }
+}
+
 function api(url, req, res) {
   const json = (status, body) => {
     res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8',
                             'Cache-Control':'no-store' });
     res.end(JSON.stringify(body));
   };
+  if (!fromThisOrigin(req)) return json(403, { error: 'the dev server answers its own origin only' });
   // `url` arrives with the query already stripped, so anything reading a
   // parameter has to go back to `req.url` for it.
   // The question bank's editor. It exists ONLY here: `api/` holds the Vercel
