@@ -65,6 +65,13 @@
   .klass h3 span { font-weight: 400; color: var(--text-muted); font-size: .85rem; margin-left: .5rem; }
   .klass table { background: var(--surface-page); border: 1px solid var(--border-hair); border-radius: 8px; overflow: hidden; }
   .none { padding: 1rem; color: var(--text-muted); }
+  .textbtn.hot { color: var(--hue-coral); }
+  dialog.confirm { border: 1px solid var(--border-hair); border-radius: 12px; padding: 1.3rem 1.5rem; max-width: 28em; background: var(--surface-card); color: var(--text-body); }
+  dialog.confirm::backdrop { background: color-mix(in srgb, var(--brand-ink) 45%, transparent); }
+  dialog.confirm h2 { margin: 0 0 .5rem; font-size: 1.1rem; color: var(--text-strong); }
+  dialog.confirm p { margin: 0 0 .8rem; font-size: .95rem; }
+  dialog.confirm .row { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+  dialog.confirm .btn.hot { background: var(--hue-coral); border-color: var(--hue-coral); color: #fff; }
 </style>
 </head>
 <body class="kodo">
@@ -107,10 +114,17 @@
     <section>
       <div class="sechead"><h2>accounts</h2><span class="rule"></span><span class="count" id="nUsers"></span></div>
       <p class="say">Google accounts that have signed in. Pending means signed in but no invite redeemed yet. Disabling ends every session and refuses sign-in.</p>
-      <div class="box"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Invite</th><th>Joined</th><th></th></tr></thead><tbody id="users"></tbody></table></div>
+      <div class="box"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Invite</th><th class="num">Apps</th><th>Joined</th><th></th></tr></thead><tbody id="users"></tbody></table></div>
     </section>
   </main>
 </div>
+
+<dialog class="confirm" id="delUser" tabindex="-1">
+  <h2>Delete this account?</h2>
+  <p><b id="delWho"></b> and everything with it: <span id="delWhat"></span>. The person can sign in again with Google, but arrives as new. This cannot be undone.</p>
+  <p class="err" id="delErr" hidden></p>
+  <div class="row"><button class="btn" id="delCancel" type="button">Cancel</button><button class="btn hot" id="delGo" type="button">Delete account</button></div>
+</dialog>
 
 <script>
 (() => {
@@ -161,9 +175,10 @@
     $('users').innerHTML = d.users.map(u => `<tr class="${u.disabled_at ? 'off' : ''}">
       <td>${esc(u.email)}</td><td>${esc(u.name)}</td>
       <td>${u.disabled_at ? 'disabled' : u.teacher_id ? 'teacher' : u.admitted_at ? 'member' : 'pending'}</td>
-      <td class="dim">${esc(u.invite_label)}</td><td class="dim">${day(u.created_at)}</td>
-      <td class="acts"><button class="textbtn" data-act="${u.disabled_at ? 'user.enable' : 'user.disable'}" data-id="${esc(u.id)}">${u.disabled_at ? 'Enable' : 'Disable'}</button></td></tr>`).join('')
-      || '<tr><td colspan="6" class="none">No accounts yet.</td></tr>';
+      <td class="dim">${esc(u.invite_label)}</td><td class="num">${u.apps}</td><td class="dim">${day(u.created_at)}</td>
+      <td class="acts"><button class="textbtn" data-act="${u.disabled_at ? 'user.enable' : 'user.disable'}" data-id="${esc(u.id)}">${u.disabled_at ? 'Enable' : 'Disable'}</button>
+        &nbsp; <button class="textbtn hot" data-del="${esc(u.id)}" data-who="${esc(u.name || u.email)}" data-apps="${u.apps}" data-teacher="${u.teacher_id ? 1 : ''}">Delete</button></td></tr>`).join('')
+      || '<tr><td colspan="7" class="none">No accounts yet.</td></tr>';
   }
 
   const load = () => api().then(paint).catch(fail);
@@ -179,6 +194,24 @@
       if (r.code) fresh(`Dashboard code for teacher <b>${esc(b.dataset.id)}</b>, shown once: <code>${esc(r.code)}</code>`);
       load();
     } catch (err) { fail(err); }
+  });
+
+  // Deleting an account: a real dialog that names what goes, not a confirm().
+  let delId = null;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-del]'); if (!b) return;
+    delId = b.dataset.del;
+    const n = Number(b.dataset.apps);
+    $('delWho').textContent = b.dataset.who;
+    $('delWhat').textContent = `${n} app${n === 1 ? '' : 's'}, every version of them, and any open session`
+      + (b.dataset.teacher ? '. Their teacher row and classes stay, unlinked' : '');
+    $('delErr').hidden = true;
+    $('delUser').showModal(); $('delUser').focus();
+  });
+  $('delCancel').addEventListener('click', () => $('delUser').close());
+  $('delGo').addEventListener('click', async () => {
+    try { await api({ action: 'user.delete', id: delId }); $('delUser').close(); load(); }
+    catch (err) { $('delErr').textContent = err.message; $('delErr').hidden = false; }
   });
 
   $('newTeacher').addEventListener('submit', async e => {

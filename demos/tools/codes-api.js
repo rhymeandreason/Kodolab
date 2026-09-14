@@ -9,7 +9,9 @@
  *    POST {action, ...}           teacher.new {name} · teacher.reissue {id}
  *                                 invite.teacher {note} · invite.member {label, max}
  *                                 invite.revoke {code} · invite.restore {code}
- *                                 user.disable {email} · user.enable {email}
+ *                                 user.disable {id} · user.enable {id}
+ *                                 user.delete {id}   the account, its sessions and its apps;
+ *                                                    a linked teacher row stays, unlinked
  *                                 seat.revoke {id} · seat.unrevoke {id}
  *
  *  A teacher code is stored hashed and comes back in the reply once, the way
@@ -39,7 +41,8 @@ async function list() {
   }
   const invites = await sql`SELECT code, kind, label, uses, max_uses, note, revoked_at, created_at FROM invites ORDER BY created_at DESC`;
   const users = await sql`
-    SELECT u.id, u.email, u.name, u.invite_label, u.admitted_at, u.disabled_at, u.created_at, t.id AS teacher_id
+    SELECT u.id, u.email, u.name, u.invite_label, u.admitted_at, u.disabled_at, u.created_at, t.id AS teacher_id,
+           (SELECT count(*) FROM apps a WHERE a.owner_id = 'user:' || u.id)::int AS apps
     FROM users u LEFT JOIN teachers t ON t.user_id = u.id ORDER BY u.created_at DESC`;
   return { teachers, invites, users };
 }
@@ -81,6 +84,16 @@ async function act(body) {
                            WHERE id = ${String(body.id || '')} RETURNING id`;
     if (!rows.length) throw new Error('no such account');
     if (a === 'user.disable') await sql`DELETE FROM sessions WHERE user_id = ${rows[0].id}`;
+    return { ok: true };
+  }
+  if (a === 'user.delete') {
+    const id = String(body.id || '');
+    const [u] = await sql`SELECT id FROM users WHERE id = ${id}`;
+    if (!u) throw new Error('no such account');
+    // Versions cascade from apps; sessions cascade from the user; the teacher
+    // row's user_id is set null by its own constraint.
+    await sql`DELETE FROM apps WHERE owner_id = ${'user:' + id}`;
+    await sql`DELETE FROM users WHERE id = ${id}`;
     return { ok: true };
   }
   if (a === 'seat.revoke' || a === 'seat.unrevoke') {
