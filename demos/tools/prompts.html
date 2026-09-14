@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Build prompts</title>
+<script defer src="/demos/lib/site.js"></script>
+<link rel="stylesheet" href="../css/kodo.css">
+<!-- =========================================================================
+     EVERY BUILDER PROMPT, newest first: what was asked, of which app, from
+     which cohort, and what came back. Localhost only: it reads the live
+     database through /api/prompts, which exists only in tools/dev-server.js
+     and answers only loopback. Not deployed (.vercelignore).
+     ========================================================================= -->
+<style>
+  main { padding-bottom: 5rem; }
+  .say { margin: .6rem 0 0; max-width: 60em; color: var(--text-muted); font-size: .95rem; }
+  .filters { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.4rem; padding: .9rem 1rem; background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 12px; }
+  .filters input[type=search], .filters select { padding: .5rem .9rem; border: 1px solid var(--border-hair); border-radius: 999px; background: var(--surface-page); color: var(--text-strong); font: inherit; font-size: .95rem; }
+  .filters input[type=search] { flex: 1; min-width: 12rem; }
+  .filters input:focus-visible, .filters select:focus-visible { outline: 0; border-color: var(--accent); }
+  .filters label { display: flex; gap: .4rem; align-items: center; color: var(--text-muted); font-size: .9rem; }
+  .err { color: var(--hue-coral); margin: .8rem 0 0; }
+  .count { margin: 1.2rem 0 .4rem; color: var(--text-muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+
+  .app { margin-top: 1rem; background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 12px; overflow: hidden; }
+  .app header { display: flex; flex-wrap: wrap; gap: .3rem .9rem; align-items: baseline; padding: .8rem 1.1rem; border-bottom: 1px solid var(--border-hair); font-size: .82rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .app header a { color: var(--text-strong); font-weight: 600; font-size: 1rem; text-decoration: none; }
+  .app header a:hover { color: var(--accent); }
+  .turn { padding: .8rem 1.1rem; border-bottom: 1px solid var(--border-hair); }
+  .turn:last-child, .app:not([open]) summary .turn { border-bottom: 0; }
+  .app summary { list-style: none; cursor: pointer; }
+  .app summary::-webkit-details-marker { display: none; }
+  .app summary:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+  .toggle { margin-left: auto; color: var(--accent); font-family: var(--font-ui); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+  .toggle::before { content: '\25B8  Show ' attr(data-n) ' more'; }
+  .app[open] .toggle::before { content: '\25BE  Hide'; }
+  .turn.failed { box-shadow: inset 3px 0 0 var(--hue-coral); }
+  .meta { display: flex; flex-wrap: wrap; gap: .3rem .9rem; align-items: baseline; font-size: .82rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .tag { display: inline-block; padding: .1em .6em; border-radius: 999px; font-family: var(--font-ui); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; background: color-mix(in srgb, var(--text-muted) 14%, transparent); color: var(--text-dim); }
+  .tag.build { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+  .tag.fail { background: color-mix(in srgb, var(--hue-coral) 16%, transparent); color: var(--hue-coral); }
+  .req { margin: .55rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-strong); font-size: .98rem; line-height: 1.45; }
+  .sum { margin: .45rem 0 0; color: var(--text-muted); font-size: .9rem; }
+  .fail-msg { margin: .45rem 0 0; color: var(--hue-coral); font-size: .88rem; overflow-wrap: anywhere; }
+  .more { margin-top: 1.2rem; }
+  .none { padding: 1.4rem 0; color: var(--text-muted); }
+</style>
+</head>
+<body class="kodo">
+<div class="page">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <span class="crumb">localhost</span>
+  </nav>
+  <header class="pagehead">
+    <h1>build prompts</h1>
+    <p class="deck">Everything the builder was asked, newest first. This machine only.</p>
+  </header>
+  <main>
+    <p class="say">Builds and edits the model answered, including ones whose page failed its checks. Prompts refused before the model ran, or whose call errored, were never stored.</p>
+    <form class="filters" id="filters">
+      <input type="search" id="q" placeholder="Search prompts">
+      <select id="cohort"><option value="">All cohorts</option></select>
+      <select id="kind"><option value="">Builds and edits</option><option value="build">Builds</option><option value="edit">Edits</option></select>
+      <label><input type="checkbox" id="failed"> Failed only</label>
+    </form>
+    <p class="err" id="err" hidden></p>
+    <p class="count" id="count"></p>
+    <div id="turns"></div>
+    <button class="btn more" id="more" type="button" hidden>Load more</button>
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const when = t => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const tokens = u => {
+    if (!u) return '';
+    const i = u.input ?? u.input_tokens, o = u.output ?? u.output_tokens;
+    const t = i != null && o != null ? `${i.toLocaleString()} in · ${o.toLocaleString()} out` : '';
+    return u.cost_usd != null ? `${t} · $${u.cost_usd.toFixed(3)}` : t;
+  };
+
+  let shownApps = 0, shownPrompts = 0, last = null, seq = 0;
+
+  function params(before) {
+    const p = new URLSearchParams();
+    if ($('q').value.trim()) p.set('q', $('q').value.trim());
+    if ($('cohort').value) p.set('cohort', $('cohort').value);
+    if ($('kind').value) p.set('kind', $('kind').value);
+    if ($('failed').checked) p.set('failed', '1');
+    if (before) p.set('before', before);
+    return p;
+  }
+
+  function appCard(a) {
+    const cost = a.prompts.reduce((s, p) => s + (p.usage && p.usage.cost_usd || 0), 0);
+    const [first, ...rest] = a.prompts;
+    const header = `<header>
+        <a href="/app/${encodeURIComponent(a.app_id)}" target="_blank" rel="noopener">${esc(a.title || '(untitled)')}</a>
+        <span>${esc(a.cohort || 'no cohort')}${a.is_local ? ' · local' : ''}</span>
+        ${a.owner_id ? `<span>${esc(a.owner_id)}</span>` : ''}
+        <span>${a.prompts.length} prompt${a.prompts.length === 1 ? '' : 's'}</span>
+        ${cost ? `<span>$${cost.toFixed(3)}</span>` : ''}
+        ${rest.length ? `<span class="toggle" data-n="${rest.length}"></span>` : ''}
+      </header>`;
+    if (!rest.length) return `<section class="app">${header}${card(first)}</section>`;
+    return `<details class="app"><summary>${header}${card(first)}</summary>${rest.map(card).join('')}</details>`;
+  }
+
+  function card(r) {
+    return `<article class="turn${r.error ? ' failed' : ''}">
+      <div class="meta">
+        <span>${when(r.created_at)}</span>
+        <span class="tag ${r.kind}">${r.kind} ${r.n}</span>
+        ${r.error ? '<span class="tag fail">failed</span>' : ''}
+        <span>${esc(r.model || '')}</span>
+        ${r.ms ? `<span>${(r.ms / 1000).toFixed(1)} s</span>` : ''}
+        <span>${tokens(r.usage)}</span>
+      </div>
+      <p class="req">${esc(r.request)}</p>
+      ${r.summary ? `<p class="sum">${esc(r.summary)}</p>` : ''}
+      ${r.error ? `<p class="fail-msg">${esc(r.error)}</p>` : ''}
+    </article>`;
+  }
+
+  async function load(append) {
+    const mine = ++seq;
+    try {
+      const r = await fetch('/api/prompts?' + params(append ? last : null));
+      const d = await r.json().catch(() => ({ error: 'HTTP ' + r.status }));
+      if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+      if (mine !== seq) return;
+      $('err').hidden = true;
+      if (!append) {
+        const pick = $('cohort').value;
+        $('cohort').innerHTML = '<option value="">All cohorts</option>' + d.cohorts.map(c =>
+          `<option value="${esc(c.cohort || '')}"${(c.cohort || '') === pick ? ' selected' : ''}>${esc(c.cohort || 'no cohort')} (${c.n})</option>`).join('');
+        $('turns').innerHTML = '';
+        shownApps = shownPrompts = 0;
+      }
+      $('turns').insertAdjacentHTML('beforeend', d.apps.map(appCard).join(''));
+      shownApps += d.apps.length;
+      shownPrompts += d.apps.reduce((n, a) => n + a.prompts.length, 0);
+      if (d.apps.length) last = d.apps[d.apps.length - 1].last;
+      $('more').hidden = !d.more;
+      const plus = d.more ? '+' : '';
+      $('count').textContent = `${shownApps}${plus} app${shownApps === 1 ? '' : 's'} · ${shownPrompts}${plus} prompt${shownPrompts === 1 ? '' : 's'}`;
+      if (!shownApps) $('turns').innerHTML = '<p class="none">No prompts match.</p>';
+    } catch (e) {
+      $('err').textContent = e.message; $('err').hidden = false;
+    }
+  }
+
+  let typing;
+  $('q').addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => load(false), 250); });
+  $('filters').addEventListener('change', e => { if (e.target.id !== 'q') load(false); });
+  $('filters').addEventListener('submit', e => { e.preventDefault(); load(false); });
+  $('more').addEventListener('click', () => load(true));
+
+  load(false);
+})();
+</script>
+</body>
+</html>

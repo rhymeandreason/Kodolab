@@ -23,6 +23,9 @@ demos/map-cms.html
 # endpoint that exists only in tools/dev-server.js, and only for loopback.
 demos/tools/codes.html
 demos/tools/codes-api.js
+# The builder's prompts, read the same way.
+demos/tools/prompts.html
+demos/tools/prompts-api.js
 
 # The clip shelf, same reason and the same kind of endpoint (/api/clips, also
 # only in tools/dev-server.js). It reaches the network and shells out to ffmpeg,

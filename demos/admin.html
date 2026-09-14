@@ -97,6 +97,20 @@
   a.card.component:hover { border-color: var(--ink); }
   .component .badge { background: var(--accent); color: #fff; }
 
+  a.big-button {
+    display: block;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-align: center;
+    padding: 1.1rem;
+    border-radius: 10px;
+    margin: 0 0 2rem;
+  }
+  a.big-button:hover { background: var(--ink); }
+
   .filters {
     display: grid;
     grid-template-columns: max-content 1fr;
@@ -181,6 +195,8 @@
 <div class="wrap">
   <h1>All pages</h1>
   <p class="sub">Internal index — not linked from the public site. Grouped by topic; badge is status per <code>CLAUDE.md</code>.</p>
+
+  <a class="big-button" href="tools/social.html">Social image generator →</a>
 
   <a class="bigbtn" href="tools/codes.html"><span>Access codes<small>Teachers, seat codes, invites, accounts. Localhost only.</small></span><span class="go">&rarr;</span></a>
 

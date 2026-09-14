@@ -703,6 +703,11 @@ function api(url, req, res) {
     delete require.cache[require.resolve('./codes-api.js')];
     return require('./codes-api.js').handler(req, res, json, require(path.join(ROOT, 'api/_local.js')).local);
   }
+  // Every builder prompt, for tools/prompts.html. Local only, and not deployed.
+  if (url === '/api/prompts') {
+    delete require.cache[require.resolve('./prompts-api.js')];
+    return require('./prompts-api.js').handler(req, res, json, require(path.join(ROOT, 'api/_local.js')).local);
+  }
   if (url === '/api/mapcontent') return editable(req, res, json, 'mapcontent');
   if (url === '/api/clips') return clips(req, res, json);
   if (url === '/api/images') return images(req, res, json);
