@@ -165,12 +165,24 @@
     pointer-events: none;
   }
   section.topic.hidden { display: none; }
+  /* The one thing this page is opened for most: a door, not a card. */
+  a.bigbtn {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    margin: 0 0 2rem; padding: 1.2rem 1.5rem;
+    background: var(--ink); color: var(--paper); text-decoration: none;
+    border-radius: 12px; font-size: 1.15rem; font-weight: 600;
+  }
+  a.bigbtn small { display: block; font-size: .85rem; font-weight: 400; opacity: .75; margin-top: .15rem; }
+  a.bigbtn .go { font-size: 1.6rem; line-height: 1; }
+  a.bigbtn:hover { opacity: .92; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>All pages</h1>
   <p class="sub">Internal index — not linked from the public site. Grouped by topic; badge is status per <code>CLAUDE.md</code>.</p>
+
+  <a class="bigbtn" href="tools/codes.html"><span>Access codes<small>Teachers, seat codes, invites, accounts. Localhost only.</small></span><span class="go">&rarr;</span></a>
 
   <div class="filters">
     <span class="label">Status</span>
