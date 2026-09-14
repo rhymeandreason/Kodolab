@@ -32,6 +32,11 @@ module.exports = async function handler(req, res) {
       res.setHeader('Allow', 'GET, POST');
       return res.status(405).json({ error: 'GET or POST only' });
     }
+    // `google` needs no cookie, so SameSite does not guard it: a form on another
+    // site could post a credential for the attacker's account and sign this
+    // browser into it, and `claim` would then hand it the apps built here. A
+    // browser writes Origin on every cross-site POST and a page cannot forge it.
+    if (!sameOrigin(req)) return res.status(403).json({ error: 'sign-in must come from this site' });
 
     const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
     const action = String(body.action || '');
@@ -73,5 +78,12 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'sign-in failed: ' + ((err && err.message) || 'unknown error') });
   }
 };
+
+/* No Origin is curl, or a same-origin request from an old browser; either is fine. */
+function sameOrigin(req) {
+  const o = req.headers.origin;
+  if (!o) return true;
+  try { return new URL(o).host === String(req.headers.host || ''); } catch { return false; }
+}
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return {}; } }
