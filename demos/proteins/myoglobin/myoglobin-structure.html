@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Site-wide chrome: analytics + the foot. Absolute src, because the
+     featured pages set <base href>. lib/site.js -->
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at a short URL by a vercel.json rewrite, which does not move the
+     file: every ../../ path below resolves against this. docs/deploy.md. -->
+<base href="/demos/proteins/myoglobin/">
+<title>Myoglobin — Kodolab</title>
+<meta name="description" content="Myoglobin in 3D, from real coordinates, taken apart piece by piece: the fold, the heme, the iron, and what changes when oxygen binds.">
+
+<!-- ===================================================================
+     MYOGLOBIN, IN THE GLOSSARY SHAPE. dna-structure.html's page: one
+     molecule held on the left, the writing that names its parts scrolling
+     past on the right, and the section under the reading line is the part
+     the model shows. Scrolling is the only control.
+
+     FOUR DEPOSITIONS, ONE BOX. The fold is the same in every myoglobin
+     file and every difference this page is about is an ångström or two
+     across a forty-ångström protein, so the parts about the SITE lean the
+     camera in on the iron and the parts about the PROTEIN pull back out.
+     The box keeps its camera across a switch (Proteinbox.setData), which
+     is what makes four states of one site read as four states rather than
+     four molecules.
+
+     EVERY NUMBER IS READ FROM THE BAKE AT RENDER TIME. Distances come off
+     the pocket through heme-metrics.js, shared with the bench so two pages
+     cannot print two answers; counts come off the trace. The one typed
+     number is Kendrew's year, and it says so where it is typed.
+     =================================================================== -->
+
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="../../css/kodo.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+<style>
+  /* EDITORIAL SPLIT, dna-structure.html's. The model holds the left and never
+     scrolls; the writing runs down the right. The WINDOW is what scrolls, so
+     the stage is FIXED beside the column. */
+  :root{--stage-w:62vw}
+  #stage{position:fixed;top:0;left:0;width:var(--stage-w);height:100vh;z-index:1;
+    background:var(--surface-stage);background-image:none;
+    border-right:1px solid var(--border-hair)}
+  #stage canvas{display:block;width:100%;height:100%}
+  /* WHICH FILE IS ON SCREEN, under it. A reader three sections in is looking
+     at a different deposition than they started on, and a caption that says
+     which is the difference between a demo and evidence. */
+  #specimen{position:absolute;left:26px;bottom:22px;z-index:6;max-width:44ch;
+    font-family:var(--font-editorial);font-size:13px;line-height:1.45;
+    color:var(--text-muted)}
+  #specimen .pdb{font-family:var(--font-ui);letter-spacing:.06em;
+    color:var(--text-strong)}
+  #specimen a{color:var(--text-muted)}
+
+  #read{position:relative;z-index:2;margin-left:var(--stage-w);
+    background:var(--surface-page);
+    padding:0 clamp(28px,4vw,56px)}
+  #read .col{max-width:46ch;margin:0 auto}
+
+  /* THE FIRST SECTION IS THE MASTHEAD. */
+  #read section:first-of-type{padding-top:14vh}
+  #read section:first-of-type h3{font-size:clamp(32px,3.6vw,44px)}
+  #read .deck{margin:14px 0 0;font-family:var(--font-editorial);font-size:18px;
+    line-height:1.55;color:var(--text-muted)}
+  #read .hint{margin:36px 0 0;font-family:var(--font-ui);font-size:12px;
+    letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim)}
+
+  /* A PART IS A SECTION, tall enough that only one is ever near the reading
+     line. Off the line the whole section recedes. */
+  #read section{padding:22vh 0;border-top:1px solid var(--border-hair)}
+  #read section:first-of-type{border-top:0}
+  #read section{opacity:.34;transition:opacity .45s ease}
+  #read section[aria-current="true"]{opacity:1}
+
+  #read .num{font-family:var(--font-ui);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--text-dim)}
+  #read h3{margin:8px 0 0;font-family:var(--font-display);
+    font-weight:var(--weight-regular);font-size:clamp(24px,2.6vw,32px);
+    line-height:1.15;letter-spacing:-.2px;color:var(--text-strong)}
+  #read .gloss{margin:4px 0 0;font-family:var(--font-editorial);font-size:14px;
+    font-style:italic;color:var(--text-muted)}
+  #read .claim{margin:18px 0 0;font-family:var(--font-editorial);font-size:18px;
+    line-height:1.6;color:var(--text-body)}
+  #read .claim b{font-weight:600;color:var(--text-strong)}
+  #read .claim a{color:var(--text-strong)}
+
+  /* QUICK STATS. Three figures about the FILE, each read off the bake, under
+     the text of the part that introduces it. A part declares `stats` to get a
+     row; here only the masthead does, because every file on this page is the
+     same protein. A protein whose files differ (prion) gives one to each part
+     that switches file. */
+  #read .measure{display:flex;flex-wrap:wrap;gap:1.1rem 1.75rem;margin:40px 0 0;
+    padding:28px 0 8px;border-top:1px solid var(--border-hair)}
+  #read .measure div{min-width:7rem}
+  #read .measure .n{display:block;font-family:var(--font-display);font-size:22px;
+    line-height:1.1;color:var(--text-strong)}
+  #read .measure .l{display:block;margin-top:3px;font-family:var(--font-ui);
+    font-size:12.5px;color:var(--text-muted)}
+
+  /* A TERM LIST IN A SECTION: the sources, on the last part. */
+  #read dl{margin:20px 0 0;padding-left:14px;
+    border-left:1px solid var(--border-hair)}
+  #read dt{font-family:var(--font-ui);font-size:12.5px;font-weight:600;
+    letter-spacing:.01em;color:var(--text-strong);margin-top:12px}
+  #read dt:first-child{margin-top:0}
+  #read dt a{color:inherit;text-decoration:none;border-bottom:1px solid var(--border-hair)}
+  #read dd{margin:2px 0 0;font-family:var(--font-editorial);font-size:14px;
+    line-height:1.5;color:var(--text-muted)}
+
+  #read .tail{height:52vh}
+
+  @media (max-width:900px){
+    #stage{width:100%;height:52vh;border-right:0;
+      border-bottom:1px solid var(--border-hair)}
+    #read{margin-left:0;padding-top:52vh}
+    #read section:first-of-type{padding-top:8vh}
+    #read section{padding:12vh 0}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <p id="specimen"></p>
+</div>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  <a class="crumb" href="/proteins">proteins</a>
+</nav>
+
+<div id="read"><div class="col">
+  <div id="sections"></div>
+  <div class="tail"></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Momentum only: Lenis wraps the browser's own scroll. Pinned. -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../lib/annotate.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script src="heme-metrics.js"></script>
+<script>
+'use strict';
+
+const ME = ProteinLib.byKey('myoglobin');
+const stage = document.getElementById('stage');
+const $ = id => document.getElementById(id);
+
+/* One box for the whole page, re-fed as the reader scrolls. The rotation is the
+   registry's, so this protein faces one way everywhere in the repo. */
+const box = Proteinbox.create({
+  mount: stage,
+  view: ProteinLib.viewOf(ME),
+  orbit: true,
+  stage: { ortho: false, turn: 'trackball' },
+  pad: 1.15,
+  sub: 10,
+});
+
+/* THE CLOSE-UP'S OWN BASIS, picked by a human on the bench: the angle that
+   shows the fold puts the heme edge-on, and a molecule bound to the iron then
+   hides behind the ring it sits on. This one looks at the face of the ring. */
+const SITE_VIEW = [[0.1221, -0.4973, 0.859],
+                   [0.9244, 0.372, 0.084],
+                   [-0.3613, 0.7838, 0.5051]];
+/* The pocket and no more: the heme is about 10 Å across, so 8 fills the stage
+   with the ring, the two histidines, and whatever is on the iron. */
+const SITE_R = 8;
+const GHOST = 0.16;
+const TWEEN = 620;
+
+/* THE CALLOUTS. annotate.js over the box's own camera, every anchor a function
+   read off the pocket group each frame: the reader can orbit, and the box
+   moves its root when it leans in, so a point captured once comes adrift. */
+const NOTES = Annot.create(THREE, stage, box.camera, { mode:'on' });
+(function tick(){ NOTES.step(); requestAnimationFrame(tick); })();
+
+const traces = {};
+let pocket = null;          // { group, materials } for the file on screen
+let shownId = null;
+
+/* Where a baked point is NOW, in world: pocket atoms and CA atoms share the
+   structure's frame, and the pocket group lives in it. */
+const worldAt = p => () => {
+  const g = pocket.group;
+  g.updateWorldMatrix(true, false);
+  return g.localToWorld(new THREE.Vector3(p[0], p[1], p[2]));
+};
+const atomIn = (t, group, name) => t.pocket.atoms.find(a => a.group === group && a.name === name);
+const midOf = (t, pick) => {
+  const at = t.pocket.atoms.filter(pick);
+  const c = [0, 1, 2].map(k => at.reduce((s, a) => s + a.p[k], 0) / (at.length || 1));
+  return worldAt(c);
+};
+const A = v => v === null ? '—' : v.toFixed(2) + ' Å';
+const ch = t => t.chains[t.order[0]];
+const res = t => { const c = t.meta.counts[0]; return c.declared ? `${c.modelled} of ${c.declared}` : c.modelled; };
+
+/* THE FILE IN THREE TILES: who it came from, how much of it was modelled, how
+   sharp. "x of y" and never the bare count: one construct here is 151 residues
+   where another is 153, and a single number invites comparing two things that
+   are not the same measurement. */
+const fileStats = (id, t) => {
+  const v = ProteinLib.variantOf(ME, id), c = t.meta.counts[0];
+  return [
+    [v.species, 'species'],
+    [res(t), c.declared ? `residues, ${Math.round(100 * c.modelled / c.declared)}%` : 'residues'],
+    [t.meta.resolution ? t.meta.resolution.toFixed(2) + ' Å' : '—', v.read.method],
+  ];
+};
+
+/* =============================================================================
+ *  THE PARTS
+ * =============================================================================
+ *  Each part: which deposition, whether the stage leans in on the iron, what
+ *  the column says beside it, and what the callouts name on it. `note` and
+ *  `notes` take the trace, so every number is the file's own.
+ * ========================================================================== */
+const PARTS = [
+  { key:'whole', id:'1BZP', title:'Myoglobin', sub:'one chain, one iron',
+    deck:'Rendered from real data.',
+    hint:'Scroll to examine each part',
+    stats:t=>fileStats('1BZP', t),
+    note:t=>`A single protein chain, ${ch(t).nums.length} amino acids long, folded `
+      + `around one iron atom. It holds oxygen in muscle until the muscle needs `
+      + `it, and it is why muscle is red.\n\n <b>It was the first protein anyone `
+      + `ever saw the shape of.</b>`,
+    notes:()=>[] },
+
+  { key:'heme', id:'1BZP', close:true, title:'The heme', sub:'a flat ring holding an iron',
+    note:t=>`Inside the hole sits a <b>heme group</b>: a flat ring of carbon and `
+      + `nitrogen with an iron ion at its centre. Heme is not part of the chain. `
+      + `It is a separate molecule the protein wraps around, held by the shape of `
+      + `the pocket and one bond from below.\n\n The iron is what binds oxygen. `
+      + `Here the site is empty, and the iron sits ${A(HemeMetrics.ironOutOfPlane(t))} `
+      + `below the plane of the ring, pulled towards the histidine holding it.`,
+    notes:t=>[
+      { text:'Iron', card:'Fe²⁺. The one atom in the protein that oxygen touches.',
+        at:worldAt(HemeMetrics.iron(t).p), offset:[70, -40] },
+      { text:'Porphyrin ring', card:'Four nitrogens hold the iron in the plane. The ring is flat and greasy, which is why the pocket around it is lined with greasy side chains.',
+        at:midOf(t, a => a.group === 'heme' && a.el === 'C'), offset:[-90, 60] },
+    ] },
+
+  { key:'histidines', id:'1BZP', close:true, title:'Two histidines', sub:'one below, one above',
+    note:t=>`Two side chains reach the iron. The <b>proximal histidine</b> below `
+      + `the ring bonds straight to the iron: this is the one bond that ties the `
+      + `heme to the chain. The <b>distal histidine</b> above the ring does not `
+      + `touch the iron. It leans over the empty site, waiting.\n\n Everything `
+      + `else near the iron is greasy, so water stays out and the iron stays `
+      + `reduced. An iron that rusts cannot carry oxygen.`,
+    notes:t=>[
+      { text:'Proximal histidine', card:'His 93. Its ring nitrogen bonds the iron from below, the only covalent link between heme and chain.',
+        at:worldAt(atomIn(t, 'proximal', 'NE2').p), offset:[-90, 60] },
+      { text:'Distal histidine', card:'His 64. It does not bond the iron. It steadies whatever lands on it.',
+        at:worldAt(atomIn(t, 'distal', 'NE2').p), offset:[-50, -100] },
+    ] },
+
+  { key:'oxy', id:'1A6M', close:true, title:'Oxygen bound', sub:'held at an angle',
+    note:t=>`The same site with O₂ on it. The oxygen sits ${A(HemeMetrics.ironToLigand(t))} `
+      + `from the iron, leaning over rather than standing straight, and the distal `
+      + `histidine reaches down to steady it with a hydrogen bond.\n\n Watch the iron. `
+      + `It is now ${A(HemeMetrics.ironOutOfPlane(t))} out of the plane, flat in the ring. `
+      + `<b>Binding oxygen pulls the iron into the ring</b>, and the histidine bonded `
+      + `under it moves with it. In myoglobin that small tug goes nowhere. In its `
+      + `four-chain cousin haemoglobin it is the whole mechanism.`,
+    notes:t=>[
+      { text:'O₂', card:'Bent, not upright. The site is shaped for a molecule that leans, and that shape is a defence.',
+        at:midOf(t, a => a.group === 'bound'), offset:[110, 80] },
+      { text:'Hydrogen bond', card:'From the distal histidine to the outer oxygen. It makes O₂ bind tighter than it otherwise would.',
+        at:worldAt(atomIn(t, 'distal', 'NE2').p), offset:[-40, -110] },
+    ] },
+
+  { key:'co', id:'1MBC', close:true, title:'Carbon monoxide', sub:'the same site, the wrong molecule',
+    note:t=>`CO binds the same iron, ${A(HemeMetrics.ironToLigand(t))} away, and it `
+      + `binds hard. Once it is on, the site is taken and the protein cannot do its `
+      + `job. That is carbon monoxide poisoning: not damage, <b>a parking space `
+      + `occupied</b>.\n\n The protein defends itself. CO wants to stand straight up `
+      + `off the iron, and the distal histidine is in the way. It cannot make the `
+      + `site refuse CO, but it narrows the gap enough that a lungful of ordinary `
+      + `air does not poison you.`,
+    notes:t=>[
+      { text:'CO', card:'Carbon on the iron, oxygen out. The histidine above crowds it off the straight line it would prefer.',
+        at:midOf(t, a => a.group === 'bound'), offset:[110, 80] },
+    ] },
+
+  { key:'kendrew', id:'1MBN', title:'The first protein structure', sub:'Kendrew, and a whale',
+    note:t=>`This is <b>1MBN</b>, sperm whale myoglobin, the file that descends `
+      + `from John Kendrew's 1958 structure: the first protein anyone ever solved `
+      + `at atomic resolution. He chose myoglobin because it is small and `
+      + `crystallises easily, and it still took over a hundred crystals and a `
+      + `quarter of a million X-ray reflections.\n\n A whale because he needed a `
+      + `lot of it. Diving mammals pack their muscle with myoglobin as an oxygen `
+      + `store, which is part of how they stay down so long. The fold, the ring, `
+      + `the iron and the two histidines are the same in you.\n\n This deposition: `
+      + `${res(t)} residues, ${t.meta.resolution ? t.meta.resolution.toFixed(1) + ' Å' : 'unstated'} resolution, `
+      + `${t.extents.map(x => x.toFixed(0)).join(' × ')} Å end to end.`,
+    /* THE SOURCES. Links only; nothing is copied in. */
+    dl:[
+      ['https://www.nature.com/articles/181662a0', 'Kendrew et al., Nature 181, 662 (1958)', 'The paper. Paywalled; the abstract is free at PubMed.'],
+      ['https://www.nobelprize.org/uploads/2025/08/kendrew-lecture-2.pdf', 'Kendrew’s Nobel lecture (1962)', 'Free PDF. He shows the models and the density maps himself.'],
+      ['https://pmc.ncbi.nlm.nih.gov/articles/PMC5980623/', 'de Chadarevian, Protein Science 27, 1136 (2018)', 'Free to read. Photographs of the crystals, the plates, and the models.'],
+      ['https://pdb101.rcsb.org/motm/1', 'PDB-101 Molecule of the Month #1', 'Myoglobin was the first one.'],
+    ],
+    notes:()=>[] },
+];
+
+/* What the caption under the stage says about each file. Page copy, not
+   registry data: a database of structures is not the place for a caption
+   written for one stage. */
+const SAYS = {
+  '1BZP': 'the empty site',
+  '1A6M': 'oxygen bound to the iron',
+  '1MBC': 'carbon monoxide in the same place',
+  '1MBN': 'Kendrew’s sperm whale myoglobin',
+};
+
+/* =============================================================================
+ *  SHOWING A PART
+ * =============================================================================
+ *  Re-feed the box only when the FILE changes; lean in or pull out as one move;
+ *  then hang the part's callouts on the atoms the new file has.
+ * ========================================================================== */
+let current = null;
+function show(part){
+  if(current === part) return;
+  const first = current === null;
+  current = part;
+  const t = traces[part.id];
+  const v = ProteinLib.variantOf(ME, part.id);
+
+  if(shownId !== part.id){
+    shownId = part.id;
+    box.setData(t, { keep:true });
+    pocket = box.setPocket(t.pocket);
+    $('specimen').innerHTML =
+      `<span class="pdb">${v.source.id}</span> · ${SAYS[part.id]} · `
+      + `<a href="${ProteinLib.urls(v).entry}" target="_blank" rel="noopener">at the PDB →</a>`;
+  }
+
+  const fe = HemeMetrics.iron(t);
+  box.focus(part.close && fe
+    ? { at:fe.p, radius:SITE_R, view:SITE_VIEW, ghost:GHOST }
+    : null, first ? 0 : TWEEN);
+
+  NOTES.clear();
+  for(const n of part.notes(t)) if(n.at) NOTES.add(n);
+  for(const el of secs) el.setAttribute('aria-current', String(el.dataset.key === part.key));
+}
+
+/* =============================================================================
+ *  THE COLUMN
+ * =============================================================================
+ *  One section per part, built once the files are in, so every number in a
+ *  sentence is the file's own.
+ * ========================================================================== */
+const claim = t => t.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean)
+  .map(x => `<p class="claim">${x}</p>`).join('');
+const tiles = st => !st ? '' : '<div class="measure">' + st.map(([n, l]) =>
+  `<div><span class="n">${n}</span><span class="l">${l}</span></div>`).join('') + '</div>';
+const terms = dl => !dl ? '' : '<dl>' + dl.map(([href, name, why]) =>
+  `<dt><a href="${href}" target="_blank" rel="noopener">${name}</a></dt><dd>${why}</dd>`).join('') + '</dl>';
+
+let secs = [];
+const NEEDED = [...new Set(PARTS.map(p => p.id))];
+Promise.all(NEEDED.map(id => {
+  const v = ProteinLib.variantOf(ME, id);
+  return fetch(`data/${v.read.baked}`).then(r => r.json()).then(t => { traces[id] = t; });
+})).then(() => {
+  const host = $('sections');
+  secs = PARTS.map((part, i) => {
+    const el = document.createElement('section');
+    el.dataset.key = part.key;
+    el.innerHTML =
+      `<p class="num">${String(i + 1).padStart(2, '0')} / ${String(PARTS.length).padStart(2, '0')}</p>`
+      + `<h3>${part.title}</h3>`
+      + `<p class="gloss">${part.sub}</p>`
+      + (part.deck ? `<p class="deck">${part.deck}</p>` : '')
+      + claim(part.note(traces[part.id]))
+      + tiles(part.stats && part.stats(traces[part.id]))
+      + terms(part.dl)
+      + (part.hint ? `<p class="hint">${part.hint}</p>` : '');
+    host.appendChild(el);
+    return el;
+  });
+
+  show(PARTS[0]);
+
+  /* THE SCROLL: momentum from Lenis, which part is showing from an
+     IntersectionObserver squeezed to the line across the middle of the window,
+     and a settle so a section parks on that line. dna-structure.html's. */
+  const lenis = new Lenis({ autoRaf:true, duration:1.1 });
+  const seen = new IntersectionObserver(entries => {
+    for(const e of entries) if(e.isIntersecting) show(PARTS[secs.indexOf(e.target)]);
+  }, { root:null, rootMargin:'-50% 0px -50% 0px', threshold:0 });
+  for(const el of secs) seen.observe(el);
+
+  const settleTo = el => el.offsetTop + el.offsetHeight / 2 - innerHeight / 2;
+  const SETTLE_MS = 150, SNAP_SLOP = 8;
+  let settleTimer = null, settling = false;
+  lenis.on('scroll', () => {
+    if(settling) return;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      let best = null, bestD = Infinity;
+      for(const el of secs){
+        const d = Math.abs(settleTo(el) - lenis.scroll);
+        if(d < bestD){ bestD = d; best = el; }
+      }
+      if(!best || bestD <= SNAP_SLOP) return;
+      settling = true;
+      lenis.scrollTo(settleTo(best), {
+        duration:0.6, easing:t => 1 - Math.pow(1 - t, 3),
+        onComplete:() => { settling = false; },
+      });
+    }, SETTLE_MS);
+  });
+});
+
+window.page = { box, traces, get showing(){ return current && current.key; } };
+</script>
+</body>
+</html>
