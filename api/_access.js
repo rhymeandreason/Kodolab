@@ -83,7 +83,7 @@ async function resolve(req, { seatFirst = true } = {}) {
   }
 
   const u = await require('./_accounts.js').userFrom(req);
-  const label = keys.cohort(req);
+  const label = await keys.cohort(req);
   const teacherCode = header(req, TEACHER_HEADER);
   const byCode = async () => {
     const t = await teacherByCode(teacherCode);

@@ -7,15 +7,15 @@
 <script defer src="/demos/lib/site.js"></script>
 <link rel="stylesheet" href="../css/kodo.css">
 <!-- =========================================================================
-     EVERY ACCESS CODE, on one page: teachers and their dashboard codes, each
+     EVERY ACCESS CODE, on one page: testing links, teachers and their dashboard codes, each
      class's seat codes, the invites that admit Google accounts, and the
      accounts themselves. Localhost only: it reads and writes the live database
      through /api/codes, which exists only in tools/dev-server.js and answers
      only loopback. Not deployed (.vercelignore). The same operations from the
-     terminal are `node demos/tools/db.js teacher|invite|user`.
+     terminal are `node demos/tools/db.js link|teacher|invite|user`.
 
-     A teacher's dashboard code is shown ONCE, when minted or reissued: it is
-     stored hashed, so there is no looking it up later.
+     A teacher's dashboard code and a link's secret are shown ONCE, when
+     minted: they are stored hashed, so there is no looking them up later.
      ========================================================================= -->
 <style>
   main { padding-bottom: 5rem; }
@@ -89,6 +89,17 @@
     <div class="fresh" id="fresh" hidden></div>
 
     <section>
+      <div class="sechead"><h2>testing links</h2><span class="rule"></span><span class="count" id="nLinks"></span></div>
+      <p class="say">Opens /build and every lesson's tutor with no account. The label is the cohort the log and the rate limit count, so one leaked link is revoked without touching the others. Revoked links refuse on the next request.</p>
+      <form class="mint" id="newLink">
+        <input id="linkLabel" placeholder="Label, e.g. openday" required>
+        <input id="linkNote" placeholder="Note (optional)">
+        <button class="btn" type="submit">New link</button>
+      </form>
+      <div class="box"><table><thead><tr><th>Label</th><th>Note</th><th>Last used</th><th>Made</th><th></th></tr></thead><tbody id="links"></tbody></table></div>
+    </section>
+
+    <section>
       <div class="sechead"><h2>invites</h2><span class="rule"></span><span class="count" id="nInvites"></span></div>
       <p class="say">Redeemed after Google sign-in. A teacher invite is single use and makes the account a teacher. A member invite admits builders under a label, for as many uses as you set.</p>
       <form class="mint" id="newInvite">
@@ -138,7 +149,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const day = t => t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const day = t =>t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
   async function api(body) {
     const r = await fetch('/api/codes', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
@@ -151,6 +162,13 @@
 
   function paint(d) {
     $('err').hidden = true;
+    $('nLinks').textContent = d.links.length;
+    $('links').innerHTML = d.links.map(l => `<tr class="${l.revoked_at ? 'off' : ''}">
+      <td><code>${esc(l.label)}</code></td><td class="dim">${esc(l.note)}</td>
+      <td class="dim">${l.last_used_at ? day(l.last_used_at) : 'never'}</td><td class="dim">${day(l.created_at)}</td>
+      <td class="acts"><button class="textbtn" data-act="${l.revoked_at ? 'link.restore' : 'link.revoke'}" data-id="${esc(l.id)}">${l.revoked_at ? 'Restore' : 'Revoke'}</button></td></tr>`).join('')
+      || '<tr><td colspan="5" class="none">No links yet.</td></tr>';
+
     $('nTeachers').textContent = d.teachers.length;
     const openNow = new Set([...document.querySelectorAll('.teacher[open]')].map(x => x.dataset.id));
     $('teachers').innerHTML = d.teachers.map(t => {
@@ -198,6 +216,7 @@
     const act = b.dataset.act;
     if (act === 'teacher.reissue' && !confirm('Issue a new dashboard code? Any old one stops working.')) return;
     if (act === 'user.disable' && !confirm('Disable this account? Their sessions end now.')) return;
+    if (act === 'link.revoke' && !confirm('Revoke this link? Everyone using it is refused on their next request.')) return;
     try {
       const r = await api({ action: act, id: b.dataset.id, code: b.dataset.code });
       if (r.code) fresh(`Dashboard code for teacher <b>${esc(b.dataset.id)}</b>, shown once: <code>${esc(r.code)}</code>`);
@@ -239,6 +258,17 @@
   $('delTGo').addEventListener('click', async () => {
     try { await api({ action: 'teacher.delete', id: delTId }); $('delTeacher').close(); load(); }
     catch (err) { $('delTErr').textContent = err.message; $('delTErr').hidden = false; }
+  });
+
+  $('newLink').addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      const r = await api({ action: 'link.new', label: $('linkLabel').value, note: $('linkNote').value });
+      const url = `https://kodolab.org/build?k=${encodeURIComponent(r.secret)}`;
+      fresh(`Testing link <b>${esc(r.label)}</b>, shown once: <code>${esc(url)}</code><br>The same <code>?k=</code> on a lesson opens its tutor.`);
+      $('linkLabel').value = ''; $('linkNote').value = '';
+      load();
+    } catch (err) { fail(err); }
   });
 
   $('newTeacher').addEventListener('submit', async e => {

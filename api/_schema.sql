@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS threads (
   id          uuid PRIMARY KEY,
   visitor_id  uuid NOT NULL,               -- stable per browser, cleared with site data
   lesson      text,                        -- null: the plain ask box, no lesson around it
-  cohort      text,                        -- the access link's label; null: ungated (local, or no TUTOR_KEYS)
+  cohort      text,                        -- the access link's label; null: ungated (no testing link anywhere)
   started_at  timestamptz NOT NULL DEFAULT now()
 );
 
@@ -343,3 +343,20 @@ CREATE TABLE IF NOT EXISTS invites (
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS user_id text UNIQUE REFERENCES users(id) ON DELETE SET NULL;
 -- Google's profile photo URL, refreshed on every sign-in; the nav draws it.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS picture text;
+
+-- =============================================================================
+--  links - testing links, admitted without an account
+-- =============================================================================
+--  A LINK is a cohort label and a secret, shared as `?k=<secret>` on /build or
+--  a lesson. The secret is stored hashed, so it is shown once when minted.
+--  ANY ROW TURNS THE GATE ON, revoked or not (`_keys.js`): revoking every link
+--  locks the tutor and the builder rather than opening them.
+CREATE TABLE IF NOT EXISTS links (
+  id            text PRIMARY KEY,
+  label         text NOT NULL,             -- the cohort the log and the rate limit count
+  secret_hash   text NOT NULL UNIQUE,
+  note          text,
+  last_used_at  timestamptz,               -- moved at most every ten minutes
+  revoked_at    timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);

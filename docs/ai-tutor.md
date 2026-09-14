@@ -21,7 +21,7 @@ Working end to end on `demos/water-lab.html`:
 * the tutor sees live scene state (molecule count, temperature, phase, salt)
 * provider switch: Gemini (default, `gemini-3.7-flash`) or Claude, one env var
 * the stable half of the prompt is cached server-side, and on a lesson page it is the large majority of the input
-* **the access gate is built** (`api/_keys.js`): `TUTOR_KEYS` names cohorts, the key rides in `?k=` once and travels as a header after. Unset means no gate, so a checkout is unchanged
+* **the access gate is built** (`api/_keys.js`): testing links name cohorts, live in the `links` table (legacy `TUTOR_KEYS` still honoured), ride in `?k=` once and travel as a header after. No link anywhere means no gate, so a checkout is unchanged
 * **the cohort label is logged**, on `threads`, and the viewer filters by it
 * **the rate limit is built** (`api/_limit.js`): per class and per browser, counted in Postgres, failing open
 
@@ -163,11 +163,11 @@ A link that turns the live tutor on, no accounts. `api/_keys.js` resolves a secr
 
 **No key reuses the absence path rather than inventing an error state.** The design said "no key means demo mode", but demo mode is not built, so today the refused GET simply keeps `chat.js` from adding the launcher and the lesson looks exactly as it does on GitHub Pages. There is nothing to explain to a visitor who was never invited. When demo mode lands it slots in here, and the degradation gets better without the gate changing.
 
-**Unset means no gate.** A checkout, and the dev server, answer as they always did. Set locally, the gate applies to loopback too: a gate you cannot exercise on the machine you wrote it on is a gate nobody has seen work. A malformed `TUTOR_KEYS` reads as *off*, not as a lockout, because a typo should not look identical to a deliberate one — `check-ask.js` asserts both, plus that the cohort label is not accepted as its own key and that a prefix of a real key fails.
+**No link anywhere means no gate.** A checkout with no `TUTOR_KEYS` and no `links` row answers as it always did. A revoked row still counts, so revoking every link locks rather than opens, and a database that cannot be asked fails closed. On, the gate applies to loopback too: a gate you cannot exercise on the machine you wrote it on is a gate nobody has seen work. A malformed `TUTOR_KEYS` reads as *off*, not as a lockout, because a typo should not look identical to a deliberate one — `check-ask.js` asserts both, plus that the cohort label is not accepted as its own key and that a prefix of a real key fails.
 
 **The key rides in the URL once.** `?k=` on the shared link, then into `localStorage`, then stripped from the address bar, and sent as a header on every request after that. A query string ends up in server access logs, browser history and screenshots; a header ends up in none of them. Same reason `LOG_TOKEN` was dropped rather than fixed.
 
-**Keys name a cohort, not a person**: `TUTOR_KEYS=bio101-fall:<secret>,openday:<secret>`. The *label* is written to the thread row, so the log shows usage per cohort, a link that escapes is revoked on its own without cutting anyone else off, and a rate limit attaches to the label.
+**Keys name a cohort, not a person**: a link is a label and a secret, minted in `demos/tools/codes.html` or `db.js link new <label>`, with the secret stored hashed and shown once. The *label* is written to the thread row, so the log shows usage per cohort, a link that escapes is revoked on its own without cutting anyone else off, and a rate limit attaches to the label.
 
 **It is a bearer token and nothing more.** Everyone it is forwarded to has it, and there is no way around that without accounts. So it protects *spend*, never anything private, and the prepaid cap stays the real backstop. Leakage is expected and rotation is routine. If it ever has to be more than that, it needs accounts, and that is a different design.
 

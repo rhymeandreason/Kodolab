@@ -245,19 +245,19 @@ async function ask({ messages, provider, system, cited, lesson, step, state, ben
  * POST refuse identically. `cohort` is a label the transport already resolved -
  * see `_keys.js` for why it is a label and not a person.
  *
- * With TUTOR_KEYS unset this returns null and nothing is gated, which is what a
- * checkout without one gets. With it set, a request without a valid key is
- * refused BEFORE any model runs, so an unauthorised caller costs a JSON parse
- * and nothing else. */
-function denied(cohort) {
-  if (!keys.enabled() || cohort) return null;
+ * With no testing link anywhere this returns null and nothing is gated, which is
+ * what a fresh checkout gets. Otherwise a request without a valid key is
+ * refused BEFORE any model runs, so an unauthorised caller costs a lookup and
+ * nothing else. */
+async function denied(cohort) {
+  if (cohort || !(await keys.enabled())) return null;
   return { status: 401, body: { error: 'this tutor is open to invited classes; ask your instructor for the access link' } };
 }
 
 async function handleAsk(payload, { bench = false, cohort = null } = {}) {
   // Checked here as well as in the transport: a transport that forgets fails
   // closed rather than answering for free.
-  const gate = denied(cohort);
+  const gate = await denied(cohort);
   if (gate) return gate;
 
   const body   = payload || {};

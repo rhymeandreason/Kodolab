@@ -784,24 +784,27 @@ function api(url, req, res) {
   // than hardcoded true, so the two transports cannot drift.
   const bench = require(path.join(ROOT, 'api/_local.js')).local(req);
 
-  // The same gate the deployment applies. TUTOR_KEYS is normally unset locally,
-  // so this is a no-op; set it in .env.local to exercise the gate for real.
-  const who  = require(path.join(ROOT, 'api/_keys.js')).cohort(req);
-  const gate = tutor.denied(who);
-  if (gate) return json(gate.status, gate.body);
+  // The same gate the deployment applies, against the same links table when
+  // .env.local has a DATABASE_URL. The body is not read until a listener
+  // attaches, so resolving the gate first loses none of it.
+  (async () => {
+    const who  = await require(path.join(ROOT, 'api/_keys.js')).cohort(req);
+    const gate = await tutor.denied(who);
+    if (gate) return json(gate.status, gate.body);
 
-  if (req.method === 'GET')  return json(200, tutor.config(bench, who));
-  if (req.method !== 'POST') return json(405, { error: 'GET or POST only' });
+    if (req.method === 'GET')  return json(200, tutor.config(bench, who));
+    if (req.method !== 'POST') return json(405, { error: 'GET or POST only' });
 
-  let raw = '';
-  req.on('data', d => { raw += d; if (raw.length > 1e5) req.destroy(); });
-  req.on('end', async () => {
-    let payload = {};
-    try { payload = JSON.parse(raw || '{}'); } catch { /* handled as a missing question */ }
-    const out = await tutor.handleAsk(payload, { bench, cohort: who });
-    console.log(`  api /api/ask → ${out.status}`);
-    json(out.status, out.body);
-  });
+    let raw = '';
+    req.on('data', d => { raw += d; if (raw.length > 1e5) req.destroy(); });
+    req.on('end', async () => {
+      let payload = {};
+      try { payload = JSON.parse(raw || '{}'); } catch { /* handled as a missing question */ }
+      const out = await tutor.handleAsk(payload, { bench, cohort: who });
+      console.log(`  api /api/ask → ${out.status}`);
+      json(out.status, out.body);
+    });
+  })().catch(e => json(500, { error: e.message }));
 }
 
 /* Safari will not play a <video> from a server that answers its opening

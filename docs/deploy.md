@@ -119,10 +119,10 @@ Set in the Vercel project, Production scope. Same names as `.env.local`.
 | `GEMINI_API_KEY` | required, or the tutor answers "not set on the server" |
 | `AI_PROVIDER` | `gemini` unless you mean otherwise |
 | `DATABASE_URL` | the Neon pooled string. **Unset means no log AND no rate limit**, for the tutor and the search alike |
-| `TUTOR_KEYS` | `cohort:secret` pairs. **Unset means the tutor is public and unmetered.** Does not gate `api/find.js`, which is open by design |
+| `TUTOR_KEYS` | legacy `cohort:secret` pairs; testing links now live in the `links` table (`db.js link`, `tools/codes.html`). **With no pair here and no row there, the tutor is public and unmetered.** Does not gate `api/find.js`, which is open by design |
 | `EMBED_MODEL` | optional; `gemini-embedding-001` unless set. **Must match what `lib/mapcontent-vectors.json` was baked with** |
 
-The last two are the ones that fail quietly. Unset `TUTOR_KEYS` does not error:
+The last two are the ones that fail quietly. No testing link does not error:
 it makes the tutor open to anyone who finds it. Unset `DATABASE_URL` does not
 error either: `_limit.js` and `_finds.js` have nothing to count and both fail
 open, so the caps stop existing. Neither shows up on the page.
@@ -146,7 +146,7 @@ endpoint.
 ## Smoke test
 
 Against the deployment, before the domain moves and again after. `$K` is a real
-secret from `TUTOR_KEYS`.
+testing link's secret.
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' https://<deployment>/            # 200, the lesson index
@@ -179,4 +179,5 @@ A 401 on the first of those is the gate working, not a broken deploy.
 `node demos/tools/db.js cost` and the log viewer read the same Neon database
 production writes to, from a laptop, with nothing public in the path. Watch the
 per-class counts: a cohort at its hourly cap is what a leaked link looks like.
-Rotate by editing `TUTOR_KEYS` and redeploying; the other cohorts are unaffected.
+Rotate by revoking the link in `tools/codes.html` and minting a new one, no
+redeploy; the other cohorts are unaffected.

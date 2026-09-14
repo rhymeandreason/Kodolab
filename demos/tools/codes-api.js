@@ -5,8 +5,9 @@
  *  the Vercel functions in api/, and the dev server answers it only to
  *  loopback (api/_local.js). tools/codes.html is the page on it.
  *
- *    GET                          → { teachers, invites, users }
- *    POST {action, ...}           teacher.new {name} · teacher.reissue {id}
+ *    GET                          → { links, teachers, invites, users }
+ *    POST {action, ...}           link.new {label, note} · link.revoke {id} · link.restore {id}
+ *                                 teacher.new {name} · teacher.reissue {id}
  *                                 invite.teacher {note} · invite.member {label, max}
  *                                 invite.revoke {code} · invite.restore {code}
  *                                 user.disable {id} · user.enable {id}
@@ -17,8 +18,8 @@
  *                                                    and every app those made; a linked
  *                                                    Google account stays, as a member
  *
- *  A teacher code is stored hashed and comes back in the reply once, the way
- *  `db.js teacher new` prints it once. Seat codes are stored plain (the
+ *  A teacher code and a link's secret are stored hashed and come back in the
+ *  reply once, the way `db.js teacher new` prints it once. Seat codes are stored plain (the
  *  schema says why) and are listed.
  * ========================================================================== */
 'use strict';
@@ -27,6 +28,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 const log    = require(path.join(ROOT, 'api/_log.js'));
 const access = require(path.join(ROOT, 'api/_access.js'));
+const keys   = require(path.join(ROOT, 'api/_keys.js'));
 
 async function list() {
   const sql = log.sql();
@@ -48,12 +50,23 @@ async function list() {
     SELECT u.id, u.email, u.name, u.invite_label, u.admitted_at, u.disabled_at, u.created_at, t.id AS teacher_id,
            (SELECT count(*) FROM apps a WHERE a.owner_id = 'user:' || u.id)::int AS apps
     FROM users u LEFT JOIN teachers t ON t.user_id = u.id ORDER BY u.created_at DESC`;
-  return { teachers, invites, users };
+  const links = await sql`SELECT id, label, note, last_used_at, revoked_at, created_at FROM links ORDER BY created_at DESC`;
+  return { links, teachers, invites, users };
 }
 
 async function act(body) {
   const sql = log.sql();
   const a = String(body.action || '');
+  if (a === 'link.new') {
+    const r = await keys.mint({ label: body.label, note: String(body.note || '').trim() });
+    return { secret: r.secret, label: r.label };
+  }
+  if (a === 'link.revoke' || a === 'link.restore') {
+    const [r] = await sql`UPDATE links SET revoked_at = ${a === 'link.revoke' ? new Date().toISOString() : null}
+                          WHERE id = ${String(body.id || '')} RETURNING id`;
+    if (!r) throw new Error('no such link');
+    return { ok: true };
+  }
   if (a === 'teacher.new') {
     const name = String(body.name || '').trim();
     if (!name) throw new Error('a teacher needs a name');

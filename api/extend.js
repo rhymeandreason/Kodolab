@@ -160,7 +160,7 @@ RULES, and a reply breaking one is discarded:
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  const who = keys.cohort(req);
+  const who = await keys.cohort(req);
 
   if (req.method === 'GET') {
     return res.status(200).json({ ok: !!process.env.GEMINI_API_KEY, gated: false });

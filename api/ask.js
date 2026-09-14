@@ -27,8 +27,8 @@ module.exports = async function handler(req, res) {
   // the launcher off the page: `chat.js` only offers the tutor when this
   // answers ok, so a visitor without a link sees the lesson with no broken
   // invitation on it, exactly as a static deploy does.
-  const who  = cohort(req);
-  const gate = denied(who);
+  const who  = await cohort(req);
+  const gate = await denied(who);
   if (gate) return res.status(gate.status).json(gate.body);
 
   if (req.method === 'GET') return res.status(200).json(config(bench, who));

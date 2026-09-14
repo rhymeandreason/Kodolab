@@ -106,7 +106,7 @@ module.exports = async function handler(req, res) {
     const action = String(body.action || '');
 
     if (action === 'remix') {
-      if ((keys.enabled() || who) && !access.admitted(who)) return res.status(401).json({ ...access.refusal(who), beta: true });
+      if (((await keys.enabled()) || who) && !access.admitted(who)) return res.status(401).json({ ...access.refusal(who), beta: true });
       const app = await apps.read(id);
       if (!app || !app.version) return res.status(404).json({ error: 'no such app' });
       const made = await apps.create({

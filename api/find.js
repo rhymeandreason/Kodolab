@@ -43,13 +43,13 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
   /* OPEN, unlike the tutor, and not because a search is cheap. The gate it
-     would inherit is TUTOR_KEYS, so a shared map link would also hand out
-     tutor spend — one link, two budgets, and no way to give away the first
-     without the second. The caps in _finds.js are the protection here, and
+     would inherit is the tutor's testing links, so a shared map link would also
+     hand out tutor spend — one link, two budgets, and no way to give away the
+     first without the second. The caps in _finds.js are the protection here, and
      they hold against someone with no key at all, which is the case the tutor's
      gate cannot cover anyway. `cohort` is still read and still recorded, so a
      link that HAS a key says which group it came from. */
-  const who = keys.cohort(req);
+  const who = await keys.cohort(req);
 
   if (req.method === 'GET') {
     return res.status(200).json({

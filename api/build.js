@@ -40,7 +40,8 @@ module.exports = async function handler(req, res) {
 
   // A code that was sent and is wrong is refused even where the gate is off:
   // a student told they are in is a student whose work belongs to nobody.
-  if ((keys.enabled() || who) && !access.admitted(who)) {
+  const gated = await keys.enabled();
+  if ((gated || who) && !access.admitted(who)) {
     return res.status(401).json(access.refusal(who));
   }
 
@@ -49,7 +50,7 @@ module.exports = async function handler(req, res) {
     try { components = builder.components(); } catch { /* reference missing: reported below */ }
     return res.status(200).json({
       ok: apps.enabled() && !!process.env[providers.pick(null, bench).envKey],
-      gated: keys.enabled(), cohort, who: access.describe(who), bench,
+      gated, cohort, who: access.describe(who), bench,
       provider: providers.DEFAULT, limits: apps.LIMITS, components,
       maxRequest: builder.MAX_REQUEST,
     });

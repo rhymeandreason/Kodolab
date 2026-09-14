@@ -290,48 +290,53 @@ for (const [lesson, L] of Object.entries(T.LESSONS)) {
  * visible from the page, so it is asserted rather than eyeballed.
  *
  * Offline and with no key of its own: TUTOR_KEYS is set and restored around the
- * checks, so a checkout without one still runs them. -------------------------- */
+ * checks, so a checkout without one still runs them. The `links` table half
+ * needs a database and is not asserted here; with DATABASE_URL in the
+ * environment the "no gate" checks are skipped, since a row may exist. ------- */
 {
   const keys = require(path.join(ROOT, 'api/_keys.js'));
   const { denied, handleAsk } = require(path.join(ROOT, 'api/_tutor.js'));
+  const offline = !require(path.join(ROOT, 'api/_log.js')).enabled();
   const was = process.env.TUTOR_KEYS;
 
-  // Unset: nothing is gated. This is what a fresh checkout and the dev server
-  // get, and breaking it breaks running the tutor locally.
-  delete process.env.TUTOR_KEYS;
-  if (keys.enabled())      bad('TUTOR_KEYS unset but the gate reports itself enabled');
-  if (denied(null))        bad('TUTOR_KEYS unset but a request without a key was refused');
+  pending.push((async () => {
+    // Unset: nothing is gated. This is what a fresh checkout gets, and breaking
+    // it breaks running the tutor locally.
+    delete process.env.TUTOR_KEYS;
+    if (offline && await keys.enabled()) bad('no links anywhere but the gate reports itself enabled');
+    if (offline && await denied(null))   bad('no links anywhere but a request without a key was refused');
 
-  // A typo that yields no usable pair is OFF, not a lockout nobody can explain.
-  process.env.TUTOR_KEYS = 'garbage-with-no-colon';
-  if (keys.enabled())      bad('a malformed TUTOR_KEYS reads as an enabled gate');
+    // A typo that yields no usable pair is OFF, not a lockout nobody can explain.
+    process.env.TUTOR_KEYS = 'garbage-with-no-colon';
+    if (offline && await keys.enabled()) bad('a malformed TUTOR_KEYS reads as an enabled gate');
 
-  process.env.TUTOR_KEYS = 'bio101:s3cret,openday:0ther';
-  if (!keys.enabled())     bad('TUTOR_KEYS is set but the gate reports itself off');
-  if (keys.labelFor('s3cret') !== 'bio101') bad('a valid key does not resolve to its cohort');
-  if (keys.labelFor('0ther') !== 'openday') bad('the second key in TUTOR_KEYS does not resolve');
+    process.env.TUTOR_KEYS = 'bio101:s3cret,openday:0ther';
+    if (!(await keys.enabled()))     bad('TUTOR_KEYS is set but the gate reports itself off');
+    if (await keys.labelFor('s3cret') !== 'bio101') bad('a valid key does not resolve to its cohort');
+    if (await keys.labelFor('0ther') !== 'openday') bad('the second key in TUTOR_KEYS does not resolve');
 
-  // The label is a cohort and the secret is not it. Naming the label as the key
-  // would make every link guessable from the log.
-  if (keys.labelFor('bio101') !== null) bad('the cohort label is accepted as its own key');
-  if (keys.labelFor('wrong')  !== null) bad('a wrong key resolves to a cohort');
-  if (keys.labelFor('')       !== null) bad('an empty key resolves to a cohort');
-  if (keys.labelFor(null)     !== null) bad('a missing key resolves to a cohort');
+    // The label is a cohort and the secret is not it. Naming the label as the key
+    // would make every link guessable from the log.
+    if (await keys.labelFor('bio101') !== null) bad('the cohort label is accepted as its own key');
+    if (await keys.labelFor('wrong')  !== null) bad('a wrong key resolves to a cohort');
+    if (await keys.labelFor('')       !== null) bad('an empty key resolves to a cohort');
+    if (await keys.labelFor(null)     !== null) bad('a missing key resolves to a cohort');
 
-  // A prefix of a real key must not pass. This is the shape a timing walk would
-  // produce, and the compare hashes both sides so it cannot.
-  if (keys.labelFor('s3cre') !== null)  bad('a prefix of a valid key is accepted');
+    // A prefix of a real key must not pass. This is the shape a timing walk would
+    // produce, and the compare hashes both sides so it cannot.
+    if (await keys.labelFor('s3cre') !== null)  bad('a prefix of a valid key is accepted');
 
-  // The refusal happens BEFORE a model runs. Asserted through handleAsk with a
-  // question that would otherwise be answered: no provider key is needed,
-  // because a gated call must never reach one.
-  pending.push(handleAsk({ question: 'Why does ice float?', lesson: 'water' }, { cohort: null })
-    .then(r => {
-      if (r.status !== 401) bad(`a gated ask without a key returned ${r.status}, not 401`);
-      process.env.TUTOR_KEYS = was === undefined ? '' : was;
+    // The refusal happens BEFORE a model runs. Asserted through handleAsk with a
+    // question that would otherwise be answered: no provider key is needed,
+    // because a gated call must never reach one.
+    const r = await handleAsk({ question: 'Why does ice float?', lesson: 'water' }, { cohort: null });
+    if (r.status !== 401) bad(`a gated ask without a key returned ${r.status}, not 401`);
+  })()
+    .catch(e => bad(`the gate threw instead of refusing: ${e.message}`))
+    .finally(() => {
       if (was === undefined) delete process.env.TUTOR_KEYS;
-    })
-    .catch(e => bad(`a gated ask threw instead of refusing: ${e.message}`)));
+      else process.env.TUTOR_KEYS = was;
+    }));
 }
 
 console.log(`\n  ${allQids.size} targets across ${Object.keys(T.LESSONS).length} lessons`);

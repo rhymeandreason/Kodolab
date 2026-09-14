@@ -24,6 +24,12 @@
  *                                    a reusable code that admits accounts to the builder under <label>
  *    node demos/tools/db.js invite list | invite revoke <code>
  *    node demos/tools/db.js user list | user disable <email> | user enable <email>
+ *    node demos/tools/db.js link new <label> [note]
+ *                                    a testing link: admits to /build and the tutor with no account
+ *    node demos/tools/db.js link list | link revoke <id> | link restore <id>
+ *    node demos/tools/db.js link import
+ *                                    copy TUTOR_KEYS into the table, secrets unchanged, so the
+ *                                    env var can go. Reads the shell's TUTOR_KEYS before .env.local's
  *    node demos/tools/db.js seed <page> [title]
  *                                    store a page as an app; prints the view and edit links.
  *                                    The eval pages under tests/ go in this way.
@@ -248,6 +254,40 @@ const CMDS = {
       return console.log(`${email} ${sub}d`);
     }
     throw new Error('user list | user disable <email> | user enable <email>');
+  },
+
+  async link(sub, ...rest) {
+    const keys = require(path.join(ROOT, 'api/_keys.js'));
+    const sql = log.sql();
+    if (sub === 'new') {
+      const r = await keys.mint({ label: rest[0], note: rest.slice(1).join(' ') });
+      console.log(`${r.id}  ${r.label}`);
+      console.log(`  https://kodolab.org/build?k=${r.secret}`);
+      console.log('  The same ?k= on a lesson opens its tutor. Shown once; revoke and mint a new one if lost.');
+      return;
+    }
+    if (sub === 'import') {
+      const pairs = keys.pairs();
+      if (!pairs.length) return console.log('no TUTOR_KEYS to import');
+      for (const p of pairs) {
+        const r = await keys.mint({ label: p.label, secret: p.secret, note: 'from TUTOR_KEYS' });
+        console.log(`${r ? 'added  ' : 'already'}  ${p.label}`);
+      }
+      return console.log('Existing links keep working. TUTOR_KEYS can now be removed.');
+    }
+    if (sub === 'revoke' || sub === 'restore') {
+      const [r] = await sql`UPDATE links SET revoked_at = ${sub === 'revoke' ? new Date().toISOString() : null}
+                            WHERE id = ${rest[0] || ''} RETURNING label`;
+      return console.log(r ? `${r.label} ${sub}d` : 'no such link; `link list` shows them');
+    }
+    if (sub === 'list') {
+      const rows = await sql`SELECT id, label, note, last_used_at, revoked_at FROM links ORDER BY created_at`;
+      if (!rows.length) return console.log('no links yet');
+      for (const r of rows) console.log(`${r.id}  ${r.label.padEnd(16)}  ${r.last_used_at ? 'used ' + String(r.last_used_at.toISOString ? r.last_used_at.toISOString() : r.last_used_at).slice(0, 10) : 'never used'}`
+        + `${r.revoked_at ? '  REVOKED' : ''}${r.note ? '  ' + r.note : ''}`);
+      return;
+    }
+    throw new Error('link new <label> [note] | link list | link revoke <id> | link restore <id> | link import');
   },
 
   /* A page from disk becomes an app, so the render route and the builder can
