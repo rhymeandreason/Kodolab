@@ -366,6 +366,11 @@ function stackUp(t, was, done){
   const run = ++stackRun;
   const TURN = 900, STAGGER = 70, PAUSE = 200;
   const qFrom = basisQ(traces['6LNI'].view), qTo = basisQ(t.view);
+  /* The rung's centre in the structure's own coordinates: the box parks root
+     at minus the ROTATED centre, so the point has to be turned back out of
+     the rung's basis and turned again by each frame's, or the rung swings
+     off the stage as it turns. */
+  const mid = was.pos.clone().negate().applyQuaternion(qFrom.clone().invert());
 
   const rung = t.order[0];
   const rank = {}; t.order.forEach((id, i) => { rank[id] = i; });
@@ -377,11 +382,11 @@ function stackUp(t, was, done){
     /* The rung's own framing, HELD: the box re-fits the camera for the whole
        stack as each chain lands, and the turn has to happen where the rung
        was seen from or the pull-back has already happened. */
-    box.root.position.copy(was.pos);
     box.cam.r = was.r;
     // 1. the turn
     const k = Math.min(1, now / TURN), e = k * k * (3 - 2 * k);
     box.group.quaternion.copy(qFrom).slerp(qTo, e);
+    box.root.position.copy(mid).applyQuaternion(box.group.quaternion).negate();
     // 2. the rungs, in order, once the turn is done
     const due = Math.floor((now - TURN - PAUSE) / STAGGER) + 1;
     for(const m of box.group.children){
