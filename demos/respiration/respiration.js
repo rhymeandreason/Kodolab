@@ -62,6 +62,7 @@ const TAG = 'rr-run';
 // World units of clear space between two lanes' drawn edges.
 const LANE_GAP = 5.0;
 const CAM = { theta: 0.30, phi: 1.32, r: 26 };
+const HELD_BADGE_SCALE = 3.6;
 
 /* ---- the carriers, as the stage draws them --------------------------
  * A discharged carrier is the charged spec with the transferred group hidden:
@@ -101,8 +102,12 @@ function aliases(MolLib, MolGraph) {
     qh2:   mk(Q, {}, { seat: Q.etc.redox }),
     q:     mk(Q, { name: 'Ubiquinone', short: 'Q', formula: M.ubiquinone.formula },
               { hide: Q.etc.redox, seat: Q.etc.redox }),
-    cytcRed: mk(HR, { name: 'Cytochrome c · Fe²⁺', short: 'cyt c · Fe²⁺' }, { seat: [HR.etc.fe] }),
-    cytcOx:  mk(HO, { name: 'Cytochrome c · Fe³⁺', short: 'cyt c · Fe³⁺' }, { seat: [HO.etc.fe] }),
+    // `badge` is HELD on the iron for as long as the molecule stands: an
+    // electron moves no atom, so the charge is the only thing there is to see
+    cytcRed: mk(HR, { name: 'Cytochrome c · Fe²⁺', short: 'cyt c · Fe²⁺' },
+                { seat: [HR.etc.fe], badge: { at: HR.etc.fe, text: '2+' } }),
+    cytcOx:  mk(HO, { name: 'Cytochrome c · Fe³⁺', short: 'cyt c · Fe³⁺' },
+                { seat: [HO.etc.fe], badge: { at: HO.etc.fe, text: '3+' } }),
     o2:    mk(M.o2, { etc: { oo: [0, 1] } }, { seat: [0, 1] }),
   };
 }
@@ -164,8 +169,35 @@ function create(THREE, root, camera, opts) {
     (meta(spec).latentH || []).forEach(i => GO.shed(g, [i]));
     const rr = spec.rr;
     if (rr) { if (rr.keep) GO.unshed(g, rr.keep); if (rr.hide) GO.shed(g, rr.hide); }
+    if (rr && rr.badge) setBadge(g, spec, rr.badge);
     return g;
   };
+  /* A charge badge that STAYS, unlike reaction.js's which is an event. Parented
+     at the atom, as that one is; replaced in place when the step changes the
+     charge, and forgotten once its molecule has left the scene. */
+  const badges = new Set();
+  function setBadge(g, spec, b) {
+    const m = g.userData.atomMeshes[b.at]; if (!m) return;
+    if (g.userData.rrBadge) { g.remove(g.userData.rrBadge.at); KIT.forget(g.userData.rrBadge.b); badges.delete(g.userData.rrBadge); }
+    const at = new THREE.Group(); at.position.copy(m.position);
+    const el = spec.atoms[b.at].el;
+    // BIGGER THAN AN EVENT BADGE: that one says "something happened here" for
+    // a second; this one is a two-character label read across a whole step,
+    // on a stage whose camera stands back from a 70-atom molecule
+    const bd = KIT.charge(b.text, '#' + new THREE.Color(PAL.atoms[el]).getHexString(), el, HELD_BADGE_SCALE);
+    at.add(bd); g.add(at);
+    const rec = { at, b: bd, g, text: b.text }; g.userData.rrBadge = rec; badges.add(rec);
+  }
+  const pruneBadges = () => badges.forEach(r => { if (!r.g.parent) { KIT.forget(r.b); badges.delete(r); } });
+  // The charge turns over on the beat the electron lands: every lane whose
+  // product wears a different badge gets it now, not when the step lands.
+  function turnBadges() {
+    lanes().forEach((l, j) => {
+      const next = isPartnerKey(l.key) ? partner().becomes : st.to[Math.min(j, st.to.length - 1)];
+      const nb = next && specOf(next).rr && specOf(next).rr.badge;
+      if (nb && !(l.g.userData.rrBadge && l.g.userData.rrBadge.text === nb.text)) setBadge(l.g, specOf(next), nb);
+    });
+  }
   const plateHTML = spec => {
     const key = [...badged].find(k => specOf(k) === spec);
     const x2 = x2On && key && st && (phase === 'done' ? STEPS.x2After(st) : STEPS.x2Before(st));
@@ -284,7 +316,7 @@ function create(THREE, root, camera, opts) {
     },
     carrierBond: () => { const l = partnerLane(); const rr = l && specOf(l.key).rr;
       return rr && rr.bond ? bondMid(l, rr.bond).clone() : null; },
-    onCarrierTaken: () => { carrierTaken = true; },
+    onCarrierTaken: () => { carrierTaken = true; turnBadges(); },
     // the group arrives: the hidden atoms are shown, and the plate says the
     // charged name once the step lands and the lane is re-rendered
     popCarrier: () => { const l = partnerLane(); const rr = l && specOf(l.key).rr;
@@ -406,6 +438,8 @@ function create(THREE, root, camera, opts) {
     MO.step(dt);
     if (FXi) FXi.step();
     LANES.step();
+    pruneBadges();
+    KIT.faceCamera(camera);          // badges keep their lift as the camera orbits
     cam.r += (fitR - cam.r) * 0.08;
     cam.target.y += (fitY - cam.target.y) * 0.08;
     FIT.frustum();
