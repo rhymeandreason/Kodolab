@@ -77,8 +77,7 @@
         var user = s.user || null;
         if (same(user, stored())) return;
         store(user);
-        var menu = document.querySelector('.sitelinks, ' + OWN);
-        if (menu) paintAccount(menu, user);
+        each('.sitelinks, ' + OWN, function (n) { paintAccount(n, user); });
       })
       .catch(function () {});
   }
@@ -194,10 +193,11 @@
      second masthead over it. Same rule the foot below follows. The builder's
      bar and the front door's mast are the two exceptions: each writes the four
      links itself, in its own ink, and is only given the account. */
-  var OWN = 'header.bar > nav.links, .mast nav.links';
+  var OWN = 'header.bar > nav.links, .mast nav.links, .hero nav.links';
+  function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
   function nav() {
-    var own = document.querySelector(OWN);
-    if (own) { paintAccount(own, stored()); reconcile(); return; }
+    var own = document.querySelectorAll(OWN);
+    if (own.length) { each(OWN, function (n) { paintAccount(n, stored()); }); reconcile(); return; }
     if (!document.body.classList.contains('kodo')) return;
     var bar = document.querySelector('.sitenav');
     if (!bar || bar.querySelector('.sitelinks')) return;
