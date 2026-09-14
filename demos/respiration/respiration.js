@@ -62,7 +62,7 @@ const TAG = 'rr-run';
 // World units of clear space between two lanes' drawn edges.
 const LANE_GAP = 5.0;
 const CAM = { theta: 0.30, phi: 1.32, r: 26 };
-const HELD_BADGE_SCALE = 3.6;
+const HELD_BADGE_SCALE = 2.6;
 
 /* ---- the carriers, as the stage draws them --------------------------
  * A discharged carrier is the charged spec with the transferred group hidden:
