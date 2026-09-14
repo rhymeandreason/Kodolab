@@ -23,6 +23,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LearningResource","name":"Glycolysis, step by step: the ten reactions that split glucose","description":"Glycolysis step by step in 3D. Every intermediate is drawn as the real molecule, with the energy curve and a running ATP and NADH ledger.","url":"https://www.kodolab.org/glycolysis","learningResourceType":"interactive simulation","educationalLevel":"college","isAccessibleForFree":true,"teaches":["Hexokinase traps glucose","Phosphoglucose isomerase","Phosphofructokinase-1, the committed step","Aldolase splits the sugar","Triose-phosphate isomerase","Glyceraldehyde-3-phosphate dehydrogenase makes NADH","Phosphoglycerate kinase, the first ATP","Phosphoglycerate mutase","Enolase","Pyruvate kinase, the second ATP"],"provider":{"@type":"Organization","name":"Kodolab","url":"https://www.kodolab.org"}}</script>
 <!-- /seo -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -80,7 +81,7 @@
      on the right edge, centred on the row, so the ten numbers stay centred on
      the page whatever the button says. A PILL — it opens a panel rather than
      changing the stage, and the round end says so beside the round numbers. */
-  #allsteps{position:absolute;right:22px;top:50%;transform:translateY(-50%);
+  #allsteps{position:absolute;right:64px; /* room for the bar's info button in the corner */top:50%;transform:translateY(-50%);
     border-radius:999px;padding:7px 16px;
     /* THE RAIL'S OWN TYPE — .rnum.rend, the END pill it stands opposite:
        display face, 12px, the micro-cap's weight and tracking. */
@@ -141,6 +142,10 @@
      sits low in its box: the letters have ascenders and no descenders. */
   #railbar{padding-top:16px}
   #allsteps{top:calc(50% + 2px)}
+  /* The info button matches the pill beside it: same ink, same fade, and its
+     centre on the pill's centre rather than the bar's. */
+  .sitenav .aboutbtn{color:var(--muted);opacity:.55;transform:translateY(-3px)}
+  .sitenav .aboutbtn:hover,.sitenav .aboutbtn[aria-expanded="true"]{opacity:1}
   /* The stage runs up behind the rail, and the rail is see-through, so the
      scene is never clipped at a line below the header. */
   @media (min-width:921px){
@@ -158,6 +163,16 @@
   <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
   <span class="crumb">Glycolysis</span>
 </nav>
+<!-- seo-about: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<section id="lesson-about" hidden>
+  <h1>Glycolysis, step by step: the ten reactions that split glucose</h1>
+  <p>Glycolysis is the first stage of cellular respiration and the one every cell shares. It takes one six-carbon glucose and, in ten enzyme-catalysed steps in the cytosol, splits it into two three-carbon pyruvate molecules. No oxygen is needed, which is why it runs in a muscle cell out of breath and in a yeast cell making wine.</p>
+  <p>The pathway spends before it earns. The first stage phosphorylates glucose twice, costing two ATP, which traps the sugar in the cell and destabilises it enough to break. Aldolase then splits the six-carbon sugar into two three-carbon halves. In the payoff stage each half is oxidised, handing electrons to NAD+ to make NADH, and gives up two phosphates to ADP by substrate-level phosphorylation.</p>
+  <p>The ledger lands on a net gain of two ATP and two NADH per glucose, with two pyruvate left over. Most of the energy is still in the pyruvate, bound for the Krebs cycle if oxygen is present and for fermentation if not. Three steps are effectively irreversible, and one of them, phosphofructokinase, is where the cell decides how fast the whole pathway runs.</p>
+  <h2>In this lesson</h2>
+  <ol><li>Hexokinase traps glucose</li><li>Phosphoglucose isomerase</li><li>Phosphofructokinase-1, the committed step</li><li>Aldolase splits the sugar</li><li>Triose-phosphate isomerase</li><li>Glyceraldehyde-3-phosphate dehydrogenase makes NADH</li><li>Phosphoglycerate kinase, the first ATP</li><li>Phosphoglycerate mutase</li><li>Enolase</li><li>Pyruvate kinase, the second ATP</li></ol>
+</section>
+<!-- /seo-about -->
 <div id="app-sidebar">
   <!-- THE PATHWAY RAIL, top, spanning both columns: read left-to-right it costs
        the stage no width, which is what the molecules needed. Title absolutely

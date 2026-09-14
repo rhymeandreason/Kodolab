@@ -31,15 +31,51 @@ const PAGES = {
   '/': { file: 'index.html', image: 'water',
     description: 'Interactive 3D biology lessons for college Bio 101: water, bonding, proteins, membranes, glycolysis and DNA, drawn from real molecular structures.' },
   '/water': { image: 'water',
-    description: 'The structure of water in 3D: hydrogen bonds, why ice floats, what temperature does to the liquid, and why salt dissolves in it.' },
+    description: 'The structure of water in 3D: hydrogen bonds, why ice floats, what temperature does to the liquid, and why salt dissolves in it.',
+    about: {
+      h1: 'The structure of water, and why it is such a good solvent',
+      paras: [
+        'A water molecule is bent, not straight. Oxygen pulls the shared electrons toward itself, so the oxygen end carries a partial negative charge and the two hydrogens a partial positive one. That polarity is the whole story: everything water does follows from it.',
+        'The partial charges attract. The hydrogen of one molecule sits against the oxygen of the next in a hydrogen bond, weak on its own and constantly breaking and re-forming. Heating water spends energy on those bonds before the molecules speed up, which is why water has such a high specific heat. Cooling it locks the bonds into an open lattice, so ice takes more room than the liquid and floats.',
+        'Drop salt in and the same charges pull the crystal apart. Water molecules turn their negative oxygen toward each sodium ion and their positive hydrogens toward each chloride, wrapping every ion in a hydration shell. Water dissolves ionic and polar substances because it is polar itself, and that is what makes it the solvent every cell runs in.',
+      ],
+      steps: ['A polar molecule', 'Hydrogen bonds', 'Specific heat', 'Why ice floats', 'The universal solvent'],
+    } },
   '/molecular-bonds': { image: 'bonds',
-    description: 'Build covalent and ionic bonds by hand. Drag atoms together and see how valence, geometry and charge decide which molecule you get.' },
+    description: 'Build covalent and ionic bonds by hand. Drag atoms together and see how valence, geometry and charge decide which molecule you get.',
+    about: {
+      h1: 'Covalent and ionic bonds: build a molecule by hand',
+      paras: [
+        'Atoms bond to fill their outer electron shell. Two nonmetals get there by sharing: a covalent bond is a pair of electrons held between two nuclei, and each atom forms as many as it has room for. Hydrogen makes one, oxygen two, nitrogen three, carbon four. That valence is why water is H2O and methane is CH4, and it is what decides which molecules you can build here.',
+        'Shared is rarely equal. Oxygen and nitrogen pull electrons harder than hydrogen or carbon, so their bonds are polar and the molecule can carry partial charges. Whether the whole molecule is polar depends on its shape: water is bent so its charges do not cancel, while carbon dioxide is straight so they do. Shape comes from electron pairs repelling each other, lone pairs included.',
+        'A metal and a nonmetal do not share. Sodium gives its one outer electron to chlorine outright, leaving Na+ and Cl-, and the attraction between the two ions is the ionic bond. There is no molecule, only a lattice of ions, which is why salt is a crystal and dissolves into ions in water. Magnesium gives two electrons, so it takes two chlorides.',
+      ],
+      steps: ['Water, H2O', 'Methane, CH4', 'Ammonia, NH3', 'Carbon dioxide, CO2', 'Nitrogen gas, N2', 'Hydrogen chloride, HCl', 'Salt, NaCl', 'Potassium chloride, KCl', 'Magnesium chloride, MgCl2', 'Ammonium, NH4+', 'Hydrochloric acid, H3O+ and Cl-'],
+    } },
   '/protein': {
     description: 'The levels of protein structure on one real molecule: watch a hemoglobin chain fold, heme settle into its pocket, and the chains assemble.' },
   '/glycolysis': { image: 'glycolysis',
-    description: 'Glycolysis step by step in 3D. Every intermediate is drawn as the real molecule, with the energy curve and a running ATP and NADH ledger.' },
+    description: 'Glycolysis step by step in 3D. Every intermediate is drawn as the real molecule, with the energy curve and a running ATP and NADH ledger.',
+    about: {
+      h1: 'Glycolysis, step by step: the ten reactions that split glucose',
+      paras: [
+        'Glycolysis is the first stage of cellular respiration and the one every cell shares. It takes one six-carbon glucose and, in ten enzyme-catalysed steps in the cytosol, splits it into two three-carbon pyruvate molecules. No oxygen is needed, which is why it runs in a muscle cell out of breath and in a yeast cell making wine.',
+        'The pathway spends before it earns. The first stage phosphorylates glucose twice, costing two ATP, which traps the sugar in the cell and destabilises it enough to break. Aldolase then splits the six-carbon sugar into two three-carbon halves. In the payoff stage each half is oxidised, handing electrons to NAD+ to make NADH, and gives up two phosphates to ADP by substrate-level phosphorylation.',
+        'The ledger lands on a net gain of two ATP and two NADH per glucose, with two pyruvate left over. Most of the energy is still in the pyruvate, bound for the Krebs cycle if oxygen is present and for fermentation if not. Three steps are effectively irreversible, and one of them, phosphofructokinase, is where the cell decides how fast the whole pathway runs.',
+      ],
+      steps: ['Hexokinase traps glucose', 'Phosphoglucose isomerase', 'Phosphofructokinase-1, the committed step', 'Aldolase splits the sugar', 'Triose-phosphate isomerase', 'Glyceraldehyde-3-phosphate dehydrogenase makes NADH', 'Phosphoglycerate kinase, the first ATP', 'Phosphoglycerate mutase', 'Enolase', 'Pyruvate kinase, the second ATP'],
+    } },
   '/membrane': { image: 'membrane',
-    description: 'The cell membrane in 3D: the phospholipid bilayer, simple diffusion, selective channels, the sodium-potassium pump, and active versus passive transport.' },
+    description: 'The cell membrane in 3D: the phospholipid bilayer, simple diffusion, selective channels, the sodium-potassium pump, and active versus passive transport.',
+    about: {
+      h1: 'Cell membrane transport: what gets through, and what it costs',
+      paras: [
+        'A cell membrane is a phospholipid bilayer. Each lipid has a charged head that sits in water and two hydrocarbon tails that will not, so the sheet assembles itself with the tails hidden inside. The middle of every membrane is oil, and anything crossing has to get through it.',
+        'That decides the traffic. Small nonpolar molecules like oxygen and carbon dioxide dissolve into the oil and cross on their own, down their concentration gradient. Ions and polar molecules cannot, however small they are. Water crosses slowly both ways, and osmosis is the net of that headcount. Charged solutes get through only by proteins: a channel picks one ion and lets it run downhill, which is passive transport and costs nothing.',
+        'Moving a solute uphill costs ATP. The sodium-potassium pump spends one ATP to push three sodium ions out and pull two potassium ions in, against both gradients. That is active transport, and it is why a resting cell is negative inside. The gradients the pump builds are what channels, nerve impulses and secondary transport then spend.',
+      ],
+      steps: ['The bilayer', 'What gets through', 'Osmosis', 'A channel', 'The pump', 'A cell at rest'],
+    } },
   '/dna': {
     description: 'The DNA double helix in 3D, built from real coordinates and taken apart piece by piece: the backbone, the bases, and how they pair.' },
   '/nodes': {
@@ -125,7 +161,7 @@ for (const [url, dest] of routes) {
 }
 for (const url of Object.keys(PAGES)) if (!routes.has(url)) fail(`PAGES names ${url}, which vercel.json no longer routes`);
 
-function block({ url, file, description, image, noindex }) {
+function block({ url, file, description, image, about, noindex }) {
   const html = fs.readFileSync(path.join(REPO, file), 'utf8');
   const title = (html.match(/<title>([^<]*)<\/title>/) || [])[1];
   if (!title) fail(`${file} has no <title>`);
@@ -147,10 +183,34 @@ function block({ url, file, description, image, noindex }) {
                '<meta property="og:image:width" content="1200">',
                '<meta property="og:image:height" content="630">');
   }
-  lines.push(`<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">`,
-             '<!-- /seo -->');
+  lines.push(`<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">`);
+  if (about) lines.push('<script type="application/ld+json">' + JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'LearningResource',
+    name: about.h1, description, url: href,
+    learningResourceType: 'interactive simulation', educationalLevel: 'college',
+    isAccessibleForFree: true, teaches: about.steps,
+    provider: { '@type': 'Organization', name: 'Kodolab', url: SITE },
+  }) + '</script>');
+  lines.push('<!-- /seo -->');
   return lines.join('\n');
 }
+
+/* THE LESSON IN PROSE, in the body: an h1 and a few paragraphs a crawler can
+ * read, since the lesson's own text is callouts a script draws. `hidden` in
+ * the file; lib/site.js puts an About button in the bar that opens it, so it
+ * is a panel a student can reach and not text only a crawler sees. */
+function aboutBlock({ about }) {
+  const p = t => `  <p>${esc(t)}</p>`;
+  return ['<!-- seo-about: written by demos/tools/seo.js; edit its PAGES table, not these lines -->',
+    '<section id="lesson-about" hidden>',
+    `  <h1>${esc(about.h1)}</h1>`,
+    ...about.paras.map(p),
+    '  <h2>In this lesson</h2>',
+    '  <ol>' + about.steps.map(t => `<li>${esc(t)}</li>`).join('') + '</ol>',
+    '</section>',
+    '<!-- /seo-about -->'].join('\n');
+}
+const ABOUT = /<!-- seo-about: [\s\S]*?<!-- \/seo-about -->\n?/;
 
 const BLOCK = /<!-- seo: [\s\S]*?<!-- \/seo -->\n?/;
 
@@ -167,6 +227,13 @@ function stamp(page) {
   }
   if ((next.match(/<meta name="description"/g) || []).length !== 1)
     fail(`${page.file} carries a meta description outside the seo block`);
+  if (page.about) {
+    const want = aboutBlock(page) + '\n';
+    if (ABOUT.test(next)) next = next.replace(ABOUT, want);
+    else if (/<\/nav>\n?/.test(next)) next = next.replace(/(<\/nav>\n?)/, `$1${want}`);
+    else { fail(`${page.file}: nowhere to put the about block (no </nav>)`); return; }
+    if ((next.match(/<h1[\s>]/g) || []).length !== 1) fail(`${page.file} has an <h1> outside the about block`);
+  } else if (ABOUT.test(next)) next = next.replace(ABOUT, '');
   write(page.file, html, next);
 }
 

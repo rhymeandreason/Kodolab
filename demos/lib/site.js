@@ -243,7 +243,37 @@
     f.insertAdjacentHTML('beforeend', SITE);
   }
 
-  function chrome() { nav(); foot(); }
+  /* The info button, on a lesson that carries #lesson-about (tools/seo.js
+     writes it). Top-right of the floating bar: it is site chrome, and every
+     lesson's stage corners are already spoken for. Phosphor BOLD glyphs, the one weight
+     every lesson loads (water also loads regular; nothing else does). Closes on its own X, on Escape, and on a click outside. */
+  function about() {
+    var panel = document.getElementById('lesson-about');
+    var bar = document.querySelector('.sitenav.floating');
+    if (!panel || !bar || bar.querySelector('.aboutbtn')) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'iconbtn aboutbtn';
+    b.innerHTML = '<i class="ph-bold ph-info"></i>';
+    b.setAttribute('aria-label', 'About this lesson'); b.title = 'About this lesson';
+    b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-controls', 'lesson-about');
+    var x = document.createElement('button');
+    x.type = 'button'; x.className = 'iconbtn aboutclose';
+    x.innerHTML = '<i class="ph-bold ph-x"></i>'; x.setAttribute('aria-label', 'Close');
+    panel.insertAdjacentElement('afterbegin', x);
+    function set(open) { panel.hidden = !open; b.setAttribute('aria-expanded', String(open)); }
+    b.addEventListener('click', function () { set(panel.hidden); });
+    x.addEventListener('click', function () { set(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+    document.addEventListener('pointerdown', function (e) {
+      if (!panel.hidden && !panel.contains(e.target) && !b.contains(e.target)) set(false);
+    });
+    if (!bar.querySelector('.spacer')) {
+      var sp = document.createElement('span'); sp.className = 'spacer'; bar.appendChild(sp);
+    }
+    bar.appendChild(b);
+  }
+
+  function chrome() { nav(); foot(); about(); }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', chrome);

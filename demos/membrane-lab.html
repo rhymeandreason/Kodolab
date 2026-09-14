@@ -23,7 +23,9 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LearningResource","name":"Cell membrane transport: what gets through, and what it costs","description":"The cell membrane in 3D: the phospholipid bilayer, simple diffusion, selective channels, the sodium-potassium pump, and active versus passive transport.","url":"https://www.kodolab.org/membrane","learningResourceType":"interactive simulation","educationalLevel":"college","isAccessibleForFree":true,"teaches":["The bilayer","What gets through","Osmosis","A channel","The pump","A cell at rest"],"provider":{"@type":"Organization","name":"Kodolab","url":"https://www.kodolab.org"}}</script>
 <!-- /seo -->
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css"> <!-- the bar's info glyph, lib/site.js -->
 <link rel="stylesheet" href="css/kodo.css">          <!-- design system: tokens, type, buttons -->
 <style>
   html,body { height:100%; margin:0; overflow:hidden; }
@@ -157,6 +159,9 @@
      shadow — the step's switches are pills mid-stage, and this must not read
      as one of them. It carries the weight of the corner tallies, the other
      things on screen that persist across steps. */
+  /* The info button, same fade as the tabs' quiet chrome. */
+  .sitenav .aboutbtn { opacity:.6 }
+  .sitenav .aboutbtn:hover, .sitenav .aboutbtn[aria-expanded="true"] { opacity:1 }
   .gset { position:absolute; right:16px; z-index:5;   /* placeControls() sets bottom */
           display:flex; align-items:center; gap:7px; cursor:pointer;
           font-family:var(--font-display); font-size:var(--cap-sm);
@@ -242,6 +247,16 @@
   <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
   <span class="crumb">Cell Membrane</span>
 </nav>
+<!-- seo-about: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<section id="lesson-about" hidden>
+  <h1>Cell membrane transport: what gets through, and what it costs</h1>
+  <p>A cell membrane is a phospholipid bilayer. Each lipid has a charged head that sits in water and two hydrocarbon tails that will not, so the sheet assembles itself with the tails hidden inside. The middle of every membrane is oil, and anything crossing has to get through it.</p>
+  <p>That decides the traffic. Small nonpolar molecules like oxygen and carbon dioxide dissolve into the oil and cross on their own, down their concentration gradient. Ions and polar molecules cannot, however small they are. Water crosses slowly both ways, and osmosis is the net of that headcount. Charged solutes get through only by proteins: a channel picks one ion and lets it run downhill, which is passive transport and costs nothing.</p>
+  <p>Moving a solute uphill costs ATP. The sodium-potassium pump spends one ATP to push three sodium ions out and pull two potassium ions in, against both gradients. That is active transport, and it is why a resting cell is negative inside. The gradients the pump builds are what channels, nerve impulses and secondary transport then spend.</p>
+  <h2>In this lesson</h2>
+  <ol><li>The bilayer</li><li>What gets through</li><li>Osmosis</li><li>A channel</li><li>The pump</li><li>A cell at rest</li></ol>
+</section>
+<!-- /seo-about -->
 <div id="page">
   <div id="stage">
     <canvas id="c"></canvas>
