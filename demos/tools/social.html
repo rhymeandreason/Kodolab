@@ -205,7 +205,7 @@
         <select id="comp"></select>
         <button class="cta" id="capture" disabled>Capture into post</button>
       </div>
-      <p>Drag to turn, scroll to zoom. Capture reads the box at its backing size: on a retina screen 960×600, transparent. Turn the card frame off to float it on the ground.</p>
+      <p>The box takes the shape of the image slot in the current layout, so a capture fills it. Drag to turn, scroll to zoom. Capture reads the box at its backing size (2x on a retina screen), transparent. Turn the card frame off to float it on the ground.</p>
       <div id="livelog"></div>
     </div>
   </div>
@@ -449,7 +449,11 @@ function rrect(ctx, x, y, w, h, r) {
 }
 /* index.html's .card: white, 16px radius, a hairline and the long soft shadow,
    the stage image inside, the number pill with its dot top-left. */
+/* The slot the current layout gives its image, in post pixels. The live box
+   takes this aspect, so a capture fills the slot instead of being letterboxed. */
+let slot = null;
 function imageCard(ctx, im, x, y, w, h, u, G, accent) {
+  slot = { w, h };
   const r = 24 * u;
   ctx.save();
   if (S.frame) {
@@ -607,6 +611,7 @@ function drawHero(ctx, W, H) {
   const hd = c.headline ? block(ctx, c.headline, { x: W / 2, y: 0, maxW: W - 2 * P, size: 44 * u, min: 24 * u, font: F.serifI, lh: 1.3, color: G.text, em: A, align: 'center', measure: true }).h + 22 * u : 0;
   const urlH = S.url ? 40 * u : 0, avail = H - 2 * P - urlH, content = mh + 44 * u + hd + dk;
   let ih = im ? Math.max(0, avail - content - 40 * u) : 0;
+  slot = { w: W - 2 * P, h: Math.max(80 * u, avail - content - 40 * u) };
   if (im) ih = Math.min(ih, im.naturalHeight * (W - 2 * P) / im.naturalWidth);
   if (ih < 80 * u) ih = 0;
   let y = P + (avail - (ih ? ih + 40 * u : 0) - content) / 2;
@@ -632,11 +637,13 @@ function paint(ctx, W, H, slide) {
 const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
 function render() {
   const [W, H] = SIZES[S.size];
+  slot = null;
   if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
   paint(ctx, W, H);
   const fit = document.getElementById('fit'), r = fit.getBoundingClientRect();
   const s = Math.min((r.width - 64) / W, (r.height - 64) / H, 1);
   canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
+  fitMount();
   document.getElementById('dims').textContent = `${W} × ${H}` + (S.type === 'carousel' ? ` · slide ${S.slide + 1} of ${S.slides.length}` : '');
 }
 addEventListener('resize', render);
@@ -791,6 +798,12 @@ const LIVE = {
   Condense: el => Condense.mount(el, { from: ['glucose', 'glucose'], progress: 0.55 }),
 };
 let APP = null, liveHandle = null, liveBox = null;
+function fitMount() {
+  const m = $('mount'), h = slot ? Math.round(480 * slot.h / slot.w) : 300;
+  if (m.style.height === h + 'px') return;
+  m.style.height = h + 'px';
+  liveBox?.layout?.();      // the box also has a ResizeObserver; this makes the next frame right now
+}
 const loadedScripts = new Set();
 const say = t => { $('livelog').textContent = t; };
 async function appTable() {
