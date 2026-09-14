@@ -23,7 +23,7 @@ const path = require('path');
 
 const DEMOS = path.join(__dirname, '..');
 const REPO = path.join(DEMOS, '..');
-const SITE = 'https://kodolab.org';
+const SITE = 'https://www.kodolab.org';
 const CHECK = process.argv.includes('--check');
 
 // Share images are 1200x630 crops of media/screenshots/.

@@ -9,8 +9,9 @@ GitHub Pages: `api/ask.js` is a serverless function, and Pages serves files.
 working tree and consults `.vercelignore` alone - a gitignored file is not
 excluded by being gitignored, and `.env.local` is a gitignored file. The Git
 integration only ever builds what is committed, which is the same guarantee
-Pages gives today. `.vercelignore` carries the CLI exclusions anyway, as the
-seatbelt for the day somebody deploys from a laptop.
+Pages gives today. **The Git integration honours `.vercelignore` too**
+(`/demos/ask/log.html` 404s in production), so an entry there keeps a file off
+the site either way.
 
 ## What deploys
 
@@ -21,6 +22,10 @@ reason `dev-server.js` serves the root rather than `demos/`.
 Local tools are withheld by `.vercelignore`: the log viewer
 (`demos/ask/log.html` + `api/log.js`), the question-bank editor, and the
 `viewer-compare/` bench. See that file for why each one.
+
+**Test benches do not deploy**: `demos/tests/` and every bench no public page
+links. The ones a public page does link stay: the library's component cards and
+every `/proteins/<key>` page. A new bench deploys unless it is added there.
 
 **The deposited structures do not deploy either.** Every `.pdb` in the repo is a
 baker input: the bakers under `*/tools/` read one and write the `.bin`/`.json`
@@ -36,12 +41,9 @@ Four pages fetch one at runtime and so are broken on the deployment, on purpose:
 one to a featured lesson means baking what it fetches, not un-ignoring the
 `.pdb`.**
 
-`.vercelignore` is a CLI-deploy mechanism, and the Git integration is what
-deploys here - so anything that must be unreachable on the public site needs a
-route as well, not just the ignore. `vercel.json` redirects `/viewer-compare`
-and everything under it, and anything ending `.pdb`, to `/` - and a redirect is
-matched before the filesystem, which is what makes it hold whichever way
-`.vercelignore` is treated. The two `api/` tools do not need the
+`vercel.json` also redirects `/viewer-compare` and everything under it, and
+anything ending `.pdb`, to `/`, as a second guard: a redirect is matched before
+the filesystem. The two `api/` tools do not need the
 same treatment: an undeployed function is not a route at all, and the smoke
 test below checks that.
 

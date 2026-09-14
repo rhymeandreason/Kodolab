@@ -14,4 +14,4 @@ Disallow: /login
 Disallow: /proteins/myoglobin/bench
 Disallow: /teach
 
-Sitemap: https://kodolab.org/sitemap.xml
+Sitemap: https://www.kodolab.org/sitemap.xml

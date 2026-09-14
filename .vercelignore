@@ -37,13 +37,48 @@ demos/clip-shelf.html
 # what a student sees, and nodegraph/images.js is the registry the map reads.
 demos/tools/clipper/
 
+# Test benches and generated-app evals: for us, on the dev server. admin.html
+# links them, so /admin has dead links in production; that is expected.
+# Benches a public page links are NOT here and must stay deployed: the library's
+# component cards (water-test, salmon-test, animalcell-test and the rest, plus
+# graph-shell-test, which graph-test links), every /proteins/<key> page, and the
+# prototypes capillary/pbf-test.html and sickle/fibre-test.html.
+demos/tests/
+demos/ask/ask-test.html
+demos/ask/chat-test.html
+demos/build/edit-test.html
+demos/build/outline-test.html
+demos/capillary/nanopore-test.html
+demos/chain/glucose-chains-test.html
+demos/chair/chair-test.html
+demos/coupling/coupling-test.html
+demos/diffusion/diffusion-test.html
+demos/dna/codon-test.html
+demos/energy/energy-test.html
+demos/hemoglobin/crowd-test.html
+demos/hemoglobin/surface-test.html
+demos/hemoglobin/tube-test.html
+demos/hexokinase/closure-test.html
+demos/kit/hbond-test.html
+demos/kit/kit-test.html
+demos/kit/proteinbox-skin-test.html
+demos/kit/ribbon-test.html
+demos/lobes/lobes-test.html
+demos/massaction/massaction-test.html
+demos/membrane/atp-handoff-test.html
+demos/membrane/chemiosmosis-test.html
+demos/membrane/membrane-pump-test.html
+demos/membrane/parts-test.html
+demos/membrane/pump-test.html
+demos/molecule-builder/builder-test.html
+demos/proteins/rb69/rb69-test.html
+demos/reaction/reaction-test.html
+
 # ---------------------------------------------------------------------------
-# Everything below is about a CLI deploy (`vercel --prod` from a laptop), which
-# uploads the WORKING TREE. `.vercelignore` is the only list it consults - a
-# file being gitignored does not keep it out. A deploy from the Git integration
-# never sees any of this, because it only ever builds what is committed, and
-# that is the way to deploy this repo. These lines are the seatbelt for the day
-# somebody deploys from the laptop instead.
+# The Git integration honours this file too (demos/ask/log.html 404s in
+# production), so every entry above and below keeps a file off the site however
+# it deploys. The entries below matter most for a CLI deploy (`vercel --prod`
+# from a laptop), which uploads the WORKING TREE, gitignored files included.
 
 # The key. Gitignored, and that is not the same as vercelignored.
 .env.local
@@ -64,8 +99,7 @@ demos/node_modules/
 # The viewer-compare bench. A weekly-use style reference that shares nothing
 # with the lessons - CDN libraries, structures fetched from RCSB - and is meant
 # to be liftable into its own repo. Nothing about it belongs on a student's URL.
-# vercel.json also redirects the route away, because this file is a CLI-deploy
-# mechanism and the Git integration is what actually deploys here.
+# vercel.json also redirects the route away, as a second guard.
 viewer-compare/
 
 # Deposited structures. These are BAKER INPUTS - the bakers under */tools/ read
@@ -80,7 +114,7 @@ viewer-compare/
 # hemoglobin/hemoglobin-inhouse.html (2HHB). All four are prototypes or test
 # benches, used on the dev server, and none is a featured lesson. They break on
 # the deployed site and nowhere else. vercel.json redirects the extension away
-# for the same reason as viewer-compare/: this file alone is a CLI mechanism.
+# as a second guard, as for viewer-compare/.
 *.pdb
 
 # Superseded lessons, kept as worked examples. folding-lab.html and
