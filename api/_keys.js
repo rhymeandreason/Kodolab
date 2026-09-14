@@ -105,7 +105,7 @@ async function mint({ label, note = null, secret = null }) {
   const s  = secret || crypto.randomBytes(18).toString('base64url');
   const id = crypto.randomBytes(8).toString('base64url');
   const [r] = await log.sql()`
-    INSERT INTO links (id, label, secret_hash, secret, note) VALUES (${id}, ${label}, ${hash(s)}, ${s}, ${note || null})
+    INSERT INTO links (id, label, secret_hash, note) VALUES (${id}, ${label}, ${hash(s)}, ${note || null})
     ON CONFLICT (secret_hash) DO NOTHING RETURNING id`;
   rowsSeen = Date.now();
   return r ? { id, label, secret: s } : null;
