@@ -1713,22 +1713,24 @@
         }
       }
 
-      /* ONE STARCH GRAIN, where the day's sugar is parked. The same layered
-         grain the amyloplast draws, off-centre hilum and all, and the same
-         starch colour, because it is the same substance. */
+      /* THREE STARCH GRAINS, where the day's sugar is parked. The same layered
+         grain the amyloplast draws, and the same starch colour, because it
+         is the same substance. Authored into gaps between stacks: x, z, radius. */
       const gStarch = sub('starch');
+      g.userData.starch = [];
       {
-        const sx = -9, sz = -5, R0 = 1.7;
-        const cy = floorAt(sx, sz) + R0 * 0.85;
         const grainMat = mat({ color: ORG.amyloplast.starch, roughness: 0.72, clearcoat: 0.12 });
-        const geo = displace(new THREE.SphereGeometry(1, 28, 20), (px, py, pz) => {
-          const d = 1 + 0.05 * noise.noise3(px * 3 + 2, py * 3, pz * 3); return [px * d, py * d, pz * d];
-        });
-        const grain = new THREE.Mesh(geo, grainMat);
-        grain.scale.set(R0 * 1.25, R0 * 0.8, R0);
-        grain.position.set(sx, cy, sz);
-        gStarch.add(grain);
-        g.userData.starch = grain.position.clone();
+        for (const [sx, sz, R0] of [[-9, -5, 1.7], [10, 7.5, 1.3], [12, -6.5, 1.3]]) {
+          const cy = floorAt(sx, sz) + R0 * 0.85;
+          const geo = displace(new THREE.SphereGeometry(1, 28, 20), (px, py, pz) => {
+            const d = 1 + 0.05 * noise.noise3(px * 3 + sx, py * 3, pz * 3 + sz); return [px * d, py * d, pz * d];
+          });
+          const grain = new THREE.Mesh(geo, grainMat);
+          grain.scale.set(R0 * 1.25, R0 * 0.8, R0);
+          grain.position.set(sx, cy, sz);
+          gStarch.add(grain);
+          g.userData.starch.push(grain.position.clone());
+        }
       }
 
       /* ---- the stroma ------------------------------------------------------
@@ -1747,7 +1749,7 @@
           const fl = floorAt(x, z);
           const y = rr(fl * 0.88, -0.35);
           if (!clearsGrana(x, y, z, margin)) continue;
-          if (g.userData.starch && g.userData.starch.distanceTo(new V3(x, y, z)) < 2.4 + margin) continue;
+          if (g.userData.starch.some(c0 => c0.distanceTo(new V3(x, y, z)) < 2.4 + margin)) continue;
           return new V3(x, y, z);
         }
         return new V3(rr(-aIn, aIn) * 0.5, -0.6, 0);

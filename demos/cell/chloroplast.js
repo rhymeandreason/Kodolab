@@ -456,7 +456,7 @@
                          if (!m) return null;
                          if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
                          return w(m.geometry.boundingSphere.center); },
-      starch:    () => w(group.userData.starch),
+      starch:    () => w(group.userData.starch[0]),
       ribosome:  () => w(D.pockets.stroma[7]),
       proton:    () => { const p = protons.find(x => x.mode === 'lumen'); return p ? w(p.pos) : null; },
       oxygen:    () => { const o = o2.find(x => x.on); return o ? w(o.pos) : null; },
