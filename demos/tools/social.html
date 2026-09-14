@@ -84,10 +84,15 @@
   [hidden] { display: none !important; }
   main { display: grid; grid-template-rows: 1fr auto auto; min-width: 0; }
   #fit { display: grid; place-items: center; padding: 2rem; overflow: hidden; min-height: 420px; }
+  #fit canvas { margin: auto; }
   canvas { display: block; box-shadow: 0 2px 4px rgba(var(--brand-ink-t), .06), 0 24px 60px -18px rgba(var(--brand-ink-t), .4); background: var(--paper); }
   #bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 2rem; border-top: 1px solid var(--rule); background: var(--paper); }
   #bar .dims { font: 500 12px 'Jost', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
   #bar .acts { display: flex; gap: .5rem; }
+  #bar .zoom { display: flex; align-items: center; gap: .6rem; }
+  #bar .zoom span { font: 500 12px 'Jost', sans-serif; letter-spacing: .08em; color: var(--mute); min-width: 6.5rem; text-align: right; }
+  #bar .zoom input { width: 160px; accent-color: var(--ink); }
+  #bar .zoom .cta { padding: .35rem .7rem; font-size: 11px; }
   #live { display: grid; grid-template-columns: 480px 1fr; gap: 1.2rem; align-items: start; padding: 1rem 2rem 1.2rem; border-top: 1px solid var(--rule); background: var(--paper); }
   #live[hidden] { display: none; }
   #mount { width: 480px; height: 300px; border-radius: 12px; overflow: hidden; background: var(--brand-paper-2); border: 1px solid var(--rule); position: relative; }
@@ -210,7 +215,7 @@
   </div>
   <div id="bar">
     <span class="dims" id="dims"></span>
-    <div class="seg" data-seg="zoom" style="flex:0 0 auto;min-width:11rem"><button data-v="feed">Feed size</button><button data-v="fit">Fit</button></div>
+    <label class="zoom"><span id="zoomLabel">feed 100%</span><input type="range" id="zoom" min="25" max="300" step="5"><button class="cta ghost" id="zoomFeed">Feed</button><button class="cta ghost" id="zoomFit">Fit</button></label>
     <div class="acts">
       <button class="cta ghost" id="pdf" hidden>PDF of all slides</button>
       <button class="cta ghost" id="pngAll" hidden>PNG of every slide</button>
@@ -267,7 +272,7 @@ const DEFAULT = {
   headline: 'Where a tree’s *mass* comes from',
   deck: 'Van Helmont weighed the soil. It hadn’t moved. The tree is built from air.',
   image: '../media/screenshots/kodo-water.png', fit: 'cover', order: 'text', num: '01', frame: true,
-  url: 'kodolab.org', mark: true, dots: true, cta: true, zoom: 'feed',
+  url: 'kodolab.org', mark: true, dots: true, cta: true, zoom: 100,
   slide: 0,
   slides: [
     { headline: 'Five things water does *because* it is bent', deck: 'A carousel from the water lesson.', image: '' },
@@ -643,7 +648,11 @@ function render() {
   if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
   paint(ctx, W, H);
   const fit = document.getElementById('fit'), r = fit.getBoundingClientRect();
-  const s = S.zoom === 'feed' ? Math.min(SIZES[S.size][3], r.width - 64) / W : Math.min((r.width - 64) / W, (r.height - 64) / H, 1);
+  /* Zoom is a percentage of the feed width, so 100% is what a reader sees. */
+  const feed = SIZES[S.size][3] / W, fitS = Math.min((r.width - 64) / W, (r.height - 64) / H);
+  const s = feed * (typeof S.zoom === 'number' ? S.zoom : 100) / 100;
+  $('zoom').value = Math.round(s / feed * 100); $('zoomLabel').textContent = `feed ${Math.round(s / feed * 100)}%`;
+  fit.style.overflow = s > fitS ? 'auto' : 'hidden';
   canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
   fitMount();
   document.getElementById('dims').textContent = `${W} × ${H}` + (S.type === 'carousel' ? ` · slide ${S.slide + 1} of ${S.slides.length}` : '');
@@ -705,7 +714,9 @@ function seg(name, get, set) {
 const paintType = seg('type', () => S.type, v => { S.type = v; if (v === 'carousel' && S.size === 'landscape') S.size = 'portrait'; });
 const paintFit = seg('fit', () => S.fit, v => S.fit = v);
 const paintOrder = seg('order', () => S.order, v => S.order = v);
-const paintZoom = seg('zoom', () => S.zoom, v => S.zoom = v);
+$('zoom').oninput = e => { S.zoom = +e.target.value; render(); save(); };
+$('zoomFeed').onclick = () => { S.zoom = 100; render(); save(); };
+$('zoomFit').onclick = () => { const r = $('fit').getBoundingClientRect(), [W, H, , fw] = SIZES[S.size]; S.zoom = Math.round(Math.min((r.width - 64) / W, (r.height - 64) / H) * W / fw * 100); render(); save(); };
 
 for (const [k, [w, h, label]] of Object.entries(SIZES)) { const o = document.createElement('option'); o.value = k; o.textContent = `${label}  ${w}×${h}`; $('size').appendChild(o); }
 function swatches(el, list, get, set) {
@@ -747,7 +758,7 @@ $('slideRight').onclick = () => { if (S.slide >= S.slides.length - 1) return; co
    object the text fields point at. */
 function sync() {
   const car = S.type === 'carousel', c = cur();
-  paintType(); paintFit(); paintOrder(); paintZoom();
+  paintType(); paintFit(); paintOrder();
   $('size').value = S.size;
   $('carouselBox').hidden = !car; $('pdf').hidden = !car; $('pngAll').hidden = !car;
   $('imageBox').hidden = S.type === 'statement';
