@@ -40,6 +40,8 @@ No CI: the hook is the run. It covers every checker except `tools/check-handedne
 npm i && node tools/check-handedness.js
 ```
 
+`tools/seo.js` writes `robots.txt`, `sitemap.xml` and each public page's description and share-card block from its own table; `--check` is the hook's run. A new rewrite fails it until the route is listed as indexed or hidden.
+
 `tools/check-docs.js` audits what the docs *claim*. Framing, spacing, rotation and captions the human tests in the browser.
 
 ## Driving a page from a probe tab

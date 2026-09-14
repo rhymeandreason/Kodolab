@@ -19,24 +19,52 @@
      ========================================================================= -->
 <style>
   main { padding-bottom: 5rem; }
-  section { margin-top: 2.6rem; }
-  table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-top: 1rem; }
-  th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--border-hair); vertical-align: top; }
-  th { font-family: var(--font-ui); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+  section { margin-top: 2.8rem; }
+  .say { margin: .6rem 0 0; max-width: 60em; color: var(--text-muted); font-size: .95rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--border-hair); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-family: var(--font-ui); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   code { font-family: ui-monospace, Menlo, monospace; font-size: .95em; letter-spacing: .06em; }
   .dim { color: var(--text-muted); }
   .off, .off code { color: var(--text-muted); text-decoration: line-through; }
-  .mint { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1rem; }
-  .mint input { padding: .45rem .8rem; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-page); font: inherit; }
-  .mint input.n { width: 5.5rem; }
-  .fresh { margin: 1rem 0 0; padding: .9rem 1.1rem; background: var(--surface-card); border: 1px solid var(--accent); border-radius: 10px; font-size: .95rem; }
-  .fresh code { font-size: 1.1rem; user-select: all; }
-  .err { color: var(--hue-coral); margin: .6rem 0 0; }
-  .sub { margin-left: 1.5rem; }
-  .sub table { margin-top: .4rem; }
+  .tag { display: inline-block; padding: .1em .6em; border-radius: 999px; font-family: var(--font-ui); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; background: color-mix(in srgb, var(--text-muted) 14%, transparent); color: var(--text-dim); }
+  .tag.ok { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+  .tag.warn { background: color-mix(in srgb, var(--hue-coral) 16%, transparent); color: var(--hue-coral); }
+
+  /* The mint forms: a row on a card, so making a code reads as one act. */
+  .mint { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.1rem; padding: .9rem 1rem; background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 12px; }
+  .mint input, .mint select { padding: .5rem .9rem; border: 1px solid var(--border-hair); border-radius: 999px; background: var(--surface-page); color: var(--text-strong); font: inherit; font-size: .95rem; }
+  .mint input:focus-visible, .mint select:focus-visible { outline: 0; border-color: var(--accent); }
+  .mint input.n { width: 6rem; }
+  .mint input:disabled { opacity: .45; }
+  .mint .btn { margin-left: auto; }
+  .fresh { margin: 1.1rem 0 0; padding: 1rem 1.2rem; background: color-mix(in srgb, var(--accent) 8%, var(--surface-card)); border: 1px solid var(--accent); border-radius: 12px; font-size: .95rem; }
+  .fresh code { font-size: 1.15rem; user-select: all; background: var(--surface-page); padding: .15em .5em; border-radius: 6px; }
+  .err { color: var(--hue-coral); margin: .8rem 0 0; }
+  .box { margin-top: 1.1rem; background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 12px; overflow: hidden; }
+  .acts { white-space: nowrap; text-align: right; }
   .textbtn { cursor: pointer; }
-  .acts { white-space: nowrap; }
+
+  /* A teacher is one row that opens: name and standing on the line, the
+     classes and their seat codes underneath. */
+  .teacher { border-bottom: 1px solid var(--border-hair); }
+  .teacher:last-child { border-bottom: 0; }
+  .teacher summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 1rem; padding: .85rem 1rem; }
+  .teacher summary::-webkit-details-marker { display: none; }
+  .teacher summary:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .teacher summary .chev { width: 1rem; color: var(--text-muted); transition: transform var(--dur-fast); font-size: .8rem; }
+  .teacher[open] summary .chev { transform: rotate(90deg); }
+  .teacher summary .nm { font-weight: 600; color: var(--text-strong); min-width: 10rem; }
+  .teacher summary .how { color: var(--text-muted); font-size: .9rem; flex: 1; }
+  .teacher summary .cnt { color: var(--text-muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .teacher .body { padding: .2rem 1rem 1.1rem 3rem; }
+  .klass { margin-top: .9rem; }
+  .klass h3 { margin: 0 0 .3rem; font-size: .95rem; font-weight: 600; color: var(--text-strong); }
+  .klass h3 span { font-weight: 400; color: var(--text-muted); font-size: .85rem; margin-left: .5rem; }
+  .klass table { background: var(--surface-page); border: 1px solid var(--border-hair); border-radius: 8px; overflow: hidden; }
+  .none { padding: 1rem; color: var(--text-muted); }
 </style>
 </head>
 <body class="kodo">
@@ -55,17 +83,17 @@
 
     <section>
       <div class="sechead"><h2>teachers</h2><span class="rule"></span><span class="count" id="nTeachers"></span></div>
-      <p class="dim">A dashboard code opens /teach without an account. A teacher who signs in with Google redeems it once and the code retires. Each class below lists its seat codes, which students type on /build.</p>
+      <p class="say">A dashboard code opens /teach without an account. A teacher who signs in with Google redeems it once and the code retires. Open a teacher to see each class and the seat codes students type on /build.</p>
       <form class="mint" id="newTeacher">
         <input id="teacherName" placeholder="Teacher's name" required>
         <button class="btn" type="submit">New teacher + code</button>
       </form>
-      <div id="teachers"></div>
+      <div class="box" id="teachers"></div>
     </section>
 
     <section>
       <div class="sechead"><h2>invites</h2><span class="rule"></span><span class="count" id="nInvites"></span></div>
-      <p class="dim">Redeemed after Google sign-in. A teacher invite is single use and makes the account a teacher. A member invite admits builders under a label, for as many uses as you set.</p>
+      <p class="say">Redeemed after Google sign-in. A teacher invite is single use and makes the account a teacher. A member invite admits builders under a label, for as many uses as you set.</p>
       <form class="mint" id="newInvite">
         <select id="inviteKind"><option value="member">Member</option><option value="teacher">Teacher</option></select>
         <input id="inviteLabel" placeholder="Label, e.g. bio101-fall">
@@ -73,13 +101,13 @@
         <input id="inviteNote" placeholder="Note (optional)">
         <button class="btn" type="submit">New invite</button>
       </form>
-      <table><thead><tr><th>Code</th><th>Kind</th><th>Label</th><th class="num">Used</th><th>Note</th><th>Made</th><th></th></tr></thead><tbody id="invites"></tbody></table>
+      <div class="box"><table><thead><tr><th>Code</th><th>Kind</th><th>Label</th><th class="num">Used</th><th>Note</th><th>Made</th><th></th></tr></thead><tbody id="invites"></tbody></table></div>
     </section>
 
     <section>
       <div class="sechead"><h2>accounts</h2><span class="rule"></span><span class="count" id="nUsers"></span></div>
-      <p class="dim">Google accounts that have signed in. Pending means signed in but no invite redeemed yet. Disabling ends every session and refuses sign-in.</p>
-      <table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Invite</th><th>Joined</th><th></th></tr></thead><tbody id="users"></tbody></table>
+      <p class="say">Google accounts that have signed in. Pending means signed in but no invite redeemed yet. Disabling ends every session and refuses sign-in.</p>
+      <div class="box"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Invite</th><th>Joined</th><th></th></tr></thead><tbody id="users"></tbody></table></div>
     </section>
   </main>
 </div>
@@ -103,21 +131,31 @@
   function paint(d) {
     $('err').hidden = true;
     $('nTeachers').textContent = d.teachers.length;
-    $('teachers').innerHTML = d.teachers.map(t => `
-      <table><thead><tr><th>${esc(t.name)}</th><th>${t.user_email ? 'Google · ' + esc(t.user_email) : t.has_code ? 'dashboard code' : 'no code'}</th><th class="dim">${esc(t.id)}</th>
-        <th class="acts"><button class="textbtn" data-act="teacher.reissue" data-id="${esc(t.id)}">${t.has_code ? 'Reissue code' : 'Issue code'}</button></th></tr></thead></table>
-      ${t.classes.map(c => `<div class="sub"><b>${esc(c.name)}</b> <span class="dim">· ${c.seats.length} seat${c.seats.length === 1 ? '' : 's'}</span>
-        <table><tbody>${c.seats.map(s => `<tr class="${s.revoked_at ? 'off' : ''}"><td>${esc(s.label)}</td><td><code>${esc(s.code)}</code></td>
-          <td class="num">${s.apps} app${s.apps === 1 ? '' : 's'}</td>
-          <td class="acts"><button class="textbtn" data-act="${s.revoked_at ? 'seat.unrevoke' : 'seat.revoke'}" data-id="${esc(s.id)}">${s.revoked_at ? 'Restore' : 'Revoke'}</button></td></tr>`).join('')}</tbody></table></div>`).join('')}`).join('')
-      || '<p class="dim">No teachers yet.</p>';
+    const openNow = new Set([...document.querySelectorAll('.teacher[open]')].map(x => x.dataset.id));
+    $('teachers').innerHTML = d.teachers.map(t => {
+      const seats = t.classes.reduce((n, c) => n + c.seats.length, 0);
+      const how = t.user_email ? `<span class="tag ok">Google</span> ${esc(t.user_email)}`
+                : t.has_code ? `<span class="tag">dashboard code</span>`
+                : `<span class="tag warn">no code</span>`;
+      return `<details class="teacher" data-id="${esc(t.id)}"${openNow.has(t.id) ? ' open' : ''}>
+        <summary><span class="chev">&#9654;</span><span class="nm">${esc(t.name)}</span><span class="how">${how}</span>
+          <span class="cnt">${t.classes.length} class${t.classes.length === 1 ? '' : 'es'} · ${seats} seat${seats === 1 ? '' : 's'}</span>
+          <button class="textbtn" data-act="teacher.reissue" data-id="${esc(t.id)}">${t.has_code ? 'Reissue code' : 'Issue code'}</button></summary>
+        <div class="body">${t.classes.map(c => `<div class="klass"><h3>${esc(c.name)}<span>${c.seats.length} seat${c.seats.length === 1 ? '' : 's'}</span></h3>
+          <table><thead><tr><th>Student</th><th>Code</th><th class="num">Apps</th><th></th></tr></thead><tbody>${c.seats.map(s => `<tr class="${s.revoked_at ? 'off' : ''}"><td>${esc(s.label)}</td><td><code>${esc(s.code)}</code></td>
+            <td class="num">${s.apps}</td>
+            <td class="acts"><button class="textbtn" data-act="${s.revoked_at ? 'seat.unrevoke' : 'seat.revoke'}" data-id="${esc(s.id)}">${s.revoked_at ? 'Restore' : 'Revoke'}</button></td></tr>`).join('')
+            || '<tr><td colspan="4" class="dim">No seats yet.</td></tr>'}</tbody></table></div>`).join('')
+          || '<p class="dim">No classes yet. The teacher makes them on /teach.</p>'}</div>
+      </details>`;
+    }).join('') || '<p class="none">No teachers yet.</p>';
 
     $('nInvites').textContent = d.invites.length;
     $('invites').innerHTML = d.invites.map(i => `<tr class="${i.revoked_at ? 'off' : ''}">
       <td><code>${esc(i.code)}</code></td><td>${esc(i.kind)}</td><td>${esc(i.label)}</td>
       <td class="num">${i.uses}${i.max_uses ? ' / ' + i.max_uses : ''}</td><td class="dim">${esc(i.note)}</td><td class="dim">${day(i.created_at)}</td>
       <td class="acts"><button class="textbtn" data-act="${i.revoked_at ? 'invite.restore' : 'invite.revoke'}" data-code="${esc(i.code)}">${i.revoked_at ? 'Restore' : 'Revoke'}</button></td></tr>`).join('')
-      || '<tr><td colspan="7" class="dim">No invites yet.</td></tr>';
+      || '<tr><td colspan="7" class="none">No invites yet.</td></tr>';
 
     $('nUsers').textContent = d.users.length;
     $('users').innerHTML = d.users.map(u => `<tr class="${u.disabled_at ? 'off' : ''}">
@@ -125,13 +163,14 @@
       <td>${u.disabled_at ? 'disabled' : u.teacher_id ? 'teacher' : u.admitted_at ? 'member' : 'pending'}</td>
       <td class="dim">${esc(u.invite_label)}</td><td class="dim">${day(u.created_at)}</td>
       <td class="acts"><button class="textbtn" data-act="${u.disabled_at ? 'user.enable' : 'user.disable'}" data-id="${esc(u.id)}">${u.disabled_at ? 'Enable' : 'Disable'}</button></td></tr>`).join('')
-      || '<tr><td colspan="6" class="dim">No accounts yet.</td></tr>';
+      || '<tr><td colspan="6" class="none">No accounts yet.</td></tr>';
   }
 
   const load = () => api().then(paint).catch(fail);
 
   document.addEventListener('click', async e => {
     const b = e.target.closest('button[data-act]'); if (!b) return;
+    e.preventDefault();  // a button on a summary line would also open it
     const act = b.dataset.act;
     if (act === 'teacher.reissue' && !confirm('Issue a new dashboard code? Any old one stops working.')) return;
     if (act === 'user.disable' && !confirm('Disable this account? Their sessions end now.')) return;

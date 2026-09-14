@@ -1,0 +1,17 @@
+# Written by demos/tools/seo.js.
+User-agent: *
+Disallow: /admin
+Disallow: /api/
+Disallow: /app/
+Disallow: /apps
+Disallow: /build
+Disallow: /demos/admin.html
+Disallow: /demos/attic/
+Disallow: /demos/build/
+Disallow: /demos/tests/
+Disallow: /join
+Disallow: /login
+Disallow: /proteins/myoglobin/bench
+Disallow: /teach
+
+Sitemap: https://kodolab.org/sitemap.xml

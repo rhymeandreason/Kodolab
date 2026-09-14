@@ -694,4 +694,20 @@ else
   echo "pre-commit: skipping check-ask.js — nothing under api/, demos/ask/ or a page staged"
 fi
 
+# What search sees. A page head, a protein blurb or a new rewrite can each
+# leave robots.txt, sitemap.xml or a page's description block stale, and none
+# of it shows on the page.
+if git diff --cached --name-only | grep -qE '^(demos/(.*\.html|tools/seo\.js|proteins/(proteins|nucleic-acids)\.js)|index\.html|contribute\.html|vercel\.json|sitemap\.xml|robots\.txt)$'; then
+  if ! node tools/seo.js --check > /tmp/cseo.$$ 2>&1; then
+    tail -20 /tmp/cseo.$$; rm -f /tmp/cseo.$$
+    echo ""
+    echo "pre-commit FAILED: seo.js — run node tools/seo.js, or put a new route in"
+    echo "  its PAGES or HIDDEN list."
+    exit 1
+  fi
+  rm -f /tmp/cseo.$$
+else
+  echo "pre-commit: skipping seo.js — no page, registry or route staged"
+fi
+
 echo "pre-commit: molecules and pages check out."

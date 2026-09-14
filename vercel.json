@@ -10,7 +10,8 @@
   },
   "headers": [
     { "source": "/demos/(.*)",
-      "headers": [ { "key": "Access-Control-Allow-Origin", "value": "*" } ] }
+      "headers": [ { "key": "Access-Control-Allow-Origin", "value": "*" } ] },
+    { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
   ],
   "redirects": [
     { "source": "/(.*).pdb",                   "destination": "/",            "permanent": false },
@@ -100,8 +101,5 @@
     { "source": "/proteins/zif268", "destination": "/demos/proteins/zif268/zif268-test.html" },
     { "source": "/proteins/nucleosome", "destination": "/demos/proteins/nucleosome/nucleosome-test.html" },
     { "source": "/proteins/polymerase", "destination": "/demos/proteins/polymerase/polymerase-test.html" }
-  ],
-  "headers": [
-    { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
   ]
 }

@@ -72,6 +72,11 @@ its own redirect onto the new one. The old `/demos/….html` 301 is `permanent`,
 so a returning browser goes to the retired short URL from cache and never asks
 the server which page it wanted.
 
+**A new rewrite also needs a search decision.** `demos/tools/seo.js` fails until
+the route is in its `PAGES` (indexed, with a description) or `HIDDEN` list, then
+rewrites `robots.txt`, `sitemap.xml` and the page's head block. Submit
+`https://kodolab.org/sitemap.xml` in Google Search Console once.
+
 A rewrite does not move the file, so every relative `src`, `href` and `fetch()`
 in a rewritten page would resolve against `/` instead of against the folder the
 file sits in. Each one carries a `<base>` naming that folder for that reason —
