@@ -26,6 +26,14 @@
      other tools is in the menu without a list here going stale. Paste a
      screenshot with cmd+V for anything else.
 
+     LIVE, NOT ONLY STILLS. A component is mounted under the preview the way
+     component-stills.html mounts one, scripts read from kit/app.js's USES,
+     and Capture takes box.snapshot() into the post: a transparent PNG at
+     the box's backing size, so on a retina screen it is 2x the box. Turn it
+     with the pointer first. The mount parameters are a copy of that
+     bench's SHOTS table with the poses this tool wants; if a component's
+     mount signature changes there, it changes here.
+
      A carousel exports one PNG per slide or one PDF of all of them; the
      PDF is written by hand (JPEG pages, DCTDecode), which is forty lines
      and no dependency. INTERNAL TOOL, DEV SERVER ONLY. Nothing here deploys.
@@ -74,12 +82,19 @@
   .slideops { display: flex; gap: .4rem; margin-bottom: .8rem; }
   .slideops button { font: 500 11px 'Jost', sans-serif; letter-spacing: .06em; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--rule); background: var(--card); cursor: pointer; }
   [hidden] { display: none !important; }
-  main { display: grid; grid-template-rows: 1fr auto; min-width: 0; }
+  main { display: grid; grid-template-rows: 1fr auto auto; min-width: 0; }
   #fit { display: grid; place-items: center; padding: 2rem; overflow: hidden; }
   canvas { display: block; box-shadow: 0 2px 4px rgba(var(--brand-ink-t), .06), 0 24px 60px -18px rgba(var(--brand-ink-t), .4); background: var(--paper); }
   #bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 2rem; border-top: 1px solid var(--rule); background: var(--paper); }
   #bar .dims { font: 500 12px 'Jost', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
   #bar .acts { display: flex; gap: .5rem; }
+  #live { display: grid; grid-template-columns: 480px 1fr; gap: 1.2rem; align-items: start; padding: 1rem 2rem 1.2rem; border-top: 1px solid var(--rule); background: var(--paper); }
+  #live[hidden] { display: none; }
+  #mount { width: 480px; height: 300px; border-radius: 12px; overflow: hidden; background: var(--brand-paper-2); border: 1px solid var(--rule); position: relative; }
+  #mount canvas { display: block; }
+  #live .side { display: flex; flex-direction: column; gap: .6rem; }
+  #live .side p { margin: 0; font-size: .8rem; color: var(--mute); }
+  #livelog { font: 12px ui-monospace, Menlo, monospace; color: var(--mute); white-space: pre-wrap; }
   #drop { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(var(--brand-ink-t), .35); color: #fff; font: 500 1.4rem 'Jost', sans-serif; pointer-events: none; opacity: 0; transition: opacity .15s; }
   body.dragging #drop { opacity: 1; }
 </style>
@@ -91,11 +106,18 @@
   <p class="sub">The front door, cropped to a post. Colours from <code>brand.css</code>, wordmark from the svg. Paste a screenshot with &#8984;V.</p>
 
   <fieldset>
+    <legend>Start from</legend>
+    <select id="preset"><option value="">a preset…</option></select>
+    <p class="hint">Platform copy first, then one per featured lesson. Loads text, ground and image; you edit from there.</p>
+  </fieldset>
+
+  <fieldset>
     <legend>Shape</legend>
     <div class="seg" data-seg="type">
       <button data-v="lesson">Lesson card</button>
       <button data-v="statement">Statement</button>
       <button data-v="carousel">Carousel</button>
+      <button data-v="hero">Hero</button>
     </div>
   </fieldset>
 
@@ -176,6 +198,17 @@
 
 <main>
   <div id="fit"><canvas id="c"></canvas></div>
+  <div id="live">
+    <div id="mount"></div>
+    <div class="side">
+      <div class="row">
+        <select id="comp"></select>
+        <button class="cta" id="capture" disabled>Capture into post</button>
+      </div>
+      <p>Drag to turn, scroll to zoom. Capture reads the box at its backing size: on a retina screen 960×600, transparent. Turn the card frame off to float it on the ground.</p>
+      <div id="livelog"></div>
+    </div>
+  </div>
   <div id="bar">
     <span class="dims" id="dims"></span>
     <div class="acts">
@@ -187,6 +220,7 @@
 </main>
 <div id="drop">Drop the image</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ---- tokens: read, never typed ------------------------------------------ */
 const cs = getComputedStyle(document.documentElement);
@@ -217,6 +251,7 @@ const SIZES = {
   portrait:  [1080, 1350, 'Portrait 4:5 · LinkedIn, Instagram, carousel'],
   landscape: [1200,  627, 'Landscape 1.91:1 · LinkedIn link image'],
   story:     [1080, 1920, 'Story 9:16 · Instagram'],
+  video:     [1920, 1080, 'Video 16:9 · title card, YouTube, LinkedIn video'],
 };
 
 const DISPLAY = "'Futura', 'Jost', sans-serif";
@@ -238,12 +273,40 @@ const DEFAULT = {
     { headline: 'Try it in *3D*', deck: 'Every lesson is a live molecular scene you can turn, heat and salt.', image: '' },
   ],
 };
+/* THE PITCH. Kodolab as a platform, in the front door's own words where it
+   has them (its hero line, the Build band), and lesson cards for each
+   featured lesson. A preset sets text, ground and image; everything else
+   stays as it was. */
+const PRESETS = [
+  ['Platform', [
+    { name: 'Seeing it beats reading it', type: 'hero', size: 'video', ground: 'paper', eyebrow: '', headline: 'Seeing it beats reading it.', deck: 'Learn biology in 3D.', image: '' },
+    { name: 'Live molecules, not diagrams', type: 'statement', ground: 'ink', eyebrow: 'Kodolab', headline: 'Every lesson is a *live* molecule.', deck: 'Turn it, heat it, salt it. Then read about it.', image: '' },
+    { name: 'Real structures', type: 'statement', ground: 'paper', eyebrow: 'Bio 101, in 3D', headline: 'Drawn from the *real* structures.', deck: 'Water, bonding, proteins, membranes, glycolysis, DNA. Every atom placed by data, not by an illustrator.', image: '' },
+    { name: 'Build: a lesson that doesn’t exist yet', type: 'statement', ground: 'butter', eyebrow: 'Kodolab Build', headline: 'Ask for a lesson that *doesn’t exist yet.*', deck: 'Describe what you want to see. A model writes the lesson from Kodolab’s component library, and it runs in your browser.', image: '' },
+    { name: 'Water to hemoglobin', type: 'statement', ground: 'coral', eyebrow: 'One platform', headline: 'From a water molecule to *hemoglobin*, one scale at a time.', deck: '', image: '' },
+    { name: 'Platform carousel', type: 'carousel', size: 'portrait', ground: 'paper', eyebrow: 'What Kodolab is', slides: [
+      { headline: 'Biology you can *turn* in your hands', deck: 'Five slides on what Kodolab is.', image: '' },
+      { headline: 'Every lesson is a *live* 3D scene', deck: 'Not a video of a molecule. The molecule, drawn from its real structure, running in the browser.', image: '../media/screenshots/kodo-water.png' },
+      { headline: 'You act *on* the molecule', deck: 'Drag atoms into bonds. Heat water until the hydrogen bonds let go. Spend ATP to run a pump.', image: '../media/screenshots/kodo-bonding.png' },
+      { headline: 'Water to *hemoglobin*', deck: 'Small molecules, pathways, membranes, proteins, DNA. One scale ladder, one visual language.', image: '../media/screenshots/kodo-folding.png' },
+      { headline: 'Ask for a lesson that *doesn’t exist yet*', deck: 'Kodolab Build writes a new lesson from the same components, on request.', image: '' },
+    ] },
+  ]],
+  ['Featured lessons', [
+    { name: 'Water', type: 'lesson', ground: 'paper', eyebrow: 'Featured lesson', headline: 'Why water *sticks* to itself', deck: 'Hydrogen bonds, ice, temperature, and a salt crystal coming apart, in one live box.', image: '../media/screenshots/kodo-water.png' },
+    { name: 'Bonding', type: 'lesson', ground: 'paper', eyebrow: 'Featured lesson', headline: 'Drag two atoms together. *Valence* decides.', deck: 'Build H₂O, CH₄, NH₃ and NaCl by hand and watch geometry and charge settle it.', image: '../media/screenshots/kodo-bonding.png' },
+    { name: 'Glycolysis', type: 'lesson', ground: 'paper', eyebrow: 'Featured lesson', headline: 'Ten steps, every one a *molecule*', deck: 'Glucose to pyruvate with the carbons tracked the whole way.', image: '../media/screenshots/kodo-glycolysis.png' },
+    { name: 'Membrane', type: 'lesson', ground: 'paper', eyebrow: 'Featured lesson', headline: 'What gets through, and what it *costs*', deck: 'A bilayer, a channel that chooses, and a pump spending ATP.', image: '../media/screenshots/kodo-membrane.png' },
+    { name: 'Hemoglobin', type: 'lesson', ground: 'ink', eyebrow: 'Featured lesson', headline: 'A protein *folds* in front of you', deck: 'One β chain folds, heme settles into its pocket, three more chains dock.', image: '../media/screenshots/kodo-folding.png' },
+  ]],
+];
 let S = load();
 function load() {
   try { const s = JSON.parse(localStorage.getItem('social.v1')); if (s) return Object.assign({}, DEFAULT, s); } catch {}
   return JSON.parse(JSON.stringify(DEFAULT));
 }
-function save() { const s = Object.assign({}, S); if (/^blob:/.test(s.image)) s.image = ''; s.slides = s.slides.map(x => Object.assign({}, x, { image: /^blob:/.test(x.image) ? '' : x.image })); localStorage.setItem('social.v1', JSON.stringify(s)); }
+const local = src => /^(blob|data):/.test(src || '');
+function save() { const s = Object.assign({}, S); if (local(s.image)) s.image = ''; s.slides = s.slides.map(x => Object.assign({}, x, { image: local(x.image) ? '' : x.image })); localStorage.setItem('social.v1', JSON.stringify(s)); }
 /* The fields a slide owns; everything else is shared across the carousel. */
 const cur = () => S.type === 'carousel' ? S.slides[S.slide] : S;
 
@@ -532,9 +595,35 @@ function drawSlide(ctx, W, H, i) {
   bottombar(ctx, W, H, P, u, G, role === 'cover' ? 'swipe  →' : S.url, false);
 }
 
+/* The front door's first screen: the wordmark as the whole page, the line
+   under it. A transparent capture, if there is one, sits above the word. */
+function drawHero(ctx, W, H) {
+  const G = GROUNDS[S.ground], A = accentFor(G), u = Math.min(W / 1920, H / 1080) * 1.6, P = 84 * u, c = cur();
+  ctx.fillStyle = G.fill; ctx.fillRect(0, 0, W, H);
+  if (S.dots) motes(ctx, W, H, u);
+  const im = img(c.image);
+  const mh = Math.min(W * (im ? .42 : .62) / (MARK ? MARK.w / MARK.h : 4.2), (im ? 100 : 150) * u);
+  const dk = c.deck ? block(ctx, c.deck, { x: W / 2, y: 0, maxW: W - 2 * P, size: 34 * u, font: F.serifI, lh: 1.3, color: G.deck, em: A, align: 'center', measure: true }).h + 26 * u : 0;
+  const hd = c.headline ? block(ctx, c.headline, { x: W / 2, y: 0, maxW: W - 2 * P, size: 44 * u, min: 24 * u, font: F.serifI, lh: 1.3, color: G.text, em: A, align: 'center', measure: true }).h + 22 * u : 0;
+  const urlH = S.url ? 40 * u : 0, avail = H - 2 * P - urlH, content = mh + 44 * u + hd + dk;
+  let ih = im ? Math.max(0, avail - content - 40 * u) : 0;
+  if (im) ih = Math.min(ih, im.naturalHeight * (W - 2 * P) / im.naturalWidth);
+  if (ih < 80 * u) ih = 0;
+  let y = P + (avail - (ih ? ih + 40 * u : 0) - content) / 2;
+  if (ih) {
+    const s = Math.min((W - 2 * P) / im.naturalWidth, ih / im.naturalHeight), dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+    ctx.drawImage(im, (W - dw) / 2, y + (ih - dh) / 2, dw, dh); y += ih + 40 * u;
+  }
+  drawMark(ctx, (W - markW(mh)) / 2, y, mh, G.text); y += mh + 44 * u;
+  if (c.headline) { block(ctx, c.headline, { x: W / 2, y, maxW: W - 2 * P, size: 44 * u, min: 24 * u, font: F.serifI, lh: 1.3, color: G.text, em: A, align: 'center' }); y += hd; }
+  if (c.deck) block(ctx, c.deck, { x: W / 2, y, maxW: W - 2 * P, size: 34 * u, font: F.serifI, lh: 1.3, color: G.deck, em: A, align: 'center' });
+  if (S.url) block(ctx, S.url, { x: W / 2, y: H - P - 14 * u, maxW: W, size: 18 * u, font: F.cap, color: G.mute, em: G.mute, sp: .24, align: 'center', upper: true });
+}
+
 function paint(ctx, W, H, slide) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
-  if (S.type === 'lesson') drawLesson(ctx, W, H);
+  if (S.type === 'hero') drawHero(ctx, W, H);
+  else if (S.type === 'lesson') drawLesson(ctx, W, H);
   else if (S.type === 'statement') drawStatement(ctx, W, H);
   else drawSlide(ctx, W, H, slide == null ? S.slide : slide);
 }
@@ -652,17 +741,98 @@ function sync() {
   $('size').value = S.size;
   $('carouselBox').hidden = !car; $('pdf').hidden = !car; $('pngAll').hidden = !car;
   $('imageBox').hidden = S.type === 'statement';
-  $('deckLabel').textContent = S.type === 'lesson' ? 'Deck' : S.type === 'statement' ? 'Under the headline' : 'Body';
+  $('capture').disabled = !liveBox || S.type === 'statement';
+  $('deckLabel').textContent = S.type === 'lesson' ? 'Deck' : S.type === 'statement' ? 'Under the headline' : S.type === 'hero' ? 'Second line' : 'Body';
   $('eyebrow').value = car ? (S.slide > 0 && c.eyebrow != null ? c.eyebrow : S.eyebrow) : S.eyebrow;
   $('eyebrow').placeholder = car && S.slide > 0 ? `shared: ${S.eyebrow}` : '';
   $('headline').value = c.headline || ''; $('deck').value = c.deck || '';
-  $('pick').value = /^blob:/.test(c.image || '') ? '' : (c.image || '');
+  $('pick').value = local(c.image) ? '' : (c.image || '');
   $('num').value = S.num; $('url').value = S.url;
   for (const k of ['mark', 'dots', 'frame', 'cta']) $(k).checked = !!S[k];
   if (car) strip();
   [...$('grounds').children].forEach(x => x.setAttribute('aria-pressed', x.dataset.v === S.ground));
   [...$('accents').children].forEach(x => x.setAttribute('aria-pressed', x.dataset.v === S.accent));
 }
+/* ---- presets -------------------------------------------------------------- */
+for (const [group, list] of PRESETS) {
+  const g = document.createElement('optgroup'); g.label = group;
+  list.forEach((p, i) => { const o = document.createElement('option'); o.value = `${group}:${i}`; o.textContent = p.name; g.appendChild(o); });
+  $('preset').appendChild(g);
+}
+$('preset').onchange = e => {
+  const [group, i] = e.target.value.split(':'); const p = PRESETS.find(x => x[0] === group)?.[1][+i]; if (!p) return;
+  const { name, ...rest } = p;
+  Object.assign(S, JSON.parse(JSON.stringify(rest)));
+  if (rest.slides) S.slide = 0;
+  if (S.type === 'carousel' && S.size === 'landscape') S.size = 'portrait';
+  e.target.value = ''; sync(); render(); save();
+};
+
+/* ---- a live component ------------------------------------------------------
+   Mount parameters follow tools/component-stills.html's SHOTS; see the header. */
+const LIVE = {
+  WaterSim: el => WaterSim.mount(el, { nWater: 14, hbonds: true, temperature: 60, cam: { theta: 0.6, phi: 1.1, r: 17 }, stage: { zoom: false } }),
+  Membrane: el => Membrane.mount(el, { proteins: { K: { x: -34 }, pump: { x: 34 } }, contents: { inside: { water: 12, K: 8 }, outside: { water: 9, NA: 8, CL: 6 } }, sideLabels: false, pumpAuto: true, cam: { theta: 0.35, phi: Math.PI / 2 - 0.22, r: 250 } }),
+  Proteinbox: async el => {
+    const hb = ProteinLib.byKey('hemoglobin'), v = ProteinLib.defaultOf(hb);
+    const data = await fetch(`../${hb.dir}/data/${v.read.baked}`).then(r => r.json());
+    return Proteinbox.create({ mount: el, base: '../', orbit: true, pad: 1.1, sub: 8, stage: { ortho: false }, view: ProteinLib.viewOf(hb), data });
+  },
+  HbCrowd: async el => { const h = HbCrowd.mount(el, { variant: 'HbS', stick: true, base: '../', n: 120 }); await h.ready; h.play(); h.intro(9); return h; },
+  BloodCell: el => BloodCell.mount(el, { cut: 1 }),
+  AnimalCell: el => AnimalCell.mount(el, {}),
+  Mitochondrion: el => Mitochondrion.mount(el, { cam: { theta: 0.6, phi: 0.95, r: 17 } }),
+  PlantCell: el => PlantCell.mount(el, {}),
+  Leaf: el => Leaf.mount(el, { aperture: 1 }),
+  BloodFlow: el => BloodFlow.mount(el, { sickle: 0 }),
+  Tree: el => Tree.mount(el, {}),
+  Molecule: el => Molecule.mount(el, { molecule: 'glucose' }),
+  RespirationReaction: el => RespirationReaction.mount(el, { step: 'glycolysis/1' }),
+  Condense: el => Condense.mount(el, { from: ['glucose', 'glucose'], progress: 0.55 }),
+};
+let APP = null, liveHandle = null, liveBox = null;
+const loadedScripts = new Set();
+const say = t => { $('livelog').textContent = t; };
+async function appTable() {
+  if (APP) return APP;
+  const src = await fetch('../kit/app.js').then(r => r.text());
+  const mod = { exports: {} }; new Function('module', 'exports', src)(mod, mod.exports);
+  return APP = mod.exports;
+}
+function loadScript(src) {
+  if (loadedScripts.has(src)) return Promise.resolve();
+  loadedScripts.add(src);
+  return new Promise((ok, no) => { const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = () => no(new Error(`${src} did not load`)); document.head.appendChild(t); });
+}
+async function loadFor(use) {
+  const app = await appTable(), plan = app.plan([use], 'steps'), url = f => (/^https?:/.test(f) ? f : '../' + f);
+  for (const f of plan.css) { if (app.CORE_CSS.includes(f)) continue; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = url(f); document.head.appendChild(l); }
+  for (const f of plan.scripts) { if (/three\.min\.js/.test(f)) continue; await loadScript(url(f)); }
+}
+async function mountLive(use) {
+  if (liveHandle) { try { liveHandle.destroy(); } catch {} liveHandle = liveBox = null; }
+  $('mount').innerHTML = ''; $('capture').disabled = true;
+  if (!use) return;
+  say(`loading ${use}…`);
+  try {
+    await loadFor(use);
+    liveHandle = await LIVE[use]($('mount'));
+    liveBox = liveHandle.box || liveHandle;
+    for (let i = 0; liveBox.building && i < 300; i++) { liveBox.draw(); await new Promise(r => setTimeout(r, 16)); }
+    liveBox.start?.();
+    say(`${use} is live. Turn it, then capture.`);
+    $('capture').disabled = S.type === 'statement';
+  } catch (e) { say(`${use}: ${e.message}`); }
+}
+for (const k of Object.keys(LIVE)) { const o = document.createElement('option'); o.value = k; o.textContent = k; $('comp').appendChild(o); }
+$('comp').insertAdjacentHTML('afterbegin', '<option value="">pick a component…</option>');
+$('comp').onchange = e => mountLive(e.target.value);
+$('capture').onclick = () => {
+  const png = liveBox && liveBox.snapshot ? liveBox.snapshot() : null;
+  if (!png) { say('no frame to read from this box'); return; }
+  cur().image = png; $('pick').value = ''; render(); say('captured');
+};
+
 sync(); fillPicker().then(sync); render();
 </script>
 </body>
