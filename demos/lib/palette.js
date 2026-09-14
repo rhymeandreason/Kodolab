@@ -414,6 +414,7 @@
     stalk: PALETTE.respiration.stalk,
     proton: PALETTE.atoms.H,
     oxygen: PALETTE.atoms.O,
+    photon: 0xffd452,    // absorbed light: warm, and no pigment's colour
   };
 
   global.MolPalette = PALETTE;

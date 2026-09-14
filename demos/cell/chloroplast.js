@@ -60,7 +60,7 @@
  *               oxygen (an O₂ released)
  *      parts    outer · inner · ims · stroma · granum · thylakoid · lamella ·
  *               lumen · psii · b6f · psi · synthase · starch · dna ·
- *               ribosome · proton · oxygen. LIBRARY is the teaching text. NOT ALL ARE
+ *               ribosome · proton · oxygen · photon. LIBRARY is the teaching text. NOT ALL ARE
  *               MESHES: `ims`, `stroma` and `lumen` are spaces and
  *               `thylakoid` is one disc of a granum — they carry an anchor
  *               and a card and no show chip.
@@ -116,10 +116,11 @@
     synthase:  { theta: 0.30, phi: 1.22, r: 11 },
     proton:    { theta: 0.45, phi: 1.00, r: 16 },
     oxygen:    { theta: 0.60, phi: 0.95, r: 22 },
+    photon:    { theta: 0.50, phi: 0.85, r: 20 },
   };
 
   const ORDER = ['outer', 'inner', 'ims', 'stroma', 'granum', 'thylakoid', 'lamella', 'lumen',
-                 'psii', 'b6f', 'psi', 'synthase', 'starch', 'dna', 'ribosome', 'proton', 'oxygen'];
+                 'psii', 'b6f', 'psi', 'synthase', 'starch', 'dna', 'ribosome', 'proton', 'oxygen', 'photon'];
   const PLACES = ['ims', 'stroma', 'thylakoid', 'lumen'];   // an anchor and a card, no chip
 
   /* The component's own teaching text: a label and two sentences per part,
@@ -142,6 +143,7 @@
     dna:       { text: 'chloroplast DNA', offset: [-44, -20], card: 'Circles of the organelle\'s own genome, in many copies, bacterial in shape and inherited from one parent. The plainest evidence that a chloroplast was once a free-living cyanobacterium.' },
     ribosome:  { text: 'plastid ribosomes', offset: [46, 26], card: 'Ribosomes of the bacterial kind, not the cell\'s own. They build the core subunits of both photosystems and of Rubisco here, from the genome beside them.' },
     proton:    { text: 'protons', offset: [-46, 24], card: 'Into the lumen at b6f and from water at PSII; out of it only through ATP synthase. The whole payoff of the light reactions is in that round trip, which is why an uncoupler leaves the light making nothing but heat.' },
+    photon:    { text: 'light', offset: [-44, -24], card: 'Each flash is a photon caught by a photosystem. PSII needs one for every electron it pulls from water, and PSI needs another to lift that same electron again, so both are hit. Dim the light and the protons slow, because nothing else here pays for them.' },
     oxygen:    { text: 'oxygen', offset: [44, 22], card: 'One O₂ for every two waters split, leaving the lumen and drifting out of the organelle. It is a by-product: photosynthesis keeps the hydrogens and throws the oxygen away.' },
   };
 
@@ -170,6 +172,7 @@
 
     let K = null, group = null, D = null, protonMesh = null, protons = [], rand = null;
     let o2Mesh = null, o2 = [];
+    let phMesh = null, ph = [], flMesh = null, fl = [], phDue = 0;
     let hovered = null, selected = null;
     const shown = {};
     let pumped = 0, fromWater = 0, through = 0, leaked = 0, rotorAngle = 0, turnsSeen = 0, o2Seen = 0;
@@ -178,6 +181,8 @@
     const rr = (a, b) => a + (b - a) * rand();
     const pickOne = arr => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
     const O2_POOL = 8;
+    const PH_POOL = 40, PH_RATE = 9, PH_DUR = 0.6, FL_DUR = 0.35, PH_FALL = 14;   // PH_RATE: absorptions per second at full light
+    const SUN = new V3(-0.3, 1, 0.25).normalize();   // toward the light, out through the cut
 
     function build() {
       if (group) { model.remove(group); dispose(group); }
@@ -214,9 +219,20 @@
       group.add(o2Mesh);
       o2 = [];
       for (let i = 0; i < O2_POOL; i++) o2.push({ on: false, pos: new V3(), path: null, t: 0, dur: 0 });
+      /* The light: streaks falling in from the sun side of the cut, and a
+         flash where each is absorbed. Unlit, so they read as light and not
+         as another bead. */
+      const lm = new THREE.MeshBasicMaterial({ color: PHO.photon, transparent: true, opacity: 0.9, depthWrite: false });
+      phMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 6), lm, PH_POOL);
+      flMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), lm, PH_POOL);
+      phMesh.userData.part = flMesh.userData.part = 'photon';
+      group.add(phMesh, flMesh);
+      ph = []; fl = [];
+      for (let i = 0; i < PH_POOL; i++) { ph.push({ on: false, pos: new V3(), from: new V3(), to: new V3(), t: 0 }); fl.push({ on: false, pos: new V3(), t: 0 }); }
+      phDue = 0;
       pumped = fromWater = through = leaked = 0; rotorAngle = 0; turnsSeen = 0; o2Seen = 0;
       for (const n in shown) if (shown[n] === false) applyShow(n, false);
-      writeProtons(); writeO2();
+      writeProtons(); writeO2(); writeLight();
     }
 
     function dispose(g) {
@@ -256,6 +272,7 @@
                     s.lumen.clone(), lumenNear(s)];
           p.jump = 2;
           p.dur = (1.6 + rr(0, 1.0)) / speed;
+          shine(s); shine(a);
           p.done = () => { p.mode = 'lumen'; fromWater++; if (fromWater % H_PER_O2 === 0) releaseO2(s); };
         }
       } else if (P.uncoupler && rand() < 0.8) {
@@ -320,11 +337,49 @@
       writeO2();
     }
 
+    /* ---- the light --------------------------------------------------------
+       A streak marks WHERE a photon is absorbed, not a photon's path: at
+       this scale light is a wave far wider than a granum, and nothing here
+       travels as a bead. Every electron needs two, one at PSII and one at
+       PSI, so a water route shines on both and the background rate picks
+       either. With an uncoupler the light still lands; only the ATP stops. */
+    function shine(site) {
+      const r = ph.find(x => !x.on);
+      if (!r || !site) return;
+      r.on = true; r.t = 0;
+      r.to.copy(site.p).addScaledVector(site.out, 0.35);
+      r.from.copy(r.to).addScaledVector(SUN, PH_FALL);
+      r.pos.copy(r.from);
+    }
+    function stepLight(dt) {
+      phDue += dt * PH_RATE * P.light;
+      while (phDue >= 1) { phDue--; shine(pickOne(rand() < 0.5 ? D.sites.psii : D.sites.psi)); }
+      for (const r of ph) {
+        if (!r.on) continue;
+        r.t += dt / PH_DUR;
+        r.pos.lerpVectors(r.from, r.to, Math.min(1, r.t));
+        if (r.t >= 1) {
+          r.on = false;
+          const f = fl.find(x => !x.on);
+          if (f) { f.on = true; f.t = 0; f.pos.copy(r.to); }
+        }
+      }
+      for (const f of fl) if (f.on && (f.t += dt / FL_DUR) >= 1) f.on = false;
+      writeLight();
+    }
+
     const _m4 = new THREE.Matrix4(), _s = new THREE.Vector3(), _q = new THREE.Quaternion();
     function writeProtons() {
       if (!protonMesh) return;
       protons.forEach((p, i) => { _m4.makeTranslation(p.pos.x, p.pos.y, p.pos.z); protonMesh.setMatrixAt(i, _m4); });
       protonMesh.instanceMatrix.needsUpdate = true;
+    }
+    const _qs = new THREE.Quaternion().setFromUnitVectors(new V3(0, 1, 0), SUN);
+    function writeLight() {
+      if (!phMesh) return;
+      ph.forEach((r, i) => { _s.setScalar(r.on ? 1 : 0); _m4.compose(r.pos, _qs, _s); phMesh.setMatrixAt(i, _m4); });
+      fl.forEach((f, i) => { _s.setScalar(f.on ? 0.55 * Math.sin(PI * f.t) : 0); _m4.compose(f.pos, _q, _s); flMesh.setMatrixAt(i, _m4); });
+      phMesh.instanceMatrix.needsUpdate = flMesh.instanceMatrix.needsUpdate = true;
     }
     function writeO2() {
       if (!o2Mesh) return;
@@ -362,6 +417,7 @@
     function applyShow(name, on) {
       if (name === 'proton') { if (protonMesh) protonMesh.visible = on; return; }
       if (name === 'oxygen') { if (o2Mesh) o2Mesh.visible = on; return; }
+      if (name === 'photon') { if (phMesh) phMesh.visible = flMesh.visible = on; return; }
       const g = D.groups[name];
       if (g) g.visible = on;
     }
@@ -372,8 +428,8 @@
       tw.update(dt);
       stepProtons(dt);
       stepO2(dt);
-      /* PSII glows with the light: the one thing on stage that says how
-         bright it is, since the photons themselves are not drawn. */
+      stepLight(dt);
+      /* PSII glows faintly with the light, under the flashes. */
       const pm = group.userData.psiiMaterial;
       if (pm) { pm.emissive.copy(pm.color); pm.emissiveIntensity = 0.55 * P.light; }
       /* The rotor turns because protons went through it, not because time
@@ -460,6 +516,7 @@
       ribosome:  () => w(D.pockets.stroma[7]),
       proton:    () => { const p = protons.find(x => x.mode === 'lumen'); return p ? w(p.pos) : null; },
       oxygen:    () => { const o = o2.find(x => x.on); return o ? w(o.pos) : null; },
+      photon:    () => { const f = fl.find(x => x.on) || ph.find(x => x.on); return f ? w(f.pos) : null; },
     };
     /* Only the envelope's outside can turn away from the reader; everything
        else is in the cut the default camera is aimed into. */
@@ -479,10 +536,11 @@
       { name: 'ATP synthase', color: hex(PHO.synthase) },
       { name: 'protons', color: hex(PHO.proton) },
       { name: 'oxygen', color: hex(PHO.oxygen) },
+      { name: 'light', color: hex(PHO.photon) },
       { name: 'starch', color: hex((global.MolPalette || global.MolLib.PALETTE).organelles.amyloplast.starch) },
       { name: 'chloroplast DNA', color: hex(ORGP.dna) },
     ];
-    const layersOf = () => ORDER.filter(n => n === 'proton' || n === 'oxygen' || D.groups[n])
+    const layersOf = () => ORDER.filter(n => n === 'proton' || n === 'oxygen' || n === 'photon' || D.groups[n])
       .map(n => ({ name: n, label: LIBRARY[n].text, on: shown[n] !== false }));
     const show = (n, on) => { shown[n] = !!on; applyShow(n, !!on); return api; };
     const select = n => { selected = n; emit('pick', n); return api; };
