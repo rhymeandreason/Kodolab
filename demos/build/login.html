@@ -60,7 +60,6 @@
           <button class="cta" type="submit">Redeem</button>
         </form>
         <div class="line" id="go" hidden></div>
-        <p class="sub"><button class="textbtn" id="signout" type="button">Sign out</button></p>
       </div>
       <p class="err" id="acctErr" hidden></p>
       <p class="sub">No invite? <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>.</p>
@@ -180,12 +179,6 @@
       if (wantsTeach && !r.teacher) { busy(''); paint(r.user); return show('acctErr', 'That invite lets you build, but it is not a teacher invite.'); }
       leave(home(r.user));
     } catch (err) { busy(''); show('acctErr', err.message); }
-  });
-
-  $('signout').addEventListener('click', async () => {
-    Apps.codes.setTeacher(null);
-    await Apps.account.logout();
-    location.reload();
   });
 
   Apps.account.state().then(s => {
