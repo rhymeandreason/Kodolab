@@ -181,7 +181,7 @@
     const rr = (a, b) => a + (b - a) * rand();
     const pickOne = arr => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
     const O2_POOL = 8;
-    const PH_POOL = 40, PH_RATE = 9, PH_DUR = 0.6, FL_DUR = 0.35, PH_FALL = 14;   // PH_RATE: absorptions per second at full light
+    const PH_POOL = 40, PH_RATE = 9, PH_DUR = 1.2, FL_DUR = 0.6, PH_LEN = 50;   // PH_RATE: absorptions per second at full light
     const SUN = new V3(-0.3, 1, 0.25).normalize();   // toward the light, out through the cut
 
     function build() {
@@ -222,13 +222,14 @@
       /* The light: streaks falling in from the sun side of the cut, and a
          flash where each is absorbed. Unlit, so they read as light and not
          as another bead. */
-      const lm = new THREE.MeshBasicMaterial({ color: PHO.photon, transparent: true, opacity: 0.9, depthWrite: false });
-      phMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 6), lm, PH_POOL);
-      flMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), lm, PH_POOL);
+      const glowGeo = (geo) => { geo.setAttribute('fade', new THREE.InstancedBufferAttribute(new Float32Array(PH_POOL), 1)); return geo; };
+      phMesh = new THREE.InstancedMesh(glowGeo(new THREE.CylinderGeometry(0.05, 0.05, PH_LEN, 6, 1, true)), lineMat(), PH_POOL);
+      flMesh = new THREE.InstancedMesh(glowGeo(new THREE.SphereGeometry(1, 16, 12)), glowMat(0.9), PH_POOL);
+      phMesh.frustumCulled = flMesh.frustumCulled = false;
       phMesh.userData.part = flMesh.userData.part = 'photon';
       group.add(phMesh, flMesh);
       ph = []; fl = [];
-      for (let i = 0; i < PH_POOL; i++) { ph.push({ on: false, pos: new V3(), from: new V3(), to: new V3(), t: 0 }); fl.push({ on: false, pos: new V3(), t: 0 }); }
+      for (let i = 0; i < PH_POOL; i++) { ph.push({ on: false, to: new V3(), t: 0 }); fl.push({ on: false, pos: new V3(), t: 0 }); }
       phDue = 0;
       pumped = fromWater = through = leaked = 0; rotorAngle = 0; turnsSeen = 0; o2Seen = 0;
       for (const n in shown) if (shown[n] === false) applyShow(n, false);
@@ -343,26 +344,63 @@
        travels as a bead. Every electron needs two, one at PSII and one at
        PSI, so a water route shines on both and the background rate picks
        either. With an uncoupler the light still lands; only the ATP stops. */
+    /* The flash: additive and depth-blind on the write, so it brightens what
+       is behind it instead of covering it. Brightest where the sphere faces
+       the eye, fading to nothing at the silhouette. */
+    function glowMat(strength) {
+      return new THREE.ShaderMaterial({
+        uniforms: { color: { value: new THREE.Color(PHO.photon) }, strength: { value: strength } },
+        vertexShader: `
+          attribute float fade; varying float vFade; varying float vFace; varying float vAlong;
+          void main() {
+            mat4 mv = modelViewMatrix * instanceMatrix;
+            vec4 p = mv * vec4(position, 1.0);
+            vec3 n = normalize(mat3(mv) * normal);
+            vFace = abs(dot(n, normalize(-p.xyz)));
+            vFade = fade; vAlong = uv.y;
+            gl_Position = projectionMatrix * p;
+          }`,
+        fragmentShader: `
+          uniform vec3 color; uniform float strength;
+          varying float vFade; varying float vFace; varying float vAlong;
+          void main() {
+            float a = pow(vFace, 2.5) * vFade * strength;
+            gl_FragColor = vec4(color * a, 1.0);
+          }`,
+        blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
+      });
+    }
+    /* The line: flat yellow, drawn whole from the sun side to the machine,
+       brighter at the machine end (uv.y 1), fading out while it stays put. */
+    function lineMat() {
+      return new THREE.ShaderMaterial({
+        uniforms: { color: { value: new THREE.Color(PHO.photon) } },
+        vertexShader: `
+          attribute float fade; varying float vFade; varying float vAlong;
+          void main() {
+            vFade = fade; vAlong = uv.y;
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: `
+          uniform vec3 color; varying float vFade; varying float vAlong;
+          void main() { gl_FragColor = vec4(color, vFade * (0.15 + 0.85 * vAlong * vAlong)); }`,
+        transparent: true, depthWrite: false,
+      });
+    }
     function shine(site) {
       const r = ph.find(x => !x.on);
       if (!r || !site) return;
       r.on = true; r.t = 0;
       r.to.copy(site.p).addScaledVector(site.out, 0.35);
-      r.from.copy(r.to).addScaledVector(SUN, PH_FALL);
-      r.pos.copy(r.from);
+      const f = fl.find(x => !x.on);
+      if (f) { f.on = true; f.t = 0; f.pos.copy(r.to); }
     }
     function stepLight(dt) {
       phDue += dt * PH_RATE * P.light;
       while (phDue >= 1) { phDue--; shine(pickOne(rand() < 0.5 ? D.sites.psii : D.sites.psi)); }
       for (const r of ph) {
         if (!r.on) continue;
-        r.t += dt / PH_DUR;
-        r.pos.lerpVectors(r.from, r.to, Math.min(1, r.t));
-        if (r.t >= 1) {
-          r.on = false;
-          const f = fl.find(x => !x.on);
-          if (f) { f.on = true; f.t = 0; f.pos.copy(r.to); }
-        }
+        if ((r.t += dt / PH_DUR) >= 1) r.on = false;
       }
       for (const f of fl) if (f.on && (f.t += dt / FL_DUR) >= 1) f.on = false;
       writeLight();
@@ -374,12 +412,19 @@
       protons.forEach((p, i) => { _m4.makeTranslation(p.pos.x, p.pos.y, p.pos.z); protonMesh.setMatrixAt(i, _m4); });
       protonMesh.instanceMatrix.needsUpdate = true;
     }
-    const _qs = new THREE.Quaternion().setFromUnitVectors(new V3(0, 1, 0), SUN);
+    const _v = new V3(), _qs = new THREE.Quaternion().setFromUnitVectors(new V3(0, 1, 0), SUN);
     function writeLight() {
       if (!phMesh) return;
-      ph.forEach((r, i) => { _s.setScalar(r.on ? 1 : 0); _m4.compose(r.pos, _qs, _s); phMesh.setMatrixAt(i, _m4); });
-      fl.forEach((f, i) => { _s.setScalar(f.on ? 0.55 * Math.sin(PI * f.t) : 0); _m4.compose(f.pos, _q, _s); flMesh.setMatrixAt(i, _m4); });
-      phMesh.instanceMatrix.needsUpdate = flMesh.instanceMatrix.needsUpdate = true;
+      const pf = phMesh.geometry.attributes.fade, ff = flMesh.geometry.attributes.fade;
+      ph.forEach((r, i) => {
+        _s.setScalar(r.on ? 1 : 0); _m4.compose(_v.copy(r.to).addScaledVector(SUN, PH_LEN / 2), _qs, _s); phMesh.setMatrixAt(i, _m4);
+        pf.array[i] = r.on ? 0.8 * (1 - r.t) : 0;
+      });
+      fl.forEach((f, i) => {
+        _s.setScalar(f.on ? 0.5 + 0.5 * f.t : 0); _m4.compose(f.pos, _q, _s); flMesh.setMatrixAt(i, _m4);
+        ff.array[i] = f.on ? Math.sin(PI * Math.sqrt(f.t)) : 0;   // quick swell, slow fall
+      });
+      phMesh.instanceMatrix.needsUpdate = flMesh.instanceMatrix.needsUpdate = pf.needsUpdate = ff.needsUpdate = true;
     }
     function writeO2() {
       if (!o2Mesh) return;
@@ -516,7 +561,7 @@
       ribosome:  () => w(D.pockets.stroma[7]),
       proton:    () => { const p = protons.find(x => x.mode === 'lumen'); return p ? w(p.pos) : null; },
       oxygen:    () => { const o = o2.find(x => x.on); return o ? w(o.pos) : null; },
-      photon:    () => { const f = fl.find(x => x.on) || ph.find(x => x.on); return f ? w(f.pos) : null; },
+      photon:    () => { const f = fl.find(x => x.on) || ph.find(x => x.on); return f ? w(f.pos || f.to) : null; },
     };
     /* Only the envelope's outside can turn away from the reader; everything
        else is in the cut the default camera is aimed into. */
