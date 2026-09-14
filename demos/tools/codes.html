@@ -89,16 +89,6 @@
     <div class="fresh" id="fresh" hidden></div>
 
     <section>
-      <div class="sechead"><h2>teachers</h2><span class="rule"></span><span class="count" id="nTeachers"></span></div>
-      <p class="say">A dashboard code opens /teach without an account. A teacher who signs in with Google redeems it once and the code retires. Open a teacher to see each class and the seat codes students type on /build.</p>
-      <form class="mint" id="newTeacher">
-        <input id="teacherName" placeholder="Teacher's name" required>
-        <button class="btn" type="submit">New teacher + code</button>
-      </form>
-      <div class="box" id="teachers"></div>
-    </section>
-
-    <section>
       <div class="sechead"><h2>invites</h2><span class="rule"></span><span class="count" id="nInvites"></span></div>
       <p class="say">Redeemed after Google sign-in. A teacher invite is single use and makes the account a teacher. A member invite admits builders under a label, for as many uses as you set.</p>
       <form class="mint" id="newInvite">
@@ -109,6 +99,16 @@
         <button class="btn" type="submit">New invite</button>
       </form>
       <div class="box"><table><thead><tr><th>Code</th><th>Kind</th><th>Label</th><th class="num">Used</th><th>Note</th><th>Made</th><th></th></tr></thead><tbody id="invites"></tbody></table></div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>teachers</h2><span class="rule"></span><span class="count" id="nTeachers"></span></div>
+      <p class="say">A dashboard code opens /teach without an account. A teacher who signs in with Google redeems it once and the code retires. Open a teacher to see each class and the seat codes students type on /build.</p>
+      <form class="mint" id="newTeacher">
+        <input id="teacherName" placeholder="Teacher's name" required>
+        <button class="btn" type="submit">New teacher + code</button>
+      </form>
+      <div class="box" id="teachers"></div>
     </section>
 
     <section>
