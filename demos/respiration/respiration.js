@@ -185,6 +185,9 @@ function create(THREE, root, camera, opts) {
     // a second; this one is a two-character label read across a whole step,
     // on a stage whose camera stands back from a 70-atom molecule
     const bd = KIT.charge(b.text, '#' + new THREE.Color(PAL.atoms[el]).getHexString(), el, HELD_BADGE_SCALE);
+    // ON TOP OF THE MOLECULE, never inside it: the badge sits at the iron's
+    // shoulder, which the sphere and four Fe–N sticks pass through
+    bd.material.depthTest = false; bd.material.depthWrite = false; bd.renderOrder = 10;
     at.add(bd); g.add(at);
     const rec = { at, b: bd, g, text: b.text }; g.userData.rrBadge = rec; badges.add(rec);
   }
