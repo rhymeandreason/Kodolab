@@ -105,6 +105,13 @@ const Apps = (() => {
     const r = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
     let json = null;
     try { json = await r.json(); } catch { json = { error: `HTTP ${r.status}` }; }
+    // A pilot teacher code retires when its teacher signs in with Google. A
+    // browser still holding it would be refused for it on every page, so it is
+    // dropped here, once, and the request asked again as whoever else this is.
+    if (r.status === 401 && json && json.code === 'teacher-gone' && TEACHER) {
+      codes.setTeacher(null);
+      return api(path, { method, body, token });
+    }
     if (!r.ok) { const e = new Error((json && json.error) || `HTTP ${r.status}`); e.status = r.status; e.body = json; throw e; }
     return json;
   }
@@ -328,17 +335,24 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
   }
 
   /* The closed door. Shown when a remix or a build answers 401: no copy is
-   * made, and the page says why. */
-  function beta() {
+   * made, and the page says why. `err` is that 401: a refused code or a
+   * turned-off account is told so, and only a visitor with nothing is told
+   * about the beta. */
+  const REFUSED = ['revoked', 'invalid', 'not-class', 'disabled'];
+  function beta(err) {
     let d = document.getElementById('betaModal');
     if (!d) {
       d = document.createElement('dialog');
       d.id = 'betaModal';
       d.className = 'beta';
-      d.innerHTML = '<h2>Private beta</h2><p>Building and remixing apps is open to invited testers for now. Sign in with your class code or invite, or join the waitlist.</p>'
-        + `<form method="dialog"><a class="btn" href="${login()}">Sign in</a> <button class="btn btn--tint" type="submit">OK</button></form>`;
       document.body.appendChild(d);
     }
+    const code = err && err.body && err.body.code;
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    d.innerHTML = (REFUSED.includes(code)
+      ? `<h2>Can't remix</h2><p>${esc(err.message)}</p>`
+      : '<h2>Private beta</h2><p>Building and remixing apps is open to invited testers for now. Sign in with your class code or invite, or join the waitlist.</p>')
+      + `<form method="dialog"><a class="btn" href="${login(code === 'revoked' || code === 'invalid' ? code : '')}">Sign in</a> <button class="btn btn--tint" type="submit">OK</button></form>`;
     d.showModal();
   }
 

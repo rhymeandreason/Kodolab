@@ -784,7 +784,7 @@
       const r = await Apps.api('../../api/app', { method: 'POST', body: { action: 'remix', id: app.id, visitorId: Apps.VISITOR } });
       Apps.remember(r.id, r.token, app.title);
       location.href = `${location.pathname}?id=${r.id}`;
-    } catch (err) { if (err.status === 401) Apps.beta(); else notice(err.message, true); setBusy(false); }
+    } catch (err) { if (err.status === 401) Apps.beta(err); else notice(err.message, true); setBusy(false); }
   }
 
   function paintSettings() { $('editLink').value = Apps.link('edit', app.id, token); $('previewLink').href = Apps.link('preview', app.id); $('copied').hidden = true; }
@@ -837,7 +837,10 @@
   const GATE_WHY = {
     invalid: 'That class code is not right. Check it against your card.',
     revoked: 'That class code has been turned off. Ask your teacher for a new one.',
+    'not-class': 'That is an invite code, not a class code. Sign in with Google and enter it there.',
+    disabled: 'This account has been turned off.',
   };
+  const SEAT_REFUSED = ['invalid', 'revoked', 'not-class'];
   function gate(on, why) {
     document.body.classList.toggle('gated', on);
     $('gate').hidden = !on;
@@ -854,7 +857,7 @@
     try {
       const cfg = await Apps.api('../../api/build');
       // A wrong code beside a testing link still answers 200, as that other admission.
-      if (!cfg.who || cfg.who.kind !== 'seat') { Apps.codes.setSeat(null); return gate(true, GATE_WHY.invalid); }
+      if (!cfg.who || cfg.who.kind !== 'seat') { Apps.codes.setSeat(null); return gate(true, GATE_WHY[cfg.who && cfg.who.refused] || GATE_WHY.invalid); }
       admitted(cfg);
       gate(false);
       paintMine();
@@ -878,12 +881,11 @@
     } catch (err) {
       if (err.status === 401) {
         const code = err.body && err.body.code;
-        const bad = code === 'invalid' || code === 'revoked';
-        if (bad) Apps.codes.setSeat(null);
+        if (SEAT_REFUSED.includes(code)) Apps.codes.setSeat(null);
         // An app opened by its link still shows, read-only. Anything else
         // meets the gate, on this page: no redirect.
-        if (!Apps.ID) gate(true, bad ? GATE_WHY[code] : '');
-        else notice('Sign in to build or remix.', true);
+        if (!Apps.ID) gate(true, GATE_WHY[code] || '');
+        else notice(GATE_WHY[code] || 'Sign in to build or remix.', true);
       }
       else notice(err.message, true);
       $('send').disabled = true;

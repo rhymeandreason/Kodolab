@@ -9,8 +9,14 @@
  *    { kind: 'user',    owner: 'user:<id>',    cohort: 'invite:<label>' | '<key label>', user }
  *    { kind: 'key',     owner: null,           cohort: '<key label>' }
  *    { kind: 'pending', user }   signed in, no invite yet: not admitted
- *    { kind: 'invalid' | 'revoked' }   a code was sent and refused
+ *    { kind: 'invalid' | 'revoked' | 'not-class' }   a class code was sent and refused;
+ *                                  'not-class' is an invite typed where a class code goes
+ *    { kind: 'teacher-gone' }      a pilot teacher code that no longer opens anything
+ *    { kind: 'disabled' }          the session is a turned-off account
  *    null
+ *
+ *  An admission that passed over a refused class code carries `seatRefused`,
+ *  so a page that just asked with one can say why it was not used.
  *
  *  THE ORDER IS A SEAT, THEN THE SIGNED-IN ACCOUNT, THEN THE PILOT'S TEACHER
  *  CODE, THEN A TESTING LINK. A teacher who opens a student's code on /build is
@@ -69,8 +75,18 @@ async function teacherByCode(code) {
   return row || null;
 }
 
+/* Whether a refused class code is an invite. The two share a shape, so the
+   answer is which box it belongs in. It reveals no more than a seat guess
+   does, over the same 8e11 space. */
+async function isInvite(code) {
+  const c = normSeat(code);
+  if (!c) return false;
+  const [row] = await log.sql()`SELECT 1 AS one FROM invites WHERE code = ${c}`;
+  return !!row;
+}
+
 async function resolve(req, { seatFirst = true } = {}) {
-  let refused = null;
+  let refused = null, seatRefused = null;
 
   const seatCode = header(req, SEAT_HEADER);
   if (seatFirst && seatCode) {
@@ -79,42 +95,51 @@ async function resolve(req, { seatFirst = true } = {}) {
       return { kind: 'seat', owner: 'seat:' + s.id, cohort: 'class:' + s.class_id,
                seat: { id: s.id, label: s.label }, klass: { id: s.class_id, name: s.class_name, teacherId: s.teacher_id } };
     }
-    refused = { kind: s ? 'revoked' : 'invalid' };
+    seatRefused = s ? 'revoked' : (await isInvite(seatCode)) ? 'not-class' : 'invalid';
+    refused = { kind: seatRefused };
   }
+  const as = who => (seatRefused ? { ...who, seatRefused } : who);
 
-  const u = await require('./_accounts.js').userFrom(req);
+  let u = await require('./_accounts.js').userFrom(req, { disabled: true });
+  if (u && u.disabled_at) { refused = refused || { kind: 'disabled' }; u = null; }
   const label = await keys.cohort(req);
   const teacherCode = header(req, TEACHER_HEADER);
   const byCode = async () => {
     const t = await teacherByCode(teacherCode);
-    if (t) return { kind: 'teacher', owner: 'teacher:' + t.id, cohort: 'teacher:' + t.id, teacher: t };
-    refused = refused || { kind: 'invalid' };
+    if (t) return as({ kind: 'teacher', owner: 'teacher:' + t.id, cohort: 'teacher:' + t.id, teacher: t });
+    refused = refused || { kind: 'teacher-gone' };
     return null;
   };
   if (u && u.teacher_id) {
-    return { kind: 'teacher', owner: 'user:' + u.id, cohort: 'teacher:' + u.teacher_id,
-             teacher: { id: u.teacher_id, name: u.teacher_name }, user: u };
+    return as({ kind: 'teacher', owner: 'user:' + u.id, cohort: 'teacher:' + u.teacher_id,
+                teacher: { id: u.teacher_id, name: u.teacher_name }, user: u });
   }
   // The dashboard: a pilot code is the teacher even when a plain account is signed in too.
   if (!seatFirst && teacherCode) { const t = await byCode(); if (t) return t; }
-  if (u && u.admitted_at) return { kind: 'user', owner: 'user:' + u.id, cohort: 'invite:' + (u.invite_label || 'open'), user: u };
-  if (u && seatFirst && label) return { kind: 'user', owner: 'user:' + u.id, cohort: label, user: u };
+  if (u && u.admitted_at) return as({ kind: 'user', owner: 'user:' + u.id, cohort: 'invite:' + (u.invite_label || 'open'), user: u });
+  if (u && seatFirst && label) return as({ kind: 'user', owner: 'user:' + u.id, cohort: label, user: u });
 
   if (seatFirst && teacherCode) { const t = await byCode(); if (t) return t; }
 
   // The dashboard has no use for a testing link: a signed-in non-teacher is told to redeem an invite.
   if (u && !seatFirst) return { kind: 'pending', user: u };
-  if (label) return { kind: 'key', owner: null, cohort: label };
-  if (u) return { kind: 'pending', user: u };
+  if (label) return as({ kind: 'key', owner: null, cohort: label });
+  if (u) return as({ kind: 'pending', user: u });
   return refused;
 }
 
 const admitted = who => !!who && ['seat', 'teacher', 'user', 'key'].includes(who.kind);
 
 /* The 401 body for a request that is not admitted, worded for what it sent. */
+const REFUSED = {
+  revoked: 'This class code has been turned off. Ask your teacher for a new one.',
+  invalid: 'That code is not right. Check it against your card.',
+  'not-class': 'That is an invite code, not a class code. Sign in with Google and enter it there.',
+  'teacher-gone': 'The teacher code in this browser no longer works. Sign in with Google instead.',
+  disabled: 'This account has been turned off.',
+};
 function refusal(who) {
-  if (who && who.kind === 'revoked') return { error: 'This class code has been turned off. Ask your teacher for a new one.', code: 'revoked' };
-  if (who && who.kind === 'invalid') return { error: 'That code is not right. Check it against your card.', code: 'invalid' };
+  if (who && REFUSED[who.kind]) return { error: REFUSED[who.kind], code: who.kind };
   if (who && who.kind === 'pending') return { error: 'Enter your invite code to start building.', code: 'invite', who: describe(who) };
   return { error: 'the builder is open to invited testers; ask for an access link' };
 }
@@ -126,10 +151,11 @@ function describe(who) {
   if (!who) return null;
   const account = !!who.user;
   const user = who.user ? require('./_accounts.js').describeUser(who.user) : null;
+  const refused = who.seatRefused ? { refused: who.seatRefused } : {};
   if (who.kind === 'seat') return { kind: 'seat', label: who.seat.label, className: who.klass.name };
-  if (who.kind === 'teacher') return { kind: 'teacher', name: who.teacher.name, account, user };
-  if (who.kind === 'user' || who.kind === 'pending') return { kind: who.kind, name: who.user.name || who.user.email, account, user };
-  if (who.kind === 'key') return { kind: 'key', cohort: who.cohort };
+  if (who.kind === 'teacher') return { kind: 'teacher', name: who.teacher.name, account, user, ...refused };
+  if (who.kind === 'user' || who.kind === 'pending') return { kind: who.kind, name: who.user.name || who.user.email, account, user, ...refused };
+  if (who.kind === 'key') return { kind: 'key', cohort: who.cohort, ...refused };
   return null;
 }
 

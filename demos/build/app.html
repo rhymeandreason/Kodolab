@@ -51,7 +51,7 @@
       const r = await Apps.api('../../api/app', { method: 'POST', body: { action: 'remix', id: app.id, visitorId: Apps.VISITOR } });
       Apps.remember(r.id, r.token, app.title);
       location.href = Apps.link('edit', r.id);
-    } catch (err) { if (err.status === 401) Apps.beta(); else notice(err.message, true); }
+    } catch (err) { if (err.status === 401) Apps.beta(err); else notice(err.message, true); }
   });
 })();
 </script>

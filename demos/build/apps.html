@@ -66,8 +66,9 @@
     } catch (err) {
       if (err.status === 401) {
         const code = err.body && err.body.code;
-        if (code === 'invalid' || code === 'revoked') Apps.codes.setSeat(null);
-        return location.replace(Apps.login(code === 'invalid' || code === 'revoked' ? code : ''));
+        const seat = ['invalid', 'revoked', 'not-class'].includes(code);
+        if (seat) Apps.codes.setSeat(null);
+        return location.replace(Apps.login(seat || code === 'disabled' ? code : ''));
       }
     }
     shelf.refresh();

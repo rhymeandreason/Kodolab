@@ -103,15 +103,17 @@ function cookie(token, { secure }) {
                : `${COOKIE}=; Max-Age=0; ${attrs}`;
 }
 
-/* The signed-in person, or null. Carries the teacher row when there is one. */
-async function userFrom(req) {
+/* The signed-in person, or null. Carries the teacher row when there is one.
+   `disabled: true` also returns a turned-off account, with `disabled_at` set,
+   for `_access.js` to refuse by name; every other caller treats it as nobody. */
+async function userFrom(req, { disabled = false } = {}) {
   const token = readCookie(req);
   if (!token || !log.enabled()) return null;
   const [u] = await log.sql()`
-    SELECT u.id, u.email, u.name, u.picture, u.admitted_at, u.invite_label, t.id AS teacher_id, t.name AS teacher_name
+    SELECT u.id, u.email, u.name, u.picture, u.admitted_at, u.invite_label, u.disabled_at, t.id AS teacher_id, t.name AS teacher_name
     FROM sessions s JOIN users u ON u.id = s.user_id
     LEFT JOIN teachers t ON t.user_id = u.id
-    WHERE s.token_hash = ${hash(token)} AND s.expires_at > now() AND u.disabled_at IS NULL`;
+    WHERE s.token_hash = ${hash(token)} AND s.expires_at > now() AND (${disabled} OR u.disabled_at IS NULL)`;
   return u || null;
 }
 
@@ -184,7 +186,14 @@ async function redeem(user, code) {
   if (pilot.row) return { ok: true, teacher: true };
 
   const [seen] = await db`SELECT kind, revoked_at, uses, max_uses FROM invites WHERE code = ${c}`;
-  if (!seen) return { error: 'That invite code is not right.' };
+  if (!seen) {
+    // Not an invite, and not a pilot code this account could take: say what it is, if it is anything.
+    const [pilotCode] = await db`SELECT 1 AS one FROM teachers WHERE code_hash = ${hash(raw)}`;
+    if (pilotCode) return { error: 'You are already a teacher, so this pilot teacher code cannot be added to your account.' };
+    const [seat] = await db`SELECT 1 AS one FROM seats WHERE code = ${c}`;
+    if (seat) return { error: 'That is a class code. Students type it in the Students box, with no Google sign-in.' };
+    return { error: 'That invite code is not right.' };
+  }
   if (seen.revoked_at) return { error: 'That invite has been turned off.' };
   if (seen.max_uses != null && seen.uses >= seen.max_uses) return { error: 'That invite has already been used.' };
   return { error: seen.kind === 'teacher' ? 'You are already a teacher.' : 'You can already build. This is not a teacher invite.' };

@@ -86,8 +86,12 @@
   const WHY = {
     invalid: 'That class code is not right. Check it against your card.',
     revoked: 'That class code has been turned off. Ask your teacher for a new one.',
+    'not-class': 'That is an invite code, not a class code. Sign in with Google and enter it there.',
+    disabled: 'This account has been turned off.',
   };
-  if (WHY[params.get('why')]) show('codeErr', WHY[params.get('why')]);
+  // A refused class code is said under the Students door; a turned-off account under Google's.
+  const why = params.get('why');
+  if (WHY[why]) show(why === 'disabled' ? 'acctErr' : 'codeErr', WHY[why]);
 
   /* ---- the wait --------------------------------------------------------- *
    * Everything but the header goes, and one line says what is happening: a
@@ -111,7 +115,7 @@
       const r = await Apps.api('../../api/build');
       // A wrong code with a testing link or an account beside it still answers 200, as that other admission.
       if (r.who && r.who.kind === 'seat') return leave(next && !wantsTeach ? next : Apps.page('build'));
-      Apps.codes.setSeat(null); busy(''); show('codeErr', WHY.invalid);
+      Apps.codes.setSeat(null); busy(''); show('codeErr', WHY[r.who && r.who.refused] || WHY.invalid);
     } catch (err) {
       Apps.codes.setSeat(null); busy('');
       show('codeErr', err.status === 401 ? err.message : 'Could not check the code: ' + err.message);
