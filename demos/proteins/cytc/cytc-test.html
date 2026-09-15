@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<base href="/demos/proteins/cytc/">
+<title>Cytochrome c — deposited structure</title>
+
+<!-- Bench. What each structure is lives in proteins/proteins.js; pocket
+     drawing is kit/proteinbox.js's setPocket, and what is in it is the baker's. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+<style>
+  .chip.metal{background:rgba(168,50,26,.14);color:#a8321a}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>Cytochrome c</h1>
+    <p class="deck">A small protein that carries one electron at a time between
+      complex III and complex IV, on the iron of the heme it holds.</p>
+
+    <h2>show</h2>
+    <button class="mode" id="s-site" aria-pressed="true">
+      <span class="who">heme and what holds it</span><span class="chip metal">Fe</span></button>
+    <button class="mode" id="s-lys" aria-pressed="false">
+      <span class="who">plus every lysine</span><span class="chip" id="c-lys">Lys</span></button>
+
+    <h2>what you are looking at</h2>
+    <p class="meta" id="d-meta">&mdash;</p>
+    <table>
+      <tr><td>fold</td><td id="d-fold">&mdash;</td></tr>
+      <tr class="hi"><td>completeness</td><td id="d-pct">&mdash;</td></tr>
+      <tr><td>heme</td><td id="d-heme">&mdash;</td></tr>
+      <tr><td>on the iron</td><td id="d-iron">&mdash;</td></tr>
+      <tr><td>thioethers</td><td id="d-thio">&mdash;</td></tr>
+      <tr><td>lysines</td><td id="d-lys">&mdash;</td></tr>
+      <tr><td>chains in file</td><td id="d-chains">&mdash;</td></tr>
+      <tr><td>extents &Aring;</td><td id="d-ext">&mdash;</td></tr>
+      <tr><td>frame</td><td id="d-view">&mdash;</td></tr>
+    </table>
+    <p class="note">Sticks come from the file's bond records. The one exception
+      is a thioether marked <em>not in file, drawn</em>: heme c always has
+      both, so it is drawn at the distance the model puts it.</p>
+
+    <button class="mode" id="pick" style="margin-top:12px">copy this view</button>
+    <p class="note" id="pick-note">Turn the molecule, click copy.</p>
+
+    <p class="src">
+      <a id="d-rcsb" target="_blank" rel="noopener">RCSB entry<svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2h5.5v5.5M10 2 4.5 7.5M8 9.5H2V3.5"/></svg></a>
+      <a id="d-baked" href="data/">what this page loads</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script>
+'use strict';
+const ME = ProteinLib.byKey('cytc');
+const V = ProteinLib.defaultOf(ME);
+const $ = id => document.getElementById(id);
+const box = Proteinbox.create({ mount: $('stage'), view: ProteinLib.viewOf(ME),
+                                orbit: true, pad: 1.15, sub: 10,
+                                stage: { ortho: false, turn: 'trackball' } });
+let data = null, withLys = false;
+window.bench = { box, get data() { return data; } };
+
+function pocket() {
+  const P = data.pocket;
+  if (withLys) return P;
+  const keep = P.atoms.map(a => a.group !== 'lys');
+  const idx = [], map = new Map();
+  P.atoms.forEach((a, i) => { if (keep[i]) { map.set(i, idx.length); idx.push(a); } });
+  return { atoms: idx, bonds: P.bonds.filter(([i, j]) => keep[i] && keep[j])
+                                     .map(([i, j]) => [map.get(i), map.get(j)]) };
+}
+
+function show() {
+  const m = data.meta, ch = data.chains[m.chain], c0 = m.counts[0];
+  const bond = l => `${l.res} ${l.dist.toFixed(2)} Å` + (l.deposited ? '' : ' · not deposited');
+  $('d-meta').textContent = `${m.entry} · chain ${m.chain} · ${m.method}` +
+    (m.resolution ? ` · ${m.resolution.toFixed(2)} Å` : '');
+  $('d-fold').textContent = `${ch.helices} helices` + (ch.strands ? `, ${ch.strands} strands` : ', no sheet');
+  $('d-pct').textContent = `${c0.modelled} of ${c0.declared}`;
+  $('d-heme').textContent = `heme c · ${m.hemeAtoms} atoms`;
+  $('d-iron').textContent = m.iron.map(bond).join(' · ');
+  $('d-thio').textContent = m.thio.map(t => `Cys${t.cys}–${t.to} ${t.dist.toFixed(2)} Å` +
+    (t.deposited ? '' : t.drawn ? ' · not in file, drawn' : ' · not bonded')).join(' · ');
+  $('d-lys').textContent = `${m.lysines} in the chain`;
+  $('c-lys').textContent = `${m.lysines} Lys`;
+  $('d-chains').textContent = `${m.chainsInFile}, drawing ${m.chain}`;
+  $('d-ext').textContent = data.extents.map(v => v.toFixed(0)).join(' × ');
+  $('d-view').textContent = data.frame;
+  $('d-rcsb').href = ProteinLib.urls(V).entry;
+  $('d-baked').href = `data/${V.read.baked}`;
+  box.setData(data);
+  box.setPocket(pocket());
+}
+
+const mode = on => {
+  withLys = on;
+  $('s-site').setAttribute('aria-pressed', String(!on));
+  $('s-lys').setAttribute('aria-pressed', String(on));
+  box.setPocket(pocket());
+};
+$('s-site').addEventListener('click', () => mode(false));
+$('s-lys').addEventListener('click', () => mode(true));
+$('pick').addEventListener('click', () => {
+  const text = JSON.stringify(box.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  $('pick-note').textContent = text;
+});
+
+fetch(`data/${V.read.baked}`).then(r => r.json()).then(t => { data = t; show(); });
+</script>
+</body>
+</html>

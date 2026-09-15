@@ -1000,6 +1000,26 @@
         baked: "ab-3HFM.json" } },
   ];
 
+  /* Not 3CYT, the old default: tuna, and its two redox chains differ by
+     under an angstrom. 3ZCF leaves Cys17's thioether out of CONECT; the
+     baker draws it by name and the bench flags it. 5TY3 and 3NWV record it
+     but are K72A and G41S mutants, and Lys72 is a docking lysine. */
+  const CYTC_VARIANTS = [
+    { id: '3ZCF', default: true,
+      purpose: 'the carrier and its heme, human',
+      species: 'human',
+      source: { kind: 'rcsb', id: '3ZCF' },
+      chains: 'A',
+      pocket: { cys: [14, 17], his: 18, met: 80 },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 4,
+        residues: 104,
+        declared: 104,
+        ec: null,
+        baked: "cytc-3ZCF.json" } },
+  ];
+
   const PROTEINS = [
     {
       key: 'atp-synthase', name: 'ATP synthase', dir: 'proteins/atp-synthase',
@@ -1882,6 +1902,24 @@
       variants: ANTIBODY_VARIANTS,
     },
   ];
+    {
+      key: 'cytc', name: 'Cytochrome c', dir: 'proteins/cytc',
+      blurb: 'A small protein that carries one electron at a time from complex '
+           + 'III to complex IV. The electron rides on the iron of a heme bolted '
+           + 'into the protein, with one edge left exposed to hand it across.',
+      does: 'electron carrier',
+      pipeline: 'trace',
+      fitWhy: 'one structure, nothing to superpose it onto',
+      view: { by: 'human',
+              why: 'globular, so no solved basis is stable; turned on the bench',
+              basis: [[-0.0278, -0.3598, -0.9326],
+                      [-0.8007, -0.5505, 0.2362],
+                      [-0.5984, 0.7533, -0.2728]] },
+      surface: { bake: false,
+                 why: 'the docking patch is a surface claim, but the lysines '
+                    + 'read as side chains and no lesson asks for the shape yet' },
+      variants: CYTC_VARIANTS,
+    },
 
   const byKey = key => PROTEINS.find(p => p.key === key) || null;
   /* THE VARIANT A PROTEIN OPENS ON, and the one a card shows. Required, not
@@ -2068,7 +2106,10 @@
      antibody's is to DO the recognising — and the word the wishlist reserved
      for it before it was pulled. */
   const DOES = ['enzyme', 'oxygen carrier', 'unknown', 'structural', 'hormone',
-                'storage', 'reporter', 'recognition'];
+  /* `electron carrier` is cytochrome c's: it catalyses nothing and moves one
+     electron between two complexes on its heme's iron. The wishlist reserved
+     the word for it. */
+                'storage', 'reporter', 'recognition', 'electron carrier'];
 
   /* HOW A VARIANT DIFFERS FROM THE HEALTHY PROTEIN, where it differs at all.
      Optional: most variants are the same protein under different conditions —
