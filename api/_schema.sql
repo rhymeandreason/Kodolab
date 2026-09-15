@@ -248,8 +248,10 @@ CREATE INDEX IF NOT EXISTS apps_visitor_idx ON apps (visitor_id, created_at DESC
 --  teachers, classes, seats - a class that builds without accounts
 -- =============================================================================
 --  A TEACHER is one row, admitted today by a long code minted from the
---  terminal (`db.js teacher`) and stored hashed. `email` is null until sign-in
---  exists; attaching one to this row is the upgrade, and nothing else moves.
+--  terminal (`db.js teacher`) and stored hashed. A teacher who signs in gets
+--  `user_id` (below), and that account's email is the one read. `email` here
+--  is no longer written: it is UNIQUE, and copying the account's email in made
+--  a redeem fail for anyone whose address another teacher row already held.
 --
 --  A SEAT is one student's place in a class, and its code is the student's
 --  whole identity: typed once on /build, it owns the apps made under it, so

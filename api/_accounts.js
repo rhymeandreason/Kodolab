@@ -128,50 +128,77 @@ function describeUser(u) {
 
 const normCode = c => String(c || '').trim().toLowerCase().replace(/\s+/g, '');
 
-/* One code, whichever kind it is. The use is taken in the same statement that
-   checks there is one left, so a single-use invite cannot admit two people
-   who press Enter at the same moment. Returns {ok, teacher} or {error}. */
+/* One code, whichever kind it is, and ONE STATEMENT for each kind. The neon
+   driver gives every statement its own transaction, so the use is counted in
+   the same statement that makes the teacher row and admits the account: a
+   redeem that fails part way undoes whole, and a single-use teacher invite is
+   never spent on nobody. The same statement checks a use is left, so two
+   people pressing Enter at once cannot both take the last one.
+
+   A use is only counted when it changes something. A member invite admits an
+   account that is not yet admitted; a teacher invite, or the pilot's code,
+   makes a teacher of an account that is not one. The check reads the tables,
+   not `user`, which may be a request old. Returns {ok, teacher} or {error}. */
 async function redeem(user, code) {
   const db = log.sql();
   const raw = String(code || '').trim();
   const c = normCode(raw).replace(/^([a-z0-9]{4})([a-z0-9]{4})$/, '$1-$2');
 
-  const [inv] = await db`
-    UPDATE invites SET uses = uses + 1
-    WHERE code = ${c} AND revoked_at IS NULL AND (max_uses IS NULL OR uses < max_uses)
-      AND (kind = 'member' OR ${!user.teacher_id})
-    RETURNING kind, label`;
+  const inv = await once(db`
+    WITH inv AS (
+      UPDATE invites SET uses = uses + 1
+      WHERE code = ${c} AND revoked_at IS NULL AND (max_uses IS NULL OR uses < max_uses)
+        AND CASE kind WHEN 'teacher' THEN NOT EXISTS (SELECT 1 FROM teachers WHERE user_id = ${user.id})
+                      ELSE NOT EXISTS (SELECT 1 FROM users WHERE id = ${user.id} AND admitted_at IS NOT NULL) END
+      RETURNING kind, label),
+    t AS (
+      INSERT INTO teachers (id, name, user_id)
+      SELECT ${mintId()}::text, ${user.name || user.email || 'Teacher'}::text, ${user.id}::text FROM inv WHERE kind = 'teacher'
+      RETURNING id),
+    u AS (
+      UPDATE users SET admitted_at = COALESCE(users.admitted_at, now()),
+                       invite_label = COALESCE(users.invite_label, CASE WHEN inv.kind = 'teacher' THEN 'teachers' ELSE inv.label END)
+      FROM inv WHERE users.id = ${user.id}
+      RETURNING users.id)
+    SELECT kind FROM inv`);
+  if (inv.error) return inv;
+  if (inv.row) return { ok: true, teacher: inv.row.kind === 'teacher' };
 
-  if (inv && inv.kind === 'teacher') {
-    await db`INSERT INTO teachers (id, name, email, user_id)
-             VALUES (${mintId()}, ${user.name || user.email || 'Teacher'}, ${user.email}, ${user.id})`;
-    await db`UPDATE users SET admitted_at = COALESCE(admitted_at, now()),
-                              invite_label = COALESCE(invite_label, 'teachers') WHERE id = ${user.id}`;
-    return { ok: true, teacher: true };
-  }
-  if (inv) {
-    await db`UPDATE users SET admitted_at = COALESCE(admitted_at, now()),
-                              invite_label = COALESCE(invite_label, ${inv.label}) WHERE id = ${user.id}`;
-    return { ok: true, teacher: false };
-  }
+  // The pilot's long teacher code: the account becomes that teacher and takes its apps.
+  const pilot = await once(db`
+    WITH t AS (
+      UPDATE teachers SET user_id = ${user.id}, code_hash = NULL
+      WHERE code_hash = ${hash(raw)} AND user_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM teachers WHERE user_id = ${user.id})
+      RETURNING id),
+    a AS (
+      UPDATE apps SET owner_id = ${'user:' + user.id} FROM t WHERE apps.owner_id = 'teacher:' || t.id
+      RETURNING apps.id),
+    u AS (
+      UPDATE users SET admitted_at = COALESCE(users.admitted_at, now()),
+                       invite_label = COALESCE(users.invite_label, 'teachers')
+      FROM t WHERE users.id = ${user.id}
+      RETURNING users.id)
+    SELECT id FROM t`);
+  if (pilot.error) return pilot;
+  if (pilot.row) return { ok: true, teacher: true };
 
-  // The pilot's long teacher code, linking a code-only teacher to this account.
-  if (!user.teacher_id) {
-    const [t] = await db`UPDATE teachers SET user_id = ${user.id}, email = ${user.email}, code_hash = NULL
-                         WHERE code_hash = ${hash(raw)} AND user_id IS NULL RETURNING id`;
-    if (t) {
-      await db`UPDATE apps SET owner_id = ${'user:' + user.id} WHERE owner_id = ${'teacher:' + t.id}`;
-      await db`UPDATE users SET admitted_at = COALESCE(admitted_at, now()),
-                                invite_label = COALESCE(invite_label, 'teachers') WHERE id = ${user.id}`;
-      return { ok: true, teacher: true };
-    }
-  }
+  const [seen] = await db`SELECT kind, revoked_at, uses, max_uses FROM invites WHERE code = ${c}`;
+  if (!seen) return { error: 'That invite code is not right.' };
+  if (seen.revoked_at) return { error: 'That invite has been turned off.' };
+  if (seen.max_uses != null && seen.uses >= seen.max_uses) return { error: 'That invite has already been used.' };
+  return { error: seen.kind === 'teacher' ? 'You are already a teacher.' : 'You can already build. This is not a teacher invite.' };
+}
 
-  const [seen] = await db`SELECT kind, revoked_at FROM invites WHERE code = ${c}`;
-  if (seen && seen.kind === 'teacher' && user.teacher_id) return { error: 'You are already a teacher.' };
-  if (seen && seen.revoked_at) return { error: 'That invite has been turned off.' };
-  if (seen) return { error: 'That invite has already been used.' };
-  return { error: 'That invite code is not right.' };
+/* The first row of a redeem statement. Two teacher codes redeemed by one
+   account at the same moment both pass the NOT EXISTS; the second insert
+   meets the first's row, and its statement undoes without counting a use. */
+async function once(query) {
+  try { return { row: (await query)[0] || null }; }
+  catch (err) {
+    if (/teachers_user_id_key/.test(String(err && err.message))) return { error: 'You are already a teacher.' };
+    throw err;
+  }
 }
 
 function mintInviteCode() {
