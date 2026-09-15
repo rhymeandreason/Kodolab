@@ -262,7 +262,7 @@ fi
 # parts.js is NOT covered — it reaches for THREE at module scope and cannot be
 # required here. That is a real gap, not an oversight: its profile maths would
 # have to be split out to be checkable offline.
-if git diff --cached --name-only | grep -qE '^demos/membrane/.*$'; then
+if git diff --cached --name-only | grep -qE '^demos/(membrane|chemiosmosis)/.*$'; then
   if ! node membrane/check-pump.js > /tmp/cpu.$$ 2>&1; then
     tail -25 /tmp/cpu.$$; rm -f /tmp/cpu.$$
     echo ""

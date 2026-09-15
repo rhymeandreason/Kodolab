@@ -187,9 +187,9 @@ molecules · macromolecule · membrane · organelle · cell · tissue · organ �
 
 **At the cell rung, AnimalCell and PlantCell are the defaults.** They are what a reader pictures when they hear "a cell", and between them they carry a nucleus, organelles, a wall and a vacuole. BloodCell is a specialist with none of that, so it comes out when the subject really is blood, or as a second example after a general cell has made the point.
 
-**Respiration is three rungs and the middle one is Mitochondrion.** The reactions themselves, one step on two molecules, are RespirationReaction; WHERE IN THE CELL is AnimalCell; the architecture the gradient stands in is Mitochondrion; the gradient's own arithmetic is Membrane with `context:'mitochondrion'`. A step asking how chemiosmosis works wants the last two together — the organelle for where the protons go, the membrane for how much it buys.
+**Respiration is three rungs and the middle one is Mitochondrion.** The reactions themselves, one step on two molecules, are RespirationReaction; WHERE IN THE CELL is AnimalCell; the architecture the gradient stands in is Mitochondrion; the gradient's own arithmetic is Chemiosmosis. A step asking how chemiosmosis works wants the last two together — the organelle for where the protons go, the membrane for how much it buys.
 
-**Photosynthesis is the same three rungs, and the middle one is Chloroplast.** WHERE IN THE CELL is PlantCell with `tissue:'leaf'`; the architecture the gradient stands in is Chloroplast; the gradient's own arithmetic is Membrane with `context:'thylakoid'`. Neither organelle draws the reactions that feed it or spend it.
+**Photosynthesis is the same three rungs, and the middle one is Chloroplast.** WHERE IN THE CELL is PlantCell with `tissue:'leaf'`; the architecture the gradient stands in is Chloroplast; the gradient's own arithmetic is Chemiosmosis with `context:'thylakoid'`. Neither organelle draws the reactions that feed it or spend it.
 
 **Two rungs are often the lesson, not a choice between them.** *Why does osmosis matter* is two boxes or two steps: Membrane for the mechanism (water crossing, counted) and BloodCell or PlantCell for the consequence (a cell bursting, a leaf wilting). Neither half answers it alone — the mechanism without a consequence is a headcount nobody asked for, and the consequence without the mechanism is a shape changing for no stated reason. The same holds for a pump and the cell it keeps alive, or a chloroplast and the tree it feeds. **When a question asks why something MATTERS, reach for the pair.**
 
@@ -239,9 +239,7 @@ Good for: temperature, phase change, why ice floats, salt dissolving, colligativ
 
 ```js
 const m = Membrane.mount(el, {
-  proteins: { K:{ x:-36 }, CL:null, NA:null, AQP:null, pump:{ x:36 },   // which machines stand in the sheet, and where (±x, world units, |x| ≤ 110). Too close and the layout spreads them itself, keeping your order
-              complex:null, synthase:null, leak:null },                 // the chemiosmotic three, below
-  context: 'plasma',     // 'plasma' | 'mitochondrion' | 'thylakoid': renames the two sides and repaints the lipid
+  proteins: { K:{ x:-36 }, CL:null, NA:null, AQP:null, pump:{ x:36 } },   // which machines stand in the sheet, and where (±x, world units, |x| ≤ 110). Too close and the layout spreads them itself, keeping your order
   potential: 'nernst',   // 'off': pores conduct forever · 'fixed': E_K, E_Cl constant · 'nernst': from the live counts
   E: { K:-90, CL:-75 },  // mV, used by 'fixed'
   pumpAuto: true,        // the pump re-arms itself; false waits for m.spend()
@@ -261,7 +259,7 @@ Populating it. The box starts empty. Say what is dissolved on each side and the 
 m.set({ contents: {
   inside:  { water:46, K:20, NA:4, A:8 },     // kind: 'water' | 'o2' | 'co2' | 'NA' | 'K' | 'CL' | 'A' (an impermeant anion)
   outside: { water:26, NA:26, CL:26 },
-} });                            // 'H' is a proton, for a chemiosmosis scene
+} });
 m.reset();                       // zero the counters after a change of scene
 m.spend();                       // one ATP, one pump turn; false if a turn is running or no Na⁺ inside
 ```
@@ -292,38 +290,31 @@ Three habits worth copying. A verdict goes in words, not digits: `net` and the e
 | `mV`, `equilibrium.K`, `equilibrium.CL` | membrane potential and each ion's equilibrium potential |
 | `crossed.K`, `crossed.CL`, `crossed.NA`, `crossed.water` | net transits through each channel, signed outward |
 | `atpSpent`, `pumpT` | the pump's ledger, and where it is in its cycle |
-| `context`, `sides.inside / .outside` | what to call the two compartments here; name them from these rather than typing your own |
-| `pH.inside / .outside`, `dpH`, `pmf` | the proton gradient: pH per side, the difference, and the proton-motive force in mV (positive means protons want to come back in) |
-| `atpMade`, `rotorTurns`, `protonsThroughSynthase`, `protonsLeaked`, `complexTurns` | the proton circuit's ledger, counted rather than declared |
-| `stoichiometry.protonsPerTurn / .atpPerTurn / .protonsPerATP` | what the rotor is actually keeping to; do not type a ratio |
-| `fuel`, `oxygen`, `fuelRate`, `pmfStall` | the fuel, whether O₂ is there to take the electrons, the rate after back-pressure and oxygen have had their say, and the pmf at which the complexes stall |
-| `complexLabel`, `complexT` | the beat of the complex's six-phase cycle, and the words for it |
-| `complexStarved` | fuelled, but no protons on the side it loads from, so it cannot turn |
+| `sides.inside / .outside` | what to call the two compartments; name them from these rather than typing your own |
 
-Events: `frame` (state, dt) · `cross` (traveller, dir) through the bilayer · `conduct` (traveller, dir) through a channel · `turn` (n) a pump turn starting · `turned` (n) one finishing · `pumped` (n) one proton thrown out by the complex · `atp` (n) the synthase completing one.
+Events: `frame` (state, dt) · `cross` (traveller, dir) through the bilayer · `conduct` (traveller, dir) through a channel · `turn` (n) a pump turn starting · `turned` (n) one finishing.
 
-Anchors for `note()`: `channel.K`, `channel.CL`, `channel.NA`, `aquaporin`, `pump`, `complex`, `synthase`, `leak` (each only when in the layout), `heads` and `tails` (the bilayer's halves), `outside`, `inside`, and one molecule of each kind on stage: `water`, `NA`, `K`, `CL`, `A`, `H`. The `outside` and `inside` cards are rewritten by the context, so they name the matrix or the stroma on their own. Two at once: `m.notes(['channel.K', 'pump'])`.
+Anchors for `note()`: `channel.K`, `channel.CL`, `channel.NA`, `aquaporin`, `pump` (each only when in the layout), `heads` and `tails` (the bilayer's halves), `outside`, `inside`, and one molecule of each kind on stage: `water`, `NA`, `K`, `CL`, `A`. Two at once: `m.notes(['channel.K', 'pump'])`.
 
 Layers for `show()`: `water`, `ions`, `badges` (the charge signs), `shells`, `cut` (proteins cut open), `membrane`.
 
-Good for: diffusion, osmosis and tonicity, selectivity, the resting potential, active transport and its cost, a cell in a changed environment. Not for: a specific real protein's shape, receptors, vesicles, anything at whole-cell scale. **A proton gradient in a mitochondrion or a chloroplast is the same component with an organelle `context`** and has its own section below.
+Good for: diffusion, osmosis and tonicity, selectivity, the resting potential, active transport and its cost, a cell in a changed environment. Not for: a specific real protein's shape, receptors, vesicles, anything at whole-cell scale, or **a proton gradient in a mitochondrion or a chloroplast, which is Chemiosmosis**.
 
-## Chemiosmosis — the same membrane in an organelle
+## Chemiosmosis — a proton gradient built, and spent on ATP
 
-**Scale**: membrane, bulk — it IS Membrane, mounted with an organelle `context`, so everything in that section still holds: `contents`, `state()`, anchors, layers, the particle budget. Read it first; this section is only what changes. **There is no `Chemiosmosis` to mount** — the name on `data-use` and on `mount` is `Membrane`.
+**Scale**: membrane, bulk. The same angstrom sheet as Membrane, with everything crossing drawn 5x oversize. Mount it by its own name: `data-use="Chemiosmosis"` and `Chemiosmosis.mount`.
 
-Respiration and photosynthesis are that picture with one parameter flipped.
+**Reach for this whenever a step is about how respiration or photosynthesis MAKES ATP**: the electron transport chain pumping, the gradient as stored energy, the synthase as a turbine, what cyanide, an uncoupler or no oxygen does. Membrane is for what crosses a cell's surface and cannot do any of this. Respiration and photosynthesis are one picture with `context` flipped.
 
 ```js
-const m = Membrane.mount(el, {
+const m = Chemiosmosis.mount(el, {
   context: 'mitochondrion',   // or 'thylakoid': renames the two sides, tints the lipid
-  fuel: 'light',              // 'NADH' | 'FADH2' | 'light' | null (nothing driving it)
+  fuel: 'NADH',               // 'NADH' | 'FADH2' | 'light' | null (nothing driving it). Defaults to light in a thylakoid
   fuelRate: 1,                // 0..1: a light dimmer, or a supply dial
   oxygen: true,               // false stops an NADH or FADH2 chain: nothing takes the electrons. No effect on 'light'
-  proteins: { complex:{ x:-80 }, synthase:{ x:40 }, translocase:{ x:120 }, leak:null },
+  proteins: { complex:{ x:-80 }, synthase:{ x:40 }, translocase:{ x:120 }, leak:null },   // omitted: complex and synthase
   outerMembrane: true,        // a second sheet with a porin in it, mitochondrion only
   contents: { inside:{ water:30, H:22 }, outside:{ water:30, H:22 } },   // 'H' is a proton. Omitted, a complex gets these 22 a side; H:0 means none
-  potential: 'nernst',
   sideLabels: true,           // both halves named on the stage; false only if you have your own
   showATP: true,              // an ATP leaves the F1 head per third-turn; false for the gradient alone
   showFuel: true,             // a carrier docks at the complex and leaves spent
@@ -345,14 +336,14 @@ The translocase's swap is **electrogenic** — ATP⁴⁻ out for ADP³⁻ in, dr
 
 **Three events, and they are three different moments.** `'atp'` fires when the molecule is made, in the matrix; `'atpOut'` when it has cleared the last door on stage and is in the cytosol; `'atpDelivered'` when it reaches the `atpTo` point. A handoff wired to `'atp'` claims the ATP is available where it was made, and one wired to `'atpOut'` claims it is available the moment it leaves rather than where it arrives. `state().outerMembrane` says whether the lid is on, and `state().sides.beyond` is what to call the space above it.
 
-**WHAT SPENDS IT IS ANOTHER MEMBRANE, IN THE SAME SCENE.** The Na⁺/K⁺ pump runs on ATP and is one of the biggest consumers in a cell, but it is in the PLASMA membrane. Do not put a pump and a synthase in one sheet — that is a bacterium. Stack them instead: `Membrane.create(THREE, root, camera, opts)` takes any Object3D, so two sims can live in one `CardStage` as two groups at different y, each still believing its own membrane is at y = 0.
+**WHAT SPENDS IT IS ANOTHER MEMBRANE, IN THE SAME SCENE.** The Na⁺/K⁺ pump runs on ATP and is one of the biggest consumers in a cell, but it is in the PLASMA membrane. Do not put a pump and a synthase in one sheet — that is a bacterium. Stack them instead: `Membrane.create` and `Chemiosmosis.create(THREE, root, camera, opts)` take any Object3D, so two sims can live in one `CardStage` as two groups at different y, each still believing its own membrane is at y = 0.
 
 Top to bottom the stack is: outside the cell · **plasma membrane** · cytosol · **outer membrane** · intermembrane space · **inner membrane** · matrix. It needs no sign changes — the plasma membrane pumps Na⁺ to +y (out of the cell, up) and the mitochondrion pumps protons to +y (into the intermembrane space, up), so both already point the same way.
 
 ```js
-const cell = Membrane.create(THREE, gCell, box.camera, { context:'plasma', pumpAuto:false,
+const cell = Membrane.create(THREE, gCell, box.camera, { proteins:{ pump:{ x:-36 } }, pumpAuto:false,
   bounds:{ up:78, down:CYTOSOL - 8 } });          // its cytosol stops above the outer membrane
-const mito = Membrane.create(THREE, gMito, box.camera, { context:'mitochondrion',
+const mito = Chemiosmosis.create(THREE, gMito, box.camera, { context:'mitochondrion',
   outerMembrane:true, bounds:{ down:95 },
   atpTo: () => worldPositionOf(cell, 'pump') });  // the token walks the whole way
 mito.on('atpDelivered', () => cell.spend());      // it ARRIVED, not it was made
@@ -371,6 +362,24 @@ mito.on('atpDelivered', () => cell.spend());      // it ARRIVED, not it was made
 **THE BOTTOM HALF IS ALWAYS THE ENCLOSED COMPARTMENT** — the cytosol, the matrix, the lumen — the way every textbook cross-section draws it. So a mitochondrion pumps protons UP the screen and a thylakoid pumps them DOWN, and the direction is not something to assume from the other one. The box names both halves on the stage itself and keeps them there, so do not add your own labels. For a caption, `state().sides.pumpedInto` is where the protons collect and `.inside` / `.outside` are the bottom and top names.
 
 **Printable here: `pmf` or `dpH`, and `atpMade`. One stat tile, chosen by what the step asks; the rest of the ledger drives the page, not the panel.** **What the gradient IS** is `state().pH`, `.dpH`, `.pmf`; **where the energy WENT** is `.atpMade` against `.protonsThroughSynthase` and `.protonsLeaked`, a ledger that only means something as a comparison; **what the machine is DOING** is `.complexLabel`, the beat of the cycle it is on. Do not caption a machine from the step's own prose while it is mid-turn; the label is what it is actually doing. Ratios come from `.stoichiometry` and `.complexStoichiometry`, never typed: the rotor decides them.
+
+`state()` also carries Membrane's `counts`, `mV` and `sides`, and:
+
+| field | meaning |
+| --- | --- |
+| `pH.inside / .outside`, `dpH`, `pmf` | the proton gradient: pH per side, the difference, and the proton-motive force in mV (positive means protons want to come back) |
+| `atpMade`, `rotorTurns`, `protonsThroughSynthase`, `protonsLeaked`, `complexTurns` | the proton circuit's ledger, counted rather than declared |
+| `stoichiometry.protonsPerTurn / .atpPerTurn / .protonsPerATP` | what the rotor is actually keeping to; do not type a ratio |
+| `fuel`, `oxygen`, `fuelRate`, `pmfStall` | the fuel, whether O₂ is there to take the electrons, the rate after back-pressure and oxygen have had their say, and the pmf at which the complexes stall |
+| `complexLabel`, `complexCaption`, `complexT` | the beat of the complex's six-phase cycle, and the words for it |
+| `complexStarved` | fuelled, but no protons on the side it loads from, so it cannot turn |
+| `outerMembrane`, `sides.beyond`, `sides.pumpedInto` | whether the lid is on, what to call the space above it, and where the protons collect |
+
+Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `conduct` (traveller, dir).
+
+Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
+
+Layers for `show()`: `water`, `cut`, `membrane`, `outer`. Signals for Graph: `protons`, `voltage`, `dpH`, `pmf`, `atp`.
 
 Good for: chemiosmosis in either organelle, the proton circuit and where the energy went, uncouplers and why they make heat, respiratory control, light as the thing driving a gradient. Not for: the reactions feeding it (no Krebs cycle, no Calvin cycle, no electron carriers being made here).
 
@@ -485,7 +494,7 @@ RespirationReaction.steps('krebs') // [{id, n, name, enzyme, substrate, product,
 
 **Draw the pathway from `steps()`, and bind it both ways.** A row of chips, a ring, a ladder: build it from the list, set `step` by each entry's `id` on click, and light the entry whose id `state().id` reports. Then the diagram and the stage cannot name different steps. `on('ran')` is when to mark a step done, and `state().next` is what Next should set. Pyruvate oxidation is its own pathway with one step, between glycolysis and Krebs; a lesson that crosses from one to the next sets `pyruvate-oxidation/1` and then `krebs/1`.
 
-**The electron transport chain is the fifth pathway, on the same frame.** Each complex is a step on two molecules: NADH hands its hydride to FMN at complex I, FADH₂ its two hydrogens to ubiquinone at complex II, ubiquinol gives an electron to cytochrome c at complex III and its protons leave the frame for the intermembrane space, and at complex IV the cytochrome's electron goes to O₂, which leaves as two waters. `yields.protons` is what each complex pumps, and summing it along a branch gives the 10 per NADH and 6 per FADH₂; complex II's zero is why FADH₂ is worth less. The gradient those protons make and the synthase that spends it are Membrane with `context:'mitochondrion'` in a second box, which is the lesson.
+**The electron transport chain is the fifth pathway, on the same frame.** Each complex is a step on two molecules: NADH hands its hydride to FMN at complex I, FADH₂ its two hydrogens to ubiquinone at complex II, ubiquinol gives an electron to cytochrome c at complex III and its protons leave the frame for the intermembrane space, and at complex IV the cytochrome's electron goes to O₂, which leaves as two waters. `yields.protons` is what each complex pumps, and summing it along a branch gives the 10 per NADH and 6 per FADH₂; complex II's zero is why FADH₂ is worth less. The gradient those protons make and the synthase that spends it are Chemiosmosis in a second box, which is the lesson.
 
 **Print from state, not from memory**: `enzyme`, `substrate`, `product`, `partner.name` and `partner.becomesName`, `yields` (per single reaction: `atp`, `nadh`, `fadh2`, `co2`, `protons`, signed), `leaves` and `arrives`. A tally across steps is the page's sum of `yields`, times `x2` where it applies, and a Graph beside the stage is how to show it.
 
@@ -495,7 +504,7 @@ Rebuilds and snaps: `step`, `pathway`. Live: `x2`, `click`, `fit`. Nothing else 
 
 Anchors for `note()`: `substrate`, `partner`, `bond` (null once the step has run), `product` (null until it has). No layers, no views.
 
-Good for: one step or a few, each on its own molecules, for a student who has not met the pathway before; what a carrier IS (one molecule, two states); where the CO₂ comes from; why the ×2; what an electron carrier passes along. Not for: the whole pathway's bookkeeping on one screen (that is a Graph fed from `yields`), the proton gradient and ATP synthase (Membrane with `context:'mitochondrion'`), where in the cell it happens (AnimalCell, Mitochondrion), or a molecule on its own (Molecule).
+Good for: one step or a few, each on its own molecules, for a student who has not met the pathway before; what a carrier IS (one molecule, two states); where the CO₂ comes from; why the ×2; what an electron carrier passes along. Not for: the whole pathway's bookkeeping on one screen (that is a Graph fed from `yields`), the proton gradient and ATP synthase (Chemiosmosis), where in the cell it happens (AnimalCell, Mitochondrion), or a molecule on its own (Molecule).
 
 ## Tree — a tree, the air around it, and where its mass came from
 
@@ -676,9 +685,9 @@ const M = Mitochondrion.mount(el, {
 
 An outer membrane, and inside it **one continuous inner membrane folded back and forth** — every crista is a fold of that one sheet, not a plate standing in the matrix. The sheet is drawn at one membrane's thickness with its cut edge painted as a bilayer, and a crista lumen is the space a fold encloses, continuous with the intermembrane space through the junction; complexes I–IV sit on the faces, ATP synthase in dimer rows at the fold tips, mtDNA and mitoribosomes in the lobes of matrix between, and protons make the round trip: out of the matrix at a complex, back in through a synthase.
 
-**Reach for this the moment a step says "in the mitochondrion" and means it.** The claim it exists to carry is one a diagram almost always gets wrong: **the inside of a crista is the intermembrane space**, joined to it at the crista junctions, so a proton pumped at a complex lands INSIDE the fold and not in the matrix. It is one ribbon for exactly that reason — separate plates say separate compartments. Complex II is on the cristae, in the paler blue, and no proton ever uses it: that is why FADH₂ is worth less than NADH, and it is true of the picture. **The machines are Membrane's own colours** — same blue chain, same gold synthase, same grey porin — so the two boxes can sit in one lesson.
+**Reach for this the moment a step says "in the mitochondrion" and means it.** The claim it exists to carry is one a diagram almost always gets wrong: **the inside of a crista is the intermembrane space**, joined to it at the crista junctions, so a proton pumped at a complex lands INSIDE the fold and not in the matrix. It is one ribbon for exactly that reason — separate plates say separate compartments. Complex II is on the cristae, in the paler blue, and no proton ever uses it: that is why FADH₂ is worth less than NADH, and it is true of the picture. **The machines are Chemiosmosis's own colours** — same blue chain, same gold synthase, same grey porin — so the two boxes can sit in one lesson.
 
-**It is not the arithmetic and refuses to be.** No pH, no proton-motive force, no fuel, no respiratory control: that is Membrane with `context:'mitochondrion'`, one rung down, where it is checked. Mount both when a step asks how much — the organelle for where, the membrane for how much. The rotor's stoichiometry is the one number they share, and both read it from the same place.
+**It is not the arithmetic and refuses to be.** No pH, no proton-motive force, no fuel, no respiratory control: that is Chemiosmosis, one rung down, where it is checked. Mount both when a step asks how much — the organelle for where, the membrane for how much. The rotor's stoichiometry is the one number they share, and both read it from the same place.
 
 Glides: `flow` (pass `{snap:true}` for a slider under a thumb). Snaps: `uncoupler`, and every geometry parameter, which rebuilds.
 
@@ -686,7 +695,7 @@ Glides: `flow` (pass `{snap:true}` for a slider under a thumb). Snaps: `uncouple
 
 Parts, each with a card: `outer`, `porin`, `ims`, `inner`, `crista`, `junction`, `complex`, `synthase`, `matrix`, `dna`, `ribosome`, `proton`. **Four of them can be pointed at but not hidden** — `crista` and `junction` are places on the inner membrane and `ims` and `matrix` are spaces, so they take a `notes` chip and never appear under `layers`. **`crista`, `junction`, `synthase`, `complex`, `proton` and `porin` declare a view**, so a `zoom` chip for one of those travels; a `notes` chip only labels.
 
-Good for: what a mitochondrion IS, the two membranes and why only one holds a gradient, cristae and surface area, where the electron transport chain sits, why an uncoupler makes heat, mitochondria as ex-bacteria. Not for: the Krebs cycle or glycolysis (a pathway lesson), the numbers on the gradient (Membrane), or a cell with other organelles in it (AnimalCell).
+Good for: what a mitochondrion IS, the two membranes and why only one holds a gradient, cristae and surface area, where the electron transport chain sits, why an uncoupler makes heat, mitochondria as ex-bacteria. Not for: the Krebs cycle or glycolysis (a pathway lesson), the numbers on the gradient (Chemiosmosis), or a cell with other organelles in it (AnimalCell).
 
 ## Chloroplast — one organelle, cut open, membrane by membrane
 
@@ -701,9 +710,9 @@ const C = Chloroplast.mount(el, {
 
 Two envelope membranes, and inside them **one thylakoid membrane**: grana as columns of flattened sacs standing in the stroma, stroma lamellae joining every stack to the next, photosystem II in the faces between stacked discs, photosystem I and ATP synthase only where the membrane is open to the stroma, a starch grain, plastid DNA and ribosomes in the stroma, and protons making the round trip: into the lumen at cytochrome b6f and from water at PSII, back out through a synthase. Water molecules in the lumen move to PSII and split, two per O₂; every fourth proton from water releases an O₂, which drifts up out of the cut. Light falls in through the cut as streaks and flashes where a photosystem absorbs it, PSII and PSI both, at a rate `light` sets.
 
-**Reach for this the moment a step says "in the chloroplast" and means it**, and as the step between PlantCell and Membrane in a photosynthesis lesson: the cell for where, this for the architecture, Membrane with `context:'thylakoid'` for how much. Two claims it exists to carry, both of which a diagram of separate green coins gets wrong: **the thylakoid is one membrane around one lumen**, so a gradient built in any stack drives every synthase in the organelle; and **the machines sort by where they fit**, PSII between stacked discs, PSI and synthase never there because both hang a bulk into the stroma. A third the picture shows without a caption: the gradient is built twice, by a pump and by water splitting, and the oxygen is the waste. **The pump is Membrane's indigo complex and the synthase the mitochondrion's gold**, so the three boxes can sit in one lesson; the two photosystems have colours of their own.
+**Reach for this the moment a step says "in the chloroplast" and means it**, and as the step between PlantCell and Membrane in a photosynthesis lesson: the cell for where, this for the architecture, Chemiosmosis with `context:'thylakoid'` for how much. Two claims it exists to carry, both of which a diagram of separate green coins gets wrong: **the thylakoid is one membrane around one lumen**, so a gradient built in any stack drives every synthase in the organelle; and **the machines sort by where they fit**, PSII between stacked discs, PSI and synthase never there because both hang a bulk into the stroma. A third the picture shows without a caption: the gradient is built twice, by a pump and by water splitting, and the oxygen is the waste. **The pump is Chemiosmosis's indigo complex and the synthase the mitochondrion's gold**, so the three boxes can sit in one lesson; the two photosystems have colours of their own.
 
-**It is not the arithmetic and refuses to be.** No pH, no proton-motive force, no spectrum, **no Calvin cycle**: the gradient is Membrane with `context:'thylakoid'`, one rung down, and what the ATP and NADPH buy is a pathway lesson. Mount both when a step asks how much. The rotor's stoichiometry is the one number they share, read from the same place.
+**It is not the arithmetic and refuses to be.** No pH, no proton-motive force, no spectrum, **no Calvin cycle**: the gradient is Chemiosmosis with `context:'thylakoid'`, one rung down, and what the ATP and NADPH buy is a pathway lesson. Mount both when a step asks how much. The rotor's stoichiometry is the one number they share, read from the same place.
 
 Glides: `light` (pass `{snap:true}` for a slider under a thumb). Snaps: `uncoupler`. One model: the layout of grana is authored, so there is no seed.
 
@@ -711,7 +720,7 @@ Glides: `light` (pass `{snap:true}` for a slider under a thumb). Snaps: `uncoupl
 
 Parts, each with a card: `outer`, `inner`, `ims`, `stroma`, `granum`, `thylakoid`, `lamella`, `lumen`, `psii`, `b6f`, `psi`, `synthase`, `starch`, `dna`, `ribosome`, `proton`, `oxygen`, `water`, `photon`. **Four can be pointed at but not hidden** — `ims`, `stroma` and `lumen` are spaces and `thylakoid` is one disc of a granum — so they take a `notes` chip and never appear under `layers`. **`granum`, `thylakoid`, `lamella`, `psii`, `b6f`, `psi`, `synthase`, `proton`, `oxygen`, `water` and `photon` declare a view**, so a `zoom` chip for one of those travels; a `notes` chip only labels.
 
-Good for: what a chloroplast IS, the envelope against the thylakoid and why only one holds a gradient, grana and why stacking, where the light reactions sit, where the oxygen comes from, why an uncoupler makes heat, chloroplasts as ex-cyanobacteria. Not for: the Calvin cycle or a pigment's spectrum (a pathway lesson), the numbers on the gradient (Membrane), or a cell with other organelles in it (PlantCell).
+Good for: what a chloroplast IS, the envelope against the thylakoid and why only one holds a gradient, grana and why stacking, where the light reactions sit, where the oxygen comes from, why an uncoupler makes heat, chloroplasts as ex-cyanobacteria. Not for: the Calvin cycle or a pigment's spectrum (a pathway lesson), the numbers on the gradient (Chemiosmosis), or a cell with other organelles in it (PlantCell).
 
 ## The sandbox shell
 
@@ -766,8 +775,9 @@ label, unit and y range, so no page types a maximum:
 Graph.mount(el, { live: { span: 120 }, height: 130 }).follow(m, 'water');
 ```
 
-`Membrane.SIGNALS`: `water`, `sodium`, `potassium`, `protons` — each side, two
-lines named by context · `voltage` mV · `dpH` · `pmf` mV · `atp` cumulative.
+`Membrane.SIGNALS`: `water`, `sodium`, `potassium` — each side, two lines named
+by context · `voltage` mV. `Chemiosmosis.SIGNALS`: `protons` each side ·
+`voltage` · `dpH` · `pmf` mV · `atp` cumulative.
 
 **A step that asks how something CHANGES gets a trace; a step that asks what
 something IS gets a `.stat` and a number.** Net water flow, a gradient

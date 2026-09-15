@@ -83,6 +83,8 @@
 <script src="../membrane/parts.js"></script>
 <script src="../membrane/pump.js"></script>
 <script src="../membrane/chemiosmosis.js"></script>
+<script src="../membrane/sheet.js"></script>
+<script src="../chemiosmosis/circuit.js"></script>
 <script src="../membrane/membrane.js"></script>
 
 <script>
@@ -90,7 +92,7 @@
    the complex builds while you watch, not one it was handed. */
 const START = { inside: { water: 30, H: 22 }, outside: { water: 30, H: 22 } };
 
-const m = Membrane.mount(document.getElementById('stage'), {
+const m = Chemiosmosis.mount(document.getElementById('stage'), {
   context: 'mitochondrion',
   fuel: 'NADH', fuelRate: 1,
   proteins: { complex: { x: -80 }, synthase: { x: 40 } },

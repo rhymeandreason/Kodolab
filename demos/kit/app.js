@@ -87,6 +87,8 @@
     'membrane/parts.js',
     'membrane/pump.js',
     'membrane/chemiosmosis.js',
+    'membrane/sheet.js',
+    'chemiosmosis/circuit.js',  // before membrane.js, which still carries its machine for old pages
     'membrane/membrane.js',
     'leaf/leaf.js',
     'tree/tree.js',
@@ -147,8 +149,13 @@
      with molecule-lab.html, its last page. */
   const USES = {
     WaterSim:   ['water/watersim.js', 'water/watersim-mount.js'],
+    /* Membrane keeps circuit.js until the generated apps that mount a proton
+       circuit through it are regenerated against Chemiosmosis. */
     Membrane:   ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
-                 'membrane/chemiosmosis.js', 'membrane/membrane.js'],
+                 'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
+                 'membrane/membrane.js'],
+    Chemiosmosis: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js',
+                 'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js'],
     Proteinbox: ['folding/folding.js', 'kit/ribbon.js', 'kit/nucleic.js', 'kit/surface.js',
                  'kit/proteinbox.js', 'proteins/proteins.js'],
     Leaf:       ['lib/geo.js', 'leaf/leaf.js'],
