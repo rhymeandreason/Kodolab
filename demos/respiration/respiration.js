@@ -83,9 +83,9 @@ function aliases(MolLib, MolGraph) {
   const redox = F.krebs.redox;
   const spent = (s, k) => (s.gly && s.gly.spent && s.gly.spent[k]) || s[k];
   // the chain's: FMN over FMNH₂ and Q over ubiquinol, FAD's way; cytochrome c
-  // is heme b with the charge on the iron, so the seat is the iron and nothing
-  // is hidden; O₂ is its own spec, aliased only to name the bond to click
-  const FM = M.fmnh2, Q = M.ubiquinol, HR = M.heme, HO = M.hemeOx;
+  // is its heme c with the charge on the iron, so the seat is the iron and
+  // nothing is hidden; O₂ is its own spec, aliased only to name the bond to click
+  const FM = M.fmnh2, Q = M.ubiquinol, HR = M.hemeC, HO = M.hemeCOx;
   return {
     atp:   mk(A, { name: 'ATP', short: 'ATP' }, { seat: [pg], bond: pBond }),
     adp:   mk(A, { name: 'ADP', short: 'ADP', formula: spent(A, 'formula') },

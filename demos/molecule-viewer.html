@@ -503,8 +503,8 @@ const SHELF=[
   },
   { key:'heme', card:'Heme · Fe²⁺',
     blurb:'Heme b from myoglobin’s pocket (1A6M), real ångströms, hydrogens '
-        + 'grown by atom name. Cytochrome c carries this ring with its two vinyls '
-        + 'joined to cysteines; the electron it passes sits on the <b>iron</b>.',
+        + 'grown by atom name. The heme that carries oxygen in myoglobin and '
+        + 'hemoglobin, held in its pocket by the iron alone.',
     focus:{ title:'The iron',
             body:'Fe²⁺ here, Fe³⁺ on the oxidised twin. Nothing else about the '
                + 'molecule changes when the electron leaves, which is why the two '
@@ -512,12 +512,26 @@ const SHELF=[
             atoms:s=>[s.etc.fe] },
   },
   { key:'hemeOx', card:'Heme · Fe³⁺',
-    blurb:'The same heme with the electron gone from the iron: cytochrome c as it '
-        + 'waits at complex III.',
+    blurb:'The same heme b with Fe³⁺: met, oxidised, unable to bind oxygen.',
     focus:{ title:'The iron and its four nitrogens',
             body:'The porphyrin holds the iron in a plane; the electron comes and '
                + 'goes without moving an atom.',
             atoms:s=>[s.etc.fe, ...s.etc.n] },
+  },
+  { key:'hemeC', card:'Heme c · Fe²⁺',
+    blurb:'Cytochrome c’s heme, from 3ZCF. Both vinyls of heme b have taken a '
+        + 'cysteine sulfur, so the ring is <b>bolted into the protein</b>; the '
+        + 'stubs stop at each cysteine’s first carbon.',
+    focus:{ title:'The two thioethers',
+            body:'Sulfur to ring carbon, one per cysteine. Everything else is heme b.',
+            atoms:s=>s.etc.thio.flat() },
+  },
+  { key:'hemeCOx', card:'Heme c · Fe³⁺',
+    blurb:'The same heme c with the electron gone from the iron: cytochrome c as '
+        + 'it waits at complex III.',
+    focus:{ title:'The iron',
+            body:'Fe³⁺ here, Fe²⁺ on the reduced twin; one set of coordinates.',
+            atoms:s=>[s.etc.fe] },
   },
 
   /* NO `alt:`, no `smiles`, no `flat2d` — this one is here for the 3D view
