@@ -48,6 +48,18 @@ const IGNORE = {
   'kit/check-nucleic.js': ['ribbon.js'],
 };
 
+/* Files a checker judges without naming them: data it globs, pages whose
+   claims it asserts, bakers whose output it re-derives. */
+const ALSO = [
+  [/^proteins\/[^/]+\//, ['proteins/check-proteins.js']],
+  [/^proteins\/(dna|trna|zif268|nucleosome)\//, ['proteins/check-nucleic-acids.js']],
+  [/^tools\/(sdf\/|bake-flat2d\.js|spec2smiles\.js)/, ['check-molecules.js']],
+  [/^(dna-lab|dna-structure)\.html$/, ['dna/check-dna.js']],
+  [/^(macromolecule-builder\.html|macromolecule\/nucleoside\.js|chain\/frame\.js)$/, ['macromolecule/check-macromolecule.js']],
+  [/^folding\/data\/9ZZI\.pdb$/, ['tools/check-residues.js']],
+  [/^water\/watersim-mount\.js$/, ['tools/check-water.js']],
+];
+
 const file = c => c.split(' ')[0];
 const src = c => fs.readFileSync(path.join(ROOT, file(c)), 'utf8');
 
@@ -71,6 +83,7 @@ function resolve(arg) {
   const base = path.basename(rel);
   const hits = CHECKERS.filter(c => src(c).includes(base) && !(IGNORE[file(c)] || []).includes(base));
   if (rel.startsWith('lib/')) hits.push(...GROUPS.molecules);
+  for (const [re, cs] of ALSO) if (re.test(rel)) hits.push(...cs.map(c => CHECKERS.find(k => file(k) === c)));
   return hits;
 }
 
