@@ -129,9 +129,11 @@
   /* The account, as lib/site.js paints it, in this page's ink: kodo.css's
      `.sitelinks` rules are not loaded here, so the same shapes are restated.
      Twice on this page: in the mast, and at the top right of the intro screen,
-     where it arrives with the tagline. */
-  .hero .links { position: absolute; top: 1.4rem; right: clamp(1rem, 3vw, 2rem); display: flex; align-items: baseline; gap: clamp(.9rem, 2.4vw, 1.7rem);
+     where it arrives with the tagline. The z-index keeps its menu above the
+     lesson cards, which come later in the page and are positioned. */
+  .hero .links { position: absolute; top: 1.4rem; right: clamp(1rem, 3vw, 2rem); z-index: 20; display: flex; align-items: baseline; gap: clamp(.9rem, 2.4vw, 1.7rem);
     pointer-events: auto; opacity: 0; transition: opacity .9s var(--soft); }
+#acct-card, #acct-card-2 { z-index: 40; }
   .hero.said .links { opacity: 1; }
   .hero .links .rule { display: none; }
   :is(.mast, .hero) .links .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
@@ -149,7 +151,7 @@
   :is(.mast, .hero) .links .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   /* `.card` is also this page's lesson card, which starts at opacity 0 and
      is placed by scroll: both are undone here. */
-  :is(.mast, .hero) .links .menu .card { opacity: 1; transform: none; will-change: auto; position: absolute; right: 0; top: calc(100% + .6rem); z-index: 20; min-width: 15rem; padding: .9rem 1rem;
+  :is(.mast, .hero) .links .menu .card { opacity: 1; transform: none; will-change: auto; position: absolute; right: 0; top: calc(100% + .6rem); z-index: 10; min-width: 15rem; padding: .9rem 1rem;
     background: var(--paper); border: 1px solid rgba(var(--ink-t), .12); border-radius: 10px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t), .45);
     display: flex; flex-direction: column; gap: .75rem; font: 400 .9rem var(--sans); color: var(--ink-2); text-transform: none; letter-spacing: 0; }
   :is(.mast, .hero) .links .menu .card[hidden] { display: none; }

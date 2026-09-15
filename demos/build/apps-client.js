@@ -140,7 +140,6 @@ const Apps = (() => {
       return s;
     },
     redeem: code => api('../../api/auth', { method: 'POST', body: { action: 'redeem', code } }),
-    logout: () => { del(ACCOUNT_KEY); return api('../../api/auth', { method: 'POST', body: { action: 'logout' } }).catch(() => null); },
     note: user => (user ? set(ACCOUNT_KEY, JSON.stringify(user)) : del(ACCOUNT_KEY)),
     /* The apps this browser made on a testing link become the account's. Only
        unowned ones move, so running it again is harmless. */

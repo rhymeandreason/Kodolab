@@ -55,7 +55,13 @@
      flicker; then one GET reconciles it with the cookie, which is HttpOnly and
      the truth. A server with no database answers 503 and storage stands. */
   var ACCOUNT_KEY = 'ss.account';
-  var TEACHER_KEY = 'ss.teacher.code';
+
+  /* Everything in storage that admits someone or edits something, which
+     build/apps-client.js and ask/chat.js write. Sign out takes all of it: on a
+     shared Chromebook the next person must not inherit a class code, a testing
+     link, or the edit tokens for the apps the last one opened. The visitor id
+     stays; it admits nobody. */
+  var PERSON_KEYS = [ACCOUNT_KEY, 'ss.teacher.code', 'ss.class.code', 'ss.tutor.key', 'ss.apps'];
 
   function stored() {
     var raw = null;
@@ -83,7 +89,7 @@
   }
 
   function signOut() {
-    try { localStorage.removeItem(ACCOUNT_KEY); localStorage.removeItem(TEACHER_KEY); localStorage.removeItem('ss.class.code'); } catch (e) {}
+    PERSON_KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     fetch('/api/auth', { method: 'POST', credentials: 'same-origin',
                          headers: { 'Content-Type': 'application/json' },
                          body: JSON.stringify({ action: 'logout' }) })
@@ -153,6 +159,9 @@
 
     var card = document.createElement('div');
     card.className = 'card';
+    // The homepage paints two menus, so the second one's ids take a suffix.
+    var sfx = document.getElementById('acct-card') ? '-2' : '';
+    card.id = 'acct-card' + sfx;
     card.hidden = true;
     var who = document.createElement('p');
     who.className = 'who';
@@ -161,6 +170,7 @@
     who.appendChild(full); who.appendChild(mail);
     var out = document.createElement('button');
     out.type = 'button';
+    out.id = 'acct-signout' + sfx;
     out.textContent = 'Sign out';
     out.addEventListener('click', signOut);
     card.appendChild(who); card.appendChild(out);
