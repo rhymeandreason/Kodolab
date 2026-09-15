@@ -1077,6 +1077,9 @@
     if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
     const mk = cls => { const d = document.createElement('div'); d.className = 'mem-side ' + cls; el.appendChild(d); return d; };
     const out = mk('out'), inn = mk('in'), bey = mk('beyond');
+    /* Sized to the box, not the page: 11px down the edge of a card-sized box is a headline. */
+    const ro = new ResizeObserver(() => { const fs = Math.max(7, Math.min(11, el.clientWidth / 45)) + 'px'; for (const d of [out, inn, bey]) d.style.fontSize = fs; });
+    ro.observe(el);
     const paint = () => {
       const s = sim.state();
       if (out.textContent !== s.sides.outside) out.textContent = s.sides.outside;
@@ -1086,7 +1089,7 @@
       out.style.top = s.sides.beyond ? '37%' : '';
     };
     paint();
-    return { paint, destroy() { out.remove(); inn.remove(); bey.remove(); } };
+    return { paint, destroy() { ro.disconnect(); out.remove(); inn.remove(); bey.remove(); } };
   }
 
   /* ---- one box ----

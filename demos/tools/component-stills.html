@@ -44,7 +44,8 @@
      looking at: a transform does not touch the drawing buffer. */
   #mount{width:268px;height:179px;margin:1.2rem 0;border:1px solid #e4e0d7;background:#fff;
          transform:scale(2);transform-origin:top left}
-  #mount.bare .rr-plates, #mount.bare .rr-spots, #mount.bare .rr-glow{display:none}
+  #mount.bare .rr-plates, #mount.bare .rr-spots, #mount.bare .rr-glow,
+  #mount.bare .mem-side, #mount.bare .chem-band, #mount.bare .chem-sheet, #mount.bare .annot-layer{display:none}
   #wrap{height:400px}
   #mount iframe{width:100%;height:100%;border:0;display:block}
   #log{font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre-wrap}
@@ -83,6 +84,10 @@ const SHOTS = [
       contents: { inside: { water: 12, K: 8 }, outside: { water: 9, NA: 8, CL: 6 } },
       sideLabels: false, pumpAuto: true,
       cam: { theta: 0.35, phi: Math.PI / 2 - 0.22, r: 250 } }) },
+
+  { key: 'chemiosmosis', use: 'Chemiosmosis', warm: 14,
+    mount: el => Chemiosmosis.mount(el, { context: 'mitochondrion', chain: 'split', span: 'mitochondrion', fuel: 'NADH',
+      proteins: { complex: { x: -95 }, synthase: { x: 45 }, translocase: { x: 105 } } }) },
 
   /* The trajectory is fetched here rather than by the box: `protein:` starts
      a fetch and returns, and a capture taken before it lands is an empty

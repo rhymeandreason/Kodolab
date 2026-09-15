@@ -1137,7 +1137,10 @@
     const _l = new THREE.Vector3();
     function placeLabels() {
       const h = box.canvas.clientHeight;
+      /* Sized to the box, not the page: 11px down the edge of a card-sized box is a headline. */
+      const fs = Math.max(7, Math.min(11, box.canvas.clientWidth / 45)) + 'px';
       for (const L of LABELS) {
+        if (L.el.style.fontSize !== fs) L.el.style.fontSize = fs;
         _l.set(0, L.y(), 0).project(box.camera);
         L.el.style.top = ((-_l.y * .5 + .5) * h) + 'px';
         const t = L.text();
