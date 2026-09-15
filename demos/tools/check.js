@@ -30,8 +30,10 @@ const AREAS = {
   pathways: ['massaction/check-massaction.js', 'energy/check-energy.js', 'reaction/check-reaction.js', 'coupling/check-coupling.js'],
   water: ['tools/check-water.js'],
   dna: ['dna/check-dna.js', 'dna/check-codon.js', 'proteins/check-nucleic-acids.js', 'kit/check-nucleic.js'],
-  proteins: ['proteins/check-proteins.js', `hemoglobin/tools/check-hb.js${full ? '' : ' --quick'}`,
-             'kit/check-ribbon.js', 'tools/check-residues.js', 'sickle/tools/check-fibre.js'],
+  proteins: ['proteins/check-proteins.js'],
+  ribbon: ['kit/check-ribbon.js', 'tools/check-residues.js'],
+  hemoglobin: [`hemoglobin/tools/check-hb.js${full ? '' : ' --quick'}`],
+  sickle: ['sickle/tools/check-fibre.js'],
   nodegraph: ['tools/bake-graph-vectors.js --gate'],
   /* Slow, and only named: a bare run skips them. docs/dev.md says when. */
   diffusion: ['diffusion/check-diffusion.js'],
