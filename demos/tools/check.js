@@ -2,7 +2,7 @@
 /* =====================================================================
  *  check.js — run the offline checkers by hand, by area.
  *
- *    node tools/check.js              every area
+ *    node tools/check.js              every area but the slow two
  *    node tools/check.js membrane     one area (several may be named)
  *    node tools/check.js deploy       before a deploy
  *    node tools/check.js --list       the areas and what each runs
@@ -28,12 +28,16 @@ const AREAS = {
   builder: ['molecule-builder/check-molecule-builder.js'],
   membrane: ['membrane/check-pump.js', 'membrane/check-chemiosmosis.js', 'cell/check-mitochondrion.js'],
   pathways: ['massaction/check-massaction.js', 'energy/check-energy.js', 'reaction/check-reaction.js', 'coupling/check-coupling.js'],
-  water: ['tools/check-water.js', 'diffusion/check-diffusion.js'],
+  water: ['tools/check-water.js'],
   dna: ['dna/check-dna.js', 'dna/check-codon.js', 'proteins/check-nucleic-acids.js', 'kit/check-nucleic.js'],
   proteins: ['proteins/check-proteins.js', `hemoglobin/tools/check-hb.js${full ? '' : ' --quick'}`,
-             'folding/tools/check-folding.js', 'kit/check-ribbon.js', 'tools/check-residues.js', 'sickle/tools/check-fibre.js'],
+             'kit/check-ribbon.js', 'tools/check-residues.js', 'sickle/tools/check-fibre.js'],
   nodegraph: ['tools/bake-graph-vectors.js --gate'],
+  /* Slow, and only named: a bare run skips them. docs/dev.md says when. */
+  diffusion: ['diffusion/check-diffusion.js'],
+  folding: ['folding/tools/check-folding.js'],
 };
+const SLOW = ['diffusion', 'folding'];
 
 const args = process.argv.slice(2).filter(a => !a.startsWith('--'));
 if (process.argv.includes('--list')) {
@@ -46,7 +50,7 @@ if (unknown.length) {
   process.exit(2);
 }
 
-const cmds = [...new Set((args.length ? args : Object.keys(AREAS)).flatMap(a => AREAS[a]))];
+const cmds = [...new Set((args.length ? args : Object.keys(AREAS).filter(a => !SLOW.includes(a))).flatMap(a => AREAS[a]))];
 let failed = 0;
 for (const cmd of cmds) {
   const [file, ...rest] = cmd.split(' ');
