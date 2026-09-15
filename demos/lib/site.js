@@ -83,7 +83,7 @@
   }
 
   function signOut() {
-    try { localStorage.removeItem(ACCOUNT_KEY); localStorage.removeItem(TEACHER_KEY); } catch (e) {}
+    try { localStorage.removeItem(ACCOUNT_KEY); localStorage.removeItem(TEACHER_KEY); localStorage.removeItem('ss.class.code'); } catch (e) {}
     fetch('/api/auth', { method: 'POST', credentials: 'same-origin',
                          headers: { 'Content-Type': 'application/json' },
                          body: JSON.stringify({ action: 'logout' }) })

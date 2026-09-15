@@ -163,6 +163,8 @@
   // The apps this browser made on a testing link move into the account before it leaves.
   async function signedIn(user, err) {
     if (err) { busy(''); return show('acctErr', err.message); }
+    // Signing in is saying who you are: a class code left in this browser would outrank it on /build.
+    Apps.codes.setSeat(null);
     if (!paint(user)) return busy('');
     await Apps.account.claimLocal();
     leave(home(user));
