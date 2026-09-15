@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Site-wide chrome: analytics + the foot. Absolute src, because the
+     featured pages set <base href>. lib/site.js -->
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at a short URL by a vercel.json rewrite, which does not move the
+     file: every ../../ path below resolves against this. docs/deploy.md. -->
+<base href="/demos/proteins/atp-synthase/">
+<title>ATP Synthase Structure in 3D — Kodolab</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="The enzyme that makes ATP, built into the inner membrane of the mitochondrion. Protons falling across the membrane spin its rotor about a hundred times a second, and each turn assembles ATP from…">
+<link rel="canonical" href="https://www.kodolab.org/proteins/atp-synthase">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/proteins/atp-synthase">
+<meta property="og:title" content="ATP Synthase Structure in 3D — Kodolab">
+<meta property="og:description" content="The enzyme that makes ATP, built into the inner membrane of the mitochondrion. Protons falling across the membrane spin its rotor about a hundred times a second, and each turn assembles ATP from…">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
+
+<!-- ===================================================================
+     ATP SYNTHASE, IN THE GLOSSARY SHAPE. prion-story.html's page: one
+     molecule fixed on the left, the parts scrolling past on the right.
+
+     THREE FILES, the bench's three. The whole human enzyme (8H9S, cryo-EM)
+     carries every part about the machine and the turn; two β subunits of
+     one bovine crystal (1BMF, open and DP, superposed on the P-loop) carry
+     the site. Different organism, different frame: the switch between them
+     is a cut, never a tween.
+
+     THE TURN IS A RIGID ROTATION of 8H9S's own rotor coordinates about the
+     axis the baker measured. The head's shape change as it turns is the
+     chemistry and is NOT animated; the page says so.
+
+     EVERY NUMBER IS READ FROM THE BAKE AT RENDER TIME: subunit counts off
+     `meta.roles`, what a site holds off `meta.bound`, the axis agreement
+     off `spin`.
+     =================================================================== -->
+
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="../../css/kodo.css">
+<link rel="stylesheet" href="../../css/story.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+<style>
+  #stage{background-image:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <p id="specimen"></p>
+</div>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  <a class="crumb" href="/proteins">proteins</a>
+</nav>
+
+<div id="read"><div class="col">
+  <div id="sections"></div>
+  <div class="tail"></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="../../lib/story.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../lib/annotate.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script>
+'use strict';
+
+const ME = ProteinLib.byKey('atp-synthase');
+const stage = document.getElementById('stage');
+const $ = id => document.getElementById(id);
+
+const box = Proteinbox.create({
+  mount: stage,
+  view: ProteinLib.viewOf(ME),
+  orbit: true,
+  stage: { ortho: false, turn: 'trackball' },
+  pad: 1.15,
+  sub: 10,
+});
+const TWEEN = 620;
+/* The P-loop and what it holds, with the domain around it faded. */
+const SITE_R = 13;
+const GHOST = 0.18;
+
+const NOTES = Annot.create(THREE, stage, box.camera, { mode:'on' });
+(function tick(){ NOTES.step(); requestAnimationFrame(tick); })();
+
+/* Callout tints are the ribbon's own role colours, written from the registry
+   table the chains are painted from. */
+{
+  const hex = n => '#' + n.toString(16).padStart(6, '0');
+  const el = document.createElement('style');
+  el.textContent = Object.entries(ME.draw.byRole).map(([role, n]) =>
+    `.annot-${role} .annot-dot{border-color:${hex(n)}}.annot-${role} .annot-label{color:${hex(n)}}`).join('');
+  document.head.appendChild(el);
+}
+
+const traces = {};
+let shownId = null, pocket = null, current = null;
+
+/* ---- measured off the bake ------------------------------------------------ */
+const roleOf = (t, id) => t.meta.roles[id];
+const chainsOf = (t, subs) => {
+  const want = new Set(subs.split(','));
+  return t.order.filter(id => want.has(roleOf(t, id).subunit));
+};
+const count = (t, sub) => chainsOf(t, sub).length;
+const centroidOf = (t, ids) => {
+  const c = [0, 0, 0]; let n = 0;
+  for(const id of ids) for(const p of t.chains[id].CA){ c[0] += p[0]; c[1] += p[1]; c[2] += p[2]; n++; }
+  return c.map(v => v / n);
+};
+const subunitKinds = t => new Set(t.order.map(id => roleOf(t, id).subunit)).size;
+
+/* An anchor is an Object3D in the chain group, so it moves with whatever the
+   box does to the group, and with the rotor's pivot if it is parented there. */
+const V = new THREE.Vector3();
+function anchorAt(p, parent){
+  const a = new THREE.Object3D();
+  a.userData.anchor = true;
+  a.position.set(p[0], p[1], p[2]);
+  (parent || box.group).add(a);
+  return () => a.getWorldPosition(new THREE.Vector3());
+}
+const partAt = (t, subs) => anchorAt(centroidOf(t, chainsOf(t, subs)));
+/* The middle CA of one chain: gamma's shaft, IF1's wedge. */
+const midCA = (t, id) => { const P = t.chains[id].CA; return P[P.length >> 1]; };
+const siteAt = (t, group) => {
+  const i = t.site.atoms.findIndex(a => a.group === group && (group !== 'bound' || a.el === 'P'));
+  const k = i < 0 ? t.site.atoms.findIndex(a => a.group === group) : i;
+  const mesh = pocket.group.children[k];
+  return () => mesh.getWorldPosition(V.clone());
+};
+const siteCentre = t => {
+  const g = t.site.atoms.filter(a => a.group === 'grip');
+  return [0, 1, 2].map(k => g.reduce((s, a) => s + a.p[k], 0) / g.length);
+};
+const held = t => (t.meta.bound || []).filter(x => x !== 'MG').join(' + ');
+
+const fileStats = (id, t) => {
+  const v = ProteinLib.variantOf(ME, id), cs = t.meta.counts;
+  const mod = cs.reduce((s, c) => s + c.modelled, 0), dec = cs.reduce((s, c) => s + c.declared, 0);
+  const n = t.order.length;
+  return [
+    [n > 1 ? `${n}` : v.species, n > 1 ? `chains, ${subunitKinds(t)} kinds of subunit` : 'species'],
+    [`${mod}`, `residues modelled, ${Math.floor(100 * mod / dec)}% of ${dec}`],
+    [t.meta.resolution.toFixed(2) + ' Å', v.read.method],
+  ];
+};
+
+/* =============================================================================
+ *  THE PARTS
+ * ========================================================================== */
+const PARTS = [
+  { key:'whole', id:'human', title:'ATP synthase', sub:'the motor that makes ATP',
+    deck:'Rendered from real data.',
+    hint:'Scroll to examine each part',
+    stats:t=>fileStats('human', t),
+    note:t=>`Your body turns over roughly its own weight in ATP every day, `
+      + `and almost all of it comes off this one enzyme, built into the inner `
+      + `membrane of every mitochondrion.\n\n It is a <b>rotary motor</b>. `
+      + `Protons flow through the bottom, spin a rotor, and the turning `
+      + `shaft squeezes ATP out of the top. This is the human enzyme, `
+      + `${t.order.length} protein chains, coloured by job.`,
+    notes:()=>[] },
+
+  { key:'parts', id:'human', title:'What turns, what holds still', sub:'rotor and stator',
+    note:t=>`A motor needs something to push against. The <b>rotor</b>, in `
+      + `blue, is a ring of ${count(t, 'c')} c-subunits in the membrane with a `
+      + `shaft (γ) running up through the middle. Everything else is the `
+      + `<b>stator</b>.\n\n The green head, ${count(t, 'α')} α and `
+      + `${count(t, 'β')} β subunits, sits on top of the shaft. The tan stalk `
+      + `bolts it to the membrane. Without the stalk the head would spin `
+      + `along with the shaft and nothing would be made.`,
+    notes:t=>[
+      { text:'head · α₃β₃', tone:'head', card:'Where ATP is made. It never turns.',
+        at:partAt(t, 'α,β'), offset:[60, -40] },
+      { text:'rotor · c-ring + γ', tone:'rotor', card:'Turns as one rigid piece.',
+        at:partAt(t, 'c'), offset:[-170, 30] },
+      /* b and d, not the whole stalk: OSCP caps the head, and averaging it
+         in pulls the anchor onto the green. */
+      { text:'stalk', tone:'stalk', card:'Holds the head still against the shaft\'s torque.',
+        at:partAt(t, 'b,d'), offset:[60, 10] },
+    ] },
+
+  { key:'protons', id:'human', title:'Protons turn the ring', sub:'a gradient becomes a rotation',
+    note:t=>`The electron transport chain pumps protons out of the matrix, `
+      + `so they pile up on the other side of the membrane. They want back `
+      + `in, and this is the only door.\n\n <b>Subunit a</b> holds two `
+      + `half-channels that don't line up. A proton enters through one, `
+      + `hops onto a c-subunit, rides the ring almost a full circle, and `
+      + `leaves through the other. Each proton pushes the ring one step, `
+      + `so ${count(t, 'c')} protons turn it once.`,
+    notes:t=>[
+      { text:'subunit a', tone:'membrane', card:'Two offset half-channels, one open to each side of the membrane.',
+        at:partAt(t, 'a'), offset:[70, 40] },
+      { text:`c-ring · ${count(t, 'c')} subunits`, tone:'rotor', card:'Each c-subunit carries one proton on a glutamate as it turns.',
+        at:partAt(t, 'c'), offset:[-190, 40] },
+    ] },
+
+  { key:'turn', id:'human', title:'The turn', sub:'three ATP per revolution', spin:true,
+    note:t=>{
+      const c = count(t, 'c'), b = count(t, 'β');
+      return `The shaft is bent. As it turns inside the head it presses on `
+      + `each of the ${b} β subunits in sequence, forcing its catalytic site `
+      + `through three shapes: <b>open, gripping, releasing</b>. One full `
+      + `turn makes ${b} ATP, from ${c} protons, about `
+      + `${(c / b).toFixed(1)} protons per ATP.\n\n The real enzyme spins over `
+      + `a hundred times a second. Here it is slowed down, and only the rotor `
+      + `moves: the head's own flexing is the chemistry, and the next part `
+      + `looks at it up close.`;
+    },
+    notes:t=>[
+      { text:'γ shaft', tone:'rotor', card:'Off-centre, so each third of a turn deforms a different β.',
+        at:anchorAt(midCA(t, chainsOf(t, 'γ')[0])), offset:[-150, -30] },
+    ],
+    /* The axis and how well it was measured are the baker's. */
+    caption:t=>`rotor turned rigidly about an axis measured two ways, agreeing to ${t.spin.spread.degrees}°` },
+
+  { key:'open', id:'open', close:true, title:'An empty site', sub:'one β subunit, up close',
+    stats:t=>fileStats('open', t),
+    note:t=>`Zoom in on one β subunit. The loop of backbone that grips a `
+      + `nucleotide's phosphates, the <b>P-loop</b>, is residues `
+      + `${t.meta.grip[0]}–${t.meta.grip[1]}. Right now it holds `
+      + `${t.meta.bound ? held(t) : '<b>nothing</b>'}.\n\n This is the open `
+      + `state: the site has let go and is waiting for ADP and phosphate. `
+      + `This view is from a cow's enzyme, whose head is almost identical to `
+      + `yours and was solved sharply enough to see inside one site.`,
+    notes:t=>[
+      { text:'P-loop, empty', card:'The grip, with nothing to grip.',
+        at:siteAt(t, 'grip'), offset:[60, -50] },
+    ] },
+
+  { key:'dp', id:'dp', close:true, title:'The hard part is letting go', sub:'binding change',
+    note:t=>`A third of a turn later, the same site holds `
+      + `<b>${held(t)}</b>. A neighbouring β from the same crystal, laid over `
+      + `the first on its P-loop, so the site stays put and the rest of the `
+      + `subunit visibly swings.\n\n Here is the surprise: inside a closed `
+      + `site, ADP and phosphate join into ATP almost for free. <b>The `
+      + `energy from the turn goes into prying the site open</b> so the `
+      + `ATP can leave. Paul Boyer predicted this; John Walker's structure `
+      + `showed it.`,
+    notes:t=>[
+      { text:held(t), tone:'phosphorus', card:'Product made and still held. The next push of the shaft releases it.',
+        at:siteAt(t, 'bound'), offset:[60, -50] },
+    ] },
+
+  { key:'reverse', id:'human', title:'It runs backward', sub:'and needs a brake',
+    note:t=>`Nothing in the motor decides its direction. The gradient does. `
+      + `Cut off oxygen, the proton gradient collapses, and the enzyme turns `
+      + `the other way: <b>it spends ATP to pump protons</b>, draining the `
+      + `cell's supply.\n\n The violet chain is <b>IF1</b>, a separate `
+      + `${t.chains[chainsOf(t, 'IF1')[0]].nums.length}-residue protein `
+      + `that wedges into the head and jams the reverse direction only. `
+      + `Bacteria use the same machine both ways on purpose.`,
+    notes:t=>[
+      { text:'IF1 · the brake', tone:'brake', card:'Blocks ATP-burning rotation, not ATP-making.',
+        at:anchorAt(midCA(t, chainsOf(t, 'IF1')[0])), offset:[-160, -40] },
+    ] },
+
+  { key:'sources', id:'human', title:'Where the pictures come from', sub:'two structures, thirty years apart',
+    note:()=>`The site views are X-ray crystallography of the enzyme's head `
+      + `alone. The whole machine is cryo-electron microscopy, which can image `
+      + `a particle this large with its membrane parts attached.\n\n Boyer `
+      + `and Walker shared the 1997 Nobel Prize in Chemistry for how ATP `
+      + `synthase works.`,
+    dl:[
+      ['https://doi.org/10.1038/370621a0', 'Abrahams et al., Nature 370, 621 (1994)', 'The bovine head, 1BMF, with its three sites in three states.'],
+      ['https://doi.org/10.1016/j.molcel.2023.04.029', 'Lai et al., Mol. Cell 83, 2137 (2023)', 'The whole human enzyme, 8H9S, by cryo-EM.'],
+      ['https://www.nobelprize.org/prizes/chemistry/1997/summary/', 'Nobel Prize in Chemistry (1997)', 'Boyer and Walker, for the mechanism.'],
+    ],
+    notes:()=>[] },
+];
+
+const SAYS = {
+  human: 'the whole human enzyme',
+  open: 'one β subunit, site empty',
+  dp: 'the neighbouring β, holding product',
+};
+
+/* =============================================================================
+ *  THE TURN
+ * =============================================================================
+ *  The bench's spin: rotor meshes, found by `userData.chain`, re-parented into
+ *  a pivot on the measured axis. Harvested on a timer rather than rAF, since
+ *  the box builds a chain per frame and rAF stops in a hidden tab.
+ * ========================================================================== */
+const DEG_PER_SEC = 30;
+let pivot = null, angle = 0, lastT = 0;
+const AXIS = new THREE.Vector3();
+
+function collect(t){
+  const P = t.spin.point;
+  if(!pivot){
+    for(const c of [...box.group.children]) if(c.userData && c.userData.pivot) box.group.remove(c);
+    pivot = new THREE.Group();
+    pivot.userData.pivot = true;
+    pivot.position.set(P[0], P[1], P[2]);
+    box.group.add(pivot);
+  }
+  const moving = new Set(t.spin.chains);
+  for(const m of [...box.group.children]){
+    if(m === pivot || !m.userData || !moving.has(m.userData.chain)) continue;
+    m.position.set(-P[0], -P[1], -P[2]);
+    pivot.add(m);
+  }
+}
+setInterval(() => { if(shownId === 'human') collect(traces.human); }, 200);
+
+(function spin(now){
+  requestAnimationFrame(spin);
+  const on = current && current.spin && pivot;
+  const dt = Math.min(0.1, (now - lastT) / 1000);
+  lastT = now;
+  if(!on) return;
+  angle = (angle + DEG_PER_SEC * dt) % 360;
+  const s = traces.human.spin.axis;
+  AXIS.set(s[0], s[1], s[2]);
+  pivot.setRotationFromAxisAngle(AXIS, angle * Math.PI / 180);
+  box.draw();
+})(0);
+
+/* =============================================================================
+ *  SHOWING A PART
+ * ========================================================================== */
+function show(part){
+  if(current === part) return;
+  const first = current === null;
+  current = part;
+  const t = traces[part.id];
+  const v = ProteinLib.variantOf(ME, part.id);
+
+  NOTES.clear();
+  for(const el of secs) el.setAttribute('aria-current', String(el.dataset.key === part.key));
+
+  if(shownId !== part.id){
+    /* open and dp are superposed, so the camera stays; the human enzyme is
+       another frame, so the box re-fits. */
+    const sameFrame = shownId && v.group === ProteinLib.variantOf(ME, shownId).group;
+    shownId = part.id;
+    pivot = null; angle = 0;
+    box.setData(t, { keep: !!sameFrame, colors: t.site ? null : ProteinLib.colorsOf(ME, v) });
+    pocket = t.site ? box.setPocket(t.site) : null;
+  }
+  for(const c of [...box.group.children]) if(c.userData && c.userData.anchor) box.group.remove(c);
+
+  $('specimen').innerHTML =
+    `<span class="pdb">${v.source.id}</span> · ${part.caption ? part.caption(t) : SAYS[part.id]} · `
+    + `<a href="${ProteinLib.urls(v).entry}" target="_blank" rel="noopener">at the PDB →</a>`;
+
+  box.focus(part.close
+    ? { at:siteCentre(t), radius:SITE_R, ghost:GHOST }
+    : null, first ? 0 : TWEEN);
+  for(const n of part.notes(t)) if(n.at) NOTES.add(n);
+  box.draw();
+}
+
+const claim = t => t.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean)
+  .map(x => `<p class="claim">${x}</p>`).join('');
+const tiles = st => !st ? '' : '<div class="measure">' + st.map(([n, l]) =>
+  `<div><span class="n">${n}</span><span class="l">${l}</span></div>`).join('') + '</div>';
+const terms = dl => !dl ? '' : '<dl>' + dl.map(([href, name, why]) =>
+  `<dt><a href="${href}" target="_blank" rel="noopener">${name}</a></dt><dd>${why}</dd>`).join('') + '</dl>';
+
+let secs = [];
+const NEEDED = [...new Set(PARTS.map(p => p.id))];
+Promise.all(NEEDED.map(id => {
+  const v = ProteinLib.variantOf(ME, id);
+  return fetch(`data/${v.read.baked}`).then(r => r.json()).then(t => { traces[id] = t; });
+})).then(() => {
+  const host = $('sections');
+  secs = PARTS.map((part, i) => {
+    const el = document.createElement('section');
+    el.dataset.key = part.key;
+    el.innerHTML =
+      `<p class="num">${String(i + 1).padStart(2, '0')} / ${String(PARTS.length).padStart(2, '0')}</p>`
+      + `<h3>${part.title}</h3>`
+      + `<p class="gloss">${part.sub}</p>`
+      + (part.deck ? `<p class="deck">${part.deck}</p>` : '')
+      + claim(part.note(traces[part.id]))
+      + tiles(part.stats && part.stats(traces[part.id]))
+      + terms(part.dl)
+      + (part.hint ? `<p class="hint">${part.hint}</p>` : '');
+    host.appendChild(el);
+    return el;
+  });
+
+  show(PARTS[0]);
+  Story.scroll(secs, i => show(PARTS[i]));
+});
+
+window.page = { box, traces, get showing(){ return current && current.key; } };
+</script>
+</body>
+</html>
