@@ -41,6 +41,13 @@ const CHECKERS = [
 /* ~65 s and ~45 s. A bare run skips them; a file or their own path still runs them. */
 const SLOW = ['diffusion/check-diffusion.js', 'folding/tools/check-folding.js'];
 
+/* Files a checker names but is not worth running for. check-folding reads only
+   ribbon.js's parseBackbone and dssp; check-nucleic names ribbon.js in prose. */
+const IGNORE = {
+  'folding/tools/check-folding.js': ['ribbon.js'],
+  'kit/check-nucleic.js': ['ribbon.js'],
+};
+
 const file = c => c.split(' ')[0];
 const src = c => fs.readFileSync(path.join(ROOT, file(c)), 'utf8');
 
@@ -62,7 +69,7 @@ function resolve(arg) {
   const own = CHECKERS.filter(c => file(c) === rel);
   if (own.length) return own;
   const base = path.basename(rel);
-  const hits = CHECKERS.filter(c => src(c).includes(base));
+  const hits = CHECKERS.filter(c => src(c).includes(base) && !(IGNORE[file(c)] || []).includes(base));
   if (rel.startsWith('lib/')) hits.push(...GROUPS.molecules);
   return hits;
 }
