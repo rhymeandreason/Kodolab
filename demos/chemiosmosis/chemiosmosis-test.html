@@ -82,8 +82,8 @@ function bench(ctx) {
     <div class="bench-group">
       <div class="bench-hd">where</div>
       ${seg('context', [['mitochondrion', 'mitochondrion'], ['thylakoid', 'thylakoid']])}
-      <div class="bench-sub" data-mito>the chain</div>
-      <div data-mito>${seg('chain', [['lumped', 'one complex'], ['split', 'I · II · III · IV']])}</div>
+      <div class="bench-sub">the chain</div>
+      <div>${seg('chain', [['lumped', 'one complex'], ['split', 'I · II · III · IV']])}</div>
       <div class="bench-sub" data-mito>how far out</div>
       <div data-mito>${seg('span', [['inner', 'inner membrane'], ['mitochondrion', '+ outer'], ['cell', '+ cell']])}</div>
     </div>
@@ -154,6 +154,7 @@ function bench(ctx) {
   function sync() {
     mark('context', S.context); mark('chain', S.chain); mark('span', S.span); mark('fuel', S.fuel || '');
     for (const el of ui.qa('[data-mito]')) el.hidden = !mito();
+    ui.q('#chain > button[data-v="split"]').textContent = mito() ? 'I · II · III · IV' : 'PSII · b6f · PSI';
     $('#rate').disabled = !S.fuel;
     const blocked = mito() && S.chain === 'lumped' && !$('#o2').checked;
     for (const b of ui.qa('[data-feed]')) b.disabled = blocked;
@@ -166,7 +167,7 @@ function bench(ctx) {
     if (S[id] === b.dataset.v) return;
     S[id] = b.dataset.v;
     if (id === 'context') {
-      if (!mito()) { S.chain = 'lumped'; S.span = 'inner'; }
+      if (!mito()) S.span = 'inner';
       S.fuel = FUELS[S.context][0];
       buildFuels(); apply(); m.reset();
     } else apply();
@@ -178,7 +179,9 @@ function bench(ctx) {
   let labelsOn = false;
   function showLabels() {
     const s = m.state();
-    const names = (s.chain === 'split' ? ['complex.I', 'complex.II', 'complex.III', 'complex.IV', 'quinone', 'cytc'] : ['complex', 'inside', 'outside'])
+    const names = (s.chain !== 'split' ? ['complex', 'inside', 'outside']
+      : s.light ? ['psii', 'water.split', 'plastoquinone', 'b6f', 'plastocyanin', 'psi']
+      : ['complex.I', 'complex.II', 'complex.III', 'complex.IV', 'quinone', 'cytc'])
       .concat(['synthase'], $('#leak').checked ? ['leak'] : [], s.span !== 'inner' ? ['translocase', 'porin'] : [], s.span === 'cell' ? ['pump.atp'] : []);
     m.clearNotes(); m.notes(names);
   }
@@ -207,9 +210,19 @@ function bench(ctx) {
       row('proton-motive force', s.pmf.toFixed(0) + ' mV') +
       row('protons pumped out', s.complexTurns);
     if (s.complexes) {
-      for (const k of Object.keys(s.complexes)) rows += row(`complex ${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
-      rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
-      rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
+      for (const k of Object.keys(s.complexes)) rows += row(`${s.light ? k : 'complex ' + k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
+      if (s.light) {
+        const L = s.light;
+        rows += row('H⁺ from water', L.protonsFromWater);
+        rows += row('H⁺ into the lumen per pair · per O₂', `${s.protonsPerFuel.light} · ${L.protonsPerO2}`);
+        rows += row(`photons (${L.photonsPerPair} a pair)`, L.photons);
+        rows += row('waters split · O₂ released', `${L.waterSplit} · ${L.o2Released}`);
+        rows += row('NADPH made', L.nadphMade);
+        rows += row('plastoquinol · loaded plastocyanin', `${s.shuttles.plastoquinol} · ${s.shuttles.plastocyaninLoaded}`);
+      } else {
+        rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
+        rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
+      }
     } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
     if (s.protonsLeaked || $('#leak').checked) rows += row('protons down the uncoupler', s.protonsLeaked);
     rows += row(`ATP (${s.stoichiometry.protonsPerTurn} H⁺ per ${s.stoichiometry.atpPerTurn})`, s.atpMade);

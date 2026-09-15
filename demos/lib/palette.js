@@ -421,6 +421,12 @@
     proton: PALETTE.atoms.H,
     oxygen: PALETTE.atoms.O,
     photon: 0xffd452,    // absorbed light: warm, and no pigment's colour
+    /* THE TWO SHUTTLES, and neither is a machine. Plastoquinone is a quinone,
+       so it is ubiquinone's olive. Plastocyanin is blue for its copper, the
+       colour it really is, and lighter than the chain so it is not read as one. */
+    plastoquinone: PALETTE.respiration.quinone,
+    plastocyanin: 0x4aa3d8,
+    carrier: PALETTE.respiration.carrier,   // NADP⁺/NADPH, NAD⁺'s colour: the same statement
   };
 
   global.MolPalette = PALETTE;

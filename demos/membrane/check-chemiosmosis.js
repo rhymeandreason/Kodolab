@@ -170,7 +170,12 @@ console.log('\n== 6. the chain, split: what each fuel is worth');
   is(C.CHAIN.II.pumps === 0, 'complex II pumps nothing');
   is(C.chainProtons('NADH') === 10, `${C.chainProtons('NADH')} protons per NADH, summed off the table`);
   is(C.chainProtons('FADH2') === 6, `${C.chainProtons('FADH2')} protons per FADH₂: the difference is complex I's ${C.CHAIN.I.pumps}`);
-  is(C.chainPath('light').length === 0, 'light enters no respiratory chain');
+  is(C.chainPath('light').join() === 'PSII,b6f,PSI', 'light: water at PSII, then b6f, then PSI to NADP⁺');
+  is(C.PHOTO_CHAIN.PSII.pumps === 0 && C.PHOTO_CHAIN.PSI.pumps === 0, 'neither photosystem pumps: b6f is the only pump');
+  is(C.chainProtons('light') === 6, `${C.chainProtons('light')} H⁺ into the lumen per pair: b6f's ${C.PHOTO_CHAIN.b6f.pumps} plus ${C.PHOTO_CHAIN.PSII.fromWater} from water`);
+  is(C.chainProtons('light') * C.E_PER_O2 / 2 === 12, '12 H⁺ per O₂');
+  is(C.chainPhotons('light') === 4, `${C.chainPhotons('light')} photons per pair: one per electron at each photosystem`);
+  is(C.CARRIES.PC === 1 && C.CARRIES.PQ === 2, 'plastoquinone carries a pair, plastocyanin one electron');
   /* THE SHUTTLES BALANCE: every complex turns once per pair, so whatever a
      complex gives, the next must take in whole trips. */
   for (const k of Object.keys(C.CHAIN)) {

@@ -313,24 +313,51 @@
     III: { takes: 'Q',     gives: 'cytc', pumps: 4 },
     IV:  { takes: 'cytc',  gives: 'O2',   pumps: 2 },
   };
-  const CARRIES = { NADH: 2, FADH2: 2, Q: 2, cytc: 1 };
+  /* =====================================================================
+     THE LIGHT REACTIONS, SPLIT: the same shape, with water at the start.
+     ---------------------------------------------------------------------
+     Per PAIR of electrons, linear flow:
+
+       PSII  H₂O → PQ      pumps 0   one H₂O gives 2 e⁻ and 2 H⁺ INTO THE
+                                     LUMEN, and ½ O₂. `fromWater` is those
+                                     protons: released, not pumped
+       b6f   PQH₂ → PC     pumps 4   net of the Q cycle, drawn as a plain pump
+       PSI   PC → NADP⁺    pumps 0   ferredoxin and FNR drawn as PSI's stromal
+                                     face: NADP⁺ + 2e⁻ + H⁺ → NADPH, the H⁺
+                                     taken from the stroma
+
+     `photons` is one per electron at each photosystem. 6 H⁺ into the lumen a
+     pair, so 12 per O₂; check-chemiosmosis.js asserts both off this table.
+     Cyclic flow around PSI is not drawn.
+     ===================================================================== */
+  const PHOTO_CHAIN = {
+    PSII: { takes: 'H2O', gives: 'PQ',    pumps: 0, fromWater: 2, photons: 2 },
+    b6f:  { takes: 'PQ',  gives: 'PC',    pumps: 4 },
+    PSI:  { takes: 'PC',  gives: 'NADP+', pumps: 0, photons: 2, fromStroma: 1 },
+  };
+  const CARRIES = { NADH: 2, FADH2: 2, Q: 2, cytc: 1, H2O: 2, PQ: 2, PC: 1 };
+  const START = { NADH: 'NADH', FADH2: 'FADH2', light: 'H2O' };
+  const tableOf = fuel => fuel === 'light' ? PHOTO_CHAIN : CHAIN;
   function chainPath(fuel) {
-    const path = [];
-    let want = fuel;
-    for (let guard = 0; guard < 8; guard++) {
-      const k = Object.keys(CHAIN).find(c => CHAIN[c].takes === want);
+    const T = tableOf(fuel), end = ACCEPTOR[fuel], path = [];
+    let want = START[fuel];
+    for (let guard = 0; want && guard < 8; guard++) {
+      const k = Object.keys(T).find(c => T[c].takes === want);
       if (!k) break;
       path.push(k);
-      if (CHAIN[k].gives === 'O2') return path;
-      want = CHAIN[k].gives;
+      if (T[k].gives === end) return path;
+      want = T[k].gives;
     }
-    return path[path.length - 1] && CHAIN[path[path.length - 1]].gives === 'O2' ? path : [];
+    return [];
   }
-  const chainProtons = fuel => chainPath(fuel).reduce((s, k) => s + CHAIN[k].pumps, 0);
+  /* Protons that END UP on the pumped-into side per pair: pumped, plus any
+     released there by chemistry (water, in a thylakoid). */
+  const chainProtons = fuel => chainPath(fuel).reduce((s, k) => { const r = tableOf(fuel)[k]; return s + r.pumps + (r.fromWater || 0); }, 0);
+  const chainPhotons = fuel => chainPath(fuel).reduce((s, k) => s + (tableOf(fuel)[k].photons || 0), 0);
 
   const API = { PROTONS_PER_TURN, ATP_PER_TURN, PROTONS_PER_ATP, PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
                 CONTEXTS, sideName, pumpDir, protonState, synthaseDirection, rotor, FUELS, SPENT, ACCEPTOR, complexRate, Complex,
-                CHAIN, CARRIES, chainPath, chainProtons };
+                CHAIN, PHOTO_CHAIN, CARRIES, chainPath, chainProtons, chainPhotons, E_PER_O2: 4 };
   global.Chemiosmosis = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : globalThis);

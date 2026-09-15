@@ -312,7 +312,7 @@ const m = Chemiosmosis.mount(el, {
   fuel: 'NADH',               // 'NADH' | 'FADH2' | 'light' | null (nothing driving it). Defaults to light in a thylakoid
   fuelRate: 1,                // 0..1: a light dimmer, or a supply dial
   oxygen: true,               // false stops an NADH or FADH2 chain: nothing takes the electrons. No effect on 'light'
-  chain: 'lumped',            // 'lumped': one complex stands for the chain · 'split': complexes I–IV, ubiquinone and cytochrome c. Mitochondrion only
+  chain: 'lumped',            // 'lumped': one complex stands for the chain · 'split': I–IV, ubiquinone, cytochrome c; in a thylakoid PSII, b6f, PSI, plastoquinone, plastocyanin
   span: 'inner',              // 'inner' · 'mitochondrion': + outer membrane, porin, translocase · 'cell': + cytosol and a plasma membrane whose pump spends the ATP
   proteins: { complex:{ x:-80 }, synthase:{ x:40 }, leak:null },   // omitted: a layout that fits the chain and span. `complex` is spread into I–IV when split
   contents: { inside:{ water:30, H:22 }, outside:{ water:30, H:22 } },   // 'H' is a proton. Omitted, a complex gets these 22 a side; H:0 means none
@@ -338,6 +338,8 @@ The translocase's swap is **electrogenic** — ATP⁴⁻ out for ADP³⁻ in, dr
 
 **THE SPLIT CHAIN.** NADH docks on complex I's arm in the matrix. With `fuel:'FADH2'`, succinate docks at complex II instead: its FAD is bound inside the enzyme, and it pumps nothing, so the same pair of electrons buys fewer protons. Ubiquinone carries each pair inside the membrane to complex III; cytochrome c carries them one at a time along the outer face to complex IV, where O₂ takes them. Neither shuttle is used up. **It backs up the way a real chain does**: with `oxygen:false` the cytochromes wait loaded at IV, then III stops, then I, with NADH still waiting. `m.feed()` sends one NADH (or `feed('FADH2')`) through the whole chain once. What a fuel is worth is `state().protonsPerFuel`, summed off the chain's own table, and what each complex has done is `state().complexes.I.pumped`: print those, never a typed 10 or 6.
 
+**THE SPLIT LIGHT REACTIONS**, `context:'thylakoid'` with `chain:'split'`. Light hits PSII, which pulls the replacement electrons out of water on its lumen face: each turn is one water, **its protons appear in the lumen as real protons in the gradient**, and every second water releases an O₂. Plastoquinone carries the pair in the membrane to cytochrome b6f, **the only pump**; plastocyanin carries them one at a time through the lumen to PSI, which a second photon drives, and NADP⁺ docks on PSI's stroma face and leaves as NADPH, taking a stroma proton. Photons flash onto both photosystems, one per electron. So the gradient is built two ways, which is the claim a lumped chain cannot make. `feed('light')` is one flash: PSII turns once and PSI owes one turn. b6f slows as the lumen acidifies; the photosystems do not, and stall when every plastoquinone is waiting full. Ferredoxin, FNR and cyclic flow are not drawn. Per pair and per O₂ is `state().protonsPerFuel.light` and `state().light.protonsPerO2`; print those, never a typed 6 or 12.
+
 **`span:'cell'` is the ATP's whole trip**: matrix · translocase · intermembrane space · porin · cytosol · the Na⁺/K⁺ pump's nucleotide site in the plasma membrane, which turns once per ATP that arrives. The four spaces and three membranes are named on the stage. `state().cell.atpSpent` counts pump turns; `m.spend()` turns it by hand and returns false if a turn is running. **Say that the heights are compressed**: a real intermembrane space is about 20 nm and a mitochondrion sits microns below the cell surface, so this cytosol is perhaps a hundred times too thin. Everything else is to scale with itself.
 
 `complex` burns fuel to carry protons **inside → outside only**, on a six-phase cycle it visibly turns through. `synthase` is a turbine, not a pump: protons come back down through it and the rotor turns, and it cannot run uphill, so with the gradient gone it stops. `leak` is an uncoupler's hole — protons home without making ATP, and the fuel all comes out as heat. The complexes slow as the force they pump against rises and stall near `state().pmfStall`: respiratory control.
@@ -357,14 +359,15 @@ The translocase's swap is **electrogenic** — ATP⁴⁻ out for ADP³⁻ in, dr
 | `complexLabel`, `complexCaption`, `complexT` | the beat of the complex's six-phase cycle, and the words for it |
 | `complexStarved` | fuelled, but no protons on the side it loads from, so it cannot turn |
 | `chain`, `span`, `outerMembrane`, `sides.beyond`, `sides.pumpedInto` | the level of detail on stage, whether the lid is on, what to call the space above it, and where the protons collect |
-| `complexes.I … .IV` `{ turns, pumpsPerTurn, pumped, label }` | split only: each complex's ledger and the beat it is on |
-| `protonsPerFuel.NADH / .FADH2` | split only: what a fuel is worth, from the chain's table |
-| `shuttles.ubiquinol`, `shuttles.cytcLoaded` | split only: electrons in transit; both stuck full is a chain backed up |
+| `complexes.I … .IV` or `.PSII / .b6f / .PSI` `{ turns, pumpsPerTurn, pumped, label }` | split only: each complex's ledger and the beat it is on |
+| `protonsPerFuel.NADH / .FADH2`, or `.light` | split only: protons into the pumped-into side per fuel (per pair for light, water's included), from the chain's table |
+| `shuttles.ubiquinol / .cytcLoaded`, or `.plastoquinol / .plastocyaninLoaded` | split only: electrons in transit; both stuck full is a chain backed up |
+| `light.photons / .waterSplit / .o2Released / .nadphMade / .protonsFromWater / .protonsToNADPH`, `light.photonsPerPair / .protonsPerO2` | split thylakoid only: the light reactions' ledger, counted, and their ratios |
 | `cell.atpSpent`, `cell.mV`, `spentOnPump` | span `'cell'` only: the plasma membrane's pump, and ATP it has spent |
 
-Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `spent` (n) · `conduct` (traveller, dir).
+Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `spent` (n) · `oxygen` (n) and `nadph` (n), split thylakoid · `conduct` (traveller, dir).
 
-Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `complex.I`, `complex.II`, `complex.III`, `complex.IV`, `quinone`, `cytc` (split), `pump`, `pump.atp`, `cell.outside` (span `'cell'`), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
+Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `complex.I`, `complex.II`, `complex.III`, `complex.IV`, `quinone`, `cytc` (split), `psii`, `b6f`, `psi`, `plastoquinone`, `plastocyanin`, `water.split`, `nadph` (split thylakoid; `complex` is b6f), `pump`, `pump.atp`, `cell.outside` (span `'cell'`), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
 
 Layers for `show()`: `water`, `cut`, `membrane`, `outer`. Signals for Graph: `protons`, `voltage`, `dpH`, `pmf`, `atp`.
 

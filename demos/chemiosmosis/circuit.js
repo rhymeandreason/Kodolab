@@ -24,8 +24,11 @@
  *                       membrane from I or II to III, cytochrome c on the
  *                       outer face from III to IV. NADH docks at I and FADH₂'s
  *                       electrons enter at II, which pumps nothing. Each turn
- *                       pumps CHAIN[k].pumps. Mitochondrion only: a thylakoid
- *                       asked to split stays lumped, and says so once.
+ *                       pumps CHAIN[k].pumps. In a thylakoid: PSII, b6f and
+ *                       PSI, plastoquinone in the membrane, plastocyanin in
+ *                       the lumen; PSII splits water into lumen protons and
+ *                       O₂, PSI makes NADPH in the stroma, both fire on light.
+ *                       Off PHOTO_CHAIN. A plasma membrane stays lumped.
  *      span   'inner'          the inner membrane alone
  *             'mitochondrion'  plus the outer membrane with a porin, and a
  *                              translocase, so the ATP visibly gets out
@@ -72,20 +75,35 @@
     atpTo: null,
   };
   const SPLIT = ['I', 'II', 'III', 'IV'];
-  /* Where I–IV stand about a lumped complex's x, and how close the row may
-     pack. Tuned against the default camera, which a split chain pulls back. */
-  const SPLIT_OFFSETS = [-75, -25, 25, 75], SPLIT_GAP = 50;
+  const PHOTO = ['PSII', 'b6f', 'PSI'];
+  const ALL = SPLIT.concat(PHOTO);
+  const ROW = k => CHEM.CHAIN[k] || CHEM.PHOTO_CHAIN[k];
+  /* Where each split row stands about a lumped complex's x, and how close it
+     may pack. Tuned against the default camera, which a split chain pulls back. */
+  const SPLIT_OFFSETS = { mitochondrion: [-75, -25, 25, 75], thylakoid: [-60, 0, 60] }, SPLIT_GAP = 50;
 
   function machine(eng) {
     const { THREE, P, HALF, BOW, rnd, travellers, kit, seat, root } = eng;
     const Parts = global.Parts;
     const pumpDir = eng.pumpDir;
     const RESP = global.MolLib.PALETTE.respiration;
+    const PHO = global.MolLib.PALETTE.photosynthesis;
+    /* ONE SHAPE, TWO LINES. `rest` is where the quinone waits, `hub` the
+       pump that trades it for the one-electron shuttle, `end` where that
+       shuttle unloads. */
+    const LINES = {
+      mitochondrion: { keys: SPLIT, donors: { I: 'NADH', II: 'FADH2' }, rest: 'II', hub: 'III', end: 'IV',
+                       q: ['Q', 'QH₂'], c: 'cyt c', qColor: RESP.quinone, cColor: RESP.cytc },
+      thylakoid:     { keys: PHOTO, donors: { PSII: 'light' }, rest: 'PSII', hub: 'b6f', end: 'PSI',
+                       q: ['PQ', 'PQH₂'], c: 'PC', qColor: PHO.plastoquinone, cColor: PHO.plastocyanin },
+    };
+    const line = () => LINES[P.context] || LINES.mitochondrion;
+    const photo = () => split() && P.context === 'thylakoid';
     let warnedSplit = false;
     const split = () => {
       if (P.chain !== 'split') return false;
-      if (P.context === 'mitochondrion') return true;
-      if (!warnedSplit) { warnedSplit = true; console.warn(`Chemiosmosis: chain:'split' is the mitochondrial chain; ${P.context} stays lumped`); }
+      if (LINES[P.context]) return true;
+      if (!warnedSplit) { warnedSplit = true; console.warn(`Chemiosmosis: chain:'split' needs a mitochondrion or a thylakoid; ${P.context} stays lumped`); }
       return false;
     };
 
@@ -108,9 +126,22 @@
       II:  { R: 10.5, lobes: 2, lobe: 0.10, color: RESP.complexII },
       III: { R: 15.5, lobes: 2, lobe: 0.16, color: RESP.complex },
       IV:  { R: 13.5, lobes: 2, lobe: 0.10, color: RESP.complex },
+      /* PSII and b6f are dimers. PSII's oxygen-evolving complex hangs into
+         the lumen, where the water is split; PSI's stromal ridge is where
+         ferredoxin docks and NADP⁺ is reduced. */
+      PSII: { R: 15.5, lobes: 2, lobe: 0.14, color: PHO.psii },
+      b6f:  { R: 14.0, lobes: 2, lobe: 0.12, color: PHO.b6f },
+      PSI:  { R: 15.0, lobes: 3, lobe: 0.10, color: PHO.psi },
     };
     const CX = {};
-    for (const k of SPLIT) CX[k] = Parts.transporter({ half:HALF, site:6.2, mouth:8.0, radius:SPEC[k].R, lobes:SPEC[k].lobes, lobeDepth:SPEC[k].lobe, color:SPEC[k].color });
+    for (const k of ALL) CX[k] = Parts.transporter({ half:HALF, site:6.2, mouth:8.0, radius:SPEC[k].R, lobes:SPEC[k].lobes, lobeDepth:SPEC[k].lobe, color:SPEC[k].color });
+    const OEC = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(PHO.psii));
+    OEC.scale.set(1.3, 0.8, 1); OEC.userData.baseY = CX.PSII.height + 3;
+    CX.PSII.group.add(OEC);
+    const RIDGE_PSI = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(PHO.psi));
+    RIDGE_PSI.scale.set(1.2, 0.8, 1); RIDGE_PSI.userData.baseY = CX.PSI.height + 3;
+    CX.PSI.group.add(RIDGE_PSI);
+    CX.PSII.setGates(0, 0); CX.PSI.setGates(0, 0);
     const ARM_I = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(RESP.complex));
     ARM_I.scale.set(1, 2.1, 1); ARM_I.position.x = -5; ARM_I.userData.baseY = CX.I.height + 12;
     CX.I.group.add(ARM_I);
@@ -141,7 +172,7 @@
     const ANT = Parts.transporter({ half:HALF, site:5.4, mouth:7.0, radius:ANT_R, lobes:0, color:RESP.translocase });
     const ROTOR = buildRotor(SYNTH.height);
     SYNTH.group.add(ROTOR);
-    root.add(COMPLEX.group, SYNTH.group, LEAK.group, ANT.group, ...SPLIT.map(k => CX[k].group));
+    root.add(COMPLEX.group, SYNTH.group, LEAK.group, ANT.group, ...ALL.map(k => CX[k].group));
     const H_ = () => COMPLEX.height;
 
     /* ---- the outer membrane, and the porin in it ----
@@ -155,7 +186,7 @@
     const PORIN = Parts.transporter({ half:HALF * 0.62, over:4.0, wall:2.2, site:4.9, mouth:5.4, radius:POR_R, lobes:0, color:RESP.porin });
     root.add(PORIN.group);
     let OUTER = null, porinX = null, antX = null, complexX = 0, synthX = null;
-    const xs = { I: 0, II: 0, III: 0, IV: 0 };
+    const xs = Object.fromEntries(ALL.map(k => [k, 0]));
     const outerOn = () => !!P.outerMembrane && P.context === 'mitochondrion';
     const outerY = () => pumpDir() * OUTER_GAP;
     const _out = new THREE.Vector3();
@@ -365,21 +396,29 @@
        load and is spent on `occlude`. */
     const FUEL_SPEED = 34, FUEL_FADE = 0.9;
     const chips = {};
-    const pulse = { complex: null, I: null, II: null };
+    const pulse = { complex: null, I: null, II: null, PSII: null };
+    /* A flash is one PSII turn, and PSI owes it one turn later, whenever its
+       plastocyanins arrive: a count, so two quick flashes are two turns. */
+    const credit = { PSI: 0 };
     function dockOf(key) {
       const d = pumpDir(), H = H_();
       if (key === 'I') { const x = xs.I; return { from:{ x:x - 36, y:-d * (H + 50) }, at:{ x:x - 14, y:-d * (H + 30) }, away:{ x:x - 42, y:-d * (H + 54) } }; }
+      if (key === 'PSI') { const x = xs.PSI; return { from:{ x:x + 36, y:-d * (H + 46) }, at:{ x:x + 12, y:-d * (H + 20) }, away:{ x:x + 42, y:-d * (H + 50) } }; }
       if (key === 'II') { const x = xs.II; return { from:{ x:x - 32, y:-d * (H + 34) }, at:{ x:x - 13, y:-d * (H + 14) }, away:{ x:x - 36, y:-d * (H + 38) } }; }
       const x = complexX;
       return { from:{ x:x - 34, y:-d * (H + 30) }, at:{ x:x - 15, y:-d * (H + 13) }, away:{ x:x - 40, y:-d * (H + 34) } };
     }
+    /* AT PSI THE CARRIER IS THE ACCEPTOR, not the fuel: NADP⁺ arrives empty
+       and leaves as NADPH, the reverse of NADH at complex I. */
     function fuelArrive(key, f) {
-      if (!P.showFuel || chips[key] || !f || !CHEM.SPENT[f]) return;   // light: nothing arrives, and nothing should be drawn
+      const nadp = key === 'PSI';
+      if (!P.showFuel || chips[key]) return;
+      if (!nadp && (!f || !CHEM.SPENT[f])) return;   // light: nothing arrives, and nothing should be drawn
       const dock = dockOf(key);
       const succ = key === 'II';
-      const g = succ ? buildToken('succinate', RESP.carrier, 1) : buildToken(f === 'FADH2' ? 'FADH₂' : f, RESP.carrier, 2);
+      const g = succ ? buildToken('succinate', RESP.carrier, 1) : nadp ? buildToken('NADP⁺', PHO.carrier, 2) : buildToken(f === 'FADH2' ? 'FADH₂' : f, RESP.carrier, 2);
       root.add(g);
-      chips[key] = { obj:g, spentName: succ ? 'fumarate' : CHEM.SPENT[f], x:dock.from.x, y:dock.from.y, to:dock.at, fade:1, spent:false };
+      chips[key] = { obj:g, spentName: succ ? 'fumarate' : nadp ? 'NADPH' : CHEM.SPENT[f], x:dock.from.x, y:dock.from.y, to:dock.at, fade:1, spent:false };
       seat(g, chips[key].x, chips[key].y, 0);
     }
     function fuelSpend(key) {
@@ -500,13 +539,16 @@
        left and stops, however much NADH is waiting. */
     const Q_Z = 6, Q_SPEED = 40, C_SPEED = 36;
     const qTokens = [], cTokens = [];
-    /* AT REST IN THE LIPID, between II and III, where no protein stands. */
-    const qHome = i => ({ x: (xs.II + xs.III) / 2 + (i ? 5 : -5), y: 0, z: i ? -Q_Z : Q_Z });
+    let shuttleCtx = null;
+    /* AT REST IN THE LIPID, between the last donor and the hub, where no protein stands. */
+    const qHome = i => { const L = line(); return { x: (xs[L.rest] + xs[L.hub]) / 2 + (i ? 5 : -5), y: 0, z: i ? -Q_Z : Q_Z }; };
     /* A quinone site is inside the membrane part of the complex, so it docks
-       at the protein's edge on the side it came from, not at its axis. */
-    const qDock = (key, fromX) => {
+       at the protein's edge on the side it came from, not at its axis. Each
+       quinone has its own slot, the second one body-width further out, so
+       one waiting behind another is two objects rather than one stacked. */
+    const qDock = (key, fromX, i) => {
       const s = Math.sign(fromX - xs[key]) || -1;
-      return { x: xs[key] + s * (SPEC[key].R - 3), y: 0, z: Q_Z, key };
+      return { x: xs[key] + s * (SPEC[key].R - 3 + (i ? 11 : 0)), y: 0, z: Q_Z, key };
     };
     /* IT GOES AROUND A PROTEIN, NOT THROUGH ONE. Passing a complex it is not
        docking at, it first steps back behind it, crosses, and comes forward
@@ -518,7 +560,7 @@
       const to = q.to, dx = to.x - q.x;
       const nx = q.x + Math.sign(dx) * Math.min(Math.abs(dx), Q_SPEED * dt);
       let zWant = to.z, blocked = false;
-      for (const k of SPLIT) {
+      for (const k of line().keys) {
         if (!CX[k].group.visible || k === to.key) continue;
         const clearR = SPEC[k].R * (1 + SPEC[k].lobe) + 5;
         if (Math.abs(nx - xs[k]) < clearR || Math.abs(q.x - xs[k]) < clearR) { zWant = -(clearR + 2); blocked = true; }
@@ -531,8 +573,10 @@
       return Math.abs(to.x - q.x) < 0.5 && Math.abs(to.z - q.z) < 1.5;
     }
     const cY = () => pumpDir() * (H_() + 7);
-    const cHome = i => ({ x: xs.III + 4 + (i ? 5 : -5), y: cY(), z: 0 });
-    const cDock = i => ({ x: xs.IV - 8 + (i ? 5 : -5), y: cY(), z: 0 });
+    const cHome = i => ({ x: xs[line().hub] + 4 + (i ? 5 : -5), y: cY(), z: 0 });
+    const cDock = i => ({ x: xs[line().end] - 8 + (i ? 5 : -5), y: cY(), z: 0 });
+    /* Electrons the hub's shuttle takes a trip: 2 per pair over this. */
+    const cCarries = () => CHEM.CARRIES[ROW(line().hub).gives];
     function ePill(on, tok) {
       if (tok.e) { kit.forget(tok.e); tok.obj.remove(tok.e); tok.e = null; }
       if (!on) return;
@@ -541,12 +585,15 @@
       tok.obj.add(tok.e);
     }
     function buildShuttles() {
-      if (qTokens.length) return;
+      if (qTokens.length && shuttleCtx === P.context) return;
+      dropShuttles();
+      shuttleCtx = P.context;
+      const L = line();
       for (let i = 0; i < 2; i++) {
-        const q = { obj: buildToken('Q', RESP.quinone, 1), i, state: 'free', charged: false };
+        const q = { obj: buildToken(L.q[0], L.qColor, 1), i, state: 'free', charged: false };
         Object.assign(q, qHome(i)); q.to = qHome(i);
         root.add(q.obj); seat(q.obj, q.x, q.y, q.z); qTokens.push(q);
-        const c = { obj: buildToken('cyt c', RESP.cytc, 1), i, state: 'home', e: null };
+        const c = { obj: buildToken(L.c, L.cColor, 1), i, state: 'home', e: null };
         Object.assign(c, cHome(i)); c.to = cHome(i);
         root.add(c.obj); seat(c.obj, c.x, c.y, 0); cTokens.push(c);
       }
@@ -556,20 +603,20 @@
       qTokens.length = 0; cTokens.length = 0;
     }
     function homeShuttles() {
-      for (const q of qTokens) { if (q.state !== 'free') relabel(q.obj, 'Q', 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); }
+      for (const q of qTokens) { if (q.state !== 'free') relabel(q.obj, line().q[0], 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); }
       for (const c of cTokens) { ePill(false, c); c.state = 'home'; c.to = cHome(c.i); }
     }
     function tickShuttles(dt) {
       for (const q of qTokens) {
         const there = qMove(q, dt);
         if (q.state === 'toDonor' && there && q.charged) {
-          relabel(q.obj, 'QH₂', 8.0);
-          q.state = 'toIII'; q.to = qDock('III', q.x);
-        } else if (q.state === 'toIII' && there) q.state = 'atIII';
+          relabel(q.obj, line().q[1], 8.0);
+          q.state = 'toHub'; q.to = qDock(line().hub, q.x, q.i);
+        } else if (q.state === 'toHub' && there) q.state = 'atHub';
       }
       for (const c of cTokens) {
         const there = approach(c, c.to, dt, C_SPEED);
-        if (c.state === 'toIV' && there) c.state = 'atIV';
+        if (c.state === 'toEnd' && there) c.state = 'atEnd';
         else if (c.state === 'returning' && there) c.state = 'home';
       }
     }
@@ -588,7 +635,7 @@
        split chain pumps ten a NADH and gets more. Any `H` key, 0 included, is
        the page choosing. */
     const DEFAULT_PROTONS = 22, SPLIT_PROTONS = 30, DEFAULT_WATER = 30;
-    const hasChain = pr => pr && (pr.complex || SPLIT.some(k => pr[k]));
+    const hasChain = pr => pr && (pr.complex || ALL.some(k => pr[k]));
     function withProtons(c) {
       if (P.context === 'plasma' || !CHEM.CONTEXTS[P.context] || !hasChain(P.proteins)) return c;
       if (c && ((c.inside && 'H' in c.inside) || (c.outside && 'H' in c.outside))) return c;
@@ -702,11 +749,128 @@
     }
     /* What is paying a donor: a one-shot from feed() at its own full rate,
        else the supply if it is this donor's fuel. */
+    /* II and PSII pump nothing, so the gradient does not push back on them.
+       A photosystem stalls the honest way instead: the quinones are all
+       full and b6f, which does feel the lumen's pH, is not taking them. */
     const donorRate = (key, fuel, oxygenGate) => {
       const f = pulse[key] || (P.fuel === fuel ? fuel : null);
       if (!f) return 0;
-      return CHEM.complexRate(f, pulse[key] ? 1 : P.fuelRate, key === 'II' ? 0 : pmfNow(), oxygenGate ? P.oxygen : true);
+      return CHEM.complexRate(f, pulse[key] ? 1 : P.fuelRate, ROW(key).pumps ? pmfNow() : 0, oxygenGate ? P.oxygen : true);
     };
+    const lightRate = () => P.fuel === 'light' ? CHEM.complexRate('light', P.fuelRate, 0) : 0;
+
+    /* ---- light, water and NADP⁺: what the photosystems add ----
+       A PHOTON IS A FLASH ON THE STROMA FACE: a streak down onto the
+       photosystem and a glow as it is absorbed. One per electron, so a turn
+       (a pair) fires two, at load and at occlude.
+
+       ONE WATER A TURN at PSII's lumen face: a turn is two electrons and a
+       water gives two. On `occlude` it is gone, and its protons are set down
+       in the lumen as REAL protons that count toward the gradient, which is
+       why PSII builds it without pumping. Every second water releases an O₂
+       into the lumen, which fades: it leaves the chloroplast off stage.
+
+       AT PSI, NADP⁺ + 2e⁻ + H⁺ → NADPH, the H⁺ taken from the stroma: the
+       nearest free one rides to the carrier and is gone.
+       THE STROMA IS A BIG TANK. The Calvin cycle and the stroma's buffers take
+       up the water's other proton off stage, so while the stroma holds more
+       than the page gave it, PSI takes a second the same way. Staging,
+       declared: without it the water's protons pile up with nowhere to go. */
+    const PHOTON_LEN = 44, PHOTON_LIFE = 0.55, PHOTON_FALL = 0.22;
+    const photons = [], psiiWater = [], psiiO2 = [], riders = [];
+    const lightLedger = { photons: 0, waterSplit: 0, o2Released: 0, nadphMade: 0, protonsFromWater: 0, protonsToNADPH: 0 };
+    function flash(key) {
+      if (!CX[key].group.visible) return;
+      lightLedger.photons++;
+      const g = new THREE.Group();
+      const ray = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, PHOTON_LEN, 8), Parts.flat(PHO.photon));
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(5.5, 16, 12), Parts.flat(PHO.photon));
+      glow.visible = false;
+      g.add(ray, glow); root.add(g);
+      photons.push({ obj: g, ray, glow, t: 0, x: xs[key] + rnd(-7, 7) });
+    }
+    const oecAt = () => ({ x: xs.PSII + 3, y: pumpDir() * (CX.PSII.height + 12) });
+    function waterArrive() {
+      if (!P.showFuel || psiiWater.length) return;
+      const to = oecAt();
+      const w = { obj: tagged(eng.smallMolecule('water'), 'H₂O'), x: to.x - 30, y: pumpDir() * (H_() + 40), to };
+      root.add(w.obj); seat(w.obj, w.x, w.y, 0); psiiWater.push(w);
+    }
+    const reMV = () => { eng.mV = eng.clampMV(P.mvPerIon * eng.chargeOut); };
+    function splitWater() {
+      for (const w of psiiWater.splice(0)) dropToken(w.obj);
+      const at = oecAt(), d = pumpDir(), n = CHEM.PHOTO_CHAIN.PSII.fromWater;
+      let made = 0;
+      for (let i = 0; i < n; i++)
+        made += eng.scatter('H', 1, d, { x: at.x + (i - (n - 1) / 2) * 7, y: at.y, z: rnd(-4, 4) }).length;
+      if (made) {
+        lightLedger.protonsFromWater += made;
+        if (protonRef != null) protonRef += made / 2;
+        eng.chargeOut += d * made; reMV();
+      }
+      lightLedger.waterSplit++;
+      if (lightLedger.waterSplit % (CHEM.E_PER_O2 / CHEM.CARRIES.H2O) === 0) {
+        lightLedger.o2Released++;
+        const o = { obj: tagged(eng.smallMolecule('o2'), 'O₂'), x: at.x, y: at.y, to: { x: at.x + 34, y: d * (H_() + 44) }, fade: 1 };
+        root.add(o.obj); seat(o.obj, o.x, o.y, 0); psiiO2.push(o);
+        eng.emit('oxygen', lightLedger.o2Released);
+      }
+    }
+    function reduceNADP() {
+      fuelSpend('PSI');
+      lightLedger.nadphMade++;
+      eng.emit('nadph', lightLedger.nadphMade);
+      const s = -pumpDir(), sideKey = s > 0 ? 'outside' : 'inside';
+      const start = (P.contents && P.contents[sideKey] && P.contents[sideKey].H) | 0;
+      const bound = CHEM.PHOTO_CHAIN.PSI.fromStroma;
+      const want = bound + (eng.sideCount('H')[sideKey] > start ? 1 : 0);
+      const x = xs.PSI;
+      const pool = travellers.filter(t => t.kind === 'H' && !t.aboard && t.lane == null && Math.sign(t.y) === s)
+        .sort((a, b) => ((a.x - x) ** 2 + a.y * a.y) - ((b.x - x) ** 2 + b.y * b.y)).slice(0, want);
+      pool.forEach((t, i) => {
+        if (i < bound) lightLedger.protonsToNADPH++;
+        if (chips.PSI && i < bound) {
+          const r = { obj: eng.chargedIon('H'), x: t.x, y: t.y, z: t.z, chip: chips.PSI };
+          root.add(r.obj); seat(r.obj, r.x, r.y, r.z); riders.push(r);
+        }
+        eng.remove(t);
+        if (protonRef != null) protonRef -= 0.5;
+        eng.chargeOut -= s;
+      });
+      if (pool.length) reMV();
+    }
+    function tickLight(dt) {
+      const s = -pumpDir();
+      for (let i = photons.length - 1; i >= 0; i--) {
+        const p = photons[i]; p.t += dt;
+        const arrive = Math.min(1, p.t / PHOTON_FALL);
+        p.ray.visible = arrive < 1;
+        p.ray.position.y = s * (PHOTON_LEN / 2 + 70 * (1 - arrive));
+        if (arrive >= 1) {
+          const k = (p.t - PHOTON_FALL) / (PHOTON_LIFE - PHOTON_FALL);
+          p.glow.visible = true; p.glow.scale.setScalar(0.5 + k * 0.8); fade(p.glow, 1 - k);
+        }
+        seat(p.obj, p.x, s * (H_() + 2), 0);
+        if (p.t >= PHOTON_LIFE) { root.remove(p.obj); photons.splice(i, 1); }
+      }
+      for (const w of psiiWater) approach(w, w.to, dt, O2_SPEED);
+      for (let i = psiiO2.length - 1; i >= 0; i--) {
+        const o = psiiO2[i];
+        if (!approach(o, o.to, dt, O2_SPEED * 0.7)) continue;
+        o.fade -= dt / WATER_FADE; fade(o.obj, o.fade);
+        if (o.fade <= 0) { dropToken(o.obj); psiiO2.splice(i, 1); }
+      }
+      for (let i = riders.length - 1; i >= 0; i--) {
+        const r = riders[i];
+        if (!approach(r, { x: r.chip.x, y: r.chip.y }, dt, O2_SPEED * 1.6) && chips.PSI === r.chip) continue;
+        dropToken(r.obj); riders.splice(i, 1);
+      }
+    }
+    function clearLight() {
+      for (const t of photons) root.remove(t.obj);
+      for (const t of psiiWater.concat(psiiO2, riders)) dropToken(t.obj);
+      photons.length = psiiWater.length = psiiO2.length = riders.length = 0;
+    }
     const lumped = runner({
       key: 'complex', part: COMPLEX, n: CHEM.Complex.PROTONS_PER_CYCLE, x: () => complexX,
       rate: () => {
@@ -720,59 +884,78 @@
          so the wrap back past it is the turn ending. */
       onWrap: () => { pulse.complex = null; },
     });
-    function donor(key, fuel) {
+    function donor(key, fuel, more = {}) {
       const r = runner({
-        key, part: CX[key], n: CHEM.CHAIN[key].pumps, x: () => xs[key],
+        key, part: CX[key], n: ROW(key).pumps, x: () => xs[key],
         rate: () => donorRate(key, fuel, false),
         ready: () => qTokens.some(q => q.state === 'free'),
         load: () => {
           const q = qTokens.filter(q => q.state === 'free').sort((a, b) => Math.abs(a.x - xs[key]) - Math.abs(b.x - xs[key]))[0];
-          q.state = 'toDonor'; q.charged = false; q.to = qDock(key, q.x); r.q = q;
+          q.state = 'toDonor'; q.charged = false; q.to = qDock(key, q.x, q.i); r.q = q;
         },
-        onLoad: () => fuelArrive(key, pulse[key] || fuel),
-        onOcclude: () => { fuelSpend(key); if (r.q) { r.q.charged = true; r.q = null; } },
+        onLoad: () => { fuelArrive(key, pulse[key] || fuel); if (more.onLoad) more.onLoad(); },
+        onOcclude: () => { fuelSpend(key); if (r.q) { r.q.charged = true; r.q = null; } if (more.onOcclude) more.onOcclude(); },
         onWrap: () => { pulse[key] = null; },
       });
       return r;
     }
-    const RUN = {
-      I: donor('I', 'NADH'),
-      II: donor('II', 'FADH2'),
-      III: runner({
-        key: 'III', part: CX.III, n: CHEM.CHAIN.III.pumps, x: () => xs.III,
+    /* THE HUB: III, or b6f. Takes a reduced quinone, pumps, and loads the
+       one-electron shuttles, two per pair. */
+    function hub(key) {
+      const r = runner({
+        key, part: CX[key], n: ROW(key).pumps, x: () => xs[key],
         rate: backPressure,
-        ready: () => qTokens.some(q => q.state === 'atIII') && cTokens.filter(c => c.state === 'home').length >= 2 / CHEM.CARRIES.cytc,
+        ready: () => qTokens.some(q => q.state === 'atHub') && cTokens.filter(c => c.state === 'home').length >= E_PER_TURN / cCarries(),
         load: () => {
-          const q = qTokens.find(q => q.state === 'atIII'); q.state = 'inIII'; RUN.III.q = q;
-          RUN.III.c = cTokens.filter(c => c.state === 'home').slice(0, 2 / CHEM.CARRIES.cytc);
-          for (const c of RUN.III.c) c.state = 'held';
+          const q = qTokens.find(q => q.state === 'atHub'); q.state = 'inHub'; r.q = q;
+          r.c = cTokens.filter(c => c.state === 'home').slice(0, E_PER_TURN / cCarries());
+          for (const c of r.c) c.state = 'held';
         },
         onOcclude: () => {
-          const q = RUN.III.q;
-          if (q) { relabel(q.obj, 'Q', 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); RUN.III.q = null; }
-          for (const c of RUN.III.c || []) { ePill(true, c); c.state = 'toIV'; c.to = cDock(c.i); }
-          RUN.III.c = null;
+          const q = r.q;
+          if (q) { relabel(q.obj, line().q[0], 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); r.q = null; }
+          for (const c of r.c || []) { ePill(true, c); c.state = 'toEnd'; c.to = cDock(c.i); }
+          r.c = null;
         },
-      }),
-      IV: runner({
-        key: 'IV', part: CX.IV, n: CHEM.CHAIN.IV.pumps, x: () => xs.IV,
-        rate: backPressure,
-        ready: () => P.oxygen !== false && cTokens.filter(c => c.state === 'atIV').length * CHEM.CARRIES.cytc >= E_PER_TURN,
+      });
+      return r;
+    }
+    /* THE END: IV hands the pair to O₂, PSI to NADP⁺. */
+    function terminal(key, more) {
+      return runner({
+        key, part: CX[key], n: ROW(key).pumps, x: () => xs[key],
+        rate: more.rate,
+        ready: () => more.ready() && cTokens.filter(c => c.state === 'atEnd').length * cCarries() >= E_PER_TURN,
         load: () => {
-          for (const c of cTokens.filter(c => c.state === 'atIV').slice(0, E_PER_TURN / CHEM.CARRIES.cytc)) {
+          for (const c of cTokens.filter(c => c.state === 'atEnd').slice(0, E_PER_TURN / cCarries())) {
             ePill(false, c); c.state = 'returning'; c.to = cHome(c.i);
           }
         },
-        onLoad: () => o2Arrive('NADH'),
-        onOcclude: () => o2Reduce(),
+        onLoad: more.onLoad, onOcclude: more.onOcclude, onWrap: more.onWrap,
+      });
+    }
+    const RUN = {
+      I: donor('I', 'NADH'),
+      II: donor('II', 'FADH2'),
+      III: hub('III'),
+      IV: terminal('IV', { rate: backPressure, ready: () => P.oxygen !== false,
+        onLoad: () => o2Arrive('NADH'), onOcclude: () => o2Reduce() }),
+      PSII: donor('PSII', 'light', { onLoad: () => { flash('PSII'); waterArrive(); }, onOcclude: () => { flash('PSII'); splitWater(); } }),
+      b6f: hub('b6f'),
+      PSI: terminal('PSI', {
+        rate: () => credit.PSI > 0 ? 1 : lightRate(),
+        ready: () => true,
+        onLoad: () => { flash('PSI'); fuelArrive('PSI'); },
+        onOcclude: () => { flash('PSI'); reduceNADP(); },
+        onWrap: () => { if (credit.PSI > 0) credit.PSI--; },
       }),
     };
-    const runners = () => split() ? SPLIT.map(k => RUN[k]) : [lumped];
-    const leadRunner = () => split() ? (P.fuel === 'FADH2' || pulse.II ? RUN.II : RUN.I) : lumped;
+    const runners = () => split() ? line().keys.map(k => RUN[k]) : [lumped];
+    const leadRunner = () => !split() ? lumped : photo() ? RUN.PSII : (P.fuel === 'FADH2' || pulse.II ? RUN.II : RUN.I);
     function resetChain() {
-      lumped.reset(); for (const k of SPLIT) RUN[k].reset();
-      pulse.complex = pulse.I = pulse.II = null;
-      clearFuel(); clearO2();
+      lumped.reset(); for (const k of ALL) RUN[k].reset();
+      pulse.complex = pulse.I = pulse.II = pulse.PSII = null; credit.PSI = 0;
+      clearFuel(); clearO2(); clearLight();
       if (qTokens.length) homeShuttles();
     }
 
@@ -785,9 +968,10 @@
       const f = fuel || P.fuel || (P.context === 'thylakoid' ? 'light' : 'NADH');
       if (!CHEM.FUELS[f]) { console.warn('Chemiosmosis: no fuel named ' + f + '; have ' + Object.keys(CHEM.FUELS).join(', ')); return false; }
       if (split()) {
-        const key = f === 'FADH2' ? 'II' : f === 'NADH' ? 'I' : null;
-        if (!key) { console.warn('Chemiosmosis: a split chain takes NADH or FADH2, not ' + f); return false; }
+        const donors = line().donors, key = Object.keys(donors).find(k => donors[k] === f);
+        if (!key) { console.warn(`Chemiosmosis: a split chain in a ${P.context} takes ${Object.values(donors).join(' or ')}, not ${f}`); return false; }
         pulse[key] = f; clearFuel(key); RUN[key].kick();
+        if (key === 'PSII') credit.PSI++;
         return true;
       }
       if (!CHEM.complexRate(f, 1, 0, P.oxygen)) return false;   // no O₂: the NADH docks and nothing takes its electrons
@@ -797,46 +981,64 @@
 
     const at = eng.at;
     let LIB = null;
+    /* Called on every context change, before the relayout: runners and shuttles
+       from the other line would carry its half-finished turn across. */
+    let cardsCtx = null;
     function writeCards(library) {
       LIB = library;
+      if (cardsCtx !== null && cardsCtx !== P.context) resetChain();
+      cardsCtx = P.context;
       if (P.context === 'mitochondrion') {
         library.outside.card = 'The intermembrane space. Every proton the complexes throw out lands here, so this side goes acidic and positive: that is where the energy from NADH now sits. This space and a chloroplast\'s thylakoid lumen are the same place by descent, both of them the OUTSIDE of the bacterium each organelle came from. That is why a photosynthesis diagram looks flipped against this one.';
         library.inside.card  = 'The matrix. The Krebs cycle runs here and hands its NADH to the complexes in this membrane. Protons leave from this side and come back through the synthase.';
         library.complex.text = split() ? 'complex I' : 'electron transport chain';
         library.complex.card = split() ? library['complex.I'].card
           : 'The whole chain drawn as one machine. NADH hands it electrons, they pass down to oxygen, which becomes water, and each drop pays for protons thrown out. It spends FUEL rather than ATP: turn the fuel off and it stops, which is the whole reason the gradient is a store and not a fixture.';
+        library.oxygen.card = O2_CARD.mitochondrion;
       } else if (P.context === 'thylakoid') {
-        library.outside.card = 'The stroma, around the outside of the thylakoid disc. ATP is made here, and it is what the Calvin cycle spends to fix carbon. Protons leave from this side and come back through the synthase.';
-        library.complex.text = 'the light-driven chain';
-        library.complex.card = 'Photosystem II splits water and starts the electrons moving, cytochrome b6f is the one that pumps, and photosystem I lifts them again for NADPH. Drawn as one machine. Light is the fuel, so the dimmer is a rate knob and darkness stops it.';
-        library.inside.card  = 'The lumen, the space enclosed by the disc. Light drives protons in here, so this is the acidic side: the energy from the photons is now a gradient across this membrane. It is the same space as a mitochondrion\'s intermembrane space, both of them the OUTSIDE of the bacterium each organelle came from. A thylakoid ended up with that space sealed inside it, which is why the two diagrams are mirrored for a real reason rather than by convention.';
+        library.outside.card = 'The stroma, around the outside of the thylakoid disc. ATP and NADPH are made here, and the Calvin cycle spends both to fix carbon. Protons leave from this side and come back through the synthase.';
+        library.complex.text = split() ? 'cytochrome b6f' : 'the light-driven chain';
+        library.complex.card = split() ? library.b6f.card
+          : 'Photosystem II splits water and starts the electrons moving, cytochrome b6f is the one that pumps, and photosystem I lifts them again for NADPH. Drawn as one machine. Light is the fuel, so the dimmer is a rate knob and darkness stops it.';
+        const PC = CHEM.PHOTO_CHAIN;
+        library.inside.card  = 'The lumen, the space enclosed by the disc. Light drives protons in here, so this is the acidic side: the energy from the photons is now a gradient across this membrane.'
+          + (split() ? ` ${CHEM.chainProtons('light')} arrive per pair of electrons: ${PC.PSII.fromWater} from water at PSII, ${PC.b6f.pumps} pumped by b6f.` : '')
+          + ' It is the same space as a mitochondrion\'s intermembrane space, both of them the OUTSIDE of the bacterium each organelle came from, which is why the two diagrams are mirrored.';
+        library.oxygen.card = O2_CARD.thylakoid;
       }
     }
+    const O2_CARD = {
+      mitochondrion: 'The last stop for the electrons. Each O₂ takes four, and four protons from the matrix, and leaves as two waters. With no oxygen the electrons have nowhere to go and the whole chain stops.',
+      thylakoid: 'Waste. PSII pulls electrons out of water, and what is left of two waters is one O₂, which leaves the chloroplast. Every breath you take was split out of water this way.',
+    };
     const C = CHEM.CHAIN;
     return {
-      keys: { complex:null, I:null, II:null, III:null, IV:null, synthase:null, leak:null, translocase:null },
-      parts: [COMPLEX, ...SPLIT.map(k => CX[k]), SYNTH, LEAK, ANT],
+      keys: Object.assign({ complex:null, synthase:null, leak:null, translocase:null }, Object.fromEntries(ALL.map(k => [k, null]))),
+      parts: [COMPLEX, ...ALL.map(k => CX[k]), SYNTH, LEAK, ANT],
       /* PORIN stands in the other sheet, and a barrel setCut leaves shut is
          the one solid object in a cutaway. */
       cutParts: [PORIN],
-      tOrder: [['complex', COMPLEX], ['I', CX.I], ['III', CX.III], ['IV', CX.IV], ['II', CX.II], ['synthase', SYNTH], ['leak', LEAK]],
+      tOrder: [['complex', COMPLEX], ['I', CX.I], ['III', CX.III], ['IV', CX.IV], ['II', CX.II], ['b6f', CX.b6f], ['PSII', CX.PSII], ['PSI', CX.PSI], ['synthase', SYNTH], ['leak', LEAK]],
       tFallback: COMPLEX,
       rules: ['H'],
-      handles: { complex:COMPLEX, I:CX.I, II:CX.II, III:CX.III, IV:CX.IV, synthase:SYNTH, leak:LEAK },
+      handles: Object.assign({ complex:COMPLEX, synthase:SYNTH, leak:LEAK }, CX),
       poreGap: () => split() ? SPLIT_GAP : Infinity,
-      /* One complex into four and back, so a layout written for either chain
-         runs on the other. */
+      /* One complex into a row and back, and one row into the other when the
+         context flips, so a layout written for any chain runs on the rest. */
       expand(given) {
+        const on = ALL.filter(k => given[k]);
+        const mean = on.length ? Math.round(on.reduce((s, k) => s + (given[k].x || 0), 0) / on.length) : null;
         if (split()) {
-          if (given.complex && !SPLIT.some(k => given[k])) {
-            const x = given.complex.x || 0;
-            SPLIT.forEach((k, i) => { given[k] = { x: x + SPLIT_OFFSETS[i] }; });
+          const keys = line().keys;
+          if (!keys.some(k => given[k])) {
+            const x = given.complex ? given.complex.x || 0 : mean;
+            if (x != null) keys.forEach((k, i) => { given[k] = { x: x + SPLIT_OFFSETS[P.context][i] }; });
           }
           given.complex = null;
+          for (const k of ALL) if (!keys.includes(k)) given[k] = null;
         } else {
-          const on = SPLIT.filter(k => given[k]);
-          if (on.length && !given.complex) given.complex = { x: Math.round(on.reduce((s, k) => s + (given[k].x || 0), 0) / on.length) };
-          for (const k of SPLIT) given[k] = null;
+          if (mean != null && !given.complex) given.complex = { x: mean };
+          for (const k of ALL) given[k] = null;
         }
       },
       layout(pr, holes, PORES) {
@@ -844,7 +1046,7 @@
         if (pr.complex) { complexX = pr.complex.x; COMPLEX.group.position.x = complexX;
           /* A carrier, like the pump: no kind, so nothing queues in it. */
           holes.push([complexX, holeOf(CPX_R, CPX_LOBE)]); PORES.push({ x:complexX, R:CPX_R, lumen:8.0, kind:null }); }
-        for (const k of SPLIT) {
+        for (const k of ALL) {
           const M = CX[k];
           M.group.visible = !!pr[k];
           if (!pr[k]) continue;
@@ -870,6 +1072,8 @@
         for (const child of ROTOR.children) child.position.y = -d * child.userData.baseY;
         ARM_I.position.y = -d * ARM_I.userData.baseY; ARM_I.rotation.z = 0.45 * d;
         HEAD_II.position.y = -d * HEAD_II.userData.baseY;
+        OEC.position.y = d * OEC.userData.baseY;               // the lumen face
+        RIDGE_PSI.position.y = -d * RIDGE_PSI.userData.baseY;  // the stroma face
       },
       afterSheet(tint) {
         buildOuter(tint);
@@ -895,7 +1099,7 @@
       pre(dt) { for (const r of runners()) r.run(dt); },
       post(dt) {
         ROTOR.rotation.y += (ROT.angle - ROTOR.rotation.y) * Math.min(1, dt * 6);
-        tickATP(dt); tickFuel(dt); tickO2(dt);
+        tickATP(dt); tickFuel(dt); tickO2(dt); tickLight(dt);
         if (qTokens.length) tickShuttles(dt);
       },
       set(next) {
@@ -922,7 +1126,8 @@
         const h = base.counts.H || { inside:0, outside:0 };
         const proton = CHEM.protonState(h, eng.mV, protonRef, pumpDir());
         const lead = leadRunner(), st = lead.st;
-        const sp = split();
+        const sp = split(), ph = photo();
+        const loaded = cTokens.filter(c => c.state === 'toEnd' || c.state === 'atEnd').length;
         return {
           chain: sp ? 'split' : 'lumped',
           span: P.span || (outerOn() ? 'mitochondrion' : 'inner'),
@@ -941,23 +1146,28 @@
           complexStarved: runners().some(r => r.starved),
           /* THE SPLIT CHAIN'S LEDGER, per complex, and what a fuel is worth
              walked off CHAIN rather than typed. */
-          complexes: sp ? Object.fromEntries(SPLIT.map(k => [k, {
-            turns: RUN[k].turns, pumpsPerTurn: C[k].pumps, pumped: RUN[k].turns * C[k].pumps,
+          complexes: sp ? Object.fromEntries(line().keys.map(k => [k, {
+            turns: RUN[k].turns, pumpsPerTurn: ROW(k).pumps, pumped: RUN[k].turns * ROW(k).pumps,
             label: RUN[k].st ? RUN[k].st.label : null, phase: RUN[k].st ? RUN[k].st.phase : null,
           }])) : null,
-          protonsPerFuel: sp ? { NADH: CHEM.chainProtons('NADH'), FADH2: CHEM.chainProtons('FADH2') } : null,
-          shuttles: sp ? {
-            ubiquinol: qTokens.filter(q => q.state === 'toIII' || q.state === 'atIII' || (q.state === 'toDonor' && q.charged)).length,
-            cytcLoaded: cTokens.filter(c => c.state === 'toIV' || c.state === 'atIV').length,
-          } : null,
+          protonsPerFuel: !sp ? null : ph ? { light: CHEM.chainProtons('light') } : { NADH: CHEM.chainProtons('NADH'), FADH2: CHEM.chainProtons('FADH2') },
+          shuttles: !sp ? null : (reduced => ph ? { plastoquinol: reduced, plastocyaninLoaded: loaded } : { ubiquinol: reduced, cytcLoaded: loaded })(
+            qTokens.filter(q => q.state === 'toHub' || q.state === 'atHub' || (q.state === 'toDonor' && q.charged)).length),
+          /* The light reactions' own ledger, split thylakoid only: every count
+             is an event that happened, and the ratios are PHOTO_CHAIN's. */
+          light: ph ? Object.assign({}, lightLedger, {
+            photonsPerPair: CHEM.chainPhotons('light'),
+            protonsPerO2: CHEM.chainProtons('light') * CHEM.E_PER_O2 / 2,
+          }) : null,
           stoichiometry: { protonsPerTurn: CHEM.PROTONS_PER_TURN, atpPerTurn: CHEM.ATP_PER_TURN, protonsPerATP: CHEM.PROTONS_PER_ATP },
         };
       },
       reset() {
         ROT.reset(); pumpedTotal = 0; protonsLeaked = 0; protonsThroughSynthase = 0;
+        for (const k in lightLedger) lightLedger[k] = 0;
         clearATP(); resetChain();
       },
-      clear() { lumped.cargo.length = 0; for (const k of SPLIT) RUN[k].cargo.length = 0; },
+      clear() { lumped.cargo.length = 0; for (const k of ALL) RUN[k].cargo.length = 0; },
       lid: outerOn,
       /* THE CEILING ON THE COMPARTMENT BELOW IT, or the protons just pumped
          out drift straight through the outer sheet. */
@@ -968,19 +1178,27 @@
         outer: { label: 'the outer membrane', get: () => outerOn(), set: v => eng.set({ outerMembrane: !!v }) },
       },
       anchors: {
-        complex:  () => split() ? (P.proteins.I ? at(xs.I, H_() * 0.98) : null) : P.proteins.complex ? at(complexX, H_() * 0.98) : null,
+        complex:  () => { const k = !split() ? 'complex' : photo() ? 'b6f' : 'I', x = k === 'complex' ? complexX : xs[k];
+                          return P.proteins[k] ? at(x, H_() * 0.98) : null; },
         'complex.I':   () => split() && P.proteins.I ? at(xs.I, H_() * 0.98) : null,
         'complex.II':  () => split() && P.proteins.II ? at(xs.II, -pumpDir() * (H_() + 10)) : null,
         'complex.III': () => split() && P.proteins.III ? at(xs.III, H_() * 0.98) : null,
         'complex.IV':  () => split() && P.proteins.IV ? at(xs.IV, H_() * 0.98) : null,
-        quinone:  () => qTokens.length ? qTokens[0].obj.position : null,
-        cytc:     () => cTokens.length ? cTokens[0].obj.position : null,
+        quinone:  () => !photo() && qTokens.length ? qTokens[0].obj.position : null,
+        cytc:     () => !photo() && cTokens.length ? cTokens[0].obj.position : null,
+        psii:     () => photo() && P.proteins.PSII ? at(xs.PSII, H_() * 0.98) : null,
+        b6f:      () => photo() && P.proteins.b6f ? at(xs.b6f, H_() * 0.98) : null,
+        psi:      () => photo() && P.proteins.PSI ? at(xs.PSI, H_() * 0.98) : null,
+        plastoquinone: () => photo() && qTokens.length ? qTokens[0].obj.position : null,
+        plastocyanin:  () => photo() && cTokens.length ? cTokens[0].obj.position : null,
+        nadph:    () => chips.PSI ? chips.PSI.obj.position : null,
+        'water.split': () => photo() && P.proteins.PSII ? at(oecAt().x, oecAt().y) : null,
         translocase: () => antX == null ? null : at(antX, ANT.height * 0.98),
         porin:    () => !outerOn() ? null : at(porinX, outerY() + pumpDir() * HALF * 0.9),
         cytosol:  () => !outerOn() ? null : at(eng.clearX(), outerY() + pumpDir() * 34),
         synthase: () => synthX == null ? null : at(synthX, -pumpDir() * SYNTH.height * 1.15),
         leak:     () => P.proteins.leak ? at(P.proteins.leak.x, LEAK.height * 0.98) : null,
-        oxygen:   () => o2 ? o2.obj.position : null,
+        oxygen:   () => o2 ? o2.obj.position : psiiO2.length ? psiiO2[0].obj.position : null,
         H: () => eng.firstOf('H'),
       },
       library: {
@@ -998,6 +1216,20 @@
           card: 'A small oily molecule that moves inside the membrane. It picks up two electrons at complex I or II, becomes ubiquinol, delivers them to complex III and goes back for more.' },
         cytc: { text: 'cytochrome c', offset: [36, -30],
           card: 'A small protein on the outer face of the inner membrane. It carries one electron at a time from complex III to complex IV, and comes back empty.' },
+        psii: { text: 'photosystem II', offset: [-44, -30],
+          card: `Light knocks an electron loose, and PSII refills the hole from water, on its lumen face. Each water gives ${CHEM.CARRIES.H2O} electrons and ${CHEM.PHOTO_CHAIN.PSII.fromWater} protons, which stay in the lumen, and every two waters leave one O₂. It pumps nothing: its protons come out of water, not across the membrane. The electrons go on to plastoquinone.` },
+        b6f: { text: 'cytochrome b6f', offset: [-10, -40],
+          card: `The one pump in the chain, and a close relative of the mitochondrion's complex III. It takes the pair from plastoquinol and hands them to plastocyanin one at a time; ${CHEM.PHOTO_CHAIN.b6f.pumps} protons end up in the lumen per pair, in the same Q cycle, drawn here as a plain pump. As the lumen turns acidic it slows, so the chain cannot outrun the synthase.` },
+        psi: { text: 'photosystem I', offset: [40, -34],
+          card: `A second photon lifts each electron again, higher than PSII could, high enough to reduce NADP⁺. On its stroma face, ferredoxin and the enzyme FNR (not drawn) make NADPH from NADP⁺, two electrons and one proton from the stroma. PSI pumps nothing either.` },
+        plastoquinone: { text: 'plastoquinone', offset: [-40, 26],
+          card: 'A small oily molecule that moves inside the membrane. It picks up two electrons at PSII, becomes plastoquinol, delivers them to b6f and goes back for more. It does the job ubiquinone does in a mitochondrion.' },
+        plastocyanin: { text: 'plastocyanin', offset: [36, 30],
+          card: 'A small copper protein in the lumen. It carries one electron at a time from b6f to PSI, so b6f loads two per pair, and it comes back empty.' },
+        nadph: { text: 'NADPH', offset: [40, -26],
+          card: 'The other product of the light reactions, made in the stroma beside the ATP. The Calvin cycle spends both to turn CO₂ into sugar, and the NADP⁺ comes back to be filled again.' },
+        'water.split': { text: 'water is split here', offset: [-44, 26],
+          card: 'The oxygen-evolving complex, a cluster of manganese on PSII\'s lumen face. It strips electrons from water one at a time and keeps the protons in the lumen. Nothing else in biology can pull electrons off water.' },
         synthase: { text: 'ATP synthase', offset: [42, 30],
           card: 'A turbine, not a pump. Protons come back down the gradient through it and the rotor turns; every third of a turn makes one ATP. It cannot run uphill, so with no gradient it simply stops.' },
         oxygen: { text: 'oxygen', offset: [42, -34],
@@ -1019,11 +1251,14 @@
         II:       { name: 'complex II (pumps nothing)', color: hex(RESP.complexII) },
         III:      { name: 'complex III', color: hex(RESP.complex) },
         IV:       { name: 'complex IV', color: hex(RESP.complex) },
+        PSII:     { name: 'photosystem II', color: hex(PHO.psii) },
+        b6f:      { name: 'cytochrome b6f (pumps H⁺)', color: hex(PHO.b6f) },
+        PSI:      { name: 'photosystem I', color: hex(PHO.psi) },
         synthase: { name: 'ATP synthase', color: '#d9a13b' },
         leak:     { name: 'uncoupler (a hole for H⁺)', color: '#8e939b' },
         translocase: { name: 'ADP/ATP translocase', color: hex(RESP.translocase) },
       },
-      carries: { complex:['H'], I:['H'], II:[], III:['H'], IV:['H'], synthase:['H'], leak:['H'], translocase:[] },
+      carries: { complex:['H'], I:['H'], II:[], III:['H'], IV:['H'], PSII:[], b6f:['H'], PSI:[], synthase:['H'], leak:['H'], translocase:[] },
     };
   }
   const hex = n => '#' + n.toString(16).padStart(6, '0');
