@@ -26,13 +26,17 @@ A checker is `node <path>`, offline and dependency-free.
 
 `check-molecules.js` prints every spec's bond angles, audits each declared `stereo` / `topology` / `chirality` claim, and **fails if any bonded pair's spheres merge** — a merged pair buries the stick, which is how a double bond can be correctly tagged and render as nothing. Run it after any geometry change.
 
-**Checkers run automatically on commit**, each gated to the files it can judge, so most commits run one or none — see `.githooks/pre-commit` for the exact patterns and reasoning. `npm i` in `demos/` points `core.hooksPath` there. Reinstall with `npm run hooks`; disable with `git config --unset core.hooksPath`; skip once with `git commit --no-verify`.
+**Checkers run by hand, by area, when a feature is done** — not on every commit, which is mostly interim work. There is no commit hook and no CI.
 
-**The hook prints only on skip or failure** — a silent checker ran and passed. Don't read silence as "it didn't fire".
+```bash
+node tools/check.js              # every area
+node tools/check.js membrane     # one area; --list names them
+node tools/check.js deploy       # pages, seo, the tutor: before a deploy
+```
 
-Widen a checker's gate pattern alongside any new derived artefact — nothing about a stale one is visible from the page that plays it.
+`tools/check.js`'s `AREAS` is the list. A new checker gets a line there. `proteins` runs `check-hb.js --quick`; pass `--full` after changing a bake input (`bake-unfold.js`, `bake-hb.js`, `folding/folding.js`, `kit/ribbon.js`), about 60 s. Re-run the matching area after any bake: nothing about a stale one is visible from the page that plays it.
 
-No CI: the hook is the run. It covers every checker except `tools/check-handedness.js` below, and `chain/`'s and `chair/`'s, which stay ungated while those pages are test-status.
+Not in `check.js`: `tools/check-handedness.js` below, `tools/check-docs.js` (after editing an enumeration in a doc), and `chain/`'s and `chair/`'s, while those pages are test-status.
 
 **`tools/check-handedness.js` is separate on purpose** — it needs the network and RDKit, and it is the only global-mirror check (why: `MolecularGeometry.md` §1.3). Run it after touching a ring builder or adding a stereocentre:
 

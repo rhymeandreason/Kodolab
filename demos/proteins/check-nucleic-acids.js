@@ -24,8 +24,7 @@
  *    · the pair, wobble and modified counts agree
  *    · a `kind` is one of the three, and matches what the bake contains
  *
- *  Offline, no dependencies. Gated on `proteins/nucleic-acids.js` and on the
- *  bakes themselves in .githooks/pre-commit.
+ *  Offline, no dependencies. Run by `tools/check.js dna`.
  * ============================================================================= */
 'use strict';
 

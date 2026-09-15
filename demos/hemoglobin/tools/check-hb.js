@@ -22,9 +22,8 @@
  *  produces it: bake-unfold.js, or folding.js's solver, or ribbon.js's
  *  DSSP. Editing the page, the captions, the quaternary baker or this file
  *  cannot make 2HHB-B.fold.bin disagree with its source, so re-deriving it
- *  to prove it still matches is a minute spent to learn nothing. The
- *  pre-commit hook picks the mode on exactly that basis; a bare run is
- *  always the full one, so nobody gets the cheap answer by accident.
+ *  to prove it still matches is a minute spent to learn nothing. `tools/check.js proteins` runs
+ *  --quick unless given --full; a bare run is always the full one.
  * ===================================================================== */
 'use strict';
 

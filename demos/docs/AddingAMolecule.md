@@ -58,7 +58,7 @@ Provenance, formula against atoms and `charge`, sphere clearance on every bonded
 npm i && node tools/check-handedness.js
 ```
 
-**This is the only check in the repo that can see a global mirror**, it needs the network and RDKit, and it is not in the pre-commit hook. `check-molecules.js` will not cover you: its signed-volume test is wired to an amino acid's `pep`, so every other stereocentre in the library is held by this tool and nothing else.
+**This is the only check in the repo that can see a global mirror**, it needs the network and RDKit, and it is not in `tools/check.js`. `check-molecules.js` will not cover you: its signed-volume test is wired to an amino acid's `pep`, so every other stereocentre in the library is held by this tool and nothing else.
 
 Add the molecule to `REF` with its PubChem name. If it fails, the message distinguishes the two cases, and they need different fixes:
 

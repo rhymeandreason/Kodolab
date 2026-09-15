@@ -4,15 +4,12 @@
   "private": true,
   "description": "Dev-only tooling for the molecule library. The PAGES have no build step and no dependencies — they load Three and SmilesDrawer from a CDN and run straight from the working tree. This file exists solely so tools/spec2smiles.js can reach RDKit at a terminal.",
   "scripts": {
-    "check": "node check-molecules.js && node tools/check-pages.js",
+    "check": "node tools/check.js",
     "check:docs": "node tools/check-docs.js",
     "check:handedness": "node tools/check-handedness.js",
     "smiles": "node tools/spec2smiles.js",
     "bake:vectors": "node tools/bake-vectors.js",
-    "check:vectors": "node tools/bake-vectors.js --check",
-    "serve": "node tools/dev-server.js",
-    "hooks": "git config core.hooksPath .githooks",
-    "prepare": "git config core.hooksPath .githooks"
+    "serve": "node tools/dev-server.js"
   },
   "devDependencies": {
     "@rdkit/rdkit": "^2025.3.4-1.0.0"

@@ -56,7 +56,7 @@ Every doc lives in `demos/docs/` except the node graph's two and the clipper's, 
 | A new `reaction/` verb | `reaction/reaction.js`'s header, `reaction/check-reaction.js` |
 | The AI tutor, or `api/` | `docs/ai-tutor.md` |
 | Deploying, short URLs, promoting a page to featured | `docs/deploy.md` |
-| Running locally, the checkers, the commit hook | `docs/dev.md` |
+| Running locally, the checkers | `docs/dev.md` |
 | Questions-composer, or the door map | `tests/question-composer.md`, beside the page. **Being deprecated**: the node graph is its successor, and nothing new should depend on `lib/mapcontent.js`. A page mounting SEVERAL live 3D boxes reads `kit/card-stage.js`'s header instead |
 | Deciding what to build next | ask the human. `molecules-wishlist.md` is the live plan for molecules and has some ideas |
 
@@ -113,7 +113,7 @@ node tools/dev-server.js        # http://localhost:8817/ — zero dependencies
 
 Live reload, `no-store`, and it serves the **repo root**, not `demos/`, because the root is what deploys. A lesson is `/demos/water-lab.html`. A CSS-only change swaps the stylesheet in place, so the scene keeps its camera and selection.
 
-**Checkers run automatically on commit**, each gated to the files it can judge. **The hook prints only on skip or failure — a silent checker ran and passed.** The full list, the ungated exceptions, `check-handedness.js`, and what deploys: `docs/dev.md`.
+**Checkers run by hand, by area, when a feature is done**, not on every commit: `node tools/check.js <area>`, `--list` for the areas, `deploy` before a deploy. The ones outside it, `check-handedness.js`, and what deploys: `docs/dev.md`.
 
 Two browser gotchas: a backgrounded tab pauses `requestAnimationFrame`, so an automated screenshot may freeze on the last frame — drive the page's functions directly instead of trusting one shot. And **set the viewport before judging layout**: `resize_window` to \~1440x900. These are laptop lessons.
 
