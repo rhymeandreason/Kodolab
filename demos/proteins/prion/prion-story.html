@@ -182,71 +182,73 @@ const PARTS = [
     deck:'Rendered from real data.',
     hint:'Scroll to examine each part',
     stats:t=>fileStats('1QLZ', t),
-    note:t=>`A small protein carried on the outside of nerve cells. Nobody is `
-      + `sure what its normal job is. What it does when it misfolds is the `
-      + `whole story: <b>the same chain of amino acids can fold two ways</b>, `
-      + `and the wrong way is infectious.\n\n This is the healthy fold, PrPᶜ: three `
-      + `α-helices, ${frac(t, 'H')}% of the chain, packed into a compact bundle `
+    note:t=>`A small protein that sits on the surface of nerve cells. Nobody `
+      + `knows its normal job. What happens when it misfolds is the whole `
+      + `story: <b>the same chain of amino acids can fold two ways</b>, and `
+      + `the wrong way infects.\n\n This is the healthy fold, PrPᶜ. Three `
+      + `α-helices pack into a tight bundle, ${frac(t, 'H')}% of the chain, `
       + `with a small β-sheet tucked against them. The chain's first `
-      + `${ch(t).nums[0] - 1} residues are floppy and were not modelled, so what `
-      + `you see starts at residue ${ch(t).nums[0]}.`,
+      + `${ch(t).nums[0] - 1} residues stay too floppy to pin down, so the `
+      + `model starts at residue ${ch(t).nums[0]}.`,
     notes:()=>[] },
 
   { key:'disease', id:'6LNI', title:'The disease fold', sub:'PrPˢᶜ, one rung',
     stats:t=>fileStats('6LNI', t),
     note:t=>{
       const e = extents(t);
-      return `The same human sequence, refolded. <b>${frac(t, 'H')}% helix.</b> Every `
-      + `helix is gone and the chain has laid itself out flat as β-strands, `
-      + `${e[0].toFixed(0)} Å long and ${e[2].toFixed(1)} Å thick: one molecule deep.\n\n `
-      + `It is flat because it is not meant to be alone. This is one layer of a `
-      + `stack, and its strand partners are the copies above and below it. `
-      + `Only the middle ${ch(t).nums.length} residues are ordered enough to see; `
-      + `the rest hangs off the core as a disordered fringe.`;
+      return `The same human sequence, refolded. Its helix count drops to `
+      + `<b>${frac(t, 'H')}%</b>: every α-helix has unwound, and the chain now `
+      + `lies flat as β-strands, ${e[0].toFixed(0)} Å long and ${e[2].toFixed(1)} Å `
+      + `thick, one molecule deep.\n\n It lies flat because it can't stand `
+      + `alone. This is one layer of a stack, and the copies above and below `
+      + `it complete the sheet. Only the middle ${ch(t).nums.length} residues `
+      + `hold still enough to see; the rest trails off the core as a `
+      + `disordered fringe.`;
     },
     notes:t=>[
-      { text:'N-terminus', card:`Residue ${ch(t).nums[0]}. Everything before it is disordered and not in the model.`,
+      { text:'N-terminus', card:`Residue ${ch(t).nums[0]}. Before this point the chain is too disordered to model.`,
         at:worldAt(ch(t).CA[0]), offset:[80, -70] },
-      { text:'C-terminus', card:`Residue ${ch(t).nums.at(-1)}. The chain that was three helices is now one flat serpentine.`,
+      { text:'C-terminus', card:`Residue ${ch(t).nums.at(-1)}. Three helices flattened into this one strand.`,
         at:worldAt(ch(t).CA.at(-1)), offset:[80, 50] },
     ] },
 
-  { key:'stack', id:'stack', title:'The fibril', sub:'a ladder that does not end',
+  { key:'stack', id:'stack', title:'The fibril', sub:'a ladder that never ends',
     stats:t=>fileStats('stack', t),
     note:t=>{ const r = rungs(t);
-      return `All ${t.order.length} chains of the deposition: ${r.stacks} stacks of `
+      return `All ${t.order.length} chains from this file make ${r.stacks} stacks of `
       + `${r.per} rungs, lying side by side. Each rung sits ${r.gap.toFixed(1)} Å `
-      + `above the one below it, the spacing of a β-sheet, and the sheet runs the `
-      + `length of the fibre: <b>every molecule `
-      + `is hydrogen-bonded to its neighbours, not to itself.</b>\n\n The real `
-      + `fibre is thousands of rungs long. Nothing stops it growing, because `
-      + `nothing in a cell knows how to take it apart.`; },
+      + `above the one below it, the spacing of a β-sheet, and that sheet runs `
+      + `the length of the fibre: <b>each molecule hydrogen-bonds to its `
+      + `neighbours, not to itself.</b>\n\n The real fibre runs thousands of rungs long, `
+      + `and nothing stops it growing: no cell machinery knows how to take it `
+      + `apart.`; },
     notes:t=>[
       { text:'One rung', card:'The molecule from the previous part, in place. Its strands pair with the rungs above and below.',
         at:worldAt(centroid(t.chains[t.order[7]].CA)), offset:[100, -80] },
     ] },
 
   { key:'template', id:'stack', title:'Why it spreads', sub:'a shape that copies itself',
-    note:()=>`A healthy protein that touches the end of the fibre is pulled into `
-      + `the disease fold and becomes the next rung. <b>The fibre is the template. `
-      + `No gene, no enzyme, no virus: the information is the shape.</b>\n\n That `
-      + `is what makes a prion infectious, and why the diseases it causes, `
-      + `Creutzfeldt-Jakob in people and BSE in cattle, can be inherited, arise `
-      + `on their own, or be caught. How one molecule converts the next has `
-      + `never been imaged. Both ends are here; the path between is not.`,
+    note:()=>`A healthy protein that touches the fibre's end flips into the `
+      + `disease fold and becomes the next rung. <b>The fibre is the `
+      + `template. No gene, no enzyme, no virus: the shape itself carries `
+      + `the information.</b>\n\n That's what makes a prion infectious, and `
+      + `why the diseases it causes, Creutzfeldt-Jakob in people and BSE in `
+      + `cattle, can start three ways: people inherit it, it arises on its `
+      + `own, or they catch it. Nobody has ever imaged how one molecule `
+      + `converts the next.`,
     notes:()=>[] },
 
-  { key:'sources', id:'1QLZ', title:'The two structures', sub:'and the idea behind them',
-    note:()=>`The healthy fold was solved by NMR in solution, where the protein `
-      + `is free to move. The fibril was solved by cryo-electron microscopy, `
-      + `grown in a test tube from the same human protein, not taken from a sick `
-      + `brain.\n\n The idea that a protein alone could be infectious was Stanley `
-      + `Prusiner's, and it was resisted for years. The 1997 Nobel Prize was for `
-      + `the idea; these files are what it looks like.`,
+  { key:'sources', id:'1QLZ', title:'An infectious protein', sub:'a new idea',
+    note:()=>`Researchers solved the healthy fold by NMR in solution, where `
+      + `the protein moves freely. They solved the fibril by cryo-electron `
+      + `microscopy, grown in a test tube from the same human protein, not `
+      + `pulled from a sick brain.\n\n Stanley Prusiner proposed that a `
+      + `protein alone could infect, and the field resisted the idea for `
+      + `years. He received a 1997 Nobel Prize for the work.`,
     dl:[
       ['https://doi.org/10.1073/pnas.97.1.145', 'Zahn et al., PNAS 97, 145 (2000)', 'The healthy human fold, 1QLZ, by NMR.'],
       ['https://doi.org/10.1038/s41594-020-0403-y', 'Glynn et al., Nat. Struct. Mol. Biol. 27, 417 (2020)', 'The human fibril, 6LNI, by cryo-EM.'],
-      ['https://www.nobelprize.org/prizes/medicine/1997/prusiner/lecture/', 'Prusiner’s Nobel lecture (1997)', 'The prion hypothesis, told by the person who paid for it.'],
+      ['https://www.nobelprize.org/prizes/medicine/1997/prusiner/lecture/', 'Prusiner’s Nobel lecture (1997)', 'The prion hypothesis.'],
     ],
     notes:()=>[] },
 ];
