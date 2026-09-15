@@ -27,7 +27,10 @@ const AREAS = {
   molecules: ['check-molecules.js', 'lobes/check-lobes.js', 'kit/check-kit.js', 'macromolecule/check-macromolecule.js'],
   builder: ['molecule-builder/check-molecule-builder.js'],
   membrane: ['membrane/check-pump.js', 'membrane/check-chemiosmosis.js', 'cell/check-mitochondrion.js'],
-  pathways: ['massaction/check-massaction.js', 'energy/check-energy.js', 'reaction/check-reaction.js', 'coupling/check-coupling.js'],
+  /* What glycolysis, Krebs and fermentation all read: the fx verbs and the energy figure. */
+  pathways: ['reaction/check-reaction.js', 'energy/check-energy.js'],
+  massaction: ['massaction/check-massaction.js'],
+  coupling: ['coupling/check-coupling.js'],
   water: ['tools/check-water.js'],
   dna: ['dna/check-dna.js', 'dna/check-codon.js', 'proteins/check-nucleic-acids.js', 'kit/check-nucleic.js'],
   proteins: ['proteins/check-proteins.js'],
