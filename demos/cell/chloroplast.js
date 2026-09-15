@@ -781,8 +781,8 @@
      four thin things are exaggerated, and their factors are computed from
      the numbers the builder was handed so they cannot drift from what is
      drawn. The machines are icons and their factors are typed. `down` is
-     where a zoom hands off: the gradient's physics is Membrane's, one rung
-     down, with context:'thylakoid'. */
+     where a zoom hands off: the gradient's physics is Chemiosmosis's, one
+     rung down, with context:'thylakoid'. */
   global.Chloroplast.SCALE = {
     rung: 'organelle', form: 'single', unit: UNIT, sceneUnits: [],
     exag: {
@@ -792,6 +792,6 @@
       ims: +(NM(IMS) / TRUE_NM.ims).toFixed(1),
       psii: 3, psi: 3, b6f: 3.5, synthase: 2.8, ribosome: 2.8, dna: 4, proton: 300, starch: 1,
     },
-    down: { thylakoid: 'Membrane', granum: 'Membrane', lamella: 'Membrane', synthase: 'Membrane', b6f: 'Membrane', psii: 'Membrane', psi: 'Membrane' },
+    down: { thylakoid: 'Chemiosmosis', granum: 'Chemiosmosis', lamella: 'Chemiosmosis', synthase: 'Chemiosmosis', b6f: 'Chemiosmosis', psii: 'Chemiosmosis', psi: 'Chemiosmosis' },
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -99,8 +99,8 @@ const LADDER = load('kit/scale.js').ScaleLadder;
     ok(S.exag[k] >= 1, `SCALE.exag.${k} is ${S.exag[k]}: an exaggeration below 1 is a part drawn SMALLER than life, which nothing here does.`);
   ok(S.exag.membrane > S.exag.ims,
     'the bilayer should be stretched harder than the space between the two membranes: it is the thinner of the two by a factor of five.');
-  ok(S.down && S.down.inner === 'Membrane',
-    'SCALE.down does not hand the inner membrane to Membrane. The gradient arithmetic lives there and nowhere in this component.');
+  ok(S.down && S.down.inner === 'Chemiosmosis',
+    'SCALE.down does not hand the inner membrane to Chemiosmosis. The gradient arithmetic lives there and nowhere in this component.');
 }
 
 /* 4. the words */

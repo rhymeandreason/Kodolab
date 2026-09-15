@@ -198,7 +198,10 @@
     const PORE_GAP = 72;
     function spaced(pr) {
       const on = Object.keys(pr).filter(k => pr[k]).map(k => ({ k, x: pr[k].x || 0 })).sort((a, b) => a.x - b.x);
-      for (let i = 1; i < on.length; i++) if (on[i].x - on[i - 1].x < PORE_GAP) on[i].x = on[i - 1].x + PORE_GAP;
+      /* A machine may ask for a tighter row: four complexes of a split chain
+         at the plasma membrane's spacing run off the frame. */
+      const gap = Math.min(PORE_GAP, ...machines.map(m => m.poreGap ? m.poreGap() : PORE_GAP));
+      for (let i = 1; i < on.length; i++) if (on[i].x - on[i - 1].x < gap) on[i].x = on[i - 1].x + gap;
       const mean0 = on.length ? on.reduce((s, o) => s + (pr[o.k].x || 0), 0) / on.length : 0;
       const mean1 = on.length ? on.reduce((s, o) => s + o.x, 0) / on.length : 0;
       const out = {};
@@ -208,6 +211,7 @@
     let warnedKeys = false;
     function layout(proteins) {
       const given = Object.assign({}, PROTEIN_KEYS, proteins);
+      each('expand', given);      // a machine may rewrite its own keys: one complex into four
       for (const k of Object.keys(given)) if (!(k in PROTEIN_KEYS)) {
         if (given[k] && !warnedKeys) { warnedKeys = true; console.warn(`${P.componentName || 'sheet.js'}: no protein named ${k}; have ${Object.keys(PROTEIN_KEYS).join(', ')}`); }
         delete given[k];

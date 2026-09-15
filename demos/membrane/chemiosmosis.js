@@ -239,32 +239,35 @@
   }
   const CPX_PROTONS = 2;
   /* Spread in `u`, so two protons are two objects rather than one lump and
-     the spread stays proportional if the protein resizes. pump.js's trick. */
-  const cpxH = (u, a) => { const out = [];
-    for (let i = 0; i < CPX_PROTONS; i++) out.push({ species:'H', u: u + (i - (CPX_PROTONS - 1) / 2) * 0.10, alpha: a });
+     the spread stays proportional if the protein resizes. pump.js's trick.
+     `n` is how many the site holds: the lumped complex's CPX_PROTONS, or one
+     complex of the split chain's CHAIN[k].pumps. */
+  const cpxH = (u, a, n) => { const out = [], s = n > 2 ? 0.07 : 0.10;
+    for (let i = 0; i < n; i++) out.push({ species:'H', u: u + (i - (n - 1) / 2) * s, alpha: a });
     return out; };
-  function cpxCargoOf(id, k) {
+  function cpxCargoOf(id, k, n) {
     switch (id) {
-      case 'load-H':    return cpxH(mix(-1, 0, smooth(k)), clamp01(k * 3));
+      case 'load-H':    return cpxH(mix(-1, 0, smooth(k)), clamp01(k * 3), n);
       case 'occlude':
-      case 'turn-out':  return cpxH(0, 1);
-      case 'release-H': return cpxH(mix(0, 1, smooth(k)), clamp01((1 - k) * 2.2));
+      case 'turn-out':  return cpxH(0, 1, n);
+      case 'release-H': return cpxH(mix(0, 1, smooth(k)), clamp01((1 - k) * 2.2), n);
       default:          return [];        // shut-out and open-in carry nothing, and that is the point
     }
   }
   /* at(t) — t counts CYCLES, not seconds, so a scrubber and an autoplay
      share one path. */
-  function complexAt(t) {
+  function complexAt(t, n) {
+    const m = n == null ? CPX_PROTONS : n;
     const { phase, k, p } = cpxLocate(t);
     return { t:p, phase:phase.id, label:phase.label, caption:phase.caption,
-             gates: cpxGatesOf(phase.id, k), cargo: cpxCargoOf(phase.id, k),
-             protonsPerCycle: CPX_PROTONS, direction: 'inside → outside' };
+             gates: cpxGatesOf(phase.id, k), cargo: cpxCargoOf(phase.id, k, m),
+             protonsPerCycle: m, direction: 'inside → outside' };
   }
-  function complexSelfTest(steps) {
+  function complexSelfTest(steps, n) {
     const N = steps || 4000, failures = [];
     const OPEN = 0.15;
     for (let i = 0; i < N; i++) {
-      const t = i / N, s = complexAt(t);
+      const t = i / N, s = complexAt(t, n);
       const { top, bottom } = s.gates;
       if (top > OPEN && bottom > OPEN)
         failures.push(`t=${t.toFixed(4)} (${s.phase}): BOTH gates open — top ${top.toFixed(2)}, bottom ${bottom.toFixed(2)}. That is a leak, not a pump.`);
@@ -284,8 +287,50 @@
   }
   const Complex = { at: complexAt, selfTest: complexSelfTest, PHASES: CPX_PHASES, startOf: cpxStartOf, PROTONS_PER_CYCLE: CPX_PROTONS };
 
+  /* =====================================================================
+     THE CHAIN, SPLIT: four complexes and the two shuttles between them.
+     ---------------------------------------------------------------------
+     `pumps` is protons moved matrix → intermembrane space per PAIR of
+     electrons through that complex, the textbook's 4 / 0 / 4 / 2. Each
+     complex turns once per pair, so a turn pumps exactly `pumps`.
+
+       I    NADH → Q        pumps 4
+       II   FADH₂ → Q       pumps 0   succinate dehydrogenase; its FAD is bound
+       III  QH₂ → cyt c     pumps 4   net of the Q cycle, drawn as a plain pump
+       IV   cyt c → O₂      pumps 2   plus 2 matrix H⁺ per pair into water,
+                                      which is chemistry and not pumping
+
+     A fuel's worth is the sum along its path, and that sum is the whole of
+     why FADH₂ buys less ATP than NADH: it enters past complex I. Walked off
+     this table rather than typed, and check-chemiosmosis.js asserts 10 and 6.
+
+     `carries` is electrons per shuttle trip: Q takes the pair, cytochrome c
+     takes one, so complex III sends two cytochromes for every ubiquinol.
+     ===================================================================== */
+  const CHAIN = {
+    I:   { takes: 'NADH',  gives: 'Q',    pumps: 4 },
+    II:  { takes: 'FADH2', gives: 'Q',    pumps: 0 },
+    III: { takes: 'Q',     gives: 'cytc', pumps: 4 },
+    IV:  { takes: 'cytc',  gives: 'O2',   pumps: 2 },
+  };
+  const CARRIES = { NADH: 2, FADH2: 2, Q: 2, cytc: 1 };
+  function chainPath(fuel) {
+    const path = [];
+    let want = fuel;
+    for (let guard = 0; guard < 8; guard++) {
+      const k = Object.keys(CHAIN).find(c => CHAIN[c].takes === want);
+      if (!k) break;
+      path.push(k);
+      if (CHAIN[k].gives === 'O2') return path;
+      want = CHAIN[k].gives;
+    }
+    return path[path.length - 1] && CHAIN[path[path.length - 1]].gives === 'O2' ? path : [];
+  }
+  const chainProtons = fuel => chainPath(fuel).reduce((s, k) => s + CHAIN[k].pumps, 0);
+
   const API = { PROTONS_PER_TURN, ATP_PER_TURN, PROTONS_PER_ATP, PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
-                CONTEXTS, sideName, pumpDir, protonState, synthaseDirection, rotor, FUELS, SPENT, ACCEPTOR, complexRate, Complex };
+                CONTEXTS, sideName, pumpDir, protonState, synthaseDirection, rotor, FUELS, SPENT, ACCEPTOR, complexRate, Complex,
+                CHAIN, CARRIES, chainPath, chainProtons };
   global.Chemiosmosis = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : globalThis);

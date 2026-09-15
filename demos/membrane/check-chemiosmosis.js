@@ -162,5 +162,33 @@ console.log('\n== 5. context: the names, and which way the pumping runs');
   is(C.SPENT.light === null, 'light has no spent form, so a thylakoid draws no carrier arriving');
 }
 
+/* ---- 6. the split chain adds up ---- */
+console.log('\n== 6. the chain, split: what each fuel is worth');
+{
+  is(C.chainPath('NADH').join() === 'I,III,IV', 'NADH enters at complex I and goes I → III → IV');
+  is(C.chainPath('FADH2').join() === 'II,III,IV', 'FADH₂ enters at complex II, past complex I');
+  is(C.CHAIN.II.pumps === 0, 'complex II pumps nothing');
+  is(C.chainProtons('NADH') === 10, `${C.chainProtons('NADH')} protons per NADH, summed off the table`);
+  is(C.chainProtons('FADH2') === 6, `${C.chainProtons('FADH2')} protons per FADH₂: the difference is complex I's ${C.CHAIN.I.pumps}`);
+  is(C.chainPath('light').length === 0, 'light enters no respiratory chain');
+  /* THE SHUTTLES BALANCE: every complex turns once per pair, so whatever a
+     complex gives, the next must take in whole trips. */
+  for (const k of Object.keys(C.CHAIN)) {
+    const g = C.CHAIN[k].gives;
+    if (g !== 'O2' && 2 % C.CARRIES[g] !== 0) fail(`${g} carries ${C.CARRIES[g]} electrons, which does not divide a pair`);
+  }
+  is(2 / C.CARRIES.cytc === 2, 'one ubiquinol loads two cytochrome c: it carries a pair, they carry one each');
+  /* Every pumping complex is still a pump at its own seat count. */
+  for (const k of Object.keys(C.CHAIN)) {
+    const n = C.CHAIN[k].pumps;
+    if (!n) continue;
+    const r = C.Complex.selfTest(2000, n);
+    if (!r.ok) { r.failures.slice(0, 3).forEach(fail); continue; }
+    let seats = 0;
+    for (let i = 0; i < 2000; i++) seats = Math.max(seats, C.Complex.at(i / 2000, n).cargo.filter(c => c.alpha > .5).length);
+    is(seats === n, `complex ${k}: ${seats} seats, never open both ends`);
+  }
+}
+
 console.log(bad ? `\n${bad} FAILED` : '\nall good');
 process.exit(bad ? 1 : 0);

@@ -539,7 +539,7 @@
      computed from the numbers the builder was handed, so they cannot drift
      from what is drawn. The machines are icons and their factors are typed.
      `down` is where a zoom hands off: the physics of the gradient is
-     Membrane's, one rung down, with context:'mitochondrion'. */
+     Chemiosmosis's, one rung down. */
   global.Mitochondrion.SCALE = {
     rung: 'organelle', form: 'single', unit: UNIT, sceneUnits: [],
     exag: {
@@ -548,6 +548,6 @@
       lumen: +(NM(LUM) / TRUE_NM.lumen).toFixed(1),
       junction: 1.4, complex: 3.5, synthase: 2.8, porin: 8, ribosome: 2, dna: 4,
     },
-    down: { inner: 'Membrane', crista: 'Membrane', synthase: 'Membrane', complex: 'Membrane' },
+    down: { inner: 'Chemiosmosis', crista: 'Chemiosmosis', synthase: 'Chemiosmosis', complex: 'Chemiosmosis' },
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -312,17 +312,17 @@ const m = Chemiosmosis.mount(el, {
   fuel: 'NADH',               // 'NADH' | 'FADH2' | 'light' | null (nothing driving it). Defaults to light in a thylakoid
   fuelRate: 1,                // 0..1: a light dimmer, or a supply dial
   oxygen: true,               // false stops an NADH or FADH2 chain: nothing takes the electrons. No effect on 'light'
-  proteins: { complex:{ x:-80 }, synthase:{ x:40 }, translocase:{ x:120 }, leak:null },   // omitted: complex and synthase
-  outerMembrane: true,        // a second sheet with a porin in it, mitochondrion only
+  chain: 'lumped',            // 'lumped': one complex stands for the chain · 'split': complexes I–IV, ubiquinone and cytochrome c. Mitochondrion only
+  span: 'inner',              // 'inner' · 'mitochondrion': + outer membrane, porin, translocase · 'cell': + cytosol and a plasma membrane whose pump spends the ATP
+  proteins: { complex:{ x:-80 }, synthase:{ x:40 }, leak:null },   // omitted: a layout that fits the chain and span. `complex` is spread into I–IV when split
   contents: { inside:{ water:30, H:22 }, outside:{ water:30, H:22 } },   // 'H' is a proton. Omitted, a complex gets these 22 a side; H:0 means none
   sideLabels: true,           // both halves named on the stage; false only if you have your own
   showATP: true,              // an ATP leaves the F1 head per third-turn; false for the gradient alone
   showFuel: true,             // a carrier docks at the complex and leaves spent
-  atpExit: null,              // 'left' | 'right': it drifts off that way, with nowhere to be sent
-  atpTo: null,                // a function returning a world point to walk to; beats atpExit
-  bounds: null,               // {up,down}: how far the compartments run, for a stack of membranes
 });
 ```
+
+**Two dials of detail, and a lesson moves along them.** Start at `chain:'lumped'`, `span:'inner'`: the claim is that burning fuel pumps protons and the gradient turns a turbine. Turn `chain` to `'split'` when a step names a complex, compares NADH with FADH₂, or asks what cyanide or no oxygen does. Turn `span` outward when the question is where the ATP goes: `'mitochondrion'` to show it leaving, `'cell'` to show it spent. Both are `set()` on the same box: `chain` snaps to the new layout, and `span` to or from `'cell'` rebuilds the box and restarts the counts, keeping every `on()` listener.
 
 Every third of a turn a labelled ATP is released from the synthase head into the compartment it is made in and drifts off. It is the `atpMade` count, drawn: a step about where the energy went wants it, and a step about the gradient itself can set `showATP:false`.
 
@@ -334,28 +334,11 @@ Every third of a turn a labelled ATP is released from the synthase head into the
 
 The translocase's swap is **electrogenic** — ATP⁴⁻ out for ADP³⁻ in, driven by the membrane voltage, about a quarter of the whole proton budget — which the library card says and the sim does not model. Say it; do not try to read it off `state()`.
 
-**Three events, and they are three different moments.** `'atp'` fires when the molecule is made, in the matrix; `'atpOut'` when it has cleared the last door on stage and is in the cytosol; `'atpDelivered'` when it reaches the `atpTo` point. A handoff wired to `'atp'` claims the ATP is available where it was made, and one wired to `'atpOut'` claims it is available the moment it leaves rather than where it arrives. `state().outerMembrane` says whether the lid is on, and `state().sides.beyond` is what to call the space above it.
+**Events for the ATP are three different moments.** `'atp'` fires when the molecule is made, in the matrix; `'atpOut'` when it has cleared the last door on stage and is in the cytosol; with `span:'cell'`, `'atpDelivered'` when it reaches the pump and `'spent'` when the pump turns on it. A caption wired to `'atp'` claims the ATP is available where it was made. `state().sides.beyond` is what to call the space above the outer membrane.
 
-**WHAT SPENDS IT IS ANOTHER MEMBRANE, IN THE SAME SCENE.** The Na⁺/K⁺ pump runs on ATP and is one of the biggest consumers in a cell, but it is in the PLASMA membrane. Do not put a pump and a synthase in one sheet — that is a bacterium. Stack them instead: `Membrane.create` and `Chemiosmosis.create(THREE, root, camera, opts)` take any Object3D, so two sims can live in one `CardStage` as two groups at different y, each still believing its own membrane is at y = 0.
+**THE SPLIT CHAIN.** NADH docks on complex I's arm in the matrix. With `fuel:'FADH2'`, succinate docks at complex II instead: its FAD is bound inside the enzyme, and it pumps nothing, so the same pair of electrons buys fewer protons. Ubiquinone carries each pair inside the membrane to complex III; cytochrome c carries them one at a time along the outer face to complex IV, where O₂ takes them. Neither shuttle is used up. **It backs up the way a real chain does**: with `oxygen:false` the cytochromes wait loaded at IV, then III stops, then I, with NADH still waiting. `m.feed()` sends one NADH (or `feed('FADH2')`) through the whole chain once. What a fuel is worth is `state().protonsPerFuel`, summed off the chain's own table, and what each complex has done is `state().complexes.I.pumped`: print those, never a typed 10 or 6.
 
-Top to bottom the stack is: outside the cell · **plasma membrane** · cytosol · **outer membrane** · intermembrane space · **inner membrane** · matrix. It needs no sign changes — the plasma membrane pumps Na⁺ to +y (out of the cell, up) and the mitochondrion pumps protons to +y (into the intermembrane space, up), so both already point the same way.
-
-```js
-const cell = Membrane.create(THREE, gCell, box.camera, { proteins:{ pump:{ x:-36 } }, pumpAuto:false,
-  bounds:{ up:78, down:CYTOSOL - 8 } });          // its cytosol stops above the outer membrane
-const mito = Chemiosmosis.create(THREE, gMito, box.camera, { context:'mitochondrion',
-  outerMembrane:true, bounds:{ down:95 },
-  atpTo: () => worldPositionOf(cell, 'pump') });  // the token walks the whole way
-mito.on('atpDelivered', () => cell.spend());      // it ARRIVED, not it was made
-```
-
-`bounds:{up,down}` is how far each sim's compartments run from its own membrane, so one sim's solution stops where the next sim's membrane begins instead of the two interleaving. `atpTo` is a function returning a WORLD point; the token is converted into the sim's own frame at release and walks there, and `'atpDelivered'` fires on arrival. `atpExit` is the fallback for a page with nowhere to send it.
-
-**Three things a page building this stack owns.** `create()` makes no side labels and no notebook — that is `mount()`'s work — so the page draws the band names itself (four of them here, and two sims each drawing a pair would say "the cytosol" twice) and builds its own `Notebook.create({box, anchors, library})` per sim. And a sim's anchors answer in ITS frame: lift them through the group with `localToWorld` before handing them to a notebook or to `atpTo`, or every callout is off by the offset. `membrane/atp-handoff-test.html` is the worked example.
-
-**Say that the heights are compressed.** A real intermembrane space is about 20 nm and a real mitochondrion sits microns below the cell surface, so a cytosol drawn comparable to the intermembrane space is perhaps a hundred times too thin. Everything else is to scale with itself.
-
-`spend()` returns false if a turn is already running or there is no Na⁺ to carry, which is the honest answer: ATP arriving faster than the pump can turn does not make it turn faster.
+**`span:'cell'` is the ATP's whole trip**: matrix · translocase · intermembrane space · porin · cytosol · the Na⁺/K⁺ pump's nucleotide site in the plasma membrane, which turns once per ATP that arrives. The four spaces and three membranes are named on the stage. `state().cell.atpSpent` counts pump turns; `m.spend()` turns it by hand and returns false if a turn is running. **Say that the heights are compressed**: a real intermembrane space is about 20 nm and a mitochondrion sits microns below the cell surface, so this cytosol is perhaps a hundred times too thin. Everything else is to scale with itself.
 
 `complex` burns fuel to carry protons **inside → outside only**, on a six-phase cycle it visibly turns through. `synthase` is a turbine, not a pump: protons come back down through it and the rotor turns, and it cannot run uphill, so with the gradient gone it stops. `leak` is an uncoupler's hole — protons home without making ATP, and the fuel all comes out as heat. The complexes slow as the force they pump against rises and stall near `state().pmfStall`: respiratory control.
 
@@ -373,11 +356,15 @@ mito.on('atpDelivered', () => cell.spend());      // it ARRIVED, not it was made
 | `fuel`, `oxygen`, `fuelRate`, `pmfStall` | the fuel, whether O₂ is there to take the electrons, the rate after back-pressure and oxygen have had their say, and the pmf at which the complexes stall |
 | `complexLabel`, `complexCaption`, `complexT` | the beat of the complex's six-phase cycle, and the words for it |
 | `complexStarved` | fuelled, but no protons on the side it loads from, so it cannot turn |
-| `outerMembrane`, `sides.beyond`, `sides.pumpedInto` | whether the lid is on, what to call the space above it, and where the protons collect |
+| `chain`, `span`, `outerMembrane`, `sides.beyond`, `sides.pumpedInto` | the level of detail on stage, whether the lid is on, what to call the space above it, and where the protons collect |
+| `complexes.I … .IV` `{ turns, pumpsPerTurn, pumped, label }` | split only: each complex's ledger and the beat it is on |
+| `protonsPerFuel.NADH / .FADH2` | split only: what a fuel is worth, from the chain's table |
+| `shuttles.ubiquinol`, `shuttles.cytcLoaded` | split only: electrons in transit; both stuck full is a chain backed up |
+| `cell.atpSpent`, `cell.mV`, `spentOnPump` | span `'cell'` only: the plasma membrane's pump, and ATP it has spent |
 
-Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `conduct` (traveller, dir).
+Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `spent` (n) · `conduct` (traveller, dir).
 
-Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
+Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `complex.I`, `complex.II`, `complex.III`, `complex.IV`, `quinone`, `cytc` (split), `pump`, `pump.atp`, `cell.outside` (span `'cell'`), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
 
 Layers for `show()`: `water`, `cut`, `membrane`, `outer`. Signals for Graph: `protons`, `voltage`, `dpH`, `pmf`, `atp`.
 

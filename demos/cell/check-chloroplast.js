@@ -119,7 +119,7 @@ const LADDER = load('kit/scale.js').ScaleLadder;
   for (const k of ['membrane', 'lumen', 'gap', 'ims', 'psii', 'psi', 'b6f', 'synthase', 'starch'])
     ok(S.exag[k] >= 1, `SCALE.exag.${k} is ${S.exag[k]}: drawn smaller than life, which nothing here does.`);
   ok(S.exag.gap > S.exag.lumen, 'the stromal gap in a stack is the thinner thing and should be stretched harder than the lumen.');
-  ok(S.down && S.down.thylakoid === 'Membrane', 'SCALE.down does not hand the thylakoid to Membrane.');
+  ok(S.down && S.down.thylakoid === 'Chemiosmosis', 'SCALE.down does not hand the thylakoid to Chemiosmosis.');
 }
 
 /* 6. no Calvin cycle */

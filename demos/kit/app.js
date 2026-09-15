@@ -154,8 +154,11 @@
     Membrane:   ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
                  'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
                  'membrane/membrane.js'],
-    Chemiosmosis: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js',
-                 'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js'],
+    /* pump.js and membrane.js are for span:'cell', where the ATP is spent by
+       a Na⁺/K⁺ pump in a plasma membrane stacked above the mitochondrion. */
+    Chemiosmosis: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
+                 'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
+                 'membrane/membrane.js'],
     Proteinbox: ['folding/folding.js', 'kit/ribbon.js', 'kit/nucleic.js', 'kit/surface.js',
                  'kit/proteinbox.js', 'proteins/proteins.js'],
     Leaf:       ['lib/geo.js', 'leaf/leaf.js'],
