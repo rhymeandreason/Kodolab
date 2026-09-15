@@ -500,8 +500,36 @@
        left and stops, however much NADH is waiting. */
     const Q_Z = 6, Q_SPEED = 40, C_SPEED = 36;
     const qTokens = [], cTokens = [];
-    const qHome = i => ({ x: xs.III - 30 - i * 16, y: 0, z: Q_Z });
-    const qAt = x => ({ x, y: 0, z: Q_Z });
+    /* AT REST IN THE LIPID, between II and III, where no protein stands. */
+    const qHome = i => ({ x: (xs.II + xs.III) / 2 + (i ? 5 : -5), y: 0, z: i ? -Q_Z : Q_Z });
+    /* A quinone site is inside the membrane part of the complex, so it docks
+       at the protein's edge on the side it came from, not at its axis. */
+    const qDock = (key, fromX) => {
+      const s = Math.sign(fromX - xs[key]) || -1;
+      return { x: xs[key] + s * (SPEC[key].R - 3), y: 0, z: Q_Z, key };
+    };
+    /* IT GOES AROUND A PROTEIN, NOT THROUGH ONE. Passing a complex it is not
+       docking at, it first steps back behind it, crosses, and comes forward
+       again; x waits while z clears. Real ubiquinone wanders a shared pool at
+       random; this one walks to where it is going so a student can follow one
+       pair of electrons, with a wobble in the tails so it does not read as a
+       conveyor. */
+    function qMove(q, dt) {
+      const to = q.to, dx = to.x - q.x;
+      const nx = q.x + Math.sign(dx) * Math.min(Math.abs(dx), Q_SPEED * dt);
+      let zWant = to.z, blocked = false;
+      for (const k of SPLIT) {
+        if (!CX[k].group.visible || k === to.key) continue;
+        const clearR = SPEC[k].R * (1 + SPEC[k].lobe) + 5;
+        if (Math.abs(nx - xs[k]) < clearR || Math.abs(q.x - xs[k]) < clearR) { zWant = -(clearR + 2); blocked = true; }
+      }
+      q.z += (zWant - q.z) * Math.min(1, dt * 6);
+      if (!blocked || Math.abs(q.z - zWant) < 2) q.x = nx;
+      q.t = (q.t || 0) + dt;
+      q.y = Math.sin(q.t * 2.3 + q.i * 2) * 3;
+      seat(q.obj, q.x, q.y, q.z);
+      return Math.abs(to.x - q.x) < 0.5 && Math.abs(to.z - q.z) < 1.5;
+    }
     const cY = () => pumpDir() * (H_() + 7);
     const cHome = i => ({ x: xs.III + 4 + (i ? 5 : -5), y: cY(), z: 0 });
     const cDock = i => ({ x: xs.IV - 8 + (i ? 5 : -5), y: cY(), z: 0 });
@@ -533,10 +561,10 @@
     }
     function tickShuttles(dt) {
       for (const q of qTokens) {
-        const there = approach(q, q.to, dt, Q_SPEED);
+        const there = qMove(q, dt);
         if (q.state === 'toDonor' && there && q.charged) {
           relabel(q.obj, 'QH₂', 8.0);
-          q.state = 'toIII'; q.to = qAt(xs.III - 6);
+          q.state = 'toIII'; q.to = qDock('III', q.x);
         } else if (q.state === 'toIII' && there) q.state = 'atIII';
       }
       for (const c of cTokens) {
@@ -699,7 +727,7 @@
         ready: () => qTokens.some(q => q.state === 'free'),
         load: () => {
           const q = qTokens.filter(q => q.state === 'free').sort((a, b) => Math.abs(a.x - xs[key]) - Math.abs(b.x - xs[key]))[0];
-          q.state = 'toDonor'; q.charged = false; q.to = qAt(xs[key]); r.q = q;
+          q.state = 'toDonor'; q.charged = false; q.to = qDock(key, q.x); r.q = q;
         },
         onLoad: () => fuelArrive(key, pulse[key] || fuel),
         onOcclude: () => { fuelSpend(key); if (r.q) { r.q.charged = true; r.q = null; } },
