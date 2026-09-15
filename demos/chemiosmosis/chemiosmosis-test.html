@@ -4,83 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>chemiosmosis-test — pump protons out, let them back through the turbine</title>
-<link rel="stylesheet" href="../css/bench.css">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
 <link rel="stylesheet" href="../css/annotate.css">
 <style>
-  html,body { height:100%; margin:0; }
-  #wrap { display:grid; grid-template-columns:1fr 372px; height:100vh; }
-  #stage { position:relative; min-width:0; }
-  #panel { overflow-y:auto; padding:18px; border-left:1px solid rgba(0,0,0,.12); }
-  .grp { margin-bottom:18px; }
-  .hd { font-weight:600; margin-bottom:6px; }
-  label { display:block; margin:7px 0; font-size:14px; }
-  select { font-size:14px; }
-  input[type=range] { width:100%; }
-  button { margin:0 6px 6px 0; }
-  p.note { font-size:13px; opacity:.8; line-height:1.45; }
-  table.rd { font-size:13px; border-collapse:collapse; width:100%; }
-  table.rd td { padding:2px 0; }
-  table.rd td:last-child { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
-  @media (max-width:920px){ #wrap{ grid-template-columns:1fr; } }
+  .bench-group { display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .bench-group:first-child { padding-top: 0; border-top: 0; }
+  .bench-hd { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .bench-sub { font-family: var(--display); font-size: 13px; color: var(--ink-2); margin-bottom: -6px; }
+  .bench-group .segmented { flex-wrap: wrap; border-radius: 22px; }
+  .phase { font-family: var(--display); font-weight: 500; font-size: 15px; margin: 0; color: var(--ink); }
+  .phase:empty::before { content: 'idle'; color: var(--ink-3); }
+  table.rd { font-size: 13px; border-collapse: collapse; width: 100%; color: var(--ink-2); }
+  table.rd td { padding: 3px 0; border-bottom: 1px solid var(--line); }
+  table.rd td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+  .slider input[disabled] { opacity: .35; }
+  .bench-group [hidden] { display: none !important; }
+  .lshell-nav, .lshell-progress { display: none; }
+  .lshell-scroll { padding-bottom: 32px; }
 </style>
 </head>
 <body>
-<div id="wrap">
-  <div id="stage"></div>
-  <div id="panel">
-    <h1 style="font-size:17px">chemiosmosis</h1>
-    <p class="note">
-      Something with energy to spend pumps protons out; ATP synthase lets them
-      back down and turns. Two dials of detail: the chain as one machine or as
-      its four complexes, and how far out the picture reaches.
-    </p>
-
-    <div class="grp">
-      <div class="hd">detail</div>
-      <label>where <select id="context">
-        <option value="mitochondrion">mitochondrion</option>
-        <option value="thylakoid">thylakoid</option>
-      </select></label>
-      <label>chain <select id="chain">
-        <option value="lumped">one complex for the chain</option>
-        <option value="split">complexes I, II, III, IV</option>
-      </select></label>
-      <label>span <select id="span">
-        <option value="inner">the inner membrane</option>
-        <option value="mitochondrion">+ outer membrane, ATP leaving</option>
-        <option value="cell">+ cytosol and a pump at the cell surface</option>
-      </select></label>
-    </div>
-
-    <div class="grp">
-      <div class="hd">fuel</div>
-      <label>supply <select id="fuel"></select></label>
-      <label>how hard it pumps <output id="rv"></output>
-        <input id="rate" type="range" min="0" max="100" value="100"></label>
-      <label><input id="o2" type="checkbox" checked> oxygen</label>
-      <label><input id="leak" type="checkbox"> an uncoupler is in the membrane</label>
-      <button type="button" id="feed">send one</button>
-    </div>
-
-    <div class="grp">
-      <div class="hd">what the chain is doing</div>
-      <p id="phase" style="font-weight:600;font-size:15px;margin:4px 0"></p>
-      <p class="note" id="phasecap" style="min-height:4em"></p>
-    </div>
-
-    <div class="grp">
-      <div class="hd">the ledger</div>
-      <table class="rd" id="rd"></table>
-      <p class="note" id="verdict"></p>
-    </div>
-
-    <div class="grp">
-      <button type="button" id="reset">reset</button>
-      <button type="button" id="notes">label it</button>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
@@ -90,6 +34,7 @@
 <script src="../lib/scene.js"></script>
 <script src="../lib/annotate.js"></script>
 <script src="../kit/card-stage.js"></script>
+<script src="../kit/lesson-shell.js"></script>
 <script src="../membrane/parts.js"></script>
 <script src="../membrane/pump.js"></script>
 <script src="../membrane/chemiosmosis.js"></script>
@@ -98,74 +43,176 @@
 <script src="../membrane/membrane.js"></script>
 
 <script>
-const $ = id => document.getElementById(id);
-const m = Chemiosmosis.mount($('stage'), {});
-m.start();
-
 const FUELS = { mitochondrion: ['NADH', 'FADH2'], thylakoid: ['light'] };
-const fuelName = f => f === 'FADH2' ? 'FADH₂' : f;
-function fillFuels() {
-  const ctx = $('context').value;
-  $('fuel').innerHTML = FUELS[ctx].map(f => `<option value="${f}">${fuelName(f)}</option>`).join('') + '<option value="">none</option>';
-  $('chain').disabled = $('span').disabled = ctx !== 'mitochondrion';
-  if (ctx !== 'mitochondrion') { $('chain').value = 'lumped'; $('span').value = 'inner'; }
-}
-/* A layout that fits the level: the component spreads `complex` into I–IV
-   and makes room itself, so only the uncoupler needs placing here. */
-function layout() {
-  const split = $('chain').value === 'split', wide = $('span').value !== 'inner';
-  const p = split ? (wide ? { complex:{ x:-95 }, synthase:{ x:45 }, translocase:{ x:105 } } : { complex:{ x:-70 }, synthase:{ x:70 } })
-                  : (wide ? { complex:{ x:-72 }, synthase:{ x:0 }, translocase:{ x:72 } } : { complex:{ x:-80 }, synthase:{ x:40 } });
-  if ($('leak').checked) p.leak = { x: wide ? 150 : 125 };
-  return p;
-}
-const settings = () => ({ context: $('context').value, chain: $('chain').value, span: $('span').value,
-  fuel: $('fuel').value || null, oxygen: $('o2').checked, proteins: layout() });
+const fuelName = f => ({ FADH2: 'FADH₂', light: 'light' })[f] || f;
 
-$('context').onchange = () => { fillFuels(); m.set(settings()); m.reset(); };
-$('chain').onchange = $('span').onchange = $('leak').onchange = () => m.set(settings());
-$('fuel').onchange = () => m.set({ fuel: $('fuel').value || null });
-$('o2').onchange = () => m.set({ oxygen: $('o2').checked });
-$('rate').oninput = () => m.set({ fuelRate: $('rate').value / 100 });
-/* ONE CARRIER, ONE TRIP — the interesting way to press it is with the supply
-   set to none: the chain goes round once and stops. */
-$('feed').onclick = () => m.feed($('fuel').value || undefined);
-$('reset').onclick = () => { m.reset(); m.set({ contents: m.state().chain === 'split' ? { inside:{ water:30, H:30 }, outside:{ water:30, H:30 } } : { inside:{ water:30, H:22 }, outside:{ water:30, H:22 } } }); };
-$('notes').onclick = () => {
-  const s = m.state();
-  const names = (s.chain === 'split' ? ['complex.I', 'complex.II', 'complex.III', 'complex.IV', 'quinone', 'cytc'] : ['complex', 'inside', 'outside'])
-    .concat(['synthase'], $('leak').checked ? ['leak'] : [], s.span !== 'inner' ? ['translocase', 'porin'] : [], s.span === 'cell' ? ['pump.atp'] : []);
-  m.clearNotes(); m.notes(names);
-};
-
-/* EVERY NUMBER HERE IS READ FROM state(), the per-fuel worth included: the
-   panel cannot claim a ratio the chain's table does not hold. */
-const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
-m.on('frame', s => {
-  $('rv').textContent = Math.round(s.fuelRate * 100) + '%';
-  $('phase').textContent = s.complexLabel || '';
-  $('phasecap').textContent = s.complexCaption || '';
-  let rows =
-    row(`H⁺ in ${s.sides.outside}`, (s.counts.H || {}).outside | 0) +
-    row(`H⁺ in ${s.sides.inside}`, (s.counts.H || {}).inside | 0) +
-    row('proton-motive force', s.pmf.toFixed(0) + ' mV') +
-    row('protons pumped out', s.complexTurns);
-  if (s.complexes) {
-    for (const k of Object.keys(s.complexes)) rows += row(`complex ${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
-    rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
-    rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
-  } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
-  rows += row('protons down the uncoupler', s.protonsLeaked) +
-    row(`ATP (${s.stoichiometry.protonsPerTurn} H⁺ per ${s.stoichiometry.atpPerTurn})`, s.atpMade);
-  if (s.cell) rows += row('pump turns bought', s.cell.atpSpent) + row('cell membrane voltage', s.cell.mV.toFixed(0) + ' mV');
-  $('rd').innerHTML = rows;
-  $('verdict').textContent =
-    !s.oxygen && s.shuttles && s.shuttles.cytcLoaded ? 'No oxygen: the cytochromes are waiting loaded at complex IV, so III has nowhere to send electrons, and I stops behind it.'
-    : s.pmf <= 2 ? 'No gradient, so the rotor is stopped. The synthase is a turbine and there is nothing to turn it.'
-    : s.protonsLeaked > 0 ? `${s.protonsLeaked} of the ${s.protonsLeaked + s.protonsThroughSynthase} protons home came down the hole and made nothing. That fuel still burned, and all of it came out as heat.`
-    : `The gradient is holding at ${s.pmf.toFixed(0)} mV, and every ${s.stoichiometry.protonsPerATP.toFixed(1)} protons back through the synthase is one ATP.`;
+const shell = LessonShell.create({
+  brand: 'Chemiosmosis · component bench',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [{
+    eyebrow: 'chemiosmosis/circuit.js',
+    title: 'Pump out, turn back in',
+    body: '<p>Something with energy to spend pumps protons out; ATP synthase lets them back down and turns.</p>',
+    onEnter: bench,
+  }],
 });
-fillFuels();
+
+const m = Chemiosmosis.mount(shell.stage, { viewOffset: shell.viewOffset });
+m.start();
+window.chemi = m;
+
+function bench(ctx) {
+  const ui = ctx.ui;
+  const seg = (id, opts) => `<div class="segmented" id="${id}" role="group">${
+    opts.map(([v, t]) => `<button type="button" data-v="${v}">${t}</button>`).join('')}</div>`;
+  ui.controls(`
+    <div class="bench-group">
+      <div class="bench-hd">where</div>
+      ${seg('context', [['mitochondrion', 'mitochondrion'], ['thylakoid', 'thylakoid']])}
+      <div class="bench-sub" data-mito>the chain</div>
+      <div data-mito>${seg('chain', [['lumped', 'one complex'], ['split', 'I · II · III · IV']])}</div>
+      <div class="bench-sub" data-mito>how far out</div>
+      <div data-mito>${seg('span', [['inner', 'inner membrane'], ['mitochondrion', '+ outer'], ['cell', '+ cell']])}</div>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">fuel</div>
+      <div class="bench-sub">continuous supply</div>
+      <div id="fuel-seg"></div>
+      <div class="slider"><div class="slider-head"><span class="label">pump rate</span><span class="value" id="rv"></span></div>
+        <input id="rate" type="range" min="0" max="1" step="0.01" value="1"></div>
+      <div class="row" id="feeds"></div>
+      <p class="foot" id="feedfoot"></p>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">conditions</div>
+      <label class="switch" data-mito><input type="checkbox" id="o2" checked><span class="track"></span>oxygen</label>
+      <label class="switch"><input type="checkbox" id="leak"><span class="track"></span>uncoupler in the membrane</label>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">what the chain is doing</div>
+      <p class="phase" id="phase"></p>
+      <p class="foot" id="phasecap" style="min-height:3em"></p>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">the ledger</div>
+      <table class="rd" id="rd"></table>
+      <p class="foot" id="verdict"></p>
+    </div>
+
+    <div class="bench-group">
+      <div class="row">
+        <button class="btn secondary" type="button" id="notes" aria-pressed="false">Show labels</button>
+        <button class="btn ghost" type="button" id="reset">Reset</button>
+      </div>
+    </div>`);
+
+  const S = { context: 'mitochondrion', chain: 'lumped', span: 'inner', fuel: 'NADH' };
+  const $ = s => ui.q(s);
+  const mark = (id, v) => { for (const b of ui.qa(`#${id} > button`)) b.setAttribute('aria-pressed', String(b.dataset.v === v)); };
+  const mito = () => S.context === 'mitochondrion';
+
+  /* A layout that fits the level: the component spreads `complex` into I–IV
+     and makes room itself, so only the uncoupler needs placing here. */
+  function layout() {
+    const split = S.chain === 'split', wide = S.span !== 'inner';
+    const p = split ? (wide ? { complex:{ x:-95 }, synthase:{ x:45 }, translocase:{ x:105 } } : { complex:{ x:-70 }, synthase:{ x:70 } })
+                    : (wide ? { complex:{ x:-72 }, synthase:{ x:0 }, translocase:{ x:72 } } : { complex:{ x:-80 }, synthase:{ x:40 } });
+    if ($('#leak').checked) p.leak = { x: wide ? 150 : 125 };
+    return p;
+  }
+  const apply = () => { m.set({ context: S.context, chain: S.chain, span: S.span, fuel: S.fuel,
+    oxygen: $('#o2').checked, proteins: layout() }); if (labelsOn) showLabels(); sync(); };
+
+  function buildFuels() {
+    $('#fuel-seg').innerHTML = seg('fuel', FUELS[S.context].map(f => [f, fuelName(f)]).concat([['', 'none']]));
+    $('#feeds').innerHTML = FUELS[S.context].map(f =>
+      `<button class="btn secondary" type="button" data-feed="${f}">${f === 'light' ? 'One flash' : 'Send one ' + fuelName(f)}</button>`).join('');
+    for (const b of ui.qa('#fuel > button')) b.onclick = () => { S.fuel = b.dataset.v || null; m.set({ fuel: S.fuel }); sync(); };
+    for (const b of ui.qa('[data-feed]')) b.onclick = () => m.feed(b.dataset.feed);
+  }
+
+  /* Every control reflects what can happen now: a thylakoid has no four-complex
+     chain, no outer membrane and no O₂ acceptor, so those rows leave rather
+     than sit greyed. */
+  function sync() {
+    mark('context', S.context); mark('chain', S.chain); mark('span', S.span); mark('fuel', S.fuel || '');
+    for (const el of ui.qa('[data-mito]')) el.hidden = !mito();
+    $('#rate').disabled = !S.fuel;
+    const blocked = mito() && S.chain === 'lumped' && !$('#o2').checked;
+    for (const b of ui.qa('[data-feed]')) b.disabled = blocked;
+    $('#feedfoot').textContent = blocked ? 'No oxygen at the end of the chain, so a carrier has nowhere to send its electrons.'
+      : S.fuel ? 'One carrier, one trip, on top of the supply. Clearer with the supply set to none.'
+      : 'Supply off: each press goes round the chain once and stops.';
+  }
+
+  for (const id of ['context', 'chain', 'span']) for (const b of ui.qa(`#${id} > button`)) b.onclick = () => {
+    if (S[id] === b.dataset.v) return;
+    S[id] = b.dataset.v;
+    if (id === 'context') {
+      if (!mito()) { S.chain = 'lumped'; S.span = 'inner'; }
+      S.fuel = FUELS[S.context][0];
+      buildFuels(); apply(); m.reset();
+    } else apply();
+  };
+  $('#o2').onchange = () => { m.set({ oxygen: $('#o2').checked }); sync(); };
+  $('#leak').onchange = apply;
+  ui.range($('#rate'), v => { m.set({ fuelRate: v }); $('#rv').textContent = Math.round(v * 100) + '%'; });
+
+  let labelsOn = false;
+  function showLabels() {
+    const s = m.state();
+    const names = (s.chain === 'split' ? ['complex.I', 'complex.II', 'complex.III', 'complex.IV', 'quinone', 'cytc'] : ['complex', 'inside', 'outside'])
+      .concat(['synthase'], $('#leak').checked ? ['leak'] : [], s.span !== 'inner' ? ['translocase', 'porin'] : [], s.span === 'cell' ? ['pump.atp'] : []);
+    m.clearNotes(); m.notes(names);
+  }
+  $('#notes').onclick = () => {
+    labelsOn = !labelsOn;
+    $('#notes').setAttribute('aria-pressed', String(labelsOn));
+    $('#notes').textContent = labelsOn ? 'Hide labels' : 'Show labels';
+    labelsOn ? showLabels() : m.clearNotes();
+  };
+  $('#reset').onclick = () => {
+    m.reset();
+    const H = m.state().chain === 'split' ? 30 : 22;
+    m.set({ contents: { inside:{ water:30, H }, outside:{ water:30, H } } });
+    if (labelsOn) showLabels();
+  };
+
+  /* EVERY NUMBER HERE IS READ FROM state(), the per-fuel worth included: the
+     panel cannot claim a ratio the chain's table does not hold. */
+  const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+  m.on('frame', s => {
+    $('#phase').textContent = s.complexLabel || '';
+    $('#phasecap').textContent = s.complexCaption || '';
+    let rows =
+      row(`H⁺ in ${s.sides.outside}`, (s.counts.H || {}).outside | 0) +
+      row(`H⁺ in ${s.sides.inside}`, (s.counts.H || {}).inside | 0) +
+      row('proton-motive force', s.pmf.toFixed(0) + ' mV') +
+      row('protons pumped out', s.complexTurns);
+    if (s.complexes) {
+      for (const k of Object.keys(s.complexes)) rows += row(`complex ${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
+      rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
+      rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
+    } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
+    if (s.protonsLeaked || $('#leak').checked) rows += row('protons down the uncoupler', s.protonsLeaked);
+    rows += row(`ATP (${s.stoichiometry.protonsPerTurn} H⁺ per ${s.stoichiometry.atpPerTurn})`, s.atpMade);
+    if (s.cell) rows += row('pump turns bought', s.cell.atpSpent) + row('cell membrane voltage', s.cell.mV.toFixed(0) + ' mV');
+    $('#rd').innerHTML = rows;
+    $('#verdict').textContent =
+      !s.oxygen && s.shuttles && s.shuttles.cytcLoaded ? 'No oxygen: the cytochromes are waiting loaded at complex IV, so III has nowhere to send electrons, and I stops behind it.'
+      : s.pmf <= 2 ? 'No gradient, so the rotor is stopped. The synthase is a turbine and there is nothing to turn it.'
+      : s.protonsLeaked > 0 ? `${s.protonsLeaked} of the ${s.protonsLeaked + s.protonsThroughSynthase} protons home came down the hole and made nothing. That fuel still burned, and all of it came out as heat.`
+      : `The gradient is holding at ${s.pmf.toFixed(0)} mV, and every ${s.stoichiometry.protonsPerATP.toFixed(1)} protons back through the synthase is one ATP.`;
+  });
+
+  buildFuels(); apply();
+}
+
+shell.goTo(0);
 </script>
 </body>
 </html>
