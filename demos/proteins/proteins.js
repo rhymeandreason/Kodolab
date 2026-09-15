@@ -546,6 +546,9 @@
          c-ring to the head IS the axis, and the membrane normal with it, so it
          needs no convention laid on top of it. */
       axis: { from: '1,2,3,4,5,6,7,8', to: 'A,B,C,D,E,F' },
+      /* The nucleotides the file holds, and only those: ADP in two β, ATP in
+         the three α, β-E empty. The cardiolipin and 3PH are lipid, not site. */
+      site: { take: ['ADP', 'ATP', 'MG'] },
       group: 'states', reference: true,
       read: {
         method: "electron microscopy",
@@ -1023,6 +1026,7 @@
   const PROTEINS = [
     {
       key: 'atp-synthase', name: 'ATP synthase', dir: 'proteins/atp-synthase',
+      story: 'proteins/atp-synthase/atp-synthase-story.html',
       blurb: 'The enzyme that makes ATP, built into the inner membrane of the '
            + 'mitochondrion. Protons falling across the membrane spin its rotor '
            + 'about a hundred times a second, and each turn assembles ATP from '
@@ -1901,7 +1905,6 @@
                     + 'claim that is answered by measurement instead' },
       variants: ANTIBODY_VARIANTS,
     },
-  ];
     {
       key: 'cytc', name: 'Cytochrome c', dir: 'proteins/cytc',
       blurb: 'A small protein that carries one electron at a time from complex '
@@ -1920,6 +1923,7 @@
                     + 'read as side chains and no lesson asks for the shape yet' },
       variants: CYTC_VARIANTS,
     },
+  ];
 
   const byKey = key => PROTEINS.find(p => p.key === key) || null;
   /* THE VARIANT A PROTEIN OPENS ON, and the one a card shows. Required, not
@@ -2105,10 +2109,10 @@
      the mirror of `hormone` — insulin's job is to BE recognised, an
      antibody's is to DO the recognising — and the word the wishlist reserved
      for it before it was pulled. */
-  const DOES = ['enzyme', 'oxygen carrier', 'unknown', 'structural', 'hormone',
   /* `electron carrier` is cytochrome c's: it catalyses nothing and moves one
      electron between two complexes on its heme's iron. The wishlist reserved
      the word for it. */
+  const DOES = ['enzyme', 'oxygen carrier', 'unknown', 'structural', 'hormone',
                 'storage', 'reporter', 'recognition', 'electron carrier'];
 
   /* HOW A VARIANT DIFFERS FROM THE HEALTHY PROTEIN, where it differs at all.

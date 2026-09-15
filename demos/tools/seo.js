@@ -96,7 +96,8 @@ const PAGES = {
 
 // Routes search should not see: accounts, student work, our own index, a bench.
 const HIDDEN = ['/build', '/apps', '/app/:id', '/teach', '/login', '/join', '/join/:code',
-                '/admin', '/proteins/myoglobin/bench', '/proteins/prion/bench'];
+                '/admin', '/proteins/myoglobin/bench', '/proteins/prion/bench',
+                '/proteins/atp-synthase/bench'];
 // Paths no route names that are still reachable by file.
 const DISALLOW_FILES = ['/api/', '/demos/admin.html', '/demos/attic/', '/demos/build/', '/demos/tests/'];
 

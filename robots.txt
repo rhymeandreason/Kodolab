@@ -11,6 +11,7 @@ Disallow: /demos/build/
 Disallow: /demos/tests/
 Disallow: /join
 Disallow: /login
+Disallow: /proteins/atp-synthase/bench
 Disallow: /proteins/myoglobin/bench
 Disallow: /proteins/prion/bench
 Disallow: /teach

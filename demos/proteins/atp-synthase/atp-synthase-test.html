@@ -652,8 +652,12 @@ function stats(t) {
 /* WHAT IS DRAWN INSIDE THE RIBBON, counted off the baked site rather than
    typed. The empty case is the interesting one and gets said as a finding
    rather than as a dash. */
+/* A site VIEW is a cut-out with a P-loop; the whole enzyme carries a site
+   too, but it is only the nucleotides it holds. */
+const siteView = t => t.site && t.meta.grip ? t.site : null;
+
 function siteRow(t) {
-  const s = t.site;
+  const s = siteView(t);
   if (!s) return 'nothing';
   const held = t.meta.bound;
   const res = t.meta.grip
@@ -690,11 +694,11 @@ function fitRow(t) {
    kind of claim this picture is. */
 function whereHTML(t, id) {
   const m = t.meta;
-  if (t.site && !m.bound)
+  if (siteView(t) && !m.bound)
     return `<b>the empty site</b>The P-loop is drawn with <em>nothing in ` +
       `it</em>. The baker was asked for whatever was bound here and found ` +
       `none — an absence that was measured, not a view that was never built.`;
-  if (t.site)
+  if (siteView(t))
     return `<b>the catalytic site</b>Holding <em>${m.bound.join(' + ')}</em>, ` +
       `gripped by the P-loop and three side chains. The rest of the subunit ` +
       `is the ribbon around it.`;
@@ -847,9 +851,11 @@ function show(id) {
   notes.clear();
   for (const c2 of [...box.group.children])
     if (c2.userData && c2.userData.anchor) box.group.remove(c2);
-  if (t.site) {
+  if (siteView(t)) {
     siteNote(t, box.setPocket(t.site));
   } else if (m.palette === 'role') {
+    /* The whole enzyme's nucleotides, drawn where the file holds them. */
+    if (t.site) box.setPocket(t.site);
     /* THE ASSEMBLY NAMES ITS PARTS; THE DETAIL NAMES ITS SUBJECT. Naming the
        head on a view that draws nothing but the head is a label for something
        the reader cannot mistake, and it competes with the one callout that is
