@@ -182,50 +182,33 @@ const PARTS = [
     hint:'Scroll to examine each part',
     stats:t=>fileStats('human', t),
     note:t=>`Your body turns over roughly its own weight in ATP every day, `
-      + `and almost all of it comes off this one enzyme, built into the inner `
-      + `membrane of every mitochondrion.\n\n It is a <b>rotary motor</b>. `
-      + `Protons flow through the bottom, spin a rotor, and the turning `
-      + `shaft squeezes ATP out of the top. This is the human enzyme, `
+      + `almost all of it from this enzyme in the inner mitochondrial `
+      + `membrane.\n\n It is a <b>rotary motor</b>: protons spin the bottom, `
+      + `and the turning shaft squeezes ATP out of the top. The human enzyme, `
       + `${t.order.length} protein chains, coloured by job.`,
     notes:()=>[] },
 
-  { key:'parts', id:'human', title:'What turns, what holds still', sub:'rotor and stator',
-    note:t=>`A motor needs something to push against. The <b>rotor</b>, in `
-      + `blue, is a ring of ${count(t, 'c')} c-subunits in the membrane with a `
-      + `shaft (γ) running up through the middle. Everything else is the `
-      + `<b>stator</b>.\n\n The green head, ${count(t, 'α')} α and `
-      + `${count(t, 'β')} β subunits, sits on top of the shaft. The tan stalk `
-      + `bolts it to the membrane. Without the stalk the head would spin `
-      + `along with the shaft and nothing would be made.\n\n The small `
-      + `molecules are the nucleotides this structure caught: ATP in all `
-      + `${holding(t, 'ATP').length} α, which never use it, and ADP in `
-      + `${holding(t, 'ADP').length} of the ${count(t, 'β')} β. The last β is empty.`,
+  { key:'parts', id:'human', title:'Protons turn the rotor', sub:'rotor and stator',
+    note:t=>`The electron transport chain pumps protons out of the matrix, `
+      + `and they want back in. This is the only door.\n\n The <b>rotor</b>, `
+      + `in blue, is a ring of ${count(t, 'c')} c-subunits in the membrane `
+      + `with a shaft (γ) up its middle. A proton enters one half-channel in `
+      + `<b>subunit a</b>, rides the ring almost a full circle, and leaves `
+      + `through the other, pushing the ring one step. ${count(t, 'c')} `
+      + `protons turn it once.\n\n Everything else is the <b>stator</b>: `
+      + `the green head of ${count(t, 'α')} α and ${count(t, 'β')} β, and the `
+      + `tan stalk that holds it still against the shaft.`,
     notes:t=>[
       { text:'head · α₃β₃', tone:'head', card:'Where ATP is made. It never turns.',
         at:partAt(t, 'α,β'), offset:[60, -40] },
-      { text:'rotor · c-ring + γ', tone:'rotor', card:'Turns as one rigid piece.',
+      { text:`rotor · ${count(t, 'c')} c + γ`, tone:'rotor', card:'Turns as one rigid piece. Each c-subunit carries a proton on a glutamate.',
         at:partAt(t, 'c'), offset:[-170, 30] },
       /* b and d, not the whole stalk: OSCP caps the head, and averaging it
          in pulls the anchor onto the green. */
-      { text:'stalk', tone:'stalk', card:'Holds the head still against the shaft\'s torque.',
+      { text:'stalk', tone:'stalk', card:'Without it the head would spin with the shaft.',
         at:partAt(t, 'b,d'), offset:[60, 10] },
-      { text:'ADP', tone:'phosphorus', card:'Held in a β catalytic site, where this structure caught it.',
-        at:siteAt(t, 'bound', holding(t, 'ADP')[0]), offset:[70, -70] },
-    ] },
-
-  { key:'protons', id:'human', title:'Protons turn the ring', sub:'a gradient becomes a rotation',
-    note:t=>`The electron transport chain pumps protons out of the matrix, `
-      + `so they pile up on the other side of the membrane. They want back `
-      + `in, and this is the only door.\n\n <b>Subunit a</b> holds two `
-      + `half-channels that don't line up. A proton enters through one, `
-      + `hops onto a c-subunit, rides the ring almost a full circle, and `
-      + `leaves through the other. Each proton pushes the ring one step, `
-      + `so ${count(t, 'c')} protons turn it once.`,
-    notes:t=>[
-      { text:'subunit a', tone:'membrane', card:'Two offset half-channels, one open to each side of the membrane.',
+      { text:'subunit a', tone:'membrane', card:'Two offset half-channels, one open to each side.',
         at:partAt(t, 'a'), offset:[70, 40] },
-      { text:`c-ring · ${count(t, 'c')} subunits`, tone:'rotor', card:'Each c-subunit carries one proton on a glutamate as it turns.',
-        at:partAt(t, 'c'), offset:[-190, 40] },
     ] },
 
   { key:'turn', id:'human', title:'The turn', sub:'three ATP per revolution', spin:true,
@@ -236,13 +219,9 @@ const PARTS = [
       + `through three shapes: <b>open, gripping, releasing</b>. One full `
       + `turn makes ${b} ATP, from ${c} protons, about `
       + `${(c / b).toFixed(1)} protons per ATP.\n\n The real enzyme spins over `
-      + `a hundred times a second. Here it is slowed down.\n\n Watch the `
-      + `pale protons board the ring beside subunit a and leave on the head's `
-      + `side. Every third of a turn one β site opens: ATP drifts out, and ADP `
-      + `and phosphate drift in. The rotor's motion is measured from three `
-      + `structures; the protons and nucleotides are drawn to show the flow. `
-      + `The head's own flexing is not shown, and the next part looks at it `
-      + `up close.`;
+      + `a hundred times a second; here it is slowed. Every third of a turn `
+      + `one β site opens, releasing ATP and taking in ADP and phosphate. `
+      + `The head's own flexing is not drawn. The next part shows it.`;
     },
     notes:t=>[
       { text:'γ shaft', tone:'rotor', card:'Off-centre, so each third of a turn deforms a different β.',
@@ -254,12 +233,12 @@ const PARTS = [
   { key:'open', id:'open', close:true, title:'An empty site', sub:'one β subunit, up close',
     stats:t=>fileStats('open', t),
     note:t=>`Zoom in on one β subunit. The loop of backbone that grips a `
-      + `nucleotide's phosphates, the <b>P-loop</b>, is residues `
+      + `nucleotide's phosphates, the <b>P-loop</b>, spans residues `
       + `${t.meta.grip[0]}–${t.meta.grip[1]}. Right now it holds `
       + `${t.meta.bound ? held(t) : '<b>nothing</b>'}.\n\n This is the open `
-      + `state: the site has let go and is waiting for ADP and phosphate. `
-      + `This view is from a cow's enzyme, whose head is almost identical to `
-      + `yours and was solved sharply enough to see inside one site.`,
+      + `state, waiting for ADP and phosphate. This is a cow's enzyme, whose `
+      + `head is nearly identical to yours and was solved sharply enough to `
+      + `see inside one site.`,
     notes:t=>[
       { text:'P-loop, empty', card:'The grip, with nothing to grip.',
         at:siteAt(t, 'grip'), offset:[60, -50] },
@@ -267,9 +246,9 @@ const PARTS = [
 
   { key:'dp', id:'dp', close:true, title:'The hard part is letting go', sub:'binding change',
     note:t=>`A third of a turn later, the same site holds `
-      + `<b>${held(t)}</b>. A neighbouring β from the same crystal, laid over `
-      + `the first on its P-loop, so the site stays put and the rest of the `
-      + `subunit visibly swings.\n\n Here is the surprise: inside a closed `
+      + `<b>${held(t)}</b>. It is laid over the first on its P-loop, so the `
+      + `site stays put and the rest of the subunit swings.\n\n The surprise: `
+      + `inside a closed `
       + `site, ADP and phosphate join into ATP almost for free. <b>The `
       + `energy from the turn goes into prying the site open</b> so the `
       + `ATP can leave. Paul Boyer predicted this; John Walker's structure `
