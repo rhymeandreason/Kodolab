@@ -693,12 +693,24 @@
       if (t.x < x0) { t.x = x0; t.vx = -t.vx; }
       /* Kept out of every pore but its own: a water with an aquaporin to
          use is steered to it by the funnel and must not be shoved off. */
+      /* ONLY BESIDE THE SHEET, AND NEVER WIDER THAN HALF THE GAP. Applied at
+         every height with a fixed width, two pores closer than twice the
+         keepout left no legal x between them, and every water in that
+         stretch was shoved onto one line: a column of water the height of
+         the frame. Eased out rather than moved, so a water arriving at the
+         membrane over a pore drifts aside instead of jumping. */
       const others = t.conducts == null ? PORES : PORES.filter(Q => Q.x !== t.conducts);
-      if (t.keepout && others.length && others.reduce((m, Q) => Math.min(m, Math.abs(t.x - Q.x)), Infinity) < t.keepout) {
+      if (t.keepout && others.length && Math.abs(t.y) < T.height + 10) {
         let near = others[0].x;
         for (const Q of others) if (Math.abs(t.x - Q.x) < Math.abs(t.x - near)) near = Q.x;
-        t.x = near + Math.sign(t.x - near || 1) * t.keepout;
-        t.vx = -t.vx;
+        const s = Math.sign(t.x - near || 1);
+        let room = Infinity;
+        for (const Q of PORES) if (Q.x !== near && Math.sign(Q.x - near) === s) room = Math.min(room, Math.abs(Q.x - near));
+        const k = Math.min(t.keepout, room / 2), d = Math.abs(t.x - near);
+        if (d < k) {
+          t.x += s * Math.min(k - d, 40 * dt);
+          if (Math.sign(t.vx) !== s) t.vx = -t.vx;
+        }
       }
       if (t.z >  11) { t.z =  11; t.vz = -t.vz; }
       if (t.z < -11) { t.z = -11; t.vz = -t.vz; }
