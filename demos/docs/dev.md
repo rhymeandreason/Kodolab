@@ -36,7 +36,9 @@ node tools/check.js deploy       # pages, seo, the tutor: before a deploy
 
 `tools/check.js`'s `AREAS` is the list.
 
-**Two checkers are slow and almost never need running**, so a bare `check.js` skips them: `diffusion` (`diffusion/check-diffusion.js`, ~65 s) and `folding` (`folding/tools/check-folding.js`, ~45 s). Name them only after changing `diffusion/` or the folding solver, `kit/ribbon.js`, or a folding bake. A new checker gets a line there. `pathways` is what glycolysis, Krebs and fermentation share (`reaction/`, `energy/`). `massaction` (glycolysis's modal sim) and `coupling` (`energy/energy-test.html`) are their own.
+**Two checkers are slow and almost never need running**, so a bare `check.js` skips them: `diffusion` (`diffusion/check-diffusion.js`, ~65 s) and `folding` (`folding/tools/check-folding.js`, ~45 s). Name them only after changing `diffusion/` or the folding solver, `kit/ribbon.js`, or a folding bake. A new checker gets a line there. `molecules` is the specs plus `kit/motion.js` and `kit/molgraph.js`. `macromolecule` (the peptide bond, `macromolecule-builder.html`) and `lobes` (lone pairs, rarely used) are their own.
+
+`pathways` is what glycolysis, Krebs and fermentation share (`reaction/`, `energy/`). `massaction` (glycolysis's modal sim) and `coupling` (`energy/energy-test.html`) are their own.
 
 Proteins are four areas, because adding to `proteins/proteins.js` is common and the rest is rare: `proteins` (the registry), `ribbon` (`kit/ribbon.js`, the residue table), `hemoglobin`, `sickle`. `hemoglobin` runs `check-hb.js --quick`; pass `--full` after changing a bake input (`bake-unfold.js`, `bake-hb.js`, `folding/folding.js`, `kit/ribbon.js`), about 60 s. Re-run the matching area after any bake: nothing about a stale one is visible from the page that plays it.
 

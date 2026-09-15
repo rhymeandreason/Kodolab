@@ -24,7 +24,9 @@ const full = process.argv.includes('--full');
 
 const AREAS = {
   deploy: ['tools/check-pages.js', 'tools/seo.js --check', 'ask/check-ask.js'],
-  molecules: ['check-molecules.js', 'lobes/check-lobes.js', 'kit/check-kit.js', 'macromolecule/check-macromolecule.js'],
+  molecules: ['check-molecules.js', 'kit/check-kit.js'],
+  macromolecule: ['macromolecule/check-macromolecule.js'],
+  lobes: ['lobes/check-lobes.js'],
   builder: ['molecule-builder/check-molecule-builder.js'],
   membrane: ['membrane/check-pump.js', 'membrane/check-chemiosmosis.js', 'cell/check-mitochondrion.js'],
   /* What glycolysis, Krebs and fermentation all read: the fx verbs and the energy figure. */
