@@ -113,7 +113,7 @@ node tools/dev-server.js        # http://localhost:8817/ — zero dependencies
 
 Live reload, `no-store`, and it serves the **repo root**, not `demos/`, because the root is what deploys. A lesson is `/demos/water-lab.html`. A CSS-only change swaps the stylesheet in place, so the scene keeps its camera and selection.
 
-**Checkers run by hand, by area, when a feature is done**, not on every commit: `node tools/check.js <area>`, `--list` for the areas, `deploy` before a deploy. The ones outside it, `check-handedness.js`, and what deploys: `docs/dev.md`.
+**Checkers run by hand when a feature is done**, not on every commit: `node tools/check.js <file you changed>` runs the checkers that read it, `molecules` everything that loads the specs, `deploy` before a deploy. The ones outside it, `check-handedness.js`, and what deploys: `docs/dev.md`.
 
 Two browser gotchas: a backgrounded tab pauses `requestAnimationFrame`, so an automated screenshot may freeze on the last frame — drive the page's functions directly instead of trusting one shot. And **set the viewport before judging layout**: `resize_window` to \~1440x900. These are laptop lessons.
 

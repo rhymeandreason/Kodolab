@@ -26,21 +26,20 @@ A checker is `node <path>`, offline and dependency-free.
 
 `check-molecules.js` prints every spec's bond angles, audits each declared `stereo` / `topology` / `chirality` claim, and **fails if any bonded pair's spheres merge** — a merged pair buries the stick, which is how a double bond can be correctly tagged and render as nothing. Run it after any geometry change.
 
-**Checkers run by hand, by area, when a feature is done** — not on every commit, which is mostly interim work. There is no commit hook and no CI.
+**Checkers run by hand when a piece of work is done**, not on every commit, which is mostly interim work. There is no commit hook and no CI.
 
 ```bash
-node tools/check.js              # every area
-node tools/check.js membrane     # one area; --list names them
-node tools/check.js deploy       # pages, seo, the tutor: before a deploy
+node tools/check.js membrane/pump.js   # the checkers that read that file
+node tools/check.js molecules          # everything that loads the specs
+node tools/check.js deploy             # pages, seo, the tutor: before a deploy
+node tools/check.js                    # all but the slow two
 ```
 
-`tools/check.js`'s `AREAS` is the list.
+**Most checkers guard one module**, so the usual run names the file you changed. A file matches a checker whose source names its basename; anything under `lib/` also runs `molecules`, since the specs reach checkers through `lib/lib-node.js` without being named. `--which <file>` prints the match without running it, and `--list` names every checker. A new checker gets a line in `CHECKERS`.
 
-**Two checkers are slow and almost never need running**, so a bare `check.js` skips them: `diffusion` (`diffusion/check-diffusion.js`, ~65 s) and `folding` (`folding/tools/check-folding.js`, ~45 s). Name them only after changing `diffusion/` or the folding solver, `kit/ribbon.js`, or a folding bake. A new checker gets a line there. `molecules` is the specs plus `kit/motion.js` and `kit/molgraph.js`. `macromolecule` (the peptide bond, `macromolecule-builder.html`) and `lobes` (lone pairs, rarely used) are their own.
+**Two checkers are slow and almost never need running**, so a bare run skips them: `diffusion/check-diffusion.js` (~65 s) and `folding/tools/check-folding.js` (~45 s). Naming `kit/ribbon.js` matches the folding one; that is correct, and the ~45 s is why.
 
-`pathways` is what glycolysis, Krebs and fermentation share (`reaction/`, `energy/`). `massaction` (glycolysis's modal sim) and `coupling` (`energy/energy-test.html`) are their own.
-
-Proteins are four areas, because adding to `proteins/proteins.js` is common and the rest is rare: `proteins` (the registry), `ribbon` (`kit/ribbon.js`, the residue table), `hemoglobin`, `sickle`. `hemoglobin` runs `check-hb.js --quick`; pass `--full` after changing a bake input (`bake-unfold.js`, `bake-hb.js`, `folding/folding.js`, `kit/ribbon.js`), about 60 s. Re-run the matching area after any bake: nothing about a stale one is visible from the page that plays it.
+`check-hb.js` runs `--quick`; pass `--full` after changing a bake input (`bake-unfold.js`, `bake-hb.js`, `folding/folding.js`, `kit/ribbon.js`), about 60 s. Re-run a bake's checker after any bake: nothing about a stale one is visible from the page that plays it.
 
 Not in `check.js`: `tools/check-handedness.js` below, `tools/check-docs.js` (after editing an enumeration in a doc), and `chain/`'s and `chair/`'s, while those pages are test-status.
 
