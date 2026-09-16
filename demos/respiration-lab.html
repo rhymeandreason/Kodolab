@@ -34,7 +34,7 @@
     border-radius: 0; border: 0; border-right: 1px solid var(--border-hair);
     background: var(--surface-page); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
   }
-  .lshell .lshell-scroll { padding: 84px 40px 32vh; }
+  .lshell .lshell-scroll { padding: 84px 40px 40vh; }
   .lshell .lshell-stage { left: 50vw; }
   .lshell-panel .body { font-family: var(--font-ui); }
   .lshell-panel .title { font-size: 26px; line-height: 1.1; letter-spacing: -.02em; }
@@ -78,6 +78,16 @@
   /* The zone the reader is in is lit: the one cue that the scene changed because of the scroll. */
   .chart .zone { transition: stroke .5s, fill .5s }
   .chart .zone.is-here { stroke: var(--accent) }
+  /* Drawn in by stage: a button reveals one, top to bottom, each element on
+     its own delay. Layout never changes, so the scroll marks hold. */
+  .chart .s1, .chart .s2, .chart .s3 { opacity: 0; transition: opacity .5s ease }
+  .chart .is-in { opacity: 1 }
+
+  /* The step button sits in the chart's flow, where the next stage will
+     draw: under the heading first, then in the blank the stage will fill. */
+  figure { position: relative }
+  .step { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: center; transition: opacity .5s, top .6s cubic-bezier(.2,.7,.2,1) }
+  .step.is-done { opacity: 0; pointer-events: none }
 </style>
 </head>
 <body>
@@ -269,7 +279,7 @@
   'use strict';
   const shell = LessonShell.create({
     brand: 'Cellular respiration',
-    hint: 'Scroll the chart · Drag to orbit',
+    hint: 'Drag to orbit',
     chrome: 'none',
     steps: [{
       eyebrow: 'One glucose, top to bottom',
@@ -286,28 +296,35 @@
   }));
   shell.goTo(0);
 
-  /* ---- the scroll reads the chart ----
-     A line 40% down the panel is where the reader is. The phase is the last
-     mark that line has passed, so scrolling back up walks the same stops in
-     reverse. Marks are the chart's own elements, measured in the scroller's
-     coordinates, so a wider panel or a re-flowed chart moves them with it. */
   const scroller = shell.el.querySelector('.lshell-scroll');
   const chart = scroller.querySelector('svg.chart');
-  const MARKS = [
-    ['fly',   '#k-split'],
-    ['mito',  '#z-mito'],
-    ['chemi', '#k-carriers'],
-    ['etc',   '#k-etc'],
-  ];
   const topOf = sel => {
-    const n = chart.querySelector(sel);
+    const n = typeof sel === 'string' ? chart.querySelector(sel) : sel;
     return n.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
   };
-  function phaseNow() {
-    const line = scroller.scrollTop + scroller.clientHeight * 0.4;
-    let p = 'cell';
-    for (const [name, sel] of MARKS) if (line >= topOf(sel)) p = name;
-    return p;
+
+  /* ---- the chart fills in by stage ----
+     Every drawn element is sorted into three stages by where it sits against
+     two of the chart's own marks: above the mitochondrion zone is the
+     cytoplasm's, above the chain box is the organelle's, the rest is the
+     chain's. An arrow belongs to where it points, so a line is placed by its
+     end and everything else by its top. Nothing in the SVG is tagged by hand. */
+  {
+    const mitoTop = chart.querySelector('#z-mito').getBoundingClientRect().top;
+    const etcTop = chart.querySelector('#k-etc').getBoundingClientRect().top;
+    for (const el of chart.querySelectorAll('rect, text, image, line, path, ellipse')) {
+      if (el.closest('defs')) continue;
+      const r = el.getBoundingClientRect();
+      const y = (el.tagName === 'line' || el.tagName === 'path') ? r.bottom - 2 : r.top;
+      el.classList.add(y < mitoTop ? 's1' : y < etcTop ? 's2' : 's3');
+    }
+  }
+  function reveal(stage) {
+    const els = [...chart.querySelectorAll('.s' + stage)]
+      .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+    els.forEach((el, i) => { el.style.transitionDelay = (i * 30) + 'ms'; el.classList.add('is-in'); });
+    scroller.scrollTo({ top: stage === 1 ? 0 : Math.max(0, topOf(els[0]) - 72), behavior: 'smooth' });
+    cta.classList.add('is-done');
   }
 
   /* Chemiosmosis's box orbits the origin, and with span:'cell' the inner
@@ -326,6 +343,7 @@
     })(t0);
   }
   const INNER_Y = -85;
+  const FAR = { pos: [4, 26, 58], target: [0, -1.5, 0] };
 
   const PHASES = {
     cell()  { shell.showScene('cell');  cell.home(); },
@@ -343,21 +361,79 @@
     },
   };
   const ZONE = { cell: '#z-cyto', fly: '#z-cyto', mito: '#z-mito', chemi: '#z-mito', etc: '#z-mito' };
-
   let phase = null;
-  function sync() {
-    const p = phaseNow();
+  function go(p) {
     if (p === phase) return;
     phase = p;
     PHASES[p]();
     for (const z of chart.querySelectorAll('.zone')) z.classList.toggle('is-here', z.matches(ZONE[p]));
   }
-  scroller.addEventListener('scroll', sync, { passive: true });
-  window.addEventListener('resize', sync);
-  sync();
 
-  /* Build the two scenes the reader has not reached yet while the cell is
-     still on screen, so the first swap is a fade and not a hitch. */
+  /* ---- three buttons, then the scroll ----
+     Each step is a flight and a fill: the scene moves first, the chart's next
+     stage draws in behind it, and the panel scrolls to it. The last one hands
+     over to the scroll, which reads the same marks the buttons did. */
+  const cta = document.createElement('div');
+  cta.className = 'step';
+  cta.innerHTML = '<button class="cta" type="button"></button>';
+  const figure = chart.parentElement;
+  figure.appendChild(cta);
+  /* Where the next stage starts, in the figure's own coordinates. */
+  const placeCta = () => {
+    if (step >= STEPS.length) return;
+    const first = [...chart.querySelectorAll('.s' + (step + 1))]
+      .reduce((a, b) => (b.getBoundingClientRect().top < a.getBoundingClientRect().top ? b : a));
+    cta.style.top = Math.round(first.getBoundingClientRect().top - figure.getBoundingClientRect().top + (step ? 10 : 0)) + 'px';
+  };
+  window.addEventListener('resize', placeCta);
+  const btn = cta.querySelector('button');
+  const STEPS = [
+    { label: 'Enter the cell', hold: 1800, run() { go('cell'); reveal(1); } },
+    { label: 'Enter the mitochondria', hold: 3600, run() {
+      go('fly');
+      setTimeout(() => { go('mito'); reveal(2); }, 1500);
+    } },
+    /* The hold outlasts the zoom: arming the scroll reads the phase off the
+       panel, and read early it would already say 'etc' and the zoom would
+       be skipped as a repeat. */
+    { label: 'Electron transport chain', hold: 3000, run() {
+      go('chemi'); reveal(3);
+      setTimeout(() => go('etc'), 2400);
+    } },
+  ];
+  let step = 0;
+  const arm = () => {
+    if (step < STEPS.length) { btn.textContent = STEPS[step].label; placeCta(); cta.classList.remove('is-done'); return; }
+    cta.classList.add('is-done');
+    phase = phaseNow();
+    scroller.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+  };
+  btn.addEventListener('click', () => {
+    const s = STEPS[step++];
+    btn.disabled = true;
+    s.run();
+    setTimeout(() => { btn.disabled = false; arm(); }, s.hold);
+  });
+  arm();
+
+  /* Once every stage is drawn, a line 40% down the panel says where the
+     reader is, and the phase is the last mark that line has passed, so
+     scrolling back up walks the same stops in reverse. */
+  const MARKS = [['fly', '#k-split'], ['mito', '#z-mito'], ['chemi', '#k-carriers'], ['etc', '#k-etc']];
+  function phaseNow() {
+    const line = scroller.scrollTop + scroller.clientHeight * 0.4;
+    let p = 'cell';
+    for (const [name, sel] of MARKS) if (line >= topOf(sel)) p = name;
+    return p;
+  }
+  function sync() { go(phaseNow()); }
+
+  /* The cell starts far out so the first button is an entrance; the two
+     scenes the reader has not reached are built while it is on screen, so
+     each swap is a fade and not a hitch. */
+  cell.flyTo(FAR.pos, FAR.target, 0.05);
+  shell.showScene('cell');
   setTimeout(() => { mito.state(); chemi.state(); }, 1500);
 })();
 </script>
