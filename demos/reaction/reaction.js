@@ -1591,6 +1591,73 @@ function create(host) {
   const eAway = from => FX.protonHop(from, from.clone().add(acrossFrame()), null,
     {color: ELECTRON, dur: T.H_LEAVE_MS / 1000, away: true, carry: eBadge()});
 
+  /* ---- A REDOX CENTRE EMPTIED INTO THE ONE BESIDE IT --------------------
+   * Complexes I and II. The donor gives up what it has been carrying and the
+   * quinone beside it ends up reduced — but WHAT CROSSES IS THE ELECTRONS,
+   * NOT THE HYDROGENS, and that distinction is the whole step. NADH's hydride
+   * goes to FMN and FADH₂'s pair stays on its own flavin; neither atom reaches
+   * ubiquinone. The electrons run a wire of iron-sulfur clusters to it, and
+   * the two protons that finish the job come out of the matrix.
+   *
+   * So the beat is three things: what the donor carried LEAVES, an electron
+   * CROSSES, and two protons ARRIVE from below. Flying the hydride itself onto
+   * the quinone would be one motion shorter and would say the matrix protons
+   * came off NADH — which is the misreading that makes the gradient look free.
+   *
+   * `redox` names the donor's pair and `hydride` its one. On the acceptor's
+   * PRODUCT, `eFrom` is where the charge lands and `redox` where the protons
+   * do. WHICH LANE IS THE ACCEPTOR is asked of the specs, never of an index:
+   * the nearest lane whose product calls itself reduced.
+   */
+  verb('relay', {
+    dur: () => T.HOP + T.OX_GAP + T.HOP,
+    lane(c) {
+      const m = meta(c.spec), u = c.lane.g.userData;
+      const src = (m.redox && m.redox.length) ? m.redox
+                : (m.hydride != null ? [m.hydride] : []);
+      const hs = src.filter(i => u.atomMeshes[i]);
+      if (!hs.length) return;
+      const from = u.atomWorld(hs[0]).clone();
+      /* A hydride goes into the complex and a flavin's protons go to solution.
+       * Both leave the frame the same way and the badge is what says which
+       * particle it was — the contrast `hop` exists to draw. */
+      const sign = m.hydride != null ? '−' : '+';
+      hs.forEach(i => {
+        const at = u.atomWorld(i).clone();
+        shedAtoms(c.lane, [i]);
+        FX.spawnRing(at, H_LEAVE);
+        FX.protonHop(at, at.clone().add(acrossFrame()), null,
+          {color: H_LEAVE, dur: T.H_LEAVE_MS / 1000, away: true,
+           carry: KIT.charge(sign, '#' + H_LEAVE.toString(16), 'H', BADGE_SCALE)});
+      });
+      const key = k => c.keys[Math.min(k, c.keys.length - 1)];
+      const acc = lanesNow().map((l, k) => ({l, k}))
+        .filter(({k}) => k !== c.j && meta(specOf(key(k))).reduced === true)
+        .reduce((a, b) => !a ? b
+          : Math.abs(b.l.g.position.x - c.lane.g.position.x)
+          < Math.abs(a.l.g.position.x - c.lane.g.position.x) ? b : a, null);
+      if (!acc) return;
+      /* THE PRODUCT'S GEOMETRY, not the molecule standing there: the quinone on
+       * stage has no hydroxyls yet, so both the landing site and the protons'
+       * targets are asked of the ubiquinol it is about to become. */
+      const pk = key(acc.k), pro = specOf(pk), pm = meta(pro);
+      const x = host.laneOrigin(pk, acc.k, c.keys.length), y = host.laneBase(pk);
+      const land = pm.eFrom != null ? specWorld(pro, pm.eFrom, x, y)
+                                    : acc.l.g.position.clone();
+      FX.spawnRing(from, ELECTRON);
+      eHop(from, land, () => FX.spawnRing(land, ELECTRON));
+      /* …AND THE PROTONS OUT OF THE MATRIX. They come from below because that
+       * is the side the pumps are emptying, which is the fact a ledger counts.
+       * @undrawn: nothing is removed at the far end because nothing was ever
+       * drawn there — these two are free protons in solution, and the only H's
+       * on stage are the ones the donor just lost. The molecule they land on
+       * grows them itself when the lane swaps to the reduced spec. */
+      later(() => (pm.redox || []).forEach(i => {
+        const to = specWorld(pro, i, x, y);
+        hop(offstage(to, -TOP_EDGE), to, '+', () => FX.spawnRing(to, H_LEAVE));
+      }), T.OX_GAP);
+    }});
+
   /* ---- A REDUCED CARRIER HANDING ONE ELECTRON TO THE NEXT ---------------
    * Ubiquinol at complex III: two electrons and two protons leave it. One
    * electron reaches the cytochrome on stage (the carrier seat), the other

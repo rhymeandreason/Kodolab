@@ -47,7 +47,8 @@
   const THREE=global.THREE;
 
   const DEF={
-    spread:8.0,          // half the distance between two lanes, world units
+    spread:8.0,          // half the distance between two lanes, world units;
+                         //   a () => number is re-asked every time a lane is placed
     plateGap:0.8,        // world gap between the molecule top and its label
     plateGapPx:10,       // …plus this much in pixels, in the top reserve
     plateClearPx:14,     // clearance above the top label (a rail, a title)
@@ -117,7 +118,14 @@
      * is now a number rather than a case: fermentation stands a carrier beside
      * each of two substrates, which is four, and a page cannot open the shape
      * of this expression to add its own. */
-    const xOf=(i,n)=>n===1?0:(i-(n-1)/2)*(2*o.spread/(n-1));
+    /* A THUNK IS ACCEPTED, and it is not a convenience. A page whose lanes hold
+     * molecules of ONE size can pick a separation once; a page whose pair
+     * changes between steps cannot, and picking the widest pair's gap leaves
+     * every other step two small molecules at opposite edges of the frame with
+     * nothing between them. Resolved per call, so the answer follows whatever
+     * the page currently stands up. */
+    const spreadOf=()=>typeof o.spread==='function'?o.spread():o.spread;
+    const xOf=(i,n)=>n===1?0:(i-(n-1)/2)*(2*spreadOf()/(n-1));
     // where a lane's molecule actually SITS — every flight target must use this,
     // not xOf, or a group lands beside the atom it was aiming at
     const origin=(key,i,n)=>xOf(i,n)-shift(key);
@@ -270,7 +278,7 @@
 
     return { all, spawn, clear, render, swapOne, settle, step, draw,
       shift, lift, top, bottom, xOf, origin, base, offset, plateY, heightPx,
-      visibleAtoms, get lanes(){ return lanes; }, SPREAD:o.spread };
+      visibleAtoms, get lanes(){ return lanes; }, get SPREAD(){ return spreadOf(); } };
   }
 
   global.Lanes={create, DEFAULTS:DEF};

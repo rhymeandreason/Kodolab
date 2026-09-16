@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electron transport chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/pathways.css">
+<link rel="stylesheet" href="kit/enzyme-blob.css">
+<link rel="stylesheet" href="energy/energy.css">
+<style>
+  /* WHAT THIS PAGE OWNS. Everything else is pathways.css, and everything in
+     this block that is not about the conveyor is fermentation-lab.html's:
+     the branch tabs, the accordion, the closing tally. The two pages are the
+     same shape because they are the same lesson twice — a pathway with two
+     entrances — and where this one differs the comment says so.
+
+     NO TRAY. Nothing on this stage is spent into a column: every molecule here
+     is a carrier that hands on and comes back, so the pair stands in the lanes
+     and the left inset is free. */
+
+  /* THE BRANCH TABS, in the rail bar beside the numbers. A branch is not a
+     step: both tabs run the same three complexes and differ only in which door
+     the electrons came in by. */
+  #branchtabs{display:flex;gap:6px;position:absolute;right:22px;top:50%;
+    transform:translateY(-50%)}
+  .btab{font-family:var(--font-ui);font-weight:600;font-size:13px;
+    letter-spacing:.3px;color:var(--muted);background:transparent;
+    border:1px solid var(--hair);border-radius:var(--radius);
+    padding:6px 15px;cursor:pointer}
+  .btab:hover{color:var(--ink);border-color:var(--ink)}
+  .btab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);
+    color:var(--paper);cursor:default}
+  /* WHERE THE CARRIER CAME FROM, under its own tab. Which door an electron
+     enters by is a fact about the step BEFORE this pathway, so it has no step
+     of its own to live on. */
+  #branchwhen{position:absolute;left:50%;transform:translateX(-50%);
+    top:calc(50% + 19px);white-space:nowrap;
+    font-family:var(--font-sans);font-size:12.5px;letter-spacing:.2px;
+    color:var(--muted);text-align:center;pointer-events:none}
+  #railbar{padding-bottom:24px}
+
+  /* WHICH SIDE IS WHICH, over the stage. The protons leave upward all lesson
+     and the ones that finish the water come up from below, so the two sides of
+     the membrane are the one piece of geography the stage needs — and it is a
+     caption, not a drawing: no bilayer is rendered here (see the script). */
+  #sides{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none}
+  #sides div{position:absolute;left:50%;transform:translateX(-50%);
+    font-family:var(--font-display);font-size:var(--cap-sm);
+    font-weight:var(--cap-weight);letter-spacing:var(--cap-track);
+    text-transform:uppercase;color:var(--text-muted);opacity:.75}
+  #sides .up{top:14px}
+  #sides .dn{bottom:14px}
+
+  /* THE ENZYME'S NAME, BOTTOM-RIGHT, on the sidebar's left margin. The two
+     numbers are pathways.css's 316px sidebar and its 20px padding. */
+  #tools #enzname{position:static;max-width:100%;text-align:left}
+  @media (min-width:921px){
+    #tools{right:20px;width:calc(316px - 40px);align-items:flex-start}
+  }
+
+  #side{padding-top:26px}
+
+  /* THE HEAD OF THE SIDEBAR'S COLUMN: the step's verdicts, then its takeaway. */
+  #enzrail{display:flex;flex-direction:column;align-items:flex-start;gap:18px;
+    margin:0 0 18px;text-align:left;pointer-events:none}
+  #enzrail #enzmeta{align-items:flex-start;max-width:100%}
+  #enzmeta,#enznote{position:static;right:auto;bottom:auto}
+  #enzrail #enznote{text-align:left}
+  #enzmeta{pointer-events:auto}
+
+  /* THE SIDEBAR IS AN ACCORDION: the section is the card, so the readouts give
+     up their own paper inside it — but only inside it, since drawTally moves
+     the ledger into the closing grid still wearing its card. */
+  #acc{display:flex;flex-direction:column;gap:12px;margin:0 0 16px}
+  #acc[hidden],.accsec[hidden],.accb[hidden]{display:none}
+  .accsec{background:var(--surface-card);border:1px solid var(--border-hair);
+    border-radius:var(--radius-md);box-shadow:var(--shadow-panel);overflow:hidden}
+  .acch{display:flex;width:100%;align-items:center;justify-content:space-between;
+    gap:10px;background:none;border:0;padding:12px 15px;cursor:pointer;
+    text-align:left;text-transform:uppercase;
+    font-family:var(--font-display);font-size:var(--cap-sm);
+    font-weight:var(--cap-weight);letter-spacing:var(--cap-track);
+    color:var(--text-muted)}
+  .acch:hover{color:var(--text-strong)}
+  .accc{font-size:12px;transition:transform .18s ease}
+  .acch[aria-expanded="true"]{color:var(--text-strong)}
+  .acch[aria-expanded="true"] .accc{transform:rotate(180deg)}
+  .accb{padding:0 15px 14px}
+  #acc #ledger,#acc #couplebox{position:static;margin:0;padding:0;background:none;
+    border:0;box-shadow:none;transform:none}
+  #acc #ledger .lhead,#acc #couplebox .cx,#acc #couplebox .cpl-h{display:none}
+  #acc #couplebox.in,#acc #ledger.pin{animation:none}
+  /* THE CLOSING LINE IS NOT A CONTROL: same slot, nothing to press. */
+  #actbtn.done{background:transparent;border-color:transparent;color:var(--text-strong);
+    font-family:var(--font-editorial);font-size:19px;font-weight:600;
+    letter-spacing:-.01em;cursor:default;box-shadow:none}
+
+  /* THE VERDICT LINE the rows above add up to. Not a row: no number, no
+     right-hand column. */
+  .sticky .lsquare{border-top:1px solid var(--border-hair);
+    margin-top:7px;padding-top:8px;
+    font-family:var(--font-editorial);font-size:14px;line-height:1.35;
+    color:var(--energy-nad)}
+
+  /* THE CLOSING TALLY: one row, three cells. */
+  #tally{grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-rows:1fr;gap:10px 22px;padding:14px 6% 0}
+  #tally #ledger{position:static;margin:0 auto;height:auto;width:auto;
+    max-width:100%;overflow:hidden;padding:16px 18px}
+</style>
+</head>
+<!-- The class has to land before the first paint, or a framed lesson flashes
+     its own title on the way into someone else's frame. -->
+<script src="lib/embed.js"></script>
+<body>
+<div id="app-sidebar">
+  <div id="railbar">
+    <h1 id="pagetitle" class="chrome-title">Electron transport chain</h1>
+    <div id="rail"></div>
+    <div id="branchtabs"></div>
+    <div id="branchwhen"></div>
+  </div>
+  <div id="stage">
+    <div id="spotglow"></div>
+    <div id="enzymes" hidden></div>
+    <canvas id="gl"></canvas>
+    <div id="sides" hidden><div class="up">Intermembrane space</div><div class="dn">Matrix</div></div>
+    <div id="plates" aria-live="polite"></div>
+    <div id="flyers" aria-hidden="true"></div>
+    <div id="spots"></div>
+    <!-- WHAT THE CHAIN LEAVES BEHIND. The protons are the point and the water
+         is what it is named for, so the ledger sits between them. -->
+    <div id="tally" hidden>
+      <div class="tcell" data-cell="spent"><div class="tvis"></div>
+        <div class="tname"></div><div class="tcount"></div></div>
+      <div class="tcell" id="tledger"></div>
+      <div class="tcell" data-cell="water"><div class="tvis"></div>
+        <div class="tname"></div><div class="tcount"></div></div>
+    </div>
+    <div id="bottombar">
+      <div id="stephead"></div>
+      <div id="steptip" role="tooltip"></div>
+      <button id="actbtn" class="pill"></button>
+      <div id="rxmsg" aria-live="polite"><p></p></div>
+    </div>
+  </div>
+  <div id="tools">
+    <div id="enzname" hidden></div>
+  </div>
+  <div id="utils">
+    <button id="restart"><i class="ph-bold ph-arrow-counter-clockwise"></i> Restart</button>
+    <button id="savepng"><i class="ph-bold ph-download-simple"></i> PNG</button>
+  </div>
+  <div id="side">
+    <div id="enzrail">
+      <div id="enzmeta" hidden></div>
+      <div id="enznote" hidden></div>
+    </div>
+    <div id="acc" hidden>
+      <section class="accsec" id="acc-energy" hidden>
+        <button class="acch" type="button" data-panel="energy" aria-expanded="false">
+          Energy curve<i class="ph-bold ph-caret-down accc" aria-hidden="true"></i></button>
+        <div class="accb" hidden><div id="couplebox" class="note"></div></div>
+      </section>
+      <section class="accsec" id="acc-ledger">
+        <button class="acch" type="button" data-panel="ledger" aria-expanded="false">
+          Running ledger<i class="ph-bold ph-caret-down accc" aria-hidden="true"></i></button>
+        <div class="accb" hidden><div id="ledger" class="sticky hid"></div></div>
+      </section>
+    </div>
+    <div id="card"><div id="stepnote" class="note"></div></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/palette.js"></script>
+<script src="lib/tokens-from-palette.js"></script>
+<script src="lib/molecules.js"></script>
+<script src="lib/skel.js"></script>
+<!-- o2 and water; the chain ends on both -->
+<script src="lib/mol-small.js"></script>
+<!-- nadhSkel, fadh2, ubiquinone/ubiquinol -->
+<script src="lib/mol-carriers.js"></script>
+<!-- cytochrome c's heme, from 3ZCF -->
+<script src="lib/mol-heme.js"></script>
+<script src="lib/scene.js"></script>
+<script src="lib/fx.js"></script>
+<script src="kit/motion.js"></script>
+<script src="kit/molgraph.js"></script>
+<script src="kit/fit.js"></script>
+<script src="kit/lanes.js"></script>
+<script src="kit/hotspot.js"></script>
+<script src="kit/leaving.js"></script>
+<script src="kit/carriers.js"></script>
+<script src="kit/enzyme-blob.js"></script>
+<script src="kit/stagekit.js"></script>
+<script src="lib/atomkit.js"></script>
+<script src="lib/annotate.js"></script>
+<script src="reaction/reaction.js"></script>
+<script src="energy/energy.js"></script>
+<script>
+"use strict";
+/* =============================================================================
+ *  THE ELECTRON TRANSPORT CHAIN — a fall taken in steps, and what each step buys
+ * =============================================================================
+ *  PARADIGM: pathway, the fourth one. Same record shape as glycolysis, the
+ *  cycle and fermentation, same verbs, same rail.
+ *
+ *  THE CLAIM: THE CHAIN'S PRODUCT IS THE GRADIENT. Electrons could go from
+ *  NADH to oxygen in one step and the energy would leave as heat. Taken in
+ *  three, each fall is small enough to spend on pumping protons out. A student
+ *  who leaves thinking the chain makes ATP has learned the thing every diagram
+ *  accidentally teaches by drawing the synthase next to it: no ATP is made
+ *  anywhere on this page, and the ledger counts protons.
+ *
+ *  A CONVEYOR, WHICH IS WHAT NO SIBLING IS. Glycolysis keeps one molecule in a
+ *  lane and changes it; here the molecule that was just charged becomes the
+ *  next step's donor, so between steps the stage SLIDES: the spent carrier goes
+ *  back the way it came, the charged one takes its seat, and the next acceptor
+ *  walks in from the right (see `slide`). That motion is the lesson — a chain
+ *  is a queue of carriers, each handing on and going back for another load.
+ *
+ *  TWO LANES, NOT FOUR. Standing the whole chain up at once would put NADH,
+ *  ubiquinone, a heme and an O₂ in one frame, and the reaction the page is
+ *  about would be a tenth of the width. The conveyor buys full size for the
+ *  pair that is actually reacting.
+ *
+ *  NO MEMBRANE IS DRAWN. This is the molecule scale: `chemiosmosis/circuit.js`
+ *  is the component that draws the bilayer, the pumps and the turbine, and a
+ *  bilayer sketched behind these molecules would be at neither scale. The two
+ *  sides are a caption (#sides), because the protons have to leave somewhere.
+ *
+ *  DERIVED STATE, NOT MUTATED STATE. `branch` and a `done` per branch are the
+ *  only mutable lesson state; species, ledger and rail are pure functions of
+ *  them, so stepping backward and switching tabs are both free.
+ * ========================================================================== */
+
+const canvas=document.getElementById('gl');
+const OPEN_THETA=0.10;
+const L=Lesson.create(canvas,{
+  // Orthographic and unswung, for glycolysis's reasons: a pair standing side by
+  // side has to stay comparable across a slide, and every figure on this stage
+  // is placed in screen pixels off a projection.
+  ortho:true,
+  cam:{theta:OPEN_THETA,phi:1.30,r:40}, phiMin:0.4, phiMax:2.6, rMin:9, rMax:160,
+  zoom:false, orbit:false, focus:false,
+  onResize:()=>{ computeFit(); },
+});
+const {scene,camera,renderer,root,cam,applyCam,resize}=L;
+const FXi=L.fx, MO=L.motion;
+const KIT=AtomKit.create(THREE);
+const M=MolLib.MOLECULES, PAL=MolLib.PALETTE;
+
+/* =============================================================
+ *  THE MOLECULES, AS THIS STAGE DRAWS THEM
+ * =============================================================
+ *  A DISCHARGED CARRIER IS THE CHARGED SPEC WITH WHAT IT CARRIED HIDDEN, not a
+ *  second spec: identical atoms, so the camera fit cannot tell the two apart
+ *  and nothing changes size when electrons land. fermentation-lab.html makes
+ *  exactly this NAD⁺ (MolecularGeometry.md §1.6); respiration/respiration.js
+ *  builds the same table for the component, so the chain's carriers have two
+ *  homes until one page migrates (Modules.md).
+ *
+ *  `etc` on each alias is what the verbs read (`host.meta` below) and `hide` /
+ *  `keep` what the build applies. NAMES ARE THE LESSON'S: the specs call
+ *  themselves "Heme c (Fe²⁺)" and "Nicotinamide adenine dinucleotide
+ *  (reduced)", which are right in molecule-viewer.html and wrong on a stage
+ *  whose ledger says cytochrome c and NADH.
+ */
+const NSK=M.nadhSkel, FH=M.fadh2, QOL=M.ubiquinol, HR=M.hemeC, HO=M.hemeCOx;
+const NIC=NSK.gly.nic.h;                       // C4's pair; the LAST is the one
+const HYD=NSK.gly.hydride!=null?NSK.gly.hydride:NIC[1];   // GAPDH put there
+const FRD=FH.krebs.redox;
+const QRD=QOL.etc.redox;
+const mk=(base,own,etc,build)=>Object.assign(Object.create(base), own,
+  {etc:Object.assign({}, base.etc||base.krebs||base.gly, etc||{})}, build||{});
+const A={
+  nadh: mk(NSK, {name:'NADH', short:'NADH'}, {}, {keep:[NIC[0],NIC[1]]}),
+  nad:  mk(NSK, {name:'NAD⁺', short:'NAD⁺', formula:NSK.gly.spent.formula},
+          {hydride:null}, {keep:[NIC[0]], hide:[NIC[1]]}),
+  fadh2:mk(FH, {name:'FADH₂', short:'FADH₂'}, {}, {}),
+  fad:  mk(FH, {name:'FAD', short:'FAD', formula:M.fad.formula},
+          {redox:null, reduced:false}, {hide:FRD}),
+  // Q AND QH₂ ARE ONE SPEC. Ubiquinone's own spec is two atoms shorter, so
+  // swapping between them would resize the molecule on the beat the electrons
+  // arrive — the beat the step is about.
+  q:    mk(QOL, {name:'Ubiquinone', short:'Q', formula:M.ubiquinone.formula},
+          {reduced:false}, {hide:QRD}),
+  qh2:  mk(QOL, {name:'Ubiquinol', short:'QH₂'}, {}, {}),
+  // AN ELECTRON MOVES NO ATOM, so the two oxidation states differ in the
+  // iron's charge and nothing else. `reduce` reads `fe`.
+  cytcOx: mk(HO, {name:'Cytochrome c (Fe³⁺)', short:'cyt c · Fe³⁺'}, {}, {}),
+  cytcRed:mk(HR, {name:'Cytochrome c (Fe²⁺)', short:'cyt c · Fe²⁺'}, {}, {}),
+  // aliased only to name the bond the click lands on
+  o2:   mk(M.o2, {name:'Oxygen', short:'O₂'}, {oo:[0,1]}, {}),
+  water:mk(M.water, {name:'Water', short:'H₂O'}, {}, {}),
+};
+/* SHOWING AN ATOM MEANS SHOWING ITS BONDS, AND HIDING ONE MEANS HIDING THEM.
+ * `Stage.setOptionalH` does both, but only for the atoms in `optH`; a page that
+ * reaches past it to an atom mesh moves half the picture. Both halves of that
+ * were wrong here and neither is visible as a crash: ubiquinone drew two O–H
+ * bonds out to hydrogens that were not there, and NADH drew its two C4
+ * hydrogens with nothing joining them to the ring — a stub, and a float.
+ *
+ * A bond comes back only when BOTH its ends are visible, which is what keeps
+ * re-showing NAD⁺'s surviving hydrogen from also restoring the bond to the one
+ * it just lost. */
+function setAtoms(g, idx, show){
+  if(!idx || !idx.length) return;
+  const am=g.userData.atomMeshes, touched=new Set(idx);
+  idx.forEach(i=>{ if(am[i]) am[i].visible=show; });
+  const vis=i=>!am[i]||am[i].visible;
+  g.userData.bondMeshes.forEach(bm=>{
+    const pair=bm.userData.pair;
+    if(pair.some(i=>touched.has(i))) bm.visible=pair.every(vis);
+  });
+}
+
+const SPECS=k=>A[k]||M[k];
+/* WHICH BLOCK NAMES THE ATOMS. The aliases carry `etc`; the raw specs they
+ * derive from spell the same anchors `krebs` (FAD) or `gly` (NADH), so the
+ * lookup falls through in that order and a page never has to know which. */
+const META=spec=>(spec&&(spec.etc||spec.krebs||spec.gly))||{};
+
+/* =============================================================
+ *  THE LESSON SCRIPT
+ * =============================================================
+ *  ONE O₂ IS THE UNIT, AND THE STAGE SHOWS HALF OF IT. Reducing an O₂ takes
+ *  four electrons and one carrier brings two, so the complexes each run twice
+ *  per water pair. The stage draws the reaction ONCE — two molecules at full
+ *  size is the trade this page made — and the ×2 is applied in the ledger, in
+ *  the one place, the way fermentation-lab.html applies its per-glucose
+ *  doubling. Every step below counts what is on screen.
+ *
+ *  Choosing the O₂ rather than the carrier as the unit is what keeps the
+ *  ledger in whole numbers: 20 H⁺ and 5 ATP, against 10 and 2.5. The familiar
+ *  per-carrier figures are the closing line's job.
+ */
+const PER_O2=2;
+
+/* FOUR PROTONS BUY ONE ATP: three through the synthase, and a fourth spent
+ * carrying the phosphate and the ADP in. A ratio, printed as one, because the
+ * ATP row is arithmetic on the row above it and not a thing this page shows. */
+const H_PER_ATP=4;
+
+const BRANCHES=[
+  { key:'nadh', tab:'From NADH',
+    when:'NADH from glycolysis, pyruvate oxidation and the Krebs cycle',
+    spent:'nad' },
+  { key:'fadh2', tab:'From FADH₂',
+    when:'FADH₂ made at Krebs step 6, held inside complex II',
+    spent:'fad' },
+];
+
+/* ONE ENTRY PER USER ACTION. `pair` is what stands when the step is armed and
+ * `to` what stands the instant it has run; the conveyor between steps is the
+ * claim that `to[1]` and the next `pair[0]` are the same molecule, and
+ * `checkChain` below fails the page if they ever stop being. */
+const COMPLEX_III={
+  n:2, enz:'Complex III · cytochrome bc₁', hook:'One electron at a time',
+  pair:['qh2','cytcOx'], to:['q','cytcRed'], on:0,
+  fx:'electron', pumped:4, rev:false,
+  spot:{lane:0, at:'redoxH', say:'Take the electrons off ubiquinol'},
+  act:'Oxidise ubiquinol',
+  takeaway:'Two electrons split up; the protons go out',
+  msg:`<b>Ubiquinol</b> carries two electrons, and cytochrome c can only take
+    one. So complex III splits them: one goes to the cytochrome standing here,
+    the other goes back round onto a second ubiquinone and comes through again.
+    Ubiquinol's two protons are released on the OUTSIDE — pumped without a pump,
+    which is half of what this complex is for.` };
+const COMPLEX_IV={
+  n:3, enz:'Complex IV · cytochrome c oxidase', hook:'Oxygen takes the electron',
+  /* `to` IS ONE LANE, AND THAT IS THE STEP. An O₂ makes TWO waters and both of
+   * them leave — `reduce` assembles each one out of the oxygen's own atom plus
+   * two protons from the matrix and drifts it off frame. Naming a water here as
+   * well would build a third out of nothing and leave it standing where the O₂
+   * was, which is where the page would start claiming an oxygen it never had.
+   * So the lane count drops: the chain ends with the cytochrome re-oxidised and
+   * ready to go again, and nothing else on stage. */
+  pair:['cytcRed','o2'], to:['cytcOx'], on:0,
+  fx:'reduce', pumped:2, rev:false,
+  // ON THE O₂, NOT ON THE IRON: every hotspot in this repo marks the bond that
+  // BREAKS, and the only bond breaking here is O=O.
+  spot:{lane:1, at:'oo', say:'Give O₂ the electron'},
+  act:'Reduce oxygen',
+  takeaway:'The fall ends here, and the waste is water',
+  msg:`<b>Cytochrome c</b> hands its electron to complex IV, which holds the
+    O₂ until it has all four — four cytochromes, four electrons — and only then
+    breaks the O=O. Each oxygen takes two protons out of the matrix and leaves
+    as <b>water</b>. Oxygen never touches anything upstream: it sits at the
+    bottom of the fall and pulls.` };
+
+const CHAIN={
+nadh:[
+  { n:1, enz:'Complex I · NADH dehydrogenase', hook:'NADH lets go',
+    pair:['nadh','q'], to:['nad','qh2'], on:0,
+    fx:'relay', pumped:4, rev:false,
+    spot:{lane:0, at:'hydride', say:'Take the hydride off NADH'},
+    act:'Unload NADH',
+    takeaway:'Four protons out — the biggest single drop in the chain',
+    msg:`<b>NADH</b> gives up the hydride it has carried since glycolysis. It
+      lands on FMN inside the complex, and from there the two electrons run a
+      wire of iron-sulfur clusters to <b>ubiquinone</b>, which picks up two
+      protons from the matrix and becomes ubiquinol. The fall is large enough
+      to push four protons out.` },
+  COMPLEX_III, COMPLEX_IV,
+],
+fadh2:[
+  { n:1, enz:'Complex II · succinate dehydrogenase', hook:'The same quinone, one shelf lower',
+    pair:['fadh2','q'], to:['fad','qh2'], on:0,
+    fx:'relay', pumped:0, rev:false,
+    spot:{lane:0, at:'dehydroC', say:'Take both hydrogens off FADH₂'},
+    act:'Unload FADH₂',
+    takeaway:'Same destination, no pump: this is why FADH₂ is worth less',
+    msg:`<b>FADH₂</b> never leaves complex II — it is bolted into the same
+      enzyme that oxidised succinate in the Krebs cycle. Its electrons reach
+      <b>ubiquinone</b> the same way NADH's did, but succinate sits lower than
+      NADH to begin with, so the drop is too small to pump anything. Complex II
+      is the one complex in the chain that moves no protons.` },
+  COMPLEX_III, COMPLEX_IV,
+]};
+
+/* THE CONVEYOR'S PREMISE, CHECKED RATHER THAN TRUSTED: the molecule a step
+ * leaves standing on the right is the molecule the next step starts from on
+ * the left. Break it and the stage would slide one molecule off and build a
+ * different one in its place, which is the one thing a chain must not do. */
+(function checkChain(){
+  for(const k in CHAIN){ const S=CHAIN[k];
+    for(let i=1;i<S.length;i++) if(S[i-1].to[1]!==S[i].pair[0])
+      console.error(`etc-lab: ${k} step ${i} starts on ${S[i].pair[0]}, `
+                    +`but step ${i} left ${S[i-1].to[1]} standing`); }
+})();
+
+/* =============================================================
+ *  DERIVED STATE — a function of `branch` and that branch's `done`
+ * ============================================================= */
+let branch='nadh';
+// A `done` PER BRANCH: a tab is a view, and a half-run branch you come back to
+// should be where you left it.
+const progress={nadh:0, fadh2:0};
+let intro=true;
+const steps=()=>CHAIN[branch];
+const nSteps=()=>steps().length;
+const done=()=>progress[branch];
+const setDone=v=>{ progress[branch]=v; };
+const stepAt=i=>steps()[i];
+const branchOf=k=>BRANCHES.find(b=>b.key===k);
+
+let busy=false;
+let reviewing=false;
+let shownReview=false;
+const focusStep=()=>reviewing?done()-1:done();
+
+/* WHAT STANDS ON STAGE. Armed, it is the step's own pair; on the review beat
+ * it is what the step just made; past the end it is what the last step made. */
+function laneKeys(){
+  if(intro || done()===0 && !reviewing) return stepAt(0).pair;
+  if(reviewing) return stepAt(done()-1).to;
+  return done()<nSteps() ? stepAt(done()).pair : stepAt(nSteps()-1).to;
+}
+// Every arrangement the branch passes through, for one camera solve.
+function allStates(){
+  const out=[];
+  steps().forEach(s=>{ out.push(s.pair); out.push(s.to); });
+  return out;
+}
+
+/* THE LEDGER, PER O₂. Every row is a sum over the steps run — nothing typed —
+ * and the ×2 is applied here, in the one place (see PER_O2). */
+function ledgerAt(i){
+  const S=steps(); let h=0;
+  for(let k=0;k<i;k++) h+=S[k].pumped||0;
+  h*=PER_O2;
+  const done3=i>=S.length;
+  return { h, atp:h/H_PER_ATP, water:done3?2:0, full:done3 };
+}
+// Per carrier, which is the number a student will be asked for. Derived from
+// the same sum, never typed beside it.
+const perCarrier=()=>{ const t=ledgerAt(nSteps()); return t.atp/PER_O2; };
+
+/* =============================================================
+ *  3D: lanes, labels, the conveyor
+ * ============================================================= */
+/* THE LANE SEPARATION IS MEASURED, NOT TYPED. NADH is 21 Å across and an O₂ is
+ * 1.2, and a gap picked by eye is right only for the pair it was picked on.
+ * Measured the way kit/lanes.js measures — the spec's `view:` applied, the
+ * optional hydrogens dropped — because that is the extent the student sees.
+ * Duplicated from fermentation-lab.html rather than asked of the module, which
+ * needs the answer in order to be constructed. */
+const CLEAR=3.4;
+function drawnWidth(spec){
+  const opt=new Set(spec.optH||[]);
+  const q=spec.view ? new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(spec.view[0]||0, spec.view[1]||0, spec.view[2]||0, 'ZYX')) : null;
+  let lo=Infinity, hi=-Infinity;
+  spec.atoms.forEach((a,i)=>{
+    if(opt.has(i)) return;
+    const v=new THREE.Vector3(a.pos[0],a.pos[1],a.pos[2]);
+    if(q) v.applyQuaternion(q);
+    const r=PAL.radii[a.el]||0.7;
+    lo=Math.min(lo,v.x-r); hi=Math.max(hi,v.x+r);
+  });
+  return isFinite(lo)?hi-lo:0;
+}
+/* THE GAP IS THE PAIR'S, NOT THE PAGE'S. One separation over every pair either
+ * branch stands up is what the siblings do, and it cannot work here: NADH is
+ * 33 world units across and ubiquinone is 13, so a gap wide enough for complex
+ * I leaves complex III's two molecules at opposite edges of the frame with
+ * nothing between them. Asked of whatever is standing (`laneKeys`), which
+ * kit/lanes.js re-asks every time it places a lane.
+ *
+ * THE SCALE STAYS FIXED WHILE THE GAP MOVES, and that split is the whole point.
+ * The conveyor's one claim is that the molecule sliding out of the right lane
+ * is the SAME molecule arriving in the left one, and a camera that re-solved
+ * per step would resize it mid-slide and break exactly that. So the pair closes
+ * up or opens out — molecules meeting in a different complex — and nothing
+ * changes size from the first step to the last. */
+const WIDE=k=>drawnWidth(SPECS(k));
+// Half-separation: kit/lanes.js spaces n lanes evenly about the centre line, so
+// two centres land 2×LANE apart and what has to fit between them is half of
+// each molecule plus the daylight.
+const sepFor=keys=>keys.reduce((a,k)=>a+WIDE(k),0)/(2*keys.length) + CLEAR/2;
+const LANE=()=>sepFor(laneKeys());
+let lanes=[];
+
+const platesEl=document.getElementById('plates');
+const LANES=Lanes.create({
+  root, camera, canvas, host:platesEl, specOf:SPECS, radii:PAL.radii,
+  spread:LANE,
+  /* `hide` AND `keep` ARE APPLIED AFTER setOptionalH, not instead of it: where
+   * the hydrogens a discharged carrier is missing are in the spec's `optH`,
+   * setOptionalH has already hidden them, and without putting the survivors
+   * back the charged and discharged keys render identically — the step the page
+   * is about would show nothing. Both go through `setAtoms`, which is where the
+   * bonds are dealt with. */
+  build:spec=>{ const g=Stage.buildMolecule(spec);
+                Stage.setOptionalH(g,false);
+                setAtoms(g, spec.keep, true);
+                setAtoms(g, spec.hide, false);
+                return g; },
+  plateHTML:spec=>`<div class="pn">${spec.short||spec.name}</div><div class="pf">${spec.formula}</div>`,
+  // BOTH SPELLINGS ARE THE SHORT ONE for the cytochrome: "Cytochrome c (Fe³⁺)"
+  // runs under the ledger card at a laptop width, and this is the molecule the
+  // student has to be able to name in the same words the prose uses.
+  label:spec=>({full:spec.name, abbr:spec.short||spec.name}),
+});
+const laneX=(i,n)=>LANES.xOf(i,n);
+const laneShift=key=>LANES.shift(key);
+const laneLift=key=>LANES.lift(key);
+const laneOffset=l=>LANES.offset(l);
+const visibleAtoms=spec=>LANES.visibleAtoms(spec);
+const plateY=keys=>LANES.plateY(keys);
+const plateHeightPx=()=>LANES.heightPx();
+
+/* ---------- the hotspot on the bond (kit/hotspot.js) ----------
+ * An ARRAY is the bond itself (`oo`, the O=O complex IV breaks); a NUMBER is
+ * an atom whose DEPARTURE names the bond (`hydride`, `redoxH`). */
+function spotPair(spec, at){
+  const v=META(spec)[at];
+  if(Array.isArray(v)) return v;
+  if(typeof v!=='number') return null;
+  return MolGraph.leavingBond(spec, v);
+}
+const spotsEl=document.getElementById('spots');
+const glowEl=document.getElementById('spotglow');
+const SPOTS=Hotspot.create({ canvas, camera, host:spotsEl, glowHost:glowEl,
+  onPick:()=>press(runStep),
+});
+const NOTES=Annot.create(THREE, document.getElementById('stage'), camera, {mode:'on'});
+let hintAt=null;
+const hintNote=NOTES.add({ text:'', at:()=>hintAt&&hintAt(), offset:[30,-26] });
+const _hintV=new THREE.Vector3();
+// The callout's own width, measured, plus the 30px it hangs off its dot. It is
+// display:none until it has text, which measures 0, so the last real
+// measurement stands and 200 covers the first frame of the first hint.
+let _hintW=0;
+function hintWidth(){
+  const w=hintNote.label.getBoundingClientRect().width;
+  if(w) _hintW=w+30;
+  return _hintW||200;
+}
+const laneBondMid=(l,pair)=>{
+  if(!l||!pair) return null;
+  const u=l.g.userData;
+  return _hintV.copy(u.atomWorld(pair[0])).add(u.atomWorld(pair[1])).multiplyScalar(0.5);
+};
+const armed=()=>(!intro && !busy && !reviewing && done()<nSteps()) ? stepAt(done()) : null;
+const spotLane=st=>st&&st.spot?(st.spot.lane||0):0;
+function drawHint(){
+  const st=armed();
+  let text=''; hintAt=null;
+  if(st && st.spot && st.spot.say){
+    const j=spotLane(st), l=lanes[j];
+    if(l){ const pair=spotPair(SPECS(l.key), st.spot.at);
+      text=st.spot.say; hintAt=()=>laneBondMid(l, pair); }
+  }
+  if(text!==hintNote.el.dataset.t){ hintNote.el.dataset.t=text; hintNote.set(text); }
+  /* THE LABEL FLIPS RATHER THAN RUNNING UNDER THE COLUMN. The camera keeps the
+   * molecules out of the sidebar's strip, but a callout is screen-space and
+   * hangs 30px off its dot. */
+  if(text && hintAt){
+    const p=hintAt();
+    if(p){ const c=canvas.getBoundingClientRect();
+      const x=(_hintV.copy(p).project(camera).x*0.5+0.5)*c.width;
+      const room=c.width-sideReservePx();
+      hintNote.setOffset([x+hintWidth()>room ? -30 : 30, -26]); }
+  }
+  NOTES.show(!!text); NOTES.step();
+}
+function drawSpots(){
+  const st=armed(), j=spotLane(st);
+  SPOTS.update(!st||!st.spot ? [] : lanes.map((l,i)=>
+    i!==j ? null : { group:l.g, pair:spotPair(SPECS(l.key), st.spot.at), lane:i,
+                     hint:'', label:'run this step' }));
+}
+let platesOff=false;
+function drawPlates(){ platesEl.classList.toggle('mute', platesOff); LANES.draw(); }
+
+// ---- framing ---------------------------------------------------------------
+function barReservePx(){
+  const e=document.getElementById('bottombar');
+  if(!e) return 106;
+  const cs=getComputedStyle(e);
+  return (parseFloat(cs.getPropertyValue('--barh'))||0)+(parseFloat(cs.bottom)||0);
+}
+// Only while the band is up, which is the intro. The DECLARED --caph, so a
+// longer caption eats the room set aside rather than re-framing the shot.
+function capReservePx(){
+  const e=document.getElementById('rxmsg');
+  if(!e||!e.classList.contains('show')) return 0;
+  return parseFloat(getComputedStyle(e).getPropertyValue('--caph'))||0;
+}
+/* THE SIDEBAR IS OVER THE CANVAS at the wide breakpoint, and this page has no
+ * tray to buy the room back with. Measured, and asked as a box intersection so
+ * a stacked narrow screen pays nothing — both axes have to overlap. Fit pays a
+ * side reserve symmetrically, which keeps the pair on the page's centre line. */
+const GUTTER=28;
+function sideReservePx(){
+  const el=document.getElementById('side'); if(!el) return 0;
+  const r=el.getBoundingClientRect(), c=canvas.getBoundingClientRect();
+  if(!r.width||!c.height) return 0;
+  const over = r.left<c.right && r.right>c.left && r.top<c.bottom && r.bottom>c.top;
+  return over ? r.width+GUTTER : 0;
+}
+/* HALF THE COLUMN ON EACH EDGE, AND THEN PAN BACK. kit/fit.js pays a
+ * horizontal reserve SYMMETRICALLY on purpose — its header argues that the
+ * subject belongs on the centre line and that sliding the frustum makes
+ * anything added at an edge move the molecule. Declaring the whole 316px column
+ * on the right therefore charges 316 to the left as well, and on a 1024px
+ * canvas that is 60% of the width reserved for chrome that occupies 31% of it.
+ * These molecules are wide, so the page was solving a frame it could not fill.
+ *
+ * So the reserve is declared as HALF the column on each edge — which gives fit
+ * the true usable WIDTH — and `fitX` below slides the frame back over the free
+ * band. The objection fit.js raises does not bite here: that column is a fixed
+ * width in every state of this lesson, so nothing the page does at an edge can
+ * move the subject. A page whose chrome comes and goes should take fit's
+ * default instead. */
+const RESERVES=()=>{ const half=sideReservePx()/2;
+  return { top:plateHeightPx(), bottom:barReservePx()+capReservePx(),
+           left:half, right:half }; };
+const FIT=Fit.create({canvas, camera, cam, reserve:()=>RESERVES()});
+const orthoFrustum=()=>FIT.frustum();
+let fitR=40, fitY=0, fitX=0;
+const TOP_PULL=0.5;
+let _pathTop=null;
+/* EVERY STATE MEASURED WITH ITS OWN GAP, never with the one currently standing:
+ * `laneX` answers for the pair on stage, and solving the camera with complex
+ * III's separation under complex I's molecules is how a fit ends up clamped. */
+function fitFor(states){
+  let lo=0, hi=0, wide=0;
+  states.forEach(keys=>{
+    const n=keys.length, sep=sepFor(keys);
+    keys.forEach((k,j)=>{ const spec=SPECS(k);
+      const x=Math.abs(n===1?0:(j-(n-1)/2)*(2*sep/(n-1))), xc=laneShift(k), yc=laneLift(k);
+      visibleAtoms(spec).forEach(a=>{ const r=PAL.radii[a.el]||0.7;
+        lo=Math.min(lo,a.pos[1]-yc-r); hi=Math.max(hi,a.pos[1]-yc+r);
+        wide=Math.max(wide, x+Math.abs(a.pos[0]-xc)+r); }); });
+  });
+  const Y=(lo+hi)/2;
+  const halfNeeded=Math.max(hi-Y, Y-lo);
+  const {R,Y:Yfit}=FIT.solve({halfNeeded, wide, centerY:Y, pad:1.10, min:15, max:180});
+  return { Y:Yfit, R };
+}
+/* ONE FRAME FOR THE WHOLE BRANCH, solved over every pair it stands up, so a
+ * molecule getting smaller reads as chemistry rather than as the camera moving
+ * in. Re-solved on a tab change (`_pathTop` cleared with it): the two branches
+ * are not being compared across the switch. */
+function computeFit(){
+  const states=allStates();
+  const f=fitFor(states);
+  const top=_pathTop??(_pathTop=Math.max(...states.map(plateY)));
+  fitR=f.R; fitY=FIT.anchorTop(f.R, f.Y, top, TOP_PULL);
+  /* …AND THE PAN THAT PAIRS WITH THE HALF RESERVE ABOVE. The frame is centred
+   * on the canvas and the free band is not, so the target moves right by half
+   * the column and the scene lands in the middle of what is actually visible.
+   * Solved off `fitR`, never `cam.r`: r is mid-ease every frame and reading it
+   * here would make the pan chase the zoom.
+   * The camera opens near-unswung (OPEN_THETA), so world +X is screen right to
+   * within a degree or two; this is a pan, not a placement, and nothing is
+   * measured off it. */
+  fitX=(sideReservePx()/2)*(2*fitR*FIT.HALF_FOV/(canvas.clientHeight||1));
+}
+
+function renderLanes(){
+  platesOff=false; platesEl.classList.remove('mute');
+  LANES.render(laneKeys());
+  onLanes();
+}
+function onLanes(){ lanes=LANES.lanes; computeFit(); }
+function swapLane(j,key){ LANES.swapOne(j,key); onLanes(); }
+
+/* ---- page-local effects ---- */
+const RUN='run';
+const GO=Leaving.create({root, camera, motion:MO, tag:RUN});
+const cancelTimers=()=>{ MO.cancel(RUN); GO.clear(); clearFlyers(); };
+
+/* =============================================================
+ *  THE VERBS — reaction/reaction.js
+ * =============================================================
+ *  There is no carrier tray on this page, so `carrierPoint` — which every
+ *  electron-moving verb asks for the seat its charge is heading to — answers
+ *  with the OTHER LANE's own redox centre. That is the whole difference
+ *  between this stage and the component's: there the cytochrome is a tile in a
+ *  column, here it is the molecule standing beside the donor.
+ */
+const SEAT={ nadh:s=>[META(s).hydride], nad:s=>[META(s).hydride],
+             fadh2:s=>META(s).redox, fad:s=>META(s).redox,
+             q:s=>[META(s).eFrom], qh2:s=>[META(s).eFrom],
+             cytcOx:s=>[META(s).fe], cytcRed:s=>[META(s).fe],
+             o2:()=>[0,1], water:()=>[0] };
+const _seatV=new THREE.Vector3();
+function seatWorld(j){
+  const l=lanes[j]; if(!l) return null;
+  const idx=(SEAT[l.key]||(()=>[0]))(SPECS(l.key)).filter(i=>i!=null);
+  if(!idx.length) return null;
+  const u=l.g.userData;
+  _seatV.set(0,0,0);
+  idx.forEach(i=>_seatV.add(u.atomWorld(i)));
+  return _seatV.clone().multiplyScalar(1/idx.length);
+}
+const RX=Reaction.create({
+  three:THREE, root, camera, canvas,
+  motion:MO, fx:FXi, leaving:GO, kit:KIT, stage:Stage, palette:PAL,
+  molgraph:MolGraph, molLib:MolLib, skelLib:SkelLib, tag:RUN,
+  flyersEl:document.getElementById('flyers'),
+  specOf:SPECS, meta:META,
+  ...Reaction.stageHost({lanes:LANES, carriers:()=>null, onLanes}),
+  // the seat is the lane the donor is NOT in — two lanes, so it is the other one
+  carrierPoint:(st,ref,j)=>seatWorld(1-j),
+  carrierBond:()=>null,
+  onCarrierTaken:()=>{},
+  popCarrier:()=>{},
+  // `reduce` asks for the O₂ by name rather than by index, since which lane it
+  // stands in is the page's arrangement and not the chemistry's
+  oxygenLane:()=>lanes.find(l=>l.key==='o2')||null,
+});
+const later=RX.later, drawFlyers=RX.drawFlyers, clearFlyers=RX.clearFlyers;
+
+/* =============================================================
+ *  RUNNING A STEP, AND THE CONVEYOR BETWEEN TWO
+ * =============================================================
+ *  ONE CLICK PER STEP, which is where this page parts from its three siblings.
+ *  Theirs run the same reaction on two lanes because a glucose made two of
+ *  everything; here the two lanes are the two SIDES of one reaction, and
+ *  clicking each in turn would ask the student to run half a handoff.
+ */
+function runStep(){
+  if(busy || intro || reviewing || done()>=nSteps()) return;
+  const st=stepAt(done()), to=done()+1, keys=st.to;
+  busy=true;
+  platesOff=true; platesEl.classList.add('mute');
+  RX.lane(st, st.on, keys);
+  later(()=>{
+    if(keys.length!==lanes.length){
+      /* A STEP THAT CONSUMES A MOLECULE OUTRIGHT, which only the last one does.
+       * A render, not a swap, because kit/lanes.js owns the count — and each
+       * survivor is placed where it already stands and left to ease to its new
+       * lane, so the cytochrome drifts to the middle instead of cutting there.
+       * By this beat the waters have drifted off frame; what goes with the lane
+       * is its empty group and its plate. */
+      const xs=lanes.map(l=>l.g.position.x);
+      LANES.render(keys, null, (l,j,n)=>{ l.g.userData.tx=laneX(j,n);
+                                          l.g.position.x=xs[Math.min(j,xs.length-1)]; });
+      onLanes();
+    } else {
+      // BOTH LANES TURN OVER ON ONE BEAT: an electron leaving one molecule and
+      // arriving at the other is a single event, and staggering the two swaps
+      // would draw it as two.
+      keys.forEach((k,j)=>{ if(lanes[j] && lanes[j].key!==k) swapLane(j,k); });
+    }
+    platesOff=false; platesEl.classList.remove('mute');
+    setDone(to); reviewing=true;
+    busy=false; refresh();
+  }, RX.durOf(st));
+}
+
+/* THE CONVEYOR. The spent carrier goes back the way it came, the charged one
+ * slides into its seat, and the next acceptor walks in from the right.
+ *
+ * THE MOLECULE THAT SLIDES IS REBUILT WHERE IT ARRIVED, not moved: kit/lanes.js
+ * owns the lane list and `render` rebuilds it, so the incoming lane 0 is placed
+ * at the x its predecessor eased to and the swap is invisible. `tx` is the
+ * module's own target — `step()` eases x toward it every frame — which is why
+ * the walk-in needs no tween of its own. */
+const SLIDE_MS=620;
+function slide(){
+  if(done()>=nSteps()){ renderLanes(); refresh(); return; }
+  const to=stepAt(done()).pair, n=2;
+  const x0=laneX(0,n), x1=laneX(1,n), span=x1-x0;
+  busy=true;
+  // FAR ENOUGH TO BE GONE. The frustum is solved to hold two lanes plus the
+  // widest molecule, so two spans past the left lane clears it at every fit
+  // this page reaches.
+  if(lanes[0]) lanes[0].g.userData.tx=x0-2*span;
+  if(lanes[1]) lanes[1].g.userData.tx=x0;
+  later(()=>{
+    LANES.render(to, null, (l,j)=>{
+      l.g.userData.tx=laneX(j,n);
+      // lane 0 is already standing there; lane 1 walks in from off the right
+      l.g.position.x = j===0 ? x0 : x1+span;
+    });
+    onLanes();
+    busy=false; refresh();
+  }, SLIDE_MS);
+}
+function nextStep(){
+  if(!reviewing || busy) return;
+  reviewing=false;
+  if(done()>=nSteps()){ renderLanes(); refresh(); return; }
+  slide();
+}
+function rewind(){
+  if(busy) return;
+  if(reviewing){ reviewing=false; renderLanes(); refresh(); return; }
+  if(done()===0){ intro=true; renderLanes(); refresh(); return; }
+  setDone(done()-1); renderLanes(); refresh();
+}
+/* RESTART IS THE LESSON, NOT THE BRANCH. `done` is per branch so a tab switch
+ * keeps your place; the one control that means "put it all back" has to see
+ * past that. */
+function restart(){ cancelTimers(); busy=false; pressing=false; reviewing=false;
+  Object.keys(progress).forEach(k=>{ progress[k]=0; });
+  intro=true;
+  prevLedger=null; shownReview=false; panel='ledger'; metaStep=null; shownCplStep=null;
+  renderLanes(); refresh(); cam.theta=OPEN_THETA; }
+
+/* =============================================================
+ *  UI
+ * ============================================================= */
+const rxmsgEl=document.getElementById('rxmsg');
+/* THE OPENING IS THE QUESTION, NOT THE MOLECULE. Glycolysis and the cycle open
+ * by introducing what is on stage; this one opens on the thing the chain is
+ * for, because three redox steps are only interesting as an answer to it. */
+const INTRO_MSG=`Glycolysis and the Krebs cycle banked their energy in
+  <b>NADH</b> and <b>FADH₂</b>. Oxygen will take those electrons — but not all
+  at once. The chain makes them fall in steps, and spends each fall pumping
+  protons out of the matrix.`;
+const captionAt=i=>intro ? INTRO_MSG
+  : i<nSteps() ? stepAt(i).msg : stepAt(nSteps()-1).msg;
+const headAt=i=>{ const st=stepAt(i); return st?`Step ${st.n} <em>(${st.hook})</em>`:''; };
+let shownCaption=null;
+/* THE BAND IS THE INTRO AND NOTHING ELSE — the siblings' rule. Each step's
+ * prose lives on the ⓘ beside its heading, so the band holds one height (zero)
+ * from step 1 on, which is what lets the camera keep a single framing. */
+function drawCaption(){
+  const html=intro?captionAt(focusStep()):'';
+  const show=intro && !reviewing;
+  if(html!==shownCaption){
+    shownCaption=html;
+    rxmsgEl.querySelector('p').innerHTML=html;
+    rxmsgEl.classList.remove('in'); void rxmsgEl.offsetWidth;
+    if(show) rxmsgEl.classList.add('in');
+  }
+  rxmsgEl.classList.toggle('show', show);
+}
+
+/* ---- the ledger: protons first, then what they are worth -------------------
+ * THE PROTONS ARE THE PRODUCT. ATP is arithmetic on them and water is the
+ * receipt, so those two stand under the count and not beside it. */
+const ledgerEl=document.getElementById('ledger');
+let prevLedger=null;
+/* WHICH SIDEBAR PANEL IS OPEN: null, 'ledger' or 'energy'. ONE AT A TIME, and
+ * the ledger is the one that starts open — a proton count that only appears
+ * after the last click first says something at the moment it can no longer
+ * teach anything. The energy card is what the verdicts on the stage open, so
+ * it never arrives by itself. */
+let panel='ledger';
+const setPanel=p=>{ panel=(panel===p?null:p); refresh(); };
+const cplOpen=()=>panel==='energy';
+const ledgerOn=()=>panel==='ledger'||tallyOn();
+const accEl=document.getElementById('acc');
+const accSec={energy:document.getElementById('acc-energy'),
+              ledger:document.getElementById('acc-ledger')};
+accEl.addEventListener('click',e=>{
+  const h=e.target.closest('[data-panel]');
+  if(h) setPanel(h.dataset.panel);
+});
+let metaStep=null;
+function drawAcc(){
+  const i=focusStep();
+  const st=(!intro && i<nSteps() && !tallyOn()) ? stepAt(i) : null;
+  // A NEW STEP CLOSES THE ENERGY CARD — a branch switch too, since the key
+  // carries the branch. Here rather than in drawEnzMeta, which runs after:
+  // closing the panel behind the accordion's own draw leaves the header open.
+  const key=branch+':'+i;
+  if(metaStep!==key){ metaStep=key; if(cplOpen()) panel=null; }
+  const showL=!intro && !tallyOn();
+  accSec.ledger.hidden=!showL;
+  accSec.energy.hidden=!st;
+  accEl.hidden=!showL && !st;
+  for(const k in accSec){
+    const open=panel===k && !accSec[k].hidden;
+    accSec[k].querySelector('.acch').setAttribute('aria-expanded',open?'true':'false');
+    accSec[k].querySelector('.accb').hidden=!open;
+  }
+}
+function placeLedger(){
+  const hid=ledgerEl.classList.contains('hid');
+  if(intro || !ledgerOn()){ ledgerEl.classList.remove('pin'); ledgerEl.classList.add('hid'); return; }
+  if(!hid) return;
+  ledgerEl.classList.remove('hid');
+  ledgerEl.classList.remove('pin'); void ledgerEl.offsetWidth;
+  ledgerEl.classList.add('pin');
+}
+function drawLedger(){
+  placeLedger();
+  const Lg=ledgerAt(done());
+  const prev=prevLedger;
+  const bumped=k=>prev && prev[k]!==Lg[k] ? ' bump':'';
+  ledgerEl.innerHTML=
+     `<div class="lhead">Per O₂ reduced</div>`
+    +`<div class="row"><span>H⁺ pumped out</span><span class="v${bumped('h')}" data-row="h">${Lg.h}</span></div>`
+    /* THE ATP ROW ARRIVES WHEN IT HAS SOMETHING TO SAY. "ATP 0" before the
+     * first complex reads as a fact when it is a not-yet, and this page's one
+     * real risk is a student deciding the chain makes no ATP at all rather
+     * than that it makes none HERE. */
+    +(Lg.atp ? `<div class="row"><span>ATP that buys</span><span class="v${bumped('atp')}" data-row="atp">${Lg.atp}</span></div>` : '')
+    +(Lg.water ? `<div class="row prod"><span>Water made</span><span class="v" data-row="water">${Lg.water}</span></div>` : '')
+    /* THE VERDICT, ONLY ONCE IT IS EARNED, and it is where the familiar
+     * per-carrier figure is stated: the rows are per O₂ so they stay whole
+     * numbers, and 2.5 is what the exam asks for. Read off the same sum. */
+    +(Lg.full ? `<div class="lsquare">${branch==='nadh'?'NADH':'FADH₂'} is worth
+        ${perCarrier()} ATP — and not one of them is made here</div>` : '');
+  prevLedger=Lg;
+}
+
+/* =============================================================
+ *  THE CLOSING TALLY — the empty carrier, the count, the water
+ * =============================================================
+ *  Molecules in the scene, not pictures (kit/carriers.js), under the same
+ *  camera as the lanes. The order is the argument: what went in on the left,
+ *  what came out on the right, and the protons they were spent on between.
+ */
+const tallyEl=document.getElementById('tally');
+const TALLY=[
+  { k:'spent', spec:()=>SPECS(branchOf(branch).spent),
+    name:()=>SPECS(branchOf(branch).spent).short, n:()=>PER_O2 },
+  // counts read from the same ledger the sidebar prints, never typed
+  { k:'water', spec:()=>A.water, name:()=>A.water.short, n:Lg=>Lg.water },
+];
+TALLY.forEach(t=>{
+  t.host=tallyEl.querySelector(`[data-cell="${t.k}"]`);
+  t.car=Carriers.create({ root, camera, canvas, host:t.host,
+    visClass:'tvis', slotClass:'tslot', slotHTML:()=>'<div class="tslot"></div>',
+    build:spec=>{ const g=Stage.buildMolecule(spec,{center:true});
+                  Stage.setOptionalH(g,false);
+                  setAtoms(g, spec.keep, true);
+                  setAtoms(g, spec.hide, false);
+                  return g; } });
+});
+const tallyOn=()=>!intro && !reviewing && !busy && done()>=nSteps();
+function drawTally(){
+  const on=tallyOn();
+  tallyEl.hidden=!on;
+  document.getElementById('tools').hidden=on||intro;
+  document.getElementById('sides').hidden=on||intro;
+  // THE STICKER MOVES, never a second copy — drawLedger keeps writing into the
+  // same element wherever it is standing.
+  const home=on?document.getElementById('tledger')
+               :document.querySelector('#acc-ledger .accb');
+  if(ledgerEl.parentNode!==home) home.appendChild(ledgerEl);
+  lanes.forEach(l=>{ l.g.visible=!on; });
+  platesEl.style.visibility = on ? 'hidden' : '';
+  const Lg=ledgerAt(done());
+  TALLY.forEach(t=>{
+    if(!on){ t.car.show(0,t.spec()); return; }
+    t.car.show(1,t.spec());
+    t.host.querySelector('.tcount').textContent='×'+t.n(Lg);
+    t.host.querySelector('.tname').textContent=t.name();
+  });
+  placeTallyMols();
+}
+function placeTallyMols(){ const on=tallyOn(); TALLY.forEach(t=>t.car.place(on)); }
+
+/* =============================================================
+ *  THE COMPLEX — a blob behind the pair, and its name
+ * =============================================================
+ *  Deliberately not a protein, as in all three siblings: one shape, no claim
+ *  about fold or size. It spans BOTH lanes, always — a respiratory complex
+ *  holds the donor and the acceptor at once, which is the only reason an
+ *  electron can cross between them, and one blob per molecule would say there
+ *  were two enzymes.
+ */
+const enzEl=document.getElementById('enzymes');
+const enzNameEl=document.getElementById('enzname');
+const enzMetaEl=document.getElementById('enzmeta');
+const enzNoteEl=document.getElementById('enznote');
+const enzOf=()=>{ const i=focusStep(); return (!intro && i<nSteps()) ? stepAt(i) : null; };
+const ENZ=EnzymeBlob.create({camera, canvas, host:enzEl});
+function drawEnz(){
+  const st=(!tallyOn())?enzOf():null;
+  enzEl.hidden=!st; enzNameEl.hidden=!st;
+  if(st) enzNameEl.innerHTML=`<div class="ek">Complex</div><div class="en">${st.enz}</div>`;
+  else enzEl.innerHTML='';
+  drawEnzMeta();
+}
+function placeEnz(){
+  if(enzEl.hidden || !lanes.length) return;
+  // THE KEY CARRIES THE BRANCH: both branches have a step 1, and without it the
+  // blob would hold a measurement taken on the other branch's molecule.
+  ENZ.update([lanes.map(l=>l.g)], {key:branch+':'+focusStep()});
+}
+
+/* WHAT KIND OF STEP THIS IS, read off the step and never typed, and a door into
+ * the energy card. Every step here is irreversible, and that is the page's
+ * point rather than a repetition: a chain that ran backwards would let the
+ * gradient collapse through it. */
+function drawEnzMeta(){
+  const i=focusStep();
+  const st=(!intro && i<nSteps() && !tallyOn()) ? stepAt(i) : null;
+  enzMetaEl.hidden=!st;
+  enzNoteEl.hidden=!(st&&st.takeaway);
+  enzNoteEl.textContent=(st&&st.takeaway)||'';
+  if(!st){ enzMetaEl.innerHTML=''; return; }
+  const on=cplOpen()?'true':'false';
+  enzMetaEl.innerHTML=
+      `<span class="east k-irr" aria-hidden="true"></span>`
+    + `<button class="estat k-irr" data-cpl aria-pressed="${on}">Irreversible</button>`;
+}
+enzMetaEl.addEventListener('click',e=>{
+  if(!e.target.closest('[data-cpl]')) return;
+  setPanel('energy');
+});
+
+/* ---- the energy card: energy/energy.js's figure ---------------------------
+ * THE SOLO CURVE, never the coupled pair. `Energy.couple` draws "a real drop,
+ * part of it banked into a carrier", which is what GAPDH does and the opposite
+ * of what happens here: nothing on this page is banked in a molecule. What the
+ * drop buys is a gradient, and the ledger is where that is said. Names are read
+ * off the molecules, never typed. */
+function soloSpec(st){
+  const nameOf=k=>SPECS(k).short||SPECS(k).name;
+  return { from:nameOf(st.pair[0]), to:nameOf(st.to[0]), drop:true };
+}
+const PUMPED=st=>st.pumped
+  ? `The drop is big enough to push <b>${st.pumped} H⁺</b> across the membrane.
+     That is what the energy is spent on: not a bond, not a carrier, a gradient.`
+  : `Succinate sits higher than NAD⁺ does, so this fall is <b>too small to
+     pump</b>. The electrons arrive at ubiquinone all the same — they just
+     arrive having bought nothing.`;
+const cplEl=document.getElementById('couplebox');
+cplEl.addEventListener('click',e=>{
+  if(e.target.closest('[data-cplx]')){ panel=null; refresh(); }
+});
+let shownCplStep=null;
+function drawCouple(){
+  const i=focusStep();
+  const st=(cplOpen()&&!intro&&i<nSteps())?stepAt(i):null;
+  if(!st){ cplEl.style.display='none'; cplEl.innerHTML=''; shownCplStep=null; return; }
+  cplEl.style.display='block';
+  cplEl.innerHTML=`<button class="cx" type="button" data-cplx aria-label="Close">&times;</button>`
+    + `<div class="nhead cpl-h">Energy curve</div>`
+    + Energy.solo(soloSpec(st))
+    + `<p class="nbody">${PUMPED(st)}</p>`
+    + `<div class="nhead irr">Irreversible in the cell</div>`;
+  const key=branch+':'+i;
+  if(key!==shownCplStep){
+    shownCplStep=key;
+    cplEl.classList.remove('in'); void cplEl.offsetWidth;
+    cplEl.classList.add('in');
+  }
+}
+// Nothing left for the sidebar card to say: the verdict rides the stage and the
+// count rides the ledger. Collapsed, so it costs the column no height.
+const noteEl=document.getElementById('stepnote');
+function drawNote(){ noteEl.innerHTML=''; noteEl.style.display='none'; }
+
+/* ---- the branch tabs ------------------------------------------------------
+ * A TAB, NOT A RAIL STOP. The rail's numbers mean "where am I in this chain",
+ * and both branches run the same three complexes: putting the second entrance
+ * on the rail would make complex II look like a fourth step. */
+const tabsEl=document.getElementById('branchtabs');
+const whenEl=document.getElementById('branchwhen');
+function setBranch(k){
+  if(k===branch || busy) return;
+  cancelTimers(); busy=false; reviewing=false;
+  branch=k; _pathTop=null;
+  renderLanes(); refresh();
+}
+function drawTabs(){
+  tabsEl.innerHTML='';
+  // A TABLIST, NOT TWO TOGGLES: `aria-pressed` would announce "From NADH,
+  // pressed", which reads as a filter over one thing. These are two entrances.
+  tabsEl.setAttribute('role','tablist');
+  tabsEl.setAttribute('aria-label','Which carrier enters the chain');
+  BRANCHES.forEach(b=>{
+    const el=document.createElement('button');
+    el.className='btab'; el.type='button';
+    el.setAttribute('role','tab');
+    el.textContent=b.tab;
+    el.setAttribute('aria-selected', b.key===branch?'true':'false');
+    el.onclick=()=>setBranch(b.key);
+    tabsEl.appendChild(el);
+  });
+  whenEl.textContent=branchOf(branch).when;
+}
+
+/* ---- the rail ------------------------------------------------------------- */
+const railEl=document.getElementById('rail');
+function drawRail(){
+  railEl.innerHTML='';
+  const d=done(), n=nSteps();
+  steps().forEach((st,idx)=>{
+    const state = (!intro && !reviewing && idx===d) ? 'run'
+                : (!intro && idx===d-1 && !(d>=n && !reviewing)) ? 'cur'
+                : (idx < d) ? 'past' : 'future';
+    const b=document.createElement('button');
+    b.className='rnum '+state;
+    b.textContent=st.n;
+    b.setAttribute('aria-label',`Step ${st.n}`);
+    if(state==='cur') b.setAttribute('aria-current','step');
+    b.onclick=()=>goToStep(idx);
+    railEl.appendChild(b);
+  });
+  const e=document.createElement('button');
+  const at=!intro && !reviewing && d>=n;
+  e.className='rnum rend '+(at?'cur':'future');
+  e.textContent='End';
+  e.setAttribute('aria-label','End of the chain');
+  if(at) e.setAttribute('aria-current','step');
+  e.style.cursor='pointer';
+  e.onclick=()=>goToStep(n);
+  railEl.appendChild(e);
+}
+// A RAIL JUMP DOES NOT SLIDE. The conveyor is what one step handing on to the
+// next looks like; landing on step 3 from the rail is not that event, and
+// animating it would claim a handoff the student did not run.
+const goToStep=k=>{ if(busy) return; intro=false; reviewing=false; setDone(k);
+  renderLanes(); refresh(); };
+
+const actEl=document.getElementById('actbtn');
+// kodo.css's .pill. Every className write REPLACES the attribute, so the base
+// has to be re-stated each time — a bare '' strips the component.
+const ACT_BASE='pill';
+const stepHeadEl=document.getElementById('stephead');
+const stepTipEl=document.getElementById('steptip');
+const BURST_MS=190;
+let pressing=false;
+function press(fn){
+  if(pressing || busy) return;
+  pressing=true;
+  actEl.classList.add('burst');
+  later(()=>{ pressing=false; fn(); }, BURST_MS);
+}
+function begin(){
+  if(!intro) return;
+  press(()=>{ intro=false; refresh(); computeFit(); });
+}
+function drawAct(){
+  const hi=focusStep();
+  const head = intro ? ''
+             : reviewing ? `Step ${stepAt(done()-1).n} complete`
+             : hi<nSteps() ? headAt(hi) : '';
+  // THE CAPTION HANGS OFF THE HEADING: the ⓘ carries this step's own text, so
+  // there is one caption per step and one place it comes from.
+  const tip = head ? captionAt(hi) : '';
+  stepHeadEl.innerHTML = head + (tip
+    ? `<span class="infowrap"><button class="infobtn" type="button"
+         aria-describedby="steptip"
+         aria-label="What happens in this step">i</button></span>` : '');
+  stepTipEl.innerHTML = tip;
+  stepHeadEl.classList.toggle('on', !!head);
+  const entering = reviewing && !shownReview;
+  shownReview = reviewing;
+  if(entering){ stepHeadEl.classList.remove('revin'); void stepHeadEl.offsetWidth; }
+  stepHeadEl.classList.toggle('revin', reviewing);
+  if(intro){
+    actEl.style.visibility='visible';
+    actEl.className=ACT_BASE;
+    actEl.innerHTML=`Begin <i class="ph-bold ph-arrow-right"></i>`;
+    actEl.onclick=begin;
+    return;
+  }
+  actEl.className = reviewing ? ACT_BASE+' revin' : ACT_BASE;
+  if(reviewing){
+    actEl.style.visibility='visible';
+    actEl.innerHTML=`Next <i class="ph-bold ph-arrow-right"></i>`;
+    actEl.onclick=nextStep;
+    return;
+  }
+  /* THE END OF A BRANCH IS NOT THE END OF THE LESSON — the other tab is the
+   * comparison the page is built on, so the last button is the way there. */
+  if(done()>=nSteps() && !busy){
+    const other=BRANCHES.find(b=>b.key!==branch);
+    const bothDone=progress[other.key]>=CHAIN[other.key].length;
+    actEl.style.visibility='visible';
+    if(bothDone){
+      actEl.className=ACT_BASE+' done';
+      actEl.innerHTML=`Same oxygen, same water — one pump apart`;
+      actEl.onclick=null;
+      return;
+    }
+    actEl.innerHTML=`Now enter ${other.key==='nadh'?'from NADH':'from FADH₂'} <i class="ph-bold ph-arrow-right"></i>`;
+    actEl.onclick=()=>setBranch(other.key);
+    return;
+  }
+  /* NO BUTTON DURING A STEP, ever. Every step is clicked on the molecule — the
+   * click IS the hydride coming off, or the O=O breaking — and a Next in the
+   * corner would be an easier way past the lesson. `visibility`, not `display`:
+   * the bar's height is reserved by the camera fit. */
+  actEl.style.visibility='hidden'; actEl.onclick=null;
+}
+
+function refresh(){ drawTabs(); drawAcc(); drawLedger(); drawTally(); drawEnz(); drawAct();
+  drawRail(); drawNote(); drawCouple(); drawCaption(); computeFit(); }
+
+document.getElementById('restart').onclick=restart;
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault();
+    if(intro) begin();
+    else if(reviewing) nextStep();
+    else press(runStep); }
+  if(e.key==='ArrowLeft'){ e.preventDefault(); rewind(); }
+});
+
+/* =============================================================
+ *  MAIN LOOP
+ * ============================================================= */
+L.frame=()=>{
+  LANES.step();
+  cam.r+=(fitR-cam.r)*0.05;
+  cam.target.y+=(fitY-cam.target.y)*0.06;
+  cam.target.x+=(fitX-cam.target.x)*0.06;
+  applyCam(); orthoFrustum();
+  KIT.faceCamera(camera);
+};
+L.afterFrame=()=>{
+  drawPlates();
+  drawFlyers();
+  drawSpots();
+  drawHint();
+  placeTallyMols();
+  placeEnz();
+};
+
+renderLanes(); refresh(); applyCam(); resize();
+// Re-solve after refresh(): the first computeFit runs before the caption is up,
+// so it reserves nothing along the bottom and opens one frame too close.
+computeFit();
+cam.target.y=fitY; cam.target.x=fitX; cam.r=fitR; applyCam(); orthoFrustum();
+L.start();
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(computeFit);
+
+document.getElementById('savepng').onclick=()=>{
+  renderer.render(scene,camera);
+  const w=canvas.width, h=canvas.height, s=w/(canvas.clientWidth||w);
+  const out=document.createElement('canvas'); out.width=w; out.height=h;
+  const x=out.getContext('2d');
+  x.drawImage(canvas,0,0);
+  x.textAlign='center';
+  const projV=new THREE.Vector3();
+  lanes.forEach(l=>{
+    const spec=SPECS(l.key);
+    projV.set(l.g.position.x,l.topY+laneOffset(l),0).project(camera);
+    const px=(projV.x*0.5+0.5)*w, py=(-projV.y*0.5+0.5)*h;
+    x.font=`500 ${14*s}px "Zilla Slab", Georgia, serif`;
+    x.fillStyle='#8a8073'; x.fillText(spec.formula, px, py-3*s);
+    x.font=`700 ${19*s}px "Zilla Slab", Georgia, serif`;
+    x.fillStyle='#2b2723'; x.fillText(l.nameEl.textContent, px, py-20*s);
+  });
+  const a=document.createElement('a'); a.download='electron-transport-chain.png';
+  a.href=out.toDataURL('image/png'); a.click();
+};
+</script>
+
+</body>
+</html>
