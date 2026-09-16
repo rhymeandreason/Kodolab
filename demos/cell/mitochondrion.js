@@ -104,7 +104,7 @@
     seed: 4231,         // rebuild
     flow: 0.6,          // 0..1 how hard the chain is running; glides
     uncoupler: false,   // protons home without a synthase, and no ATP is made
-    protons: 72,        // how many are drawn; a budget, not a concentration
+    protons: 160,       // how many are drawn; a budget, not a concentration
     detail: 1,          // tessellation
   };
 
@@ -196,7 +196,7 @@
          rather than as the pale steel every other H⁺ in the library is. */
       const pm = K.mat({ color: RESP.proton, roughness: 0.8, clearcoat: 0.1,
                          emissive: RESP.proton, emissiveIntensity: 0.14 });
-      protonMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.026 * R, 8, 6), pm, P.protons);
+      protonMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.016 * R, 8, 6), pm, P.protons);
       protonMesh.userData.part = 'proton';
       group.add(protonMesh);
 
@@ -209,8 +209,10 @@
         protons.push({
           mode: inLumen ? 'lumen' : 'matrix',
           pos: (inLumen ? pickOne(D.pockets.lumen) : pickOne(D.pockets.matrix)).clone(),
+          vel: new THREE.Vector3(), anchor: null, curve: null,
           path: null, t: 0, dur: 0, wait: rr(0, 2.5), done: null,
         });
+        protons[protons.length - 1].anchor = protons[protons.length - 1].pos.clone();
       }
       pumped = through = leaked = 0; rotorAngle = 0; turnsSeen = 0;
       for (const n in shown) if (shown[n] === false) applyShow(n, false);
@@ -225,44 +227,74 @@
     }
 
     /* ---- the round trip -------------------------------------------------
-       A proton's whole life is: sit somewhere, pick a machine, travel to it,
-       go through, sit on the other side. The route is what carries the claim
-       — out of the matrix only at a complex, back in only at a synthase —
-       so it is a path with waypoints rather than a force, and the ledger is
-       the routes that finished rather than a number the module asserts.
+       A free proton does not travel to a machine. It diffuses, and at 100 nm
+       a nanosecond carries it anywhere in its compartment, so no path toward
+       a pump is visible and none is drawn. What is drawn is a slowed random
+       wander held inside the compartment, and the one directed step there
+       is: a machine NEAR the proton takes it up and releases it on the other
+       side. The route through the machine is what carries the claim, out of
+       the matrix only at a complex and back in only at a synthase, and the
+       ledger is the routes that finished rather than a number the module
+       asserts.
+
+       THE WANDER IS TETHERED to a pocket point, and a tether moves only to a
+       pocket close by. A crista lumen is thinner than one step of a free
+       walk, so a free walk leaves it through the membrane.
 
        COMPLEX II IS NOT A DOOR. It is on the crista and it is in the legend,
        and a proton never uses it: that is the whole reason FADH₂ yields less
        than NADH, and it has to be true of the picture, not just of a caption. */
     const PUMPS = () => D.sites.complex.filter(s => s.kind !== 'II');
+    const REACH = 0.2 * R;
+
+    const nearest = (list, at, key) => {
+      let best = list[0], bd = Infinity;
+      for (const it of list) { const d = (key ? key(it) : it).distanceToSquared(at); if (d < bd) { bd = d; best = it; } }
+      return best;
+    };
+    const nearby = (list, at, reach) => {
+      const out = list.filter(q => q.distanceTo(at) < reach);
+      return out.length ? pickOne(out) : nearest(list, at);
+    };
 
     function route(p) {
       const speed = 0.35 + 2.4 * P.flow;
       if (p.mode === 'matrix') {
-        const s = pickOne(PUMPS());
+        const s = nearest(PUMPS(), p.anchor, q => q.p);
         p.path = [p.pos.clone(),
-                  s.p.clone().addScaledVector(s.out, 0.16 * R),
-                  s.p.clone().addScaledVector(s.out, 0.02 * R),
+                  s.p.clone().addScaledVector(s.out, 0.08 * R),
+                  s.p.clone().addScaledVector(s.out, 0.01 * R),
                   s.lumen.clone()];
-        p.dur = (1.5 + rr(0, 1.1)) / speed;
-        p.done = () => { p.mode = 'lumen'; pumped++; };
+        p.dur = (0.9 + rr(0, 0.5)) / speed;
+        p.done = () => { p.mode = 'lumen'; p.anchor = nearby(D.pockets.lumen, s.lumen, REACH).clone(); pumped++; };
       } else if (P.uncoupler && rand() < 0.8) {
         /* An uncoupler is a hole, not a machine: straight back across the
            inner membrane, no rotor, no ATP, and the fuel all comes out as
            heat. Drawn as the short cut it is. */
-        p.path = [p.pos.clone(), pickOne(D.pockets.matrix).clone()];
-        p.dur = (0.9 + rr(0, 0.6)) / speed;
-        p.done = () => { p.mode = 'matrix'; leaked++; };
+        const to = nearest(D.pockets.matrix, p.pos);
+        p.path = [p.pos.clone(), to.clone()];
+        p.dur = (0.7 + rr(0, 0.4)) / speed;
+        p.done = () => { p.mode = 'matrix'; p.anchor = to.clone(); leaked++; };
       } else {
-        const s = pickOne(D.sites.synthase);
+        const s = nearest(D.sites.synthase, p.anchor, q => q.lumen);
+        const out = s.p.clone().addScaledVector(s.out, 0.30 * R);
         p.path = [p.pos.clone(), s.lumen.clone(),
-                  s.p.clone().addScaledVector(s.out, 0.02 * R),
-                  s.p.clone().addScaledVector(s.out, 0.30 * R),
-                  pickOne(D.pockets.matrix).clone()];
-        p.dur = (1.6 + rr(0, 1.2)) / speed;
-        p.done = () => { p.mode = 'matrix'; through++; };
+                  s.p.clone().addScaledVector(s.out, 0.02 * R), out];
+        p.dur = (1.0 + rr(0, 0.6)) / speed;
+        p.done = () => { p.mode = 'matrix'; p.anchor = nearby(D.pockets.matrix, out, REACH).clone(); through++; };
       }
+      p.curve = new THREE.CatmullRomCurve3(p.path, false, 'centripetal');
       p.t = 0;
+    }
+
+    /* Ornstein-Uhlenbeck: velocity is kicked at random and damped, so the
+       wander is smooth, and pulled toward the tether, so it stays put. */
+    function wander(p, dt) {
+      const k = Math.min(dt, 0.05), kick = 0.5 * R * Math.sqrt(k);
+      p.vel.x += (rand() - 0.5) * kick - p.vel.x * 3 * k + (p.anchor.x - p.pos.x) * 4 * k;
+      p.vel.y += (rand() - 0.5) * kick - p.vel.y * 3 * k + (p.anchor.y - p.pos.y) * 4 * k;
+      p.vel.z += (rand() - 0.5) * kick - p.vel.z * 3 * k + (p.anchor.z - p.pos.z) * 4 * k;
+      p.pos.addScaledVector(p.vel, k);
     }
 
     function stepProtons(dt) {
@@ -270,14 +302,12 @@
         if (p.path) {
           p.t += dt;
           const u = clamp(p.t / p.dur, 0, 1);
-          const n = p.path.length - 1, f = u * n, i = Math.min(n - 1, Math.floor(f));
-          p.pos.copy(p.path[i]).lerp(p.path[i + 1], f - i);
-          if (u >= 1) { p.path = null; p.done(); p.wait = 0.2 + rand() * 1.4; }
+          p.curve.getPoint(u * u * (3 - 2 * u), p.pos);
+          if (u >= 1) { p.path = null; p.done(); p.vel.set(0, 0, 0); p.wait = 0.4 + rand() * 1.8; }
         } else {
-          // A jitter, not a walk: it must not drift out of its compartment.
-          p.pos.x += (rand() - 0.5) * 0.06 * R * dt * 8;
-          p.pos.y += (rand() - 0.5) * 0.06 * R * dt * 8;
-          p.pos.z += (rand() - 0.5) * 0.06 * R * dt * 8;
+          if (rand() < dt * 0.25)
+            p.anchor = nearby(p.mode === 'lumen' ? D.pockets.lumen : D.pockets.matrix, p.anchor, REACH).clone();
+          wander(p, dt);
           p.wait -= dt * (0.35 + 2 * P.flow);
           if (p.wait <= 0 && P.flow > 0.005) route(p);
         }
