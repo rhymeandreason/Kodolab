@@ -228,7 +228,7 @@ const PARTS = [
         at:anchorAt(midCA(t, chainsOf(t, 'γ')[0])), offset:[-150, -30] },
     ],
     /* The axis and how well it was measured are the baker's. */
-    caption:t=>`rotor turned rigidly about an axis measured two ways, agreeing to ${t.spin.spread.degrees}°; protons and nucleotides drawn` },
+    caption:()=>'protons, nucleotides and membrane drawn' },
 
   { key:'open', id:'open', close:true, title:'An empty site', sub:'one β subunit, up close',
     stats:t=>fileStats('open', t),
@@ -338,9 +338,12 @@ setInterval(() => { if(shownId === 'human') collect(traces.human); }, 200);
 const GLU = 58, PLOOP = [160, 167];
 const BOARD = 20, ALIGHT = 340;     // degrees past subunit a: the two half-channels
 const FACE = 24;                    // Å either side of the ring's middle a proton is drawn from and to
-const HOP = 0.9;                    // s, into or out of a half-channel
-const DRIFT = 72;                   // Å a nucleotide travels from its site: far enough to clear the head
-const OUT_S = 2.8, IN_S = 2.6, IN_DELAY = 0.6;
+const HOP = 0.9;                    // s, out of a half-channel
+const APPROACH = 3.2;               // s, a proton's wander in from beside the ring
+const REACH = 130;                  // Å out from subunit a a proton starts
+const WOBBLE = 14;                  // Å of sideways drift on the way in
+const DRIFT = 150;                  // Å a nucleotide travels from its site: out toward the canvas edge
+const OUT_S = 5.2, IN_S = 5, IN_DELAY = 0.6;
 
 const flow = (() => {
   let geo = null;
@@ -371,7 +374,7 @@ const flow = (() => {
     const open = betas.find(b => b.empty) || betas[0];
     betas.sort((a, b) => ((a.az - open.az + 360) % 360) - ((b.az - open.az + 360) % 360));
     const edge = flat(aC);
-    return { A, P, glu, betas,
+    return { A, P, glu, betas, u, w,
       from: edge.clone().addScaledVector(A, mid - FACE).add(P),
       to:   edge.clone().addScaledVector(A, mid + FACE).add(P) };
   }
@@ -443,7 +446,13 @@ const flow = (() => {
     if(!geo) geo = measure(t);
     for(const g of geo.glu){
       const crossed = d => Math.floor((g.az + prev - d) / 360) < Math.floor((g.az + now - d) / 360);
-      if(crossed(BOARD)) live.push({ kind: 'H', m: proton(), g, phase: 'in', clock: 0, at: now });
+      if(crossed(BOARD)){
+        const R = () => Math.random() * 2 - 1;
+        const start = geo.from.clone().addScaledVector(geo.u, REACH * (0.8 + 0.4 * Math.random()))
+          .addScaledVector(geo.w, 40 * R()).addScaledVector(geo.A, 20 * R());
+        const waves = [0, 1].map(() => ({ f: 1.5 + 2 * Math.random(), ph: Math.random() * 6.28 }));
+        live.push({ kind: 'H', m: proton(), g, phase: 'in', clock: 0, at: now, start, waves });
+      }
     }
     if(Math.floor(prev / 120) < Math.floor(now / 120)){
       const site = geo.betas[Math.floor(now / 120) % 3];
@@ -460,8 +469,14 @@ const flow = (() => {
       let done = false;
       if(x.kind === 'H'){
         if(x.phase === 'in'){
-          const k = Math.min(1, x.clock / HOP);
-          x.m.position.copy(geo.from).lerp(gluAt(x.g, now), ease(k));
+          /* A diffusing ion: straight-line approach plus wobble that dies out
+             as it reaches the half-channel, then a short hop onto Glu58. */
+          const k = Math.min(1, x.clock / APPROACH), e = ease(k), fade = 1 - e;
+          const [a, b] = x.waves;
+          x.m.position.copy(x.start).lerp(e < .85 ? geo.from : gluAt(x.g, now), e < .85 ? e / .85 : (e - .85) / .15);
+          if(e >= .85) x.m.position.copy(geo.from).lerp(gluAt(x.g, now), (e - .85) / .15);
+          x.m.position.addScaledVector(geo.w, WOBBLE * fade * Math.sin(a.f * x.clock * 6.28 / APPROACH * 2 + a.ph))
+            .addScaledVector(geo.A, WOBBLE * fade * Math.sin(b.f * x.clock * 6.28 / APPROACH * 2 + b.ph));
           if(k >= 1){ x.phase = 'ride'; x.at = now; }
         } else if(x.phase === 'ride'){
           x.m.position.copy(gluAt(x.g, now));
@@ -505,6 +520,41 @@ const flow = (() => {
   return { step, clear, reset, get live(){ return live.length; } };
 })();
 
+/* The inner membrane, DRAWN: no lipid is in the file. Centred on the c-ring's
+   middle along the spin axis, which is where the ring sits in the bilayer.
+   One faint grey band, the bilayer's ~46 Å, heads included: a flat strip
+   through the axis, swung about it to face the camera, so from any view it
+   reads as a membrane in section. */
+const BILAYER = 46, SHEET_R = 260;   // Å
+const BAND = 0x9a9a9a;
+const WORD_H = 12;   // Å
+function word(text, at){
+  const cv = document.createElement('canvas'), x = cv.getContext('2d'), px = 64;
+  const font = `500 ${px}px ${getComputedStyle(document.body).fontFamily}`;
+  x.font = font;
+  cv.width = Math.ceil(x.measureText(text).width) + 8; cv.height = px * 1.3;
+  x.font = font; x.fillStyle = '#6b6b6b'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(text, cv.width / 2, cv.height / 2);
+  const tex = new THREE.CanvasTexture(cv);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sp.scale.set(WORD_H * cv.width / cv.height, WORD_H, 1);
+  sp.position.copy(at);
+  sp.renderOrder = 1;
+  return sp;
+}
+function membrane(t){
+  const A = new THREE.Vector3(...t.spin.axis).normalize(), P = new THREE.Vector3(...t.spin.point);
+  const mid = new THREE.Vector3(...centroidOf(t, chainsOf(t, 'c'))).sub(P).dot(A);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2 * SHEET_R, BILAYER),
+    new THREE.MeshBasicMaterial({ color: BAND, transparent: true, opacity: .14, depthWrite: false, side: THREE.DoubleSide }));
+  m.renderOrder = -1;
+  m.position.copy(P).addScaledVector(A, mid);
+  const g = new THREE.Group();
+  g.userData.membrane = true;
+  g.add(m, word('membrane', m.position));
+  return g;
+}
+
 /* One clock for the rotor and everything it carries, so a test can drive it
    where rAF does not run. The rotor does not glide: each proton through
    subunit a advances the ring one c-subunit, 360/c degrees, then it dwells
@@ -524,8 +574,32 @@ function advance(dt){
   flow.step(t, prev, turned, dt);
   box.draw();
 }
+/* Faces the band to the camera, then sets the word in it, off to one side
+   of the protein and pulled toward the middle until it is inside the canvas,
+   so a shorter window does not crop it. */
+const WORD_ASIDE = 0.55, EDGE = 0.85;   // fraction of SHEET_R; NDC
+const _A = new THREE.Vector3(), _n = new THREE.Vector3(), _x = new THREE.Vector3(), _p = new THREE.Vector3();
+function placeBand(){
+  const g = box.group.children.find(c => c.userData && c.userData.membrane);
+  if(!g) return;
+  const [band, sp] = g.children;
+  _A.set(...traces.human.spin.axis).normalize();
+  box.group.worldToLocal(_n.copy(box.camera.position)).sub(band.position);
+  _n.addScaledVector(_A, -_n.dot(_A));
+  if(_n.lengthSq() < 1e-6) return;
+  _n.normalize();
+  _x.crossVectors(_A, _n);
+  band.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(_x, _A, _n));
+  for(let r = SHEET_R * WORD_ASIDE; r >= 30; r -= 5){
+    _p.copy(band.position).addScaledVector(_x, -r);
+    const q = box.group.localToWorld(_p.clone()).project(box.camera);
+    if(Math.abs(q.x) < EDGE && Math.abs(q.y) < EDGE) break;
+  }
+  sp.position.copy(_p);
+}
 (function spin(now){
   requestAnimationFrame(spin);
+  placeBand();
   const dt = Math.min(0.1, (now - lastT) / 1000);
   lastT = now;
   advance(dt);
@@ -554,6 +628,8 @@ function show(part){
     box.setData(t, { keep: !!sameFrame, colors: v.group === 'sites' ? null : ProteinLib.colorsOf(ME, v) });
   }
   if(!part.spin) flow.clear();
+  for(const c of [...box.group.children]) if(c.userData && c.userData.membrane) box.group.remove(c);
+  if(t.spin) box.group.add(membrane(t));
   /* During the turn the β sites are the animation's, so only α keeps what
      the file holds. */
   pocket = !t.site ? null : box.setPocket(part.spin
