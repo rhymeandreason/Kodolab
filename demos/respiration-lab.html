@@ -348,13 +348,14 @@
      membrane sits below it (the stack's INNER_Y). flyTo moves theta/phi/r
      only, so the target's y is tweened here, alongside. */
   let targetRaf = 0;
-  function aimAt(box, y, dur = 1.1) {
+  function aimAt(box, y, dur = 1.1, x = 0) {
     cancelAnimationFrame(targetRaf);
-    const t0 = performance.now(), y0 = box.cam.target.y;
+    const t0 = performance.now(), y0 = box.cam.target.y, x0 = box.cam.target.x;
     const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     (function tick(now) {
       const k = Math.min(1, (now - t0) / (dur * 1000));
       box.cam.target.y = y0 + (y - y0) * ease(k);
+      box.cam.target.x = x0 + (x - x0) * ease(k);
       box.applyCam();
       if (k < 1) targetRaf = requestAnimationFrame(tick);
     })(t0);
@@ -410,7 +411,7 @@
     etc() {
       show('chemi');
       chemi.set({ chain: 'split' });
-      aimAt(chemi.box, INNER_Y); chemi.box.flyTo({ r: 380, phi: Math.PI / 2 - 0.12 });
+      aimAt(chemi.box, INNER_Y - 8, 1.1, -45); chemi.box.flyTo({ r: 350, phi: Math.PI / 2 - 0.12 });
     },
   };
   const ZONE = { cell: '#z-cyto', fly: '#z-cyto', mito: '#z-mito', chemi: '#z-mito', etc: '#z-mito' };
