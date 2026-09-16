@@ -98,7 +98,14 @@ const PROTON_R = 1.8, BADGE = 4, PILL = 6;   // Å
  *  band, the bilayer's ~46 Å, heads included: a gently bent strip through
  *  the axis, swung about it to face the camera, so from any view it reads as
  *  a membrane in section. */
-const BILAYER = 46, SHEET_R = 260, BEND_R = 520;   // Å; BEND_R is the strip's radius of curvature
+const BILAYER = 46, SHEET_R = 260;   // Å
+/* CURVED AROUND THE COMPARTMENT IT ENCLOSES, as membrane/sheet.js bends the
+   respiration lesson's: the matrix in a mitochondrion (F1's side), the lumen
+   in a thylakoid (the proton side). Both put that compartment at the bottom
+   of the screen, so the band arches up either way. Same sag for its width as
+   sheet.js's default: 12 over a 150 half-span. */
+const SAG = 12 / 150 * SHEET_R;
+const BEND_R = (SHEET_R * SHEET_R + SAG * SAG) / (2 * SAG);
 const BAND = 0x9a9a9a;
 const WORD_H = 12;   // Å
 /* The word sits off to one side of the protein, pulled toward the middle
@@ -139,15 +146,22 @@ function word(text, h = WORD_H){
 function membrane(t, context){
   const A = V3(t.spin.axis).normalize(), P = V3(t.spin.point);
   const mid = V3(centroidOf(t, chainsOf(t, 'c'))).sub(P).dot(A);
-  /* Ends toward the camera, as in the respiration lesson. */
-  const arc = new THREE.CylinderGeometry(BEND_R, BEND_R, BILAYER, 48, 1, true,
-    -SHEET_R / BEND_R, 2 * SHEET_R / BEND_R).translate(0, 0, -BEND_R).scale(1, 1, -1);
+  /* A flat strip bent in its own plane: local y is the membrane normal, and
+     the centre of curvature sits at −y. */
+  const arc = new THREE.PlaneGeometry(2 * SHEET_R, BILAYER, 48, 1);
+  const pos = arc.attributes.position;
+  for(let i = 0; i < pos.count; i++){
+    const th = pos.getX(i) / BEND_R, rad = BEND_R + pos.getY(i);
+    pos.setXY(i, rad * Math.sin(th), rad * Math.cos(th) - BEND_R);
+  }
   const m = new THREE.Mesh(arc,
     new THREE.MeshBasicMaterial({ color: BAND, transparent: true, opacity: .14, depthWrite: false, side: THREE.DoubleSide }));
   m.renderOrder = -1;
   m.position.copy(P).addScaledVector(A, mid);
   const g = new THREE.Group();
   g.userData.membrane = true;
+  /* +A is F1's side; local y points away from the enclosed compartment. */
+  g.userData.ySign = context === 'thylakoid' ? 1 : -1;
   const sp = word('membrane');
   sp.position.copy(m.position);
   const c = CONTEXTS[context];
@@ -378,11 +392,12 @@ function attach(box){
     _n.addScaledVector(A, -_n.dot(A));
     if(_n.lengthSq() < 1e-6) return;
     _n.normalize();
-    _x.crossVectors(A, _n);
-    strip.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(_x, A, _n));
+    const Y = A.clone().multiplyScalar(band.userData.ySign);
+    _x.crossVectors(Y, _n);
+    strip.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(_x, Y, _n));
     for(let r = SHEET_R * WORD_ASIDE; r >= 30; r -= 5){
       const th = -r / BEND_R;
-      _p.set(BEND_R * Math.sin(th), 0, BEND_R * (1 - Math.cos(th))).applyQuaternion(strip.quaternion).add(strip.position);
+      _p.set(BEND_R * Math.sin(th), BEND_R * (Math.cos(th) - 1), 0).applyQuaternion(strip.quaternion).add(strip.position);
       const q = box.group.localToWorld(_p.clone()).project(box.camera);
       if(Math.abs(q.x) < EDGE && Math.abs(q.y) < EDGE) break;
     }
