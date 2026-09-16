@@ -34,7 +34,7 @@
   /* 2x the library card's 3:2 stage, drawn on nothing: the still is a
      background on paper and keeps its alpha. */
   #mount{width:536px;height:358px;margin:1.2rem 0;border:1px solid #e4e0d7;background:#fff}
-  #mount canvas{width:100%;height:100%;display:block}
+  #mount canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
   #log{font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre-wrap}
   .bad{color:#c0392b}
 </style>
@@ -44,7 +44,10 @@
 <p>Draws every registered molecule once and writes <code>media/molecules/&lt;key&gt;.webp</code>. Dev server, Chrome.</p>
 <button id="go">Bake all</button>
 <select id="pick"></select>
+<select id="src" hidden><option value="">Measured</option><option value="Skel">Idealized (skel)</option></select>
 <button id="one">Bake selected</button>
+<button id="reset">Reset view</button>
+<p>Drag to rotate · shift- or right-drag to pan · wheel to zoom. Bake selected keeps this view; bake all uses each default.</p>
 <div id="mount"><canvas id="gl"></canvas></div>
 <div id="log"></div>
 
@@ -70,12 +73,16 @@
 'use strict';
 
 const KEYS = Object.keys(MolLib.MOLECULES).filter(k => MolLib.MOLECULES[k].atoms);
+/* A measured spec and its skel.js twin are one entry in the picker: `atp` and `atpSkel`. */
+const hasSkel = k => KEYS.includes(k + 'Skel');
+const PICK = KEYS.filter(k => !(k.endsWith('Skel') && KEYS.includes(k.slice(0, -4))));
 
 const canvas = document.getElementById('gl');
 const logEl = document.getElementById('log');
 const pickEl = document.getElementById('pick');
 const goEl = document.getElementById('go');
 const oneEl = document.getElementById('one');
+const srcEl = document.getElementById('src');
 const say = (t, bad) => {
   const d = document.createElement('div');
   if (bad) d.className = 'bad';
@@ -89,30 +96,48 @@ const { scene, camera, renderer, root, applyCam } = Stage.create(canvas, {
   ortho: true, cam: { theta: 0, phi: Math.PI / 2, r: 40 }, orbit: false, zoom: false });
 
 let liveKey = null;
+let half = 1;
+/* The reader's view on top of the spec's frame: a turn about the screen centre,
+   a pan in world units, a zoom factor. Identity reproduces the default still. */
+const turn = new THREE.Group();
+root.add(turn);
+const view = { q: new THREE.Quaternion(), x: 0, y: 0, zoom: 1 };
+
+function frame() {
+  const asp = canvas.clientWidth / canvas.clientHeight;
+  const h = half / view.zoom;
+  turn.quaternion.copy(view.q);
+  camera.top = h - view.y; camera.bottom = -h - view.y;
+  camera.left = -h * asp - view.x; camera.right = h * asp - view.x;
+  camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+}
+
+function resetView() {
+  view.q.identity(); view.x = view.y = 0; view.zoom = 1;
+  if (liveKey) frame();
+}
 
 function show(key) {
   const spec = MolLib.MOLECULES[key];
-  while (root.children.length) root.remove(root.children[0]);
+  while (turn.children.length) turn.remove(turn.children[0]);
   const g = Stage.buildMolecule(spec);
   if (!spec.view) g.quaternion.copy(MolView.flatPose(spec));
-  root.add(g);
+  turn.add(g);
+  view.q.identity(); view.x = view.y = 0; view.zoom = 1;
   /* The full 3D radius, not the silhouette: the modal lets the reader turn
      it, and the still has to match the frame it opens in. */
   /* Sized here, not by the stage's ResizeObserver: setSize wipes the buffer,
      and the observer's first call lands after the first render. */
   renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-  const half = Stage.measure(spec).radius * 1.06;
-  const asp = canvas.clientWidth / canvas.clientHeight;
-  camera.top = half; camera.bottom = -half;
-  camera.left = -half * asp; camera.right = half * asp;
-  camera.updateProjectionMatrix();
+  half = Stage.measure(spec).radius * 1.06;
   applyCam();
-  renderer.render(scene, camera);
   liveKey = key;
+  frame();
 }
 
-async function bake(key) {
-  if (liveKey !== key) show(key);
+async function bake(key, keepView) {
+  if (liveKey !== key || !keepView) show(key);
   renderer.render(scene, camera);          // the buffer is only readable now
   const webp = canvas.toDataURL('image/webp', 0.85);
   if (!/^data:image\/webp;/.test(webp)) {
@@ -128,17 +153,17 @@ async function bake(key) {
   return out.bytes;
 }
 
-for (const k of KEYS) {
+for (const k of PICK) {
   const o = document.createElement('option');
   o.value = k; o.textContent = k;
   pickEl.appendChild(o);
 }
 
-async function run(keys) {
+async function run(keys, keepView) {
   goEl.disabled = oneEl.disabled = pickEl.disabled = true;
   for (const k of keys) {
     try {
-      const bytes = await bake(k);
+      const bytes = await bake(k, keepView);
       say(`${k} — ${Math.round(bytes / 1024)} KB`);
     } catch (e) {
       say(`${k} — ${e.message}`, true);
@@ -149,12 +174,54 @@ async function run(keys) {
 }
 
 goEl.addEventListener('click', () => { logEl.textContent = ''; run(KEYS); });
-oneEl.addEventListener('click', () => { logEl.textContent = ''; run([pickEl.value]); });
-pickEl.addEventListener('change', () => show(pickEl.value));
+const shownKey = () => pickEl.value + (hasSkel(pickEl.value) ? srcEl.value : '');
+oneEl.addEventListener('click', () => { logEl.textContent = ''; run([shownKey()], true); });
+pickEl.addEventListener('change', () => {
+  srcEl.hidden = !hasSkel(pickEl.value);
+  show(shownKey());
+});
+srcEl.addEventListener('change', () => show(shownKey()));
+document.getElementById('reset').addEventListener('click', resetView);
+
+/* Drag turns the model about the screen axes (camera looks down -Z); shift or
+   the right button pans; the wheel zooms about the centre. */
+let drag = null;
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointerdown', e => {
+  drag = { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2 };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.pan) {
+    const per = 2 * half / view.zoom / canvas.clientHeight;
+    view.x += dx * per; view.y -= dy * per;
+  } else {
+    const k = 0.01;
+    const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * k);
+    const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx * k);
+    view.q.premultiply(qy).premultiply(qx);
+  }
+  frame();
+});
+const endDrag = () => { drag = null; };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  view.zoom = Math.min(20, Math.max(0.2, view.zoom * Math.exp(-e.deltaY * 0.002)));
+  frame();
+}, { passive: false });
 
 /* ?key=<molecule> preselects and shows it. */
 const wantKey = new URLSearchParams(location.search).get('key');
-if (wantKey && KEYS.includes(wantKey)) pickEl.value = wantKey;
+if (wantKey && KEYS.includes(wantKey)) {
+  const base = wantKey.endsWith('Skel') && PICK.includes(wantKey.slice(0, -4)) ? wantKey.slice(0, -4) : wantKey;
+  pickEl.value = base;
+  srcEl.value = base === wantKey ? '' : 'Skel';
+}
 pickEl.dispatchEvent(new Event('change'));
 </script>
 </body>

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<title>Cellular respiration — Kodolab</title>
+<!-- ===================================================================
+     ONE SPINE, FOUR LEVELS, ON A PAGE THAT SCROLLS. The document shell
+     carries Levels 0 and 1: the equation, then a flow chart down the left
+     of the page with a large node per stage, a small node per reaction,
+     a circle per checkpoint, and branches to the right for what goes
+     deeper. Every 3D scene is a modal: a LessonShell hosted in a
+     full-window overlay, built when a node is clicked and destroyed on
+     close, so the page itself holds no WebGL context.
+
+     The chart is drawn from respiration/steps.js, so a step added there
+     appears here, and every yield printed is summed from the same table.
+     =================================================================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="css/kodo.css">
+<style>
+  .page { --page-max: 1120px; }
+
+  /* ---- Level 0 ---- */
+  .story { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; margin: 8px 0 56px; }
+  .story .eq {
+    font-family: var(--font-display); font-size: clamp(1.15rem, 2.4vw, 1.7rem); font-weight: 500; letter-spacing: .01em;
+    padding: 22px 26px; border-radius: 16px; background: var(--text-strong); color: var(--surface-page); margin: 18px 0;
+  }
+  .story .eq small { display: block; font-family: var(--font-ui); font-size: .78rem; font-weight: 400; opacity: .7; margin-top: 6px; letter-spacing: 0; }
+  .story p { font-family: var(--font-editorial); font-size: 1.05rem; line-height: 1.55; color: var(--text-body); max-width: 34em; }
+  .still { position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--border-hair); background: var(--surface-stage); cursor: pointer; padding: 0; display: block; width: 100%; text-align: left; }
+  .still img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+  .still .tag { position: absolute; left: 14px; bottom: 12px; font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .12em; text-transform: uppercase; background: var(--surface-page); padding: 6px 10px; border-radius: 999px; }
+  .still:hover .tag { color: var(--accent); }
+
+  /* ---- the legend of shapes ---- */
+  .key { display: flex; flex-wrap: wrap; gap: 22px; font-size: .82rem; color: var(--text-dim); margin: 0 0 28px; align-items: center; }
+  .key span { display: inline-flex; align-items: center; gap: 8px; }
+  .key i { display: inline-block; width: 18px; height: 18px; border: 1.5px solid var(--text-dim); }
+  .key i.k-stage { width: 26px; height: 16px; border-radius: 4px; }
+  .key i.k-step { width: 14px; height: 14px; border-radius: 4px; }
+  .key i.k-check { border-radius: 50%; border-style: dashed; }
+  .key i.k-branch { width: 26px; height: 10px; border: 0; border-top: 1.5px dashed var(--text-dim); }
+
+  /* ---- a stage: spine · content · branches ---- */
+  .stage {
+    --hue: var(--hue-blue);
+    display: grid; grid-template-columns: 220px minmax(0, 1fr) 280px; gap: 0 40px;
+    position: relative; padding: 36px 0 44px;
+  }
+  .stage + .stage { border-top: 1px solid var(--border-hair); }
+  .spine { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  /* the line, running the full height of every stage so it reads as one chart */
+  .spine::before { content: ''; position: absolute; top: -36px; bottom: -44px; left: 50%; width: 2px; background: var(--border-strong); transform: translateX(-50%); }
+  .stage:first-of-type .spine::before { top: 0; }
+  .node { position: relative; z-index: 1; font: inherit; cursor: pointer; background: var(--surface-page); color: var(--text-strong); border: 1.5px solid var(--text-strong); transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+  .node:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -10px rgba(20, 22, 26, .5); }
+  .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .node--stage {
+    width: 100%; padding: 16px 16px 14px; border-radius: 12px; text-align: left;
+    border-color: var(--hue); border-width: 2px; background: color-mix(in srgb, var(--hue) 10%, var(--surface-page));
+  }
+  .node--stage b { display: block; font-family: var(--font-display); font-weight: 500; font-size: 1.05rem; line-height: 1.2; }
+  .node--stage small { display: block; font-size: .74rem; color: var(--text-dim); margin-top: 4px; }
+  .node--stage .n { position: absolute; top: -12px; left: 12px; font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .12em; padding: 2px 8px; border-radius: 999px; background: var(--hue); color: var(--text-strong); }
+  .node--step { width: 32px; height: 32px; border-radius: 8px; font-family: var(--font-display); font-size: .8rem; font-weight: 500; padding: 0; }
+  .node--step:hover { background: var(--hue); }
+  .node--check { width: 40px; height: 40px; border-radius: 50%; font-family: var(--font-display); font-size: 1rem; font-weight: 500; padding: 0; border-style: dashed; }
+  .node--check.is-passed { border-style: solid; background: var(--accent); color: #fff; border-color: var(--accent); }
+  .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
+  .steps li { position: relative; }
+  /* a step's name, to the left of the spine, on hover */
+  .steps li::after { content: attr(data-name); position: absolute; right: calc(100% + 10px); top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: .72rem; color: var(--text-dim); opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .steps li:hover::after { opacity: 1; }
+  /* the Krebs ring */
+  .steps.ring { width: 190px; height: 190px; display: block; margin: 12px 0; }
+  .steps.ring::before { content: ''; position: absolute; inset: 20px; border-radius: 50%; border: 2px solid var(--border-strong); background: var(--surface-page); }
+  .steps.ring li { position: absolute; left: 50%; top: 50%; margin: -16px; transform: rotate(calc(var(--i) * 45deg - 90deg)) translate(75px) rotate(calc(90deg - var(--i) * 45deg)); }
+  .steps.ring li::after { display: none; }
+  /* the chain: two entries */
+  .entries { font-size: .72rem; color: var(--text-dim); text-align: center; line-height: 1.4; background: var(--surface-page); position: relative; z-index: 1; padding: 2px 6px; }
+  .entries b { font-weight: 600; color: var(--text-body); }
+  .x2 { font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .1em; color: var(--text-dim); background: var(--surface-page); position: relative; z-index: 1; padding: 0 6px; }
+
+  .content .eyebrow { font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 8px; display: flex; align-items: center; gap: 10px; }
+  .content .eyebrow i { width: 10px; height: 10px; border-radius: 50%; background: var(--hue); display: inline-block; }
+  .content h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.5rem, 2.6vw, 2rem); line-height: 1.15; margin: 0 0 14px; letter-spacing: -.01em; }
+  .content .claim { font-family: var(--font-editorial); font-size: 1.05rem; line-height: 1.55; color: var(--text-body); margin: 0 0 18px; max-width: 34em; }
+  .content .claim b { color: var(--text-strong); }
+  .facts { display: grid; grid-template-columns: repeat(3, auto); gap: 10px 28px; justify-content: start; margin: 0 0 22px; }
+  .facts div { display: flex; flex-direction: column; gap: 2px; }
+  .facts dt { font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
+  .facts dd { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .content .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .branches { display: flex; flex-direction: column; gap: 14px; position: relative; padding-top: 6px; }
+  .branch { position: relative; display: block; border: 1px solid var(--border-hair); border-radius: 14px; background: var(--surface-card); overflow: visible; text-decoration: none; color: inherit; cursor: pointer; text-align: left; padding: 0; font: inherit; width: 100%; }
+  .branch:hover { border-color: var(--text-dim); }
+  .branch img { display: block; width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 13px 13px 0 0; }
+  .branch .bt { padding: 12px 14px 13px; }
+  .branch .kick { font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  .branch .kick.deeper::before { content: '＋'; margin-right: 6px; font-weight: 600; color: var(--accent); }
+  .branch .kick.quest::before { content: '↗'; margin-right: 6px; color: var(--accent); }
+  .branch b { display: block; font-family: var(--font-display); font-weight: 500; font-size: .98rem; line-height: 1.25; }
+  .branch small { display: block; color: var(--text-dim); font-size: .78rem; margin-top: 4px; line-height: 1.4; }
+  /* Branches hang off a dashed rail beside the cards; a short stub leaves the
+     stage node toward them, so the chart says "this stage branches" without a
+     line crossing the heading in between. */
+  .node--stage::after { content: ''; position: absolute; left: 100%; top: 50%; width: 40px; border-top: 1.5px dashed var(--border-strong); pointer-events: none; }
+  .branches::before { content: ''; position: absolute; left: -22px; top: 34px; bottom: 30px; border-left: 1.5px dashed var(--border-strong); }
+  .branch::before { content: ''; position: absolute; right: 100%; top: 28px; width: 22px; border-top: 1.5px dashed var(--border-strong); }
+  .branches:has(.branch:only-child)::before { display: none; }
+
+  /* ---- the wrap ---- */
+  .wrap { display: grid; grid-template-columns: 220px 1fr; gap: 0 40px; padding: 36px 0 20px; border-top: 1px solid var(--border-hair); position: relative; }
+  .wrap .end { position: relative; display: flex; justify-content: center; align-items: flex-start; }
+  .wrap .end::before { content: ''; position: absolute; top: -36px; height: 36px; left: 50%; width: 2px; background: var(--border-strong); transform: translateX(-50%); }
+  .wrap .end .node--stage { width: 100%; text-align: center; cursor: default; }
+  .wrap .end .node--stage:hover { transform: none; box-shadow: none; }
+  .wrap .end .node--stage::after { display: none; }
+  .tally { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 18px 0 0; max-width: 640px; }
+  .tally div { border: 1px solid var(--border-hair); border-radius: 12px; padding: 14px 16px; }
+  .tally dt { font-family: var(--font-display); font-size: var(--cap-sm); letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
+  .tally dd { margin: 4px 0 0; font-family: var(--font-display); font-weight: 500; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+  .tally dd small { display: block; font-family: var(--font-ui); font-weight: 400; font-size: .76rem; color: var(--text-dim); margin-top: 2px; }
+
+  /* ---- the 3D modal: a LessonShell in a full-window overlay ---- */
+  .scene-modal { position: fixed; inset: 0; z-index: 60; background: var(--bg, #f4f2ec); }
+  .scene-modal[hidden] { display: none; }
+  .scene-modal .sclose {
+    position: fixed; top: 12px; right: 18px; z-index: 70; width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid var(--line, #ccc); background: var(--panel, #fff); color: var(--ink, #111); font-size: 22px; line-height: 1; cursor: pointer;
+  }
+  .scene-modal .sclose:hover { border-color: var(--ink, #111); }
+  .lshell-panel .steplist .chip { min-width: 36px; justify-content: center; padding: 6px 10px; }
+  .lshell-panel .stats.one { grid-template-columns: 1fr; }   /* a step's name and its enzyme do not fit half a panel */
+
+  /* ---- the checkpoint modal: kit/modal.js's markup ---- */
+  .modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; }
+  .modal[hidden] { display: none; }
+  .modal .mback { position: absolute; inset: 0; background: rgba(20, 22, 26, .45); }
+  .modal .mcard { position: relative; width: min(520px, 100%); padding: 26px 28px 24px; }
+  .modal .mclose { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; font-size: 22px; cursor: pointer; color: var(--text-dim); }
+  .modal .mkick { display: block; margin-bottom: 8px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
+  .modal h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; margin: 0 0 16px; line-height: 1.25; }
+  .modal .choices { display: grid; gap: 8px; }
+  .modal .choice { font: inherit; text-align: left; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-hair); background: var(--surface-card); cursor: pointer; color: var(--text-strong); }
+  .modal .choice:hover { border-color: var(--text-dim); }
+  .modal .choice.is-right { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface-card)); }
+  .modal .choice.is-wrong { opacity: .55; }
+  .modal .verdict { margin: 14px 0 0; font-family: var(--font-editorial); color: var(--text-body); min-height: 1.5em; }
+
+  @media (max-width: 900px) {
+    .story { grid-template-columns: 1fr; }
+    .stage { grid-template-columns: 120px minmax(0, 1fr); }
+    .branches { grid-column: 2; padding-top: 18px; }
+    .branches::before, .branch::before, .node--stage::after { display: none; }
+    .steps li::after { display: none; }
+    .steps.ring { width: 110px; height: 110px; }
+    .steps.ring li { transform: rotate(calc(var(--i) * 45deg - 90deg)) translate(42px) rotate(calc(90deg - var(--i) * 45deg)); }
+    .wrap { grid-template-columns: 120px 1fr; }
+    .tally { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body class="kodo">
+<div class="page">
+
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <span class="crumb">metabolism</span>
+  </nav>
+
+  <header class="pagehead">
+    <h1>cellular respiration</h1>
+    <p class="deck">How a cell takes glucose apart and keeps the energy. One road, four stages, and you decide how far in to go.</p>
+  </header>
+
+  <main>
+    <section class="story" aria-label="The whole story">
+      <div>
+        <p><b>Level 0.</b> A cell takes glucose and oxygen apart and puts the carbon into CO₂, the hydrogen into water, and the energy into ATP. That equation is the textbook. This page is what happens between its two sides.</p>
+        <div class="eq">C₆H₁₂O₆ + 6 O₂ → 6 CO₂ + 6 H₂O + energy as ATP<small>Read the chart below top to bottom. Click any shape to open it.</small></div>
+        <div class="key" aria-label="What the shapes mean">
+          <span><i class="k-stage"></i> a stage: click for its mechanism</span>
+          <span><i class="k-step"></i> one reaction</span>
+          <span><i class="k-check"></i> a checkpoint</span>
+          <span><i class="k-branch"></i> a branch: deeper, or a side quest</span>
+        </div>
+      </div>
+      <button class="still" type="button" data-open="cell" aria-label="Open the cell in 3D">
+        <img src="media/components/animalcell.webp" alt="An animal cell cut open, with its mitochondria">
+        <span class="tag">Open the cell · where it all happens</span>
+      </button>
+    </section>
+
+    <div id="chart"></div>
+
+    <section class="wrap" aria-label="Wrap up">
+      <div class="end"><div class="node node--stage" style="--hue: var(--hue-violet)"><b>Back out to the cell</b><small>every carbon accounted for</small></div></div>
+      <div class="content">
+        <p class="eyebrow"><i style="background: var(--hue-violet)"></i> Wrap up</p>
+        <h2>Glucose came apart in two places, and the energy left mostly as loaded carriers</h2>
+        <p class="claim">Only a few ATP are made directly. Everything else the cell earns is paid out at the inner membrane, one proton at a time. What would you ask next? Why ten steps instead of one, or what a sprinting muscle does when the oxygen runs out, are both good places to start.</p>
+        <dl class="tally" id="tally"></dl>
+      </div>
+    </section>
+  </main>
+
+  <footer class="sitefoot"><span>Cellular respiration · a prototype</span></footer>
+</div>
+
+<!-- the checkpoint card: kit/modal.js owns focus, Esc and the stack -->
+<div id="checkmodal" class="modal" hidden>
+  <div class="mback"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-labelledby="checktitle">
+    <button class="mclose" aria-label="Close">&times;</button>
+    <span class="mkick cap-sm" id="checkkick">Checkpoint</span>
+    <h2 id="checktitle"></h2>
+    <div class="choices" id="checkchoices"></div>
+    <p class="verdict" id="checkverdict"></p>
+  </div>
+</div>
+
+<!-- the 3D overlay: a LessonShell is built into it on open and destroyed on close -->
+<div id="scenemodal" class="scene-modal" hidden>
+  <button class="sclose" aria-label="Close" type="button">&times;</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="kit/app.js" data-shell="steps" data-use="AnimalCell,Mitochondrion,RespirationReaction,Chemiosmosis"></script>
+<script src="kit/modal.js"></script>
+<script>
+/* ---- the data the chart is drawn from ---------------------------------- */
+const PW = ['glycolysis', 'pyruvate-oxidation', 'krebs', 'electron-transport'];
+const HUE = { glycolysis: 'coral', 'pyruvate-oxidation': 'amber', krebs: 'green', 'electron-transport': 'blue' };
+const HERO = { glycolysis: 'glycolysis/4', 'pyruvate-oxidation': 'pyruvate-oxidation/1', krebs: 'krebs/3' };
+const pwName  = p => RespirationSteps.PATHWAYS[p].name;
+const pwWhere = p => RespirationSteps.PATHWAYS[p].where;
+const chainSteps = () => RespirationReaction.steps('electron-transport');
+
+/* Per glucose: each step's yield times how often it runs. */
+function tally(p) {
+  const t = { atp: 0, nadh: 0, fadh2: 0, co2: 0 };
+  for (const s of RespirationReaction.steps(p)) {
+    const k = s.perGlucose || 1;
+    for (const y of Object.keys(t)) t[y] += (s.yields[y] || 0) * k;
+  }
+  return t;
+}
+const protonsPer = branch => chainSteps().filter(s => !s.branch || s.branch === branch).reduce((n, s) => n + (s.yields.protons || 0), 0);
+const fmtYield = t => [t.atp && `${t.atp} ATP`, t.nadh && `${t.nadh} NADH`, t.fadh2 && `${t.fadh2} FADH₂`, t.co2 && `${t.co2} CO₂`].filter(Boolean).join(' · ');
+
+/* ---- the words ----------------------------------------------------------- */
+const COPY = {
+  glycolysis: {
+    h: 'Glucose is cut in half',
+    claim: '<b>Ten enzymes, one goal:</b> split a six-carbon sugar into two three-carbon pyruvates, and pocket a little ATP on the way. Two ATP go in before any come out, which is why the first half is called the investment phase.',
+    q: 'One glucose goes in. How many pyruvate come out?', choices: [['1', 0], ['2', 1], ['3', 0], ['6', 0]],
+    right: 'Yes. Everything after the split happens twice per glucose, which is what the ×2 badge on a reaction means.',
+    wrong: 'Count carbons: six in, and pyruvate has three.',
+    deep: { title: 'Walk all ten steps', sub: 'Same camera for the whole pathway, so a molecule shrinking means it lost a carbon', img: 'respiration', open: 'walk/glycolysis' },
+  },
+  'pyruvate-oxidation': {
+    h: 'Pyruvate is stripped to two carbons',
+    claim: '<b>One reaction is the bridge into the mitochondrion.</b> A carbon leaves as CO₂, a pair of electrons goes onto NAD⁺, and what is left is bolted onto coenzyme A. Everything downstream needs the fuel to arrive in this form.',
+    q: 'Where does this reaction happen?', choices: [['Cytosol', 0], ['Mitochondrial matrix', 1], ['Inner membrane', 0], ['Nucleus', 0]],
+    right: 'Right. Pyruvate crosses two membranes to get here. The branch to the right shows both.',
+    wrong: 'Glycolysis was in the cytosol. This step is one rung further in.',
+    deep: { title: 'The two membranes it crosses', sub: 'One mitochondrion cut open: a porin in the outer membrane, and one folded inner membrane', img: 'mitochondrion', open: 'mito' },
+  },
+  krebs: {
+    h: 'The cycle burns the carbons off',
+    claim: '<b>Eight steps around a ring.</b> The two carbons that came in as acetyl-CoA leave as CO₂ while NAD⁺ and FAD collect the electrons. Only one step makes ATP directly. The cycle\'s real product is loaded carriers.',
+    q: 'What does the Krebs cycle mostly produce?', choices: [['ATP', 0], ['Loaded carriers: NADH and FADH₂', 1], ['Glucose', 0], ['Oxygen', 0]],
+    right: 'Yes. The carriers hold the energy now, and the next stage is where it becomes ATP.',
+    wrong: 'Open the ring and watch the yields: ATP appears once.',
+    deep: { title: 'Walk all eight steps', sub: 'Around the ring once, with the carbon count on every plate', img: 'respiration', open: 'walk/krebs' },
+  },
+  'electron-transport': {
+    h: 'The carriers pay out',
+    claim: '<b>NADH hands its electrons to a complex in the inner membrane, the complex pumps protons out, and the protons come back through a turbine that makes ATP.</b> Oxygen is where the electrons end up. Take it away and the whole chain backs up.',
+    q: 'Why do you need to breathe oxygen?', choices: [['To make CO₂', 0], ['To take the electrons at the end of the chain', 1], ['To power glycolysis', 0], ['To split glucose', 0]],
+    right: 'Yes. Water is what electrons landing on O₂ makes. The split chain has an oxygen switch to prove it.',
+    wrong: 'Watch where the electrons go after the last complex.',
+    deep: { title: 'Split the chain into complexes', sub: 'Send one NADH or one FADH₂ through and count what it buys. Then turn the oxygen off', img: 'chemiosmosis', open: 'split' },
+  },
+};
+const QUESTS = {
+  'electron-transport': [
+    { title: 'Poke a hole in the membrane', sub: 'An uncoupler lets protons home without making ATP. The energy leaves as heat: brown fat, and the diet poison DNP', img: 'chemiosmosis', open: 'uncouple' },
+    { title: 'What happens without oxygen?', sub: 'Fermentation: two branches, and why the point is getting NAD⁺ back', href: 'fermentation-lab.html' },
+  ],
+  krebs: [
+    { title: 'Where does the carbon go next?', sub: 'The CO₂ you breathe out is a tree\'s mass. Van Helmont\'s willow', href: 'tree/tree-lab.html' },
+  ],
+};
+
+/* ---- passed checkpoints, kept across reloads --------------------------- */
+const KEY = 'respiration-lab.passed';
+const passed = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })();
+const savePassed = () => { try { localStorage.setItem(KEY, JSON.stringify(passed)); } catch (e) {} };
+
+/* ---- the chart ----------------------------------------------------------- */
+function branchCard(b) {
+  const inner = `${b.img ? `<img src="media/components/${b.img}.webp" alt="">` : ''}<div class="bt"><span class="kick ${b.href ? 'quest' : 'deeper'}">${b.href ? 'Side quest' : 'Go deeper'}</span><b>${b.title}</b><small>${b.sub}</small></div>`;
+  return b.href ? `<a class="branch" href="${b.href}">${inner}</a>` : `<button class="branch" type="button" data-open="${b.open}">${inner}</button>`;
+}
+function spineFor(p, i) {
+  const steps = RespirationReaction.steps(p);
+  const node = s => `<li data-name="${s.name}" style="--i:${s.n - 1}"><button class="node node--step" type="button" data-open="step/${s.id}" title="${s.n}. ${s.name} · ${s.enzyme}">${s.n}</button></li>`;
+  let list;
+  if (p === 'krebs') list = `<ol class="steps ring">${steps.map(node).join('')}</ol>`;
+  else if (p === 'electron-transport') {
+    const nadh = steps.filter(s => s.branch === 'nadh'), fadh = steps.filter(s => s.branch === 'fadh2'), rest = steps.filter(s => !s.branch);
+    list = `<div class="entries"><b>NADH</b> enters at complex ${nadh.map(s => s.n).join('')}</div><ol class="steps">${nadh.map(node).join('')}</ol>
+      <div class="entries"><b>FADH₂</b> enters lower, at complex ${fadh.map(s => s.n).join('')}</div><ol class="steps">${fadh.map(node).join('')}${rest.map(node).join('')}</ol>`;
+  } else list = `<ol class="steps">${steps.map(node).join('')}</ol>`;
+  const x2 = p === 'krebs' ? `<span class="x2">×2 turns per glucose</span>` : (steps.some(s => s.perGlucose > 1) ? `<span class="x2">×2 after the split</span>` : '');
+  return `<button class="node node--stage" type="button" data-open="mech/${p}"><span class="n">Stage ${i + 1}</span><b>${pwName(p)}</b><small>${pwWhere(p)}</small></button>
+    ${list}${x2}
+    <button class="node node--check ${passed[p] ? 'is-passed' : ''}" type="button" data-check="${p}" aria-label="Checkpoint: ${pwName(p)}">${passed[p] ? '✓' : '?'}</button>`;
+}
+function stageFor(p, i) {
+  const c = COPY[p], t = tally(p);
+  const facts = p === 'electron-transport'
+    ? [['Where', pwWhere(p)], ['Per NADH', `${protonsPer('nadh')} H⁺ pumped`], ['Per FADH₂', `${protonsPer('fadh2')} H⁺ pumped`]]
+    : [['Where', pwWhere(p)], ['Per glucose', fmtYield(t) || 'rearranges only'], ['Reactions', String(RespirationReaction.steps(p).length)]];
+  const branches = [c.deep, ...(QUESTS[p] || [])].map(branchCard).join('');
+  return `<section class="stage" id="${p}" style="--hue: var(--hue-${HUE[p]})">
+    <div class="spine">${spineFor(p, i)}</div>
+    <div class="content">
+      <p class="eyebrow"><i></i> Stage ${i + 1} · Level 1</p>
+      <h2>${c.h}</h2>
+      <p class="claim">${c.claim}</p>
+      <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+      <div class="actions"><button class="cta" type="button" data-open="mech/${p}">Open the mechanism</button><button class="cta cta--ghost" type="button" data-check="${p}">Checkpoint</button></div>
+    </div>
+    <aside class="branches" aria-label="Branches">${branches}</aside>
+  </section>`;
+}
+document.getElementById('chart').innerHTML = PW.map(stageFor).join('');
+
+/* the wrap's tally, from the same table */
+(() => {
+  const t = PW.filter(p => p !== 'electron-transport').map(tally).reduce((a, b) => ({ atp: a.atp + b.atp, nadh: a.nadh + b.nadh, fadh2: a.fadh2 + b.fadh2, co2: a.co2 + b.co2 }));
+  document.getElementById('tally').innerHTML = `
+    <div><dt>ATP made directly</dt><dd>${t.atp}<small>per glucose, before the chain</small></dd></div>
+    <div><dt>Carriers loaded</dt><dd>${t.nadh + t.fadh2}<small>${t.nadh} NADH worth ${protonsPer('nadh')} H⁺ each · ${t.fadh2} FADH₂ worth ${protonsPer('fadh2')}</small></dd></div>
+    <div><dt>CO₂ breathed out</dt><dd>${t.co2}<small>six carbons in, six out</small></dd></div>`;
+})();
+
+/* ---- checkpoints --------------------------------------------------------- */
+const checkModal = Modal.create({ el: 'checkmodal' });
+function openCheck(p) {
+  const c = COPY[p];
+  document.getElementById('checkkick').textContent = `Checkpoint · ${pwName(p)}`;
+  document.getElementById('checktitle').textContent = c.q;
+  const box = document.getElementById('checkchoices'), verdict = document.getElementById('checkverdict');
+  verdict.textContent = passed[p] ? c.right : '';
+  box.innerHTML = c.choices.map(([t, ok], i) => `<button class="choice ${passed[p] && ok ? 'is-right' : ''}" type="button" data-i="${i}">${t}</button>`).join('');
+  for (const b of box.querySelectorAll('.choice')) b.onclick = () => {
+    const ok = !!c.choices[+b.dataset.i][1];
+    b.classList.add(ok ? 'is-right' : 'is-wrong');
+    verdict.textContent = ok ? c.right : c.wrong;
+    if (ok) {
+      passed[p] = true; savePassed();
+      for (const n of document.querySelectorAll(`.node--check[data-check="${p}"]`)) { n.classList.add('is-passed'); n.textContent = '✓'; }
+    }
+  };
+  checkModal.show();
+}
+
+/* ---- the 3D modal -------------------------------------------------------- */
+/* One overlay, one LessonShell at a time. The shell is built into the overlay
+   on open (LessonShell's `host`) and destroyed on close, which gives every
+   WebGL context back and takes body.lshell-page off the document again. */
+const overlay = document.getElementById('scenemodal');
+let shell = null, scrollY = 0, opener = null;
+
+function closeScene() {
+  if (!shell) return;
+  shell.destroy(); shell = null;
+  overlay.hidden = true;
+  document.documentElement.style.overflow = '';
+  window.scrollTo(0, scrollY);
+  if (location.hash.startsWith('#open=')) history.replaceState(null, '', location.pathname + location.search);
+  if (opener) { opener.focus(); opener = null; }
+}
+overlay.querySelector('.sclose').addEventListener('click', closeScene);
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && shell && !Modal.anyOpen()) closeScene(); });
+
+function openScene(id, from) {
+  const spec = sceneSpec(id);
+  if (!spec) return;
+  closeScene();
+  opener = from || null;
+  scrollY = window.scrollY;
+  overlay.hidden = false;
+  document.documentElement.style.overflow = 'hidden';
+  history.replaceState(null, '', `#open=${id}`);
+  shell = LessonShell.create(Object.assign({ host: overlay, hint: 'Drag to orbit · Scroll to zoom', chrome: 'none' }, spec.shell));
+  spec.mount(shell);
+  shell.goTo(0);
+}
+
+/* The chips for one pathway's steps, and the readout under them. Both read
+   the component, so the stage and the panel cannot name different steps. */
+function wireReaction(R, p, ctx) {
+  const chips = () => {
+    const el = ctx.q('.steplist'); if (!el) return;
+    const cur = R.state() && R.state().id;
+    el.innerHTML = RespirationReaction.steps(p).filter(s => p !== 'electron-transport' || s.branch !== 'fadh2')
+      .map(s => `<button type="button" class="chip ${s.id === cur ? 'is-on' : ''}" data-id="${s.id}" title="${s.enzyme}">${s.n}</button>`).join('');
+    for (const b of el.querySelectorAll('.chip')) b.onclick = () => R.set({ step: b.dataset.id });
+  };
+  const readout = () => {
+    const s = R.state(); if (!s || !ctx.q('#enzyme')) return;
+    ctx.q('#stepname').textContent = `${s.n}. ${s.name}`;
+    ctx.q('#enzyme').textContent = s.enzyme;
+    const y = s.yields, parts = [];
+    if (y.atp > 0) parts.push(`${y.atp} ATP made`); if (y.atp < 0) parts.push(`${-y.atp} ATP spent`);
+    if (y.nadh) parts.push(`${y.nadh} NADH`); if (y.fadh2) parts.push(`${y.fadh2} FADH₂`);
+    if (y.co2) parts.push(`${y.co2} CO₂ leaves`); if (y.protons) parts.push(`${y.protons} H⁺ pumped`);
+    ctx.q('#yield').textContent = (parts.join(' · ') || 'rearranges only') + (s.x2 > 1 ? ` · ×${s.x2}` : '');
+    const run = ctx.q('#run'); run.disabled = s.phase !== 'ready';
+    run.textContent = s.phase === 'done' ? 'Done' : (s.act || 'Run it');
+  };
+  chips(); readout();
+  ctx.q('#run').onclick = () => R.run();
+  const next = ctx.q('#nextstep'); if (next) next.onclick = () => { const s = R.state(); if (s && s.next) R.set({ step: s.next }); };
+  R.on('step', () => { chips(); readout(); });
+  R.on('frame', readout);
+}
+const REACTION_CONTROLS = walk => `
+  <div class="chips steplist"></div>
+  <div class="stats one">
+    <div class="stat"><span class="stat-label">Step</span><span class="stat-value" id="stepname"></span><span class="stat-sub" id="enzyme"></span></div>
+    <div class="stat"><span class="stat-label">This step yields</span><span class="stat-value" id="yield"></span></div>
+  </div>
+  ${walk ? '<div class="choices"><button class="btn secondary" id="run" type="button">Run it</button><button class="btn secondary" id="nextstep" type="button">Next step</button></div>'
+         : '<button class="btn secondary" id="run" type="button">Run it</button>'}`;
+
+const CHEMI = extra => shell => { shell.ctx.G = Chemiosmosis.mount(shell.stage, Object.assign({ context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'inner', viewOffset: shell.viewOffset }, extra)); };
+const REACT = (step, fit) => shell => { shell.ctx.R = RespirationReaction.mount(shell.stage, { step, fit, x2: true, click: true, viewOffset: shell.viewOffset }); };
+
+function sceneSpec(id) {
+  const [kind, ...rest] = id.split('/');
+  const p = rest.join('/');
+  const one = (step, mount) => ({ shell: { brand: step.brand, steps: [step] }, mount });
+  if (kind === 'cell') return one({
+    brand: 'The cell', eyebrow: 'Level 0 · Where it happens', title: 'One cell, two places',
+    body: '<p class="lead"><strong>Glycolysis runs in the cytosol. The other three stages run inside a mitochondrion.</strong></p><p>Click a mitochondrion to fly to it, and it resolves into its two membranes. Double-click to come home.</p>',
+    onEnter(ctx) { ctx.controls(''); ctx.showPanel(ctx.C, { notes: ['mitochondrion', 'membrane'], zoom: ['mitochondrion'] }); },
+  }, shell => { shell.ctx.C = AnimalCell.mount(shell.stage, { motion: 1, viewOffset: shell.viewOffset }); });
+
+  if (kind === 'mech' && p === 'electron-transport') return one({
+    brand: pwName(p), eyebrow: 'Level 2 · Mechanism', title: COPY[p].h,
+    body: '<p class="lead"><strong>Burning fuel pumps protons out. The gradient turns a turbine, and the turbine makes ATP.</strong></p><p>One complex stands for the whole chain here. The branch on the page splits it into four.</p>',
+    onEnter(ctx) { ctx.controls(''); ctx.showPanel(ctx.G); },
+  }, CHEMI({}));
+
+  if (kind === 'mech' || kind === 'step') {
+    const step = kind === 'mech' ? HERO[p] : p;
+    const pw = step.split('/')[0];
+    const s0 = RespirationSteps.get(step);
+    if (!s0) return null;
+    return one({
+      brand: pwName(pw), eyebrow: 'Level 2 · Mechanism', title: kind === 'mech' ? COPY[pw].h : `${s0.n}. ${s0.name}`,
+      body: kind === 'mech'
+        ? `<p class="lead"><strong>${COPY[pw].claim.replace(/<\/?b>/g, '')}</strong></p><p>Click the glowing bond to run the step on stage. The numbered chips are the other steps, in order.</p>`
+        : '<p class="lead"><strong>Click the glowing bond to run this step.</strong></p><p>The chips move along the pathway. The plate under the substrate says how many times it happens per glucose.</p>',
+      onEnter(ctx) { ctx.controls(REACTION_CONTROLS(false)); wireReaction(ctx.R, pw, ctx); },
+    }, REACT(step, 'step'));
+  }
+  if (kind === 'walk') return one({
+    brand: `${pwName(p)} · every step`, eyebrow: 'Level 3 · Every step', title: p === 'krebs' ? 'Once around the ring' : 'All ten, in order',
+    body: '<p class="lead"><strong>Same camera for the whole pathway</strong>, so when a molecule shrinks on stage it lost a carbon for real.</p><p>Run each step, then Next step. The yields add up to the numbers on the page.</p>',
+    onEnter(ctx) { ctx.controls(REACTION_CONTROLS(true)); wireReaction(ctx.R, p, ctx); },
+  }, REACT(`${p}/1`, 'pathway'));
+
+  if (kind === 'mito') return one({
+    brand: 'The mitochondrion', eyebrow: 'Level 3 · Architecture', title: 'Two membranes, and only one holds a gradient',
+    body: '<p class="lead"><strong>Pyruvate crosses the outer membrane through a porin, then the inner membrane through a carrier, and only then is it in the matrix.</strong></p><p>Every fold you see is one continuous inner membrane. The inside of a fold is outside the matrix.</p>',
+    onEnter(ctx) { ctx.controls(''); ctx.M.notes(['porin', 'matrix']); ctx.showPanel(ctx.M, { notes: ['porin', 'matrix', 'crista'], zoom: ['crista', 'synthase'] }); },
+  }, shell => { shell.ctx.M = Mitochondrion.mount(shell.stage, { flow: 0.6, viewOffset: shell.viewOffset }); });
+
+  if (kind === 'split') return one({
+    brand: 'The chain, split', eyebrow: 'Level 3 · The split chain', title: 'What one carrier buys',
+    body: '<p class="lead"><strong>Send one carrier through and count the protons.</strong> FADH₂ enters at complex II, which pumps nothing, so the same pair of electrons buys fewer protons and less ATP.</p><p>With no oxygen the last complex has nowhere to put its electrons, and the backup runs all the way to NADH.</p>',
+    onEnter(ctx) {
+      const G = ctx.G;
+      ctx.controls(`
+        <div class="choices"><button class="btn secondary" id="feedN" type="button">Send one NADH</button><button class="btn secondary" id="feedF" type="button">Send one FADH₂</button></div>
+        <div class="stats">
+          <div class="stat"><span class="stat-label">H⁺ per NADH</span><span class="stat-value" id="pN"></span></div>
+          <div class="stat"><span class="stat-label">H⁺ per FADH₂</span><span class="stat-value" id="pF"></span></div>
+          <div class="stat"><span class="stat-label">ATP made</span><span class="stat-value" id="atp"></span></div>
+          <div class="stat"><span class="stat-label">The chain is</span><span class="stat-value" id="beat"></span></div>
+        </div>
+        <div class="segmented" id="o2"><button type="button" class="is-on" data-v="1">Oxygen on</button><button type="button" data-v="0">No oxygen</button></div>`);
+      ctx.q('#feedN').onclick = () => G.feed('NADH');
+      ctx.q('#feedF').onclick = () => G.feed('FADH2');
+      for (const b of ctx.qa('#o2 button')) b.onclick = () => { G.set({ oxygen: b.dataset.v === '1' }); for (const x of ctx.qa('#o2 button')) x.classList.toggle('is-on', x === b); };
+      G.on('frame', s => {
+        const w = (id, v) => { const e = ctx.q(id); if (e) e.textContent = v; };
+        w('#atp', s.atpMade); w('#beat', s.complexLabel || '');
+        if (s.protonsPerFuel) { w('#pN', s.protonsPerFuel.NADH); w('#pF', s.protonsPerFuel.FADH2); }
+      });
+    },
+  }, CHEMI({ chain: 'split', fuelRate: 0 }));
+
+  if (kind === 'uncouple') return one({
+    brand: 'Side quest · the leak', eyebrow: 'Side quest', title: 'Poke a hole in the membrane',
+    body: '<p class="lead"><strong>Protons come home without making ATP, and the energy leaves as heat.</strong></p><p>Newborns and hibernating animals do this on purpose in brown fat. It is also how the diet drug DNP killed people in the 1930s.</p>',
+    onEnter(ctx) {
+      const G = ctx.G;
+      ctx.controls(`
+        <div class="segmented" id="leak"><button type="button" class="is-on" data-v="0">Sealed</button><button type="button" data-v="1">Uncoupled</button></div>
+        <div class="stats">
+          <div class="stat"><span class="stat-label">ATP made</span><span class="stat-value" id="atp"></span></div>
+          <div class="stat"><span class="stat-label">Protons leaked</span><span class="stat-value" id="leaked"></span></div>
+        </div>`);
+      for (const b of ctx.qa('#leak button')) b.onclick = () => {
+        G.set({ proteins: { complex: { x: -80 }, synthase: { x: 40 }, leak: b.dataset.v === '1' ? { x: -20 } : null } });
+        for (const x of ctx.qa('#leak button')) x.classList.toggle('is-on', x === b);
+      };
+      G.on('frame', s => { const a = ctx.q('#atp'), l = ctx.q('#leaked'); if (a) a.textContent = s.atpMade; if (l) l.textContent = s.protonsLeaked; });
+    },
+  }, CHEMI({}));
+  return null;
+}
+
+/* ---- wiring -------------------------------------------------------------- */
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-open]'); if (o) { openScene(o.dataset.open, o); return; }
+  const c = e.target.closest('[data-check]'); if (c) openCheck(c.dataset.check);
+});
+/* a teacher's link straight to one modal */
+const m = /[#&]open=([\w\/-]+)/.exec(location.hash);
+if (m) openScene(m[1]);
+</script>
+</body>
+</html>
