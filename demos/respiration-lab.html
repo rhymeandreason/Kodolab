@@ -537,11 +537,11 @@
     chemi.set({ chain: 'split', fuel: null });
     if (!chemi.feed(f)) return;
     sent[f]++;
-    chemi.clearNotes(); chemi.note('complex.' + DOOR[f]);
     buttons();
   });
   function etcArm() {
     etc.hidden = false;
+    chemi.clearNotes(); chemi.note('synthase', { offset: [-70, 44] });
     count();
     setInterval(count, 250);
     const top = etc.offsetTop + etc.offsetHeight + 40 - scroller.clientHeight;

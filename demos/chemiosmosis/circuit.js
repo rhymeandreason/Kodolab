@@ -1495,7 +1495,7 @@
       { cls:'chem-band', y: () => PLASMA_Y + 46, text: () => cell.state().sides.outside },
       { cls:'chem-band', y: () => (PLASMA_Y + OUTER_Y) / 2, text: () => cell.state().sides.inside },
       { cls:'chem-band', y: () => (OUTER_Y + INNER_Y) / 2, text: () => mito.state().sides.outside },
-      { cls:'chem-band', y: () => INNER_Y - 52, text: () => mito.state().sides.inside },
+      { cls:'chem-band', y: () => INNER_Y - 78, text: () => mito.state().sides.inside },
     ];
     for (const L of LABELS) { L.el = document.createElement('div'); L.el.className = L.cls; el.appendChild(L.el); }
     /* THE SHEETS AND PROTEINS ARE NAMED ON HOVER, not down the edge: names on
