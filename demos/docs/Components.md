@@ -619,6 +619,7 @@ const C = AnimalCell.mount(el, {
   motion: 1,        // 0..3 the jiggle and the vesicle runs; 0 stops the cell dead
   seed: 1234,       // a different seed is a different arrangement (rebuild)
   detail: 'auto',   // 'auto' resolves the mitochondrion a click flies to; 'low' never; 'high' all five, and costs it
+  clickToFly: true, // false: a click still fires 'pick' but the camera stays where the page put it
 });
 ```
 

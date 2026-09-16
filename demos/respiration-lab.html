@@ -290,7 +290,7 @@
 
   const centred = () => ({ x: 0, y: 0 });
   const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', viewOffset: centred }));
-  const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 0.62, phi: 0.92, r: 46 }, viewOffset: centred }));
+  const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
   const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', viewOffset: centred,
   }));
@@ -343,6 +343,10 @@
     })(t0);
   }
   const INNER_Y = -85;
+  /* Closer and more from above than the organelle's home, so the cut face
+     and the folds fill the frame. */
+  const MITO_VIEW = { theta: 2.6, phi: 0.7, r: 24 };
+  const CRISTA_VIEW = { theta: 2.6, phi: 1.15, r: 8 };
   /* A mitochondrion in its neighbourhood: the cell's own click-flight lands
      2.6 radii out and centred, which is a portrait; this stops at four and
      looks past it, so it sits up and to the left with cytoplasm and the
@@ -368,7 +372,7 @@
   const PHASES = {
     cell()  { shell.showScene('cell');  cell.home(); },
     fly()   { shell.showScene('cell');  frameMito(); },
-    mito()  { shell.showScene('mito');  mito.home(); },
+    mito()  { shell.showScene('mito');  mito.box.flyTo(MITO_VIEW); },
     chemi() {
       shell.showScene('chemi');
       chemi.set({ chain: 'lumped' });
@@ -411,14 +415,17 @@
     { label: 'Enter the cell', hold: 2200, run() { go('fly'); reveal(1); } },
     /* The organelle arrives wide and closes in over three seconds. */
     { label: 'Enter the mitochondria', hold: 3600, run() {
-      go('mito'); mito.home(3.2); reveal(2);
+      go('mito'); mito.box.flyTo(MITO_VIEW, 3.2); reveal(2);
     } },
     /* The hold outlasts the zoom: arming the scroll reads the phase off the
        panel, and read early it would already say 'etc' and the zoom would
        be skipped as a repeat. */
-    { label: 'Electron transport chain', hold: 3000, run() {
-      go('chemi'); reveal(3);
-      setTimeout(() => go('etc'), 2400);
+    /* Into the cristae first, so the membrane the next scene is cut from is
+       the one on screen when it fades in. */
+    { label: 'Electron transport chain', hold: 5000, run() {
+      mito.box.flyTo(CRISTA_VIEW, 1.8); reveal(3);
+      setTimeout(() => go('chemi'), 2000);
+      setTimeout(() => go('etc'), 4400);
     } },
   ];
   let step = 0;

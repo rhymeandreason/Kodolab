@@ -26,7 +26,7 @@
  *
  *  THE COMPONENT CONTRACT (docs/AddingAComponent.md, docs/Components.md):
  *
- *      params   motion 0..3 (default 1, live) · seed, tilt (rebuild only)
+ *      params   motion 0..3 (default 1, live) · seed, tilt (rebuild only) · clickToFly (default true)
  *      state()  motion · hovered · counts (per organelle) · shown
  *      events   frame · hover · pick
  *      parts    membrane · nucleus · er · golgi · mitochondrion ·
@@ -593,15 +593,18 @@
       const r = canvas.getBoundingClientRect();
       return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 };
     };
-    canvas.addEventListener('pointermove', e => { ndc = toNdc(e); canvas.style.cursor = sim && sim.pick(ndc) ? 'pointer' : 'grab'; });
+    /* clickToFly:false keeps hover and 'pick' and drops the flights, for a
+       page whose camera is scripted: a click that flew would fight it. */
+    const clickToFly = params.clickToFly !== false;
+    canvas.addEventListener('pointermove', e => { ndc = toNdc(e); canvas.style.cursor = sim && clickToFly && sim.pick(ndc) ? 'pointer' : 'grab'; });
     canvas.addEventListener('pointerleave', () => { ndc = null; });
     canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; fly.active = false; });
     canvas.addEventListener('pointerup', e => {
       if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
       const hit = sim.pick(toNdc(e));
-      if (hit) { focusOn(hit); sim.emit('pick', hit.userData.organelle); }
+      if (hit) { if (clickToFly) focusOn(hit); sim.emit('pick', hit.userData.organelle); }
     });
-    canvas.addEventListener('dblclick', goHome);
+    canvas.addEventListener('dblclick', () => { if (clickToFly) goHome(); });
 
     sim = create(THREE, box.root, box.camera, params);
     box.pump();
