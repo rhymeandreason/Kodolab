@@ -482,6 +482,14 @@
     function o2Reduce() {
       if (!o2 || o2.electrons >= E_PER_O2) return;
       o2.electrons += E_PER_TURN;
+      /* A HALF-REDUCED O₂ IS BOUND IN IV'S ACTIVE SITE, not loose in the
+         matrix: it moves into the protein and loses its pill, so a lone
+         NADH does not leave an O₂ parked beside the complex. */
+      if (o2.electrons < E_PER_O2) {
+        o2.to = { x: o2X(), y: -pumpDir() * HALF * 0.4, z: 0 };
+        const tag = o2.obj.userData.tag;
+        if (tag) { kit.forget(tag); o2.obj.remove(tag); o2.obj.userData.tag = null; }
+      }
       for (let i = 0; i < E_PER_TURN; i++) {
         const r = { obj: eng.chargedIon('H'), x: o2.to.x + (i ? 16 : -8), y: -pumpDir() * (H_() + 38),
                     off: { x: (i ? 1 : -1) * 3.5, y: -pumpDir() * (o2.electrons === E_PER_O2 ? 4 : -1) } };
@@ -713,10 +721,13 @@
               r.warned = true;
               console.warn('Chemiosmosis: the complex is fuelled but ' + CHEM.sideName(P.context, pumpDir() > 0 ? 'inside' : 'outside') + ' has no protons to load. Give contents an H count on that side.');
             }
-          } else { r.busy = true; r.starved = false; if (o.load) o.load(); }
+          } else {
+            /* The carrier arrives when a turn is paid for, not when the
+               machine idles at binding, or an unfed chain parks its NADH. */
+            r.busy = true; r.starved = false; if (o.load) o.load(); if (o.onLoad) o.onLoad();
+          }
         }
         if (st.phase !== r.phase) {
-          if (st.phase === 'load-H' && o.onLoad) o.onLoad();
           if (st.phase === 'occlude' && o.onOcclude) o.onOcclude();
           /* The proton is set down at the START of the empty half, so the two
              beats that follow are visibly carrying nothing. */
