@@ -271,7 +271,7 @@ function attach(box){
        without the γ phosphoryl, the four atoms the spec names. */
     function molecule(kind){
       return take(kind, () => {
-        const spec = MolLib.MOLECULES[kind === 'pi' ? 'pi' : 'atp'];
+        const spec = MolLib.MOLECULES[kind === 'pi' ? 'pi' : 'atpSkel'];
         const g = Stage.buildMolecule(spec, { center: true });
         if(kind === 'adp'){
           const gone = new Set(spec.gly.gamma), nb = (spec.bonds || []).length;
