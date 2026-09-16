@@ -1344,10 +1344,31 @@
         }
         return new V3(rr(-L, L), -0.4 * r, 0);
       };
+      /* A nucleoid goes in the widest pocket at an end, past the last
+         fold: the lobes between folds are narrower than the loop, and a
+         random point that clears the ribbon's centreline still lets the
+         loop's wobble cut a membrane. Scored on every sample. */
+      const nucleoidPt = (side) => {
+        let best = null, bestD = -1;
+        for (let a = 0; a <= 16; a++) for (let b = 0; b <= 12; b++) {
+          const x = side * (Li * 0.45 + (Li + ri * 0.6 - Li * 0.45) * (a / 16));
+          const rho = Math.max(1e-3, rhoAt(x) - gapIM);
+          const z = (b / 6 - 1) * 0.8 * rho;
+          let d = Infinity;
+          for (let i = 0; i < n; i++) {
+            const dx = pts[i].x - x, dz = pts[i].z - z;
+            d = Math.min(d, dx * dx + dz * dz);
+          }
+          if (d > bestD) { bestD = d; best = [x, z, rho]; }
+        }
+        const [x, z, rho] = best;
+        const floor = -Math.sqrt(Math.max(0.0001, rho * rho - z * z));
+        return new V3(x, floor * 0.5, z);
+      };
       {
         const dnaMat = mat({ color: ORG.mitochondrion.dna, roughness: 0.55, clearcoat: 0.1 });
         for (let i = 0; i < (o.dna === undefined ? 2 : o.dna); i++) {
-          const c = matrixPt(ribbonT * 2.4 + 0.13 * r), loop = [];
+          const c = nucleoidPt(i % 2 ? 1 : -1), loop = [];
           for (let k = 0; k <= 24; k++) {
             const A = (k / 24) * 2 * PI, wob = 1 + 0.34 * Math.sin(A * 3 + i) + 0.2 * Math.sin(A * 5 + i * 2);
             loop.push(new V3(c.x + Math.cos(A) * 0.11 * r * wob, c.y + 0.035 * r * Math.sin(A * 2 + i), c.z + Math.sin(A) * 0.11 * r * wob));
