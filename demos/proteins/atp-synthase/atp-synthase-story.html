@@ -450,7 +450,7 @@ const flow = (() => {
         const R = () => Math.random() * 2 - 1;
         const start = geo.from.clone().addScaledVector(geo.u, REACH * (0.8 + 0.4 * Math.random()))
           .addScaledVector(geo.w, 40 * R()).addScaledVector(geo.A, 20 * R());
-        const waves = [0, 1].map(() => ({ f: 1.5 + 2 * Math.random(), ph: Math.random() * 6.28 }));
+        const waves = [0, 1].map(() => ({ f: 0.8 + 0.8 * Math.random(), ph: Math.random() * 6.28 }));
         live.push({ kind: 'H', m: proton(), g, phase: 'in', clock: 0, at: now, start, waves });
       }
     }
@@ -469,14 +469,15 @@ const flow = (() => {
       let done = false;
       if(x.kind === 'H'){
         if(x.phase === 'in'){
-          /* A diffusing ion: straight-line approach plus wobble that dies out
-             as it reaches the half-channel, then a short hop onto Glu58. */
-          const k = Math.min(1, x.clock / APPROACH), e = ease(k), fade = 1 - e;
-          const [a, b] = x.waves;
-          x.m.position.copy(x.start).lerp(e < .85 ? geo.from : gluAt(x.g, now), e < .85 ? e / .85 : (e - .85) / .15);
-          if(e >= .85) x.m.position.copy(geo.from).lerp(gluAt(x.g, now), (e - .85) / .15);
-          x.m.position.addScaledVector(geo.w, WOBBLE * fade * Math.sin(a.f * x.clock * 6.28 / APPROACH * 2 + a.ph))
-            .addScaledVector(geo.A, WOBBLE * fade * Math.sin(b.f * x.clock * 6.28 / APPROACH * 2 + b.ph));
+          /* A diffusing ion: one eased curve from its start, past the
+             half-channel's mouth, onto Glu58, with a slow wobble that dies
+             out on arrival. */
+          const k = Math.min(1, x.clock / APPROACH), e = ease(k), fade = Math.sin(Math.PI * e);
+          const [a, b] = x.waves, end = gluAt(x.g, now);
+          x.m.position.copy(x.start).multiplyScalar((1 - e) * (1 - e))
+            .addScaledVector(geo.from, 2 * e * (1 - e)).addScaledVector(end, e * e)
+            .addScaledVector(geo.w, WOBBLE * fade * Math.sin(6.28 * a.f * e + a.ph))
+            .addScaledVector(geo.A, WOBBLE * fade * Math.sin(6.28 * b.f * e + b.ph));
           if(k >= 1){ x.phase = 'ride'; x.at = now; }
         } else if(x.phase === 'ride'){
           x.m.position.copy(gluAt(x.g, now));
@@ -522,10 +523,10 @@ const flow = (() => {
 
 /* The inner membrane, DRAWN: no lipid is in the file. Centred on the c-ring's
    middle along the spin axis, which is where the ring sits in the bilayer.
-   One faint grey band, the bilayer's ~46 Å, heads included: a flat strip
-   through the axis, swung about it to face the camera, so from any view it
+   One faint grey band, the bilayer's ~46 Å, heads included: a gently bent
+   strip through the axis, bowed away from and swung about it to face the camera, so from any view it
    reads as a membrane in section. */
-const BILAYER = 46, SHEET_R = 260;   // Å
+const BILAYER = 46, SHEET_R = 260, BEND_R = 520;   // Å; BEND_R is the strip's radius of curvature
 const BAND = 0x9a9a9a;
 const WORD_H = 12;   // Å
 function word(text, at){
@@ -545,7 +546,9 @@ function word(text, at){
 function membrane(t){
   const A = new THREE.Vector3(...t.spin.axis).normalize(), P = new THREE.Vector3(...t.spin.point);
   const mid = new THREE.Vector3(...centroidOf(t, chainsOf(t, 'c'))).sub(P).dot(A);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(2 * SHEET_R, BILAYER),
+  const arc = new THREE.CylinderGeometry(BEND_R, BEND_R, BILAYER, 48, 1, true,
+    -SHEET_R / BEND_R, 2 * SHEET_R / BEND_R).translate(0, 0, -BEND_R).scale(1, 1, -1);   // ends toward the camera, as in the respiration lesson
+  const m = new THREE.Mesh(arc,
     new THREE.MeshBasicMaterial({ color: BAND, transparent: true, opacity: .14, depthWrite: false, side: THREE.DoubleSide }));
   m.renderOrder = -1;
   m.position.copy(P).addScaledVector(A, mid);
@@ -591,7 +594,8 @@ function placeBand(){
   _x.crossVectors(_A, _n);
   band.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(_x, _A, _n));
   for(let r = SHEET_R * WORD_ASIDE; r >= 30; r -= 5){
-    _p.copy(band.position).addScaledVector(_x, -r);
+    const th = -r / BEND_R;
+    _p.set(BEND_R * Math.sin(th), 0, BEND_R * (1 - Math.cos(th))).applyQuaternion(band.quaternion).add(band.position);
     const q = box.group.localToWorld(_p.clone()).project(box.camera);
     if(Math.abs(q.x) < EDGE && Math.abs(q.y) < EDGE) break;
   }
