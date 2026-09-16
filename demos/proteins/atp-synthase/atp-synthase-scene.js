@@ -90,7 +90,11 @@ const DRIFT = 150;                  // Å a nucleotide travels from its site: ou
 const OUT_S = 5.2, IN_S = 5, IN_DELAY = 0.6;
 /* Glu58 sits mid-membrane, buried between c-subunits, so a proton riding it
    is drawn through the ribbon or it cannot be seen at all. */
-const PROTON_R = 1.8, BADGE = 4, PILL = 6;   // Å
+/* EXAGGERATED: every drawn particle, badge and name pill is EXAG times its
+   size in ångströms, so a proton and an ATP still read when the scene is
+   embedded small. The enzyme and the distances they travel stay true. */
+const EXAG = 2;
+const PROTON_R = 1.8 * EXAG, BADGE = 4 * EXAG, PILL = 6 * EXAG;   // Å, drawn
 
 /* ---- the membrane --------------------------------------------------------- *
  *  DRAWN: no lipid is in the file. Centred on the c-ring's middle along the
@@ -113,10 +117,9 @@ const WORD_H = 12;   // Å
 const WORD_ASIDE = 0.55, EDGE = 0.85;   // fraction of SHEET_R; NDC
 
 const CONTEXTS = {
-  mitochondrion: { head: 'matrix', tail: 'intermembrane space', headUp: false },
-  thylakoid:     { head: 'stroma', tail: 'thylakoid lumen',     headUp: true },
+  mitochondrion: { headUp: false },
+  thylakoid:     { headUp: true },
 };
-const SIDE_H = 9, SIDE_GAP = 14;   // Å: the compartment words, and how far past the band
 
 /* The bake's basis, turned half a turn about the screen's x when F1 would
    otherwise point the wrong way. */
@@ -164,14 +167,13 @@ function membrane(t, context){
   g.userData.ySign = context === 'thylakoid' ? 1 : -1;
   const sp = word('membrane');
   sp.position.copy(m.position);
-  const c = CONTEXTS[context];
-  g.add(m, sp, word(c.head, SIDE_H), word(c.tail, SIDE_H));
+  g.add(m, sp);
   return g;
 }
 
 function attach(box){
   let t = null, on = false, spinning = true, pivot = null;
-  let turned = 0, drive = 0, band = null, lastT = 0, raf = 0;
+  let turned = 0, drive = 0, band = null, lastT = 0, raf = 0, pending = false;
   const AXIS = new THREE.Vector3();
   const _n = new THREE.Vector3(), _x = new THREE.Vector3(), _p = new THREE.Vector3();
 
@@ -280,8 +282,8 @@ function attach(box){
            opening on the far side is still the event. Cloned, since Stage
            shares its materials. */
         g.traverse(m => { if(m.material){ m.material = m.material.clone(); m.material.depthTest = false; m.renderOrder = 11; } });
-        g.scale.setScalar(1 / MolLib.SCALE);
-        g.userData.size = 1 / MolLib.SCALE;
+        g.scale.setScalar(EXAG / MolLib.SCALE);
+        g.userData.size = EXAG / MolLib.SCALE;
         return g;
       });
     }
@@ -304,7 +306,7 @@ function attach(box){
         const home = site.at.clone().add(geo.P);
         const side = new THREE.Vector3().crossVectors(geo.A, site.out).normalize();
         live.push({ kind: 'mol', ...withTag('atp'), from: home, to: home.clone().addScaledVector(site.out, DRIFT), clock: 0, delay: 0, dur: OUT_S, leaving: true });
-        for(const [kind, off] of [['adp', 7], ['pi', -7]])
+        for(const [kind, off] of [['adp', 7 * EXAG], ['pi', -7 * EXAG]])
           live.push({ kind: 'mol', ...withTag(kind), to: home.clone().addScaledVector(side, off * .3),
             from: home.clone().addScaledVector(site.out, DRIFT).addScaledVector(side, off), clock: 0, delay: IN_DELAY, dur: IN_S });
       }
@@ -371,7 +373,8 @@ function attach(box){
      where rAF does not run. `drive` is the steady clock; `turned` is where
      the rotor is. */
   function advance(dt){
-    if(!(on && spinning && pivot)) return;
+    if(pending) settle();
+    if(!(on && spinning && pivot) || pending) return;
     const prev = turned;
     drive += DEG_PER_SEC * dt;
     const stepDeg = 360 / count(t, 'c'), n = Math.floor(drive / stepDeg);
@@ -386,7 +389,7 @@ function attach(box){
 
   function placeBand(){
     if(!band) return;
-    const [strip, sp, head, tail] = band.children;
+    const [strip, sp] = band.children;
     const A = V3(t.spin.axis).normalize();
     box.group.worldToLocal(_n.copy(box.camera.position)).sub(strip.position);
     _n.addScaledVector(A, -_n.dot(A));
@@ -402,9 +405,6 @@ function attach(box){
       if(Math.abs(q.x) < EDGE && Math.abs(q.y) < EDGE) break;
     }
     sp.position.copy(_p);
-    /* The spin axis points from the c-ring to F1, so +A is F1's side. */
-    head.position.copy(_p).addScaledVector(A, BILAYER / 2 + SIDE_GAP);
-    tail.position.copy(_p).addScaledVector(A, -(BILAYER / 2 + SIDE_GAP));
   }
 
   (function frame(now){
@@ -412,6 +412,8 @@ function attach(box){
     const dt = Math.min(0.1, (now - lastT) / 1000);
     lastT = now;
     if(!on) return;
+    if(pending) settle();
+    if(pending) return;
     placeBand();
     advance(dt);
   })(0);
@@ -419,10 +421,20 @@ function attach(box){
   function exit(){
     if(!on) return;
     on = false;
+    pending = false;
     flow.reset();
     if(band) box.group.remove(band);
     if(pivot) box.group.remove(pivot);
     band = pivot = null;
+  }
+  /* THE BOX BUILDS ONE CHAIN PER FRAME, and the rotor would otherwise turn
+     the chains that had landed while the rest were still arriving. Nothing
+     moves until the queue drains. */
+  function settle(){
+    if(box.building) return;
+    pending = false;
+    collect();
+    box.draw();
   }
   function enter(trace, context = 'mitochondrion'){
     exit();
@@ -430,7 +442,8 @@ function attach(box){
     turned = drive = 0;
     band = membrane(t, context);
     box.group.add(band);
-    collect();
+    pending = true;
+    settle();
   }
   return {
     enter, exit, advance, flow,
