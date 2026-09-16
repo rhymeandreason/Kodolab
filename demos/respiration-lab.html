@@ -108,6 +108,12 @@
   .modal .mback { position: absolute; inset: 0; background: rgba(20, 22, 26, .45); }
   .modal .mcard { position: relative; width: fit-content; max-width: 100%; padding: 22px; }
   .modal .mclose { position: absolute; top: 10px; right: 12px; border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: var(--text-muted); }
+  .modal-lesson .mcard { width: min(1400px, 100%); height: min(900px, 100%); padding: 0; overflow: hidden; }
+  .modal-lesson .mclose { z-index: 2; }
+  .lesson-frame, .lesson-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* On the chart the badge rides its card's stage: in when the card is. */
+  figure .badge { opacity: 0; pointer-events: none; transition: opacity .5s ease; }
+  figure .badge.is-in { opacity: 1; pointer-events: auto; }
   .synth { display: grid; grid-template-columns: min(760px, 80vh) minmax(0, 300px); gap: var(--space-6); align-items: center; }
   .synth-stage { position: relative; aspect-ratio: 1; background: var(--surface-stage); border-radius: var(--radius-md); overflow: hidden; }
   :root .modal .synth-text h2 { font-size: 34px; }
@@ -129,6 +135,14 @@
         <p class="msub">Protons flowing back into the matrix turn the rotor. Each full turn makes 3 ATP in the head. The real enzyme spins over a hundred times a second</p>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="glycomodal" class="modal modal-lesson" hidden>
+  <div class="mback"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-label="Glycolysis">
+    <button class="mclose" aria-label="Close">&times;</button>
+    <div class="lesson-frame" id="glycoframe"></div>
   </div>
 </div>
 
@@ -187,7 +201,7 @@
       <line class="flow" x1="288" y1="100" x2="288" y2="128" marker-end="url(#m)"></line>
 
       <!-- ===== glycolysis ===== -->
-      <rect class="box" x="178" y="130" width="220" height="90" rx="8"></rect>
+      <rect id="k-glyco" class="box" x="178" y="130" width="220" height="90" rx="8"></rect>
       <text class="ttl" x="288" y="158" text-anchor="middle">GLYCOLYSIS</text>
       <line class="rule" x1="194" y1="169" x2="382" y2="169"></line>
       <text class="sub" x="288" y="186" text-anchor="middle">splits the sugar in half</text>
@@ -344,6 +358,11 @@
   const synthModal = Modal.create({ el: 'synthmodal',
     onShow: () => { synth = ATPSynthase.mount(document.getElementById('synthstage'), { context: 'mitochondrion' }); },
     onHide: () => { if (synth) synth.destroy(); synth = null; } });
+  /* The glycolysis lesson itself, framed per open and dropped on close: a
+     second WebGL page left running behind this one costs every frame. */
+  const glycoModal = Modal.create({ el: 'glycomodal',
+    onShow: () => { document.getElementById('glycoframe').innerHTML = '<iframe src="glycolysis-lab.html?view=inset" title="Glycolysis"></iframe>'; },
+    onHide: () => { document.getElementById('glycoframe').innerHTML = ''; } });
   const chemi = shell.scene('chemi', el => withBadge(el, Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'split', span: 'cell', names: 'intro', viewOffset: centred,
     /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
@@ -481,6 +500,22 @@
   cta.className = 'step';
   cta.innerHTML = '<img class="step-mol" src="media/molecules/glucose.webp" alt="A glucose molecule"><span class="step-mol-cap cap-sm">1 glucose</span><button class="cta" type="button"></button>';
   const figure = chart.parentElement;
+
+  /* A see-more badge off the glycolysis card's right edge, opening the lesson. */
+  {
+    const card = chart.querySelector('#k-glyco');
+    const b = Badge.button({ icon: 'more', label: 'Open the glycolysis lesson', onClick: () => glycoModal.show() });
+    figure.appendChild(b);
+    const place = () => {
+      const r = card.getBoundingClientRect(), f = figure.getBoundingClientRect();
+      b.style.left = (r.right - f.left + 24) + 'px';
+      b.style.top = (r.top - f.top + r.height / 2) + 'px';
+      b.classList.toggle('is-in', card.classList.contains('is-in'));
+    };
+    place();
+    window.addEventListener('resize', place);
+    new MutationObserver(place).observe(card, { attributes: true, attributeFilter: ['class'] });
+  }
   figure.appendChild(cta);
   /* Where the next stage starts, in the figure's own coordinates. */
   const placeCta = () => {

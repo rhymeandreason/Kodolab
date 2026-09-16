@@ -21,6 +21,8 @@
  *                             onClick: () => modal.show() });
  *    box.on('frame', b.update);   // or from afterFrame
  *    b.destroy();
+ *
+ *    Badge.button({ icon, label, onClick })   the element alone, placed by the page
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -30,16 +32,22 @@
     more: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.3 15.3 21 21M10.5 7.5v6M7.5 10.5h6"/></svg>',
   };
 
-  function create(opts) {
-    const THREE = global.THREE;
+  /* The button alone, for a page placing it itself (on an SVG chart, say). */
+  function button(opts) {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'badge';
     el.innerHTML = ICONS[opts.icon] || ICONS.more;
     el.setAttribute('aria-label', opts.label || 'See more');
     el.title = opts.label || 'See more';
-    el.hidden = true;
     el.addEventListener('click', ev => { ev.stopPropagation(); if (opts.onClick) opts.onClick(); });
+    return el;
+  }
+
+  function create(opts) {
+    const THREE = global.THREE;
+    const el = button(opts);
+    el.hidden = true;
     if (getComputedStyle(opts.host).position === 'static') opts.host.style.position = 'relative';
     opts.host.appendChild(el);
     const v = new THREE.Vector3();
@@ -59,5 +67,5 @@
     return { el, update, destroy: () => el.remove() };
   }
 
-  global.Badge = { create, ICONS };
+  global.Badge = { create, button, ICONS };
 })(window);

@@ -1177,7 +1177,7 @@ function rewind(){
   done--; renderLanes(done); refresh();
 }
 function restart(){ cancelTimers(); busy=false; pressing=false; reviewing=false; done=0; intro=true;
-  panel=null;                       // the sidebar starts shut, as on first load
+  panel=INSET?'ledger':null;        // the sidebar starts as on first load
   laneDone.clear(); carrierGone.clear();
   renderLanes(0); refresh(); cam.theta=OPEN_THETA; }
 
@@ -1233,7 +1233,11 @@ let prevLedger=null;
  * verdicts on the stage open, so it cannot arrive by itself either.
  * EXCEPT ON THE END SCREEN, where the sticker is one of the four cells of the
  * closing tally and the accordion has nothing to say about it. */
-let panel=null;
+/* ?view=inset: glycolysis as a side door from another lesson (respiration's
+ * chart). The pathway and its ledger only: no enzyme, no energy card or the
+ * verdicts that open it, and no fork at the end, since the host is where next is. */
+const INSET=/[?&]view=inset\b/.test(location.search);
+let panel=INSET?'ledger':null;
 const setPanel=p=>{ panel=(panel===p?null:p); refresh(); };
 const cplOpen=()=>panel==='energy';
 const ledgerOn=()=>panel==='ledger'||tallyOn();
@@ -1259,7 +1263,7 @@ function drawAcc(){
   if(metaStep!==i){ metaStep=i; if(cplOpen()) panel=null; }
   const showL=!intro && !tallyOn();
   accSec.ledger.hidden=!showL;
-  accSec.energy.hidden=!st;
+  accSec.energy.hidden=!st || INSET;
   accEl.hidden=!showL && !st;
   for(const k in accSec){
     const open=panel===k && !accSec[k].hidden;
@@ -1679,7 +1683,7 @@ const enzMetaEl=document.getElementById('enzmeta');
 const enzNoteEl=document.getElementById('enznote');
 // ALWAYS ON. The blob is what the step's catalyst does, not a view of it, and
 // a lesson about enzymes that opens with them switched off argues the reverse.
-const showEnz=true;
+const showEnz=!INSET;
 // The enzyme of the step being described — the same index the heading, tray and
 // coupling box use, so on the review beat it is still the one that just ran.
 const enzOf=()=>{ const i=focusStep(); return (!intro && i<nSteps) ? STEPS[i] : null; };
@@ -1756,7 +1760,7 @@ function drawEnz(){
 function drawEnzMeta(){
   const i=focusStep();
   const st=(!intro && i<nSteps && !tallyOn()) ? stepAt(i) : null;
-  enzMetaEl.hidden=!st;
+  enzMetaEl.hidden=!st || INSET;
   // the step's one memorable line, on the same schedule as the verdicts
   enzNoteEl.hidden=!(st&&st.takeaway);
   enzNoteEl.textContent=(st&&st.takeaway)||'';
@@ -1878,6 +1882,7 @@ function drawAct(){
   const st=done<nSteps?stepAt(done):null;
   // THE LAST BUTTON IS IN THE SAME SLOT AS EVERY OTHER — so the closing
   // question is here too, not three cards arriving over the pyruvate.
+  if(!st && !busy && INSET){ actEl.style.visibility='hidden'; actEl.onclick=null; return; }
   if(!st && !busy){
     actEl.style.visibility='visible';
     actEl.innerHTML=`What's next? <i class="ph-bold ph-arrow-right"></i>`;
