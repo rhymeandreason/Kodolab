@@ -205,6 +205,8 @@
   .rlead{color:var(--muted);font-size:14px;margin:0 -3px 0 -1px;user-select:none}
   /* ?view=link: the stage and its bottom bar, nothing else */
   .link #railbar,.link #side,.link #utils{display:none}
+  .cycle #tnotes [data-note="bridge"],.cycle #tnotes [data-note="bridge"]+.tnop{display:none}
+  .cycle #tnotes{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
   .link #app-sidebar{grid-template-rows:minmax(0,1fr);grid-template-columns:1fr}
   .link #stage{grid-column:1;grid-row:1}
 </style>
@@ -471,6 +473,12 @@
 const LINK=/[?&]view=link\b/.test(location.search);
 document.documentElement.classList.toggle('link',LINK);
 if(LINK) document.title='The link step';
+/* ?view=cycle: the eight steps without the link step. Opens on acetyl-CoA, the
+ * pools start one NAD⁺ short so a turn still ends on empty, and every count
+ * and note leaves the link step out. */
+const CYCLE=/[?&]view=cycle\b/.test(location.search);
+document.documentElement.classList.toggle('cycle',CYCLE);
+const FIRST=CYCLE?1:0;
 const canvas=document.getElementById('gl');
 const OPEN_THETA=0.10;
 const L=Lesson.create(canvas,{
@@ -518,7 +526,7 @@ const meta=spec=>(spec && (spec.krebs || spec.gly)) || {};
  * NAD⁺ runs to exactly 0 and FAD to 0, which is what makes the hand-off to the
  * electron transport chain a constraint rather than a footnote. Four NAD⁺
  * because the bridge reaction spends one before the ring starts. */
-const POOL0={NAD:4, NADH:0, FAD:1, FADH2:0, ADP:1, ATP:0};
+const POOL0={NAD:CYCLE?3:4, NADH:0, FAD:1, FADH2:0, ADP:1, ATP:0};
 
 // The couple table names carriers as printed ("NAD+", "FADH2"), the tray as the
 // pools are keyed. One place converts.
@@ -565,8 +573,9 @@ const STEPS=[
     fx:'join', enter:['oaa'], linger:['coa'],
     // ON THE THIOESTER, which is where the energy for this step is. `thio` is
     // the spec's own S–C pair (mol-krebs.js), so the disc sits on the bond
-    // that breaks as the C–C forms.
-    spot:{ at:'thio', say:'Break the thioester' },
+    // that breaks as the C–C forms. Hint to the left: acetyl-CoA's name sits
+    // up and right of the bond.
+    spot:{ at:'thio', say:'Break the thioester', offset:[-40,-10] },
     takeaway:`2C + 4C = 6C — the cycle's only step that builds`,
     msg:`<b>Citrate synthase</b> joins acetyl-CoA's two carbons to
       <b>oxaloacetate</b>'s four, making the six-carbon <b>citrate</b>. Coenzyme A
@@ -769,23 +778,23 @@ const speciesAt=i=>{
 
 // One lap's totals, so a completed lap can be added without re-walking it.
 const LAP={
-  nadh:STEPS.reduce((s,x)=>s+(x.nadh||0),0),
-  fadh2:STEPS.reduce((s,x)=>s+(x.fadh2||0),0),
-  made:STEPS.reduce((s,x)=>s+(x.made||0),0),
-  co2:STEPS.reduce((s,x)=>s+(x.co2||0),0),
+  nadh:STEPS.slice(FIRST).reduce((s,x)=>s+(x.nadh||0),0),
+  fadh2:STEPS.slice(FIRST).reduce((s,x)=>s+(x.fadh2||0),0),
+  made:STEPS.slice(FIRST).reduce((s,x)=>s+(x.made||0),0),
+  co2:STEPS.slice(FIRST).reduce((s,x)=>s+(x.co2||0),0),
 };
 /* POOLS ARE PER LAP, and that is the claim, not an accounting shortcut: at the
  * end of lap 1 NAD⁺ and FAD are at zero, and lap 2 only runs because the
  * electron transport chain gave them back. The refill is shown between the two
  * laps rather than assumed. */
 function poolAt(i){ const p=Object.assign({},POOL0);
-  for(let k=0;k<i;k++){ const d=STEPS[k].pool||{}; for(const q in d) p[q]+=d[q]; }
+  for(let k=FIRST;k<i;k++){ const d=STEPS[k].pool||{}; for(const q in d) p[q]+=d[q]; }
   return p; }
 // The ledger, on the other hand, is CUMULATIVE across laps — it is the answer
 // to "per glucose", which is the number the student has to leave with.
 function ledgerAt(i){
   const L={nadh:0, fadh2:0, made:0, co2:0};
-  for(let k=0;k<i;k++){ const s=STEPS[k];
+  for(let k=FIRST;k<i;k++){ const s=STEPS[k];
     L.nadh+=s.nadh||0; L.fadh2+=s.fadh2||0; L.made+=s.made||0; L.co2+=s.co2||0; }
   for(const q in L) L[q]+=LAP[q]*(lap-1);
   return L;
@@ -891,7 +900,8 @@ const SPOTS=Hotspot.create({ canvas, camera, host:spotsEl, glowHost:glowEl,
 /* ---------- THE PROMPT AS A CALLOUT (annotate.js) ---------- */
 const NOTES=Annot.create(THREE, document.getElementById('stage'), camera, {mode:'on'});
 let hintAt=null;
-const hintNote=NOTES.add({ text:'', at:()=>hintAt&&hintAt(), offset:[30,-26] });
+const HINT_OFF=[30,-26];
+const hintNote=NOTES.add({ text:'', at:()=>hintAt&&hintAt(), offset:HINT_OFF });
 /* ONE PLACE DECIDES WHAT THE PROMPT SAYS AND WHERE IT POINTS, every frame, off
  * the same state the disc is lit from. Nothing on this page puts the target on
  * a carrier — every clickable bond is on the molecule in the lanes — so unlike
@@ -903,7 +913,9 @@ function drawHint(){
   if(st && st.spot && st.spot.say && !busy && !reviewing){
     const j=lanes.findIndex(l=>spotPair(M[l.key], st.spot.at));
     if(j>=0){ const pair=spotPair(M[lanes[j].key], st.spot.at);
-      text=st.spot.say; hintAt=()=>laneBondMid(lanes[j], pair); }
+      text=st.spot.say; hintAt=()=>laneBondMid(lanes[j], pair);
+      const o=st.spot.offset||HINT_OFF;
+      if(o!==hintNote.offset) hintNote.setOffset(o); }
   }
   if(text!==hintNote.el.dataset.t){ hintNote.el.dataset.t=text; hintNote.set(text); }
   NOTES.show(!!text);
@@ -1221,19 +1233,21 @@ function runStep(){
 function rewind(){
   if(busy || autoplay) return;
   if(reviewing){ leaveReview(); return; }
-  if(done===0){
+  if(done===FIRST){
     // Back off the first step of lap 2 is back into lap 1's ending, not the
     // intro: the laps are one run, and the tally is the screen between them.
     if(lap>1){ lap--; done=nSteps; renderLanes(done); refresh(); return; }
+    if(CYCLE) return;
     intro=true; syncLanes(); refresh(); return;
   }
   done--; renderLanes(done); refresh();
 }
 function restart(){ cancelTimers(); busy=false; pressing=false; reviewing=false;
-  autoplay=false; done=0; lap=1; intro=true;
+  autoplay=false; done=FIRST; lap=1; intro=!CYCLE;
   panel=null;                       // the sidebar starts shut, as on first load
   carrierGone.clear();
-  syncLanes(); refresh(); cam.theta=OPEN_THETA; }
+  if(CYCLE) renderLanes(done); else syncLanes();
+  refresh(); cam.theta=OPEN_THETA; }
 
 /* ---- THE SECOND TURN, PLAYED ----------------------------------------------
  * Same steps, same verbs, same ledger — the only difference is that nothing
@@ -1249,8 +1263,8 @@ function restart(){ cancelTimers(); busy=false; pressing=false; reviewing=false;
 const AUTO_GAP=620;
 function startLap2(){
   if(lap>=LAPS) return;
-  lap++; done=0; reviewing=false; autoplay=true;
-  renderLanes(0); refresh();
+  lap++; done=FIRST; reviewing=false; autoplay=true;
+  renderLanes(done); refresh();
   queueAuto();
 }
 function queueAuto(){
@@ -1286,7 +1300,7 @@ let shownCaption=null;
 function drawCaption(){
   // THE BAND IS THE INTRO AND THE HAND-OFF BETWEEN LAPS. Both are moments when
   // nothing is on the stage to point at, so words are all there is.
-  const bare = intro || (lap>1 && done===0 && !reviewing);
+  const bare = intro || (lap>1 && done===FIRST && !reviewing);
   const html = intro ? INTRO_MSG : LAP2_MSG;
   const show = bare && !reviewing;
   if(html!==shownCaption){
@@ -1372,7 +1386,7 @@ const RING_STEPS=STEPS.filter(s=>typeof s.n==='number');
  * turn of the cycle" — the same arithmetic, a different bracket. Rather than
  * change the lap, every count says which side of the bridge it came from.
  * Derived: the bridge is the step with no number, so nothing here is typed. */
-const BRIDGE_STEPS=STEPS.filter(s=>typeof s.n!=='number');
+const BRIDGE_STEPS=CYCLE?[]:STEPS.filter(s=>typeof s.n!=='number');
 const sumOver=(list,k)=>list.reduce((n,s)=>n+(s[k]||0),0);
 const fromRing=k=>sumOver(RING_STEPS,k);
 const fromBridge=k=>sumOver(BRIDGE_STEPS,k);
@@ -1765,7 +1779,8 @@ const enzMetaEl=document.getElementById('enzmeta');
 const enzNoteEl=document.getElementById('enznote');
 // ALWAYS ON. The blob is what the step's catalyst does, not a view of it, and
 // a lesson about enzymes that opens with them switched off argues the reverse.
-const showEnz=!INSET;
+// ?enzyme=off hides it alone, for a host framing the link step
+const showEnz=!INSET && !/[?&]enzyme=off\b/.test(location.search);
 const enzOf=()=>{ const i=focusStep(); return (!intro && i<nSteps) ? STEPS[i] : null; };
 const enzLive=()=>showEnz && !!enzOf() && !tallyOn();
 /* WHICH LANES THE ENZYME IS ON — one GROUP of lanes per blob, because an enzyme
@@ -1963,7 +1978,7 @@ function drawAct(){
 
 // Jump to the state just BEFORE step k, so the student re-runs it rather than
 // landing on its aftermath. Shared by the rail and the cycle list.
-const goToStep=k=>{ if(busy) return; intro=false; reviewing=false; autoplay=false;
+const goToStep=k=>{ if(busy) return; k=Math.max(FIRST,k); intro=false; reviewing=false; autoplay=false;
   done=k; carrierGone.clear(); renderLanes(done); refresh(); };
 
 /* ---- ?step=N, the same jump as a URL. Clamped, so ?step=99 opens the last
@@ -1976,6 +1991,7 @@ const railEl=document.getElementById('rail');
 function drawRail(){
   railEl.innerHTML='';
   STEPS.forEach((st,idx)=>{
+    if(idx<FIRST) return;
     const state = (!intro && !reviewing && idx===done) ? 'run'
                 : (!intro && idx===done-1 && !(done>=nSteps && !reviewing)) ? 'cur'
                 : (idx < done)             ? 'past'
@@ -2193,7 +2209,7 @@ const PER_NADH=2.5, PER_FADH2=1.5;
 const Handoff=(()=>{
   const per=k=>LAP[k]*LAPS;
   const nadh=per('nadh'), fadh2=per('fadh2'), atp=per('made');
-  const bridge=(STEPS[0].nadh||0)*LAPS;              // the ×2 of the bridge's own
+  const bridge=fromBridge('nadh')*LAPS;              // the ×2 of the bridge's own
   const num=v=>String(Math.round(v*10)/10);
   const worth=num(nadh*PER_NADH + fadh2*PER_FADH2 + atp);
   document.getElementById('hosub').innerHTML=
@@ -2221,8 +2237,8 @@ const Handoff=(()=>{
       Complex I, FADH₂ at Complex II — lower down, which is exactly why it is
       worth less. Cash them all in and these two turns are worth about
       <b>${worth} ATP</b> against the <b>${atp}</b> the cycle made itself. That
-      gap is the answer to “why bother”, and ${bridge} of the ${nadh} NADH were
-      made by the link step before the ring even started.</p>`
+      gap is the answer to “why bother”${bridge ? `, and ${bridge} of the ${nadh} NADH were
+      made by the link step before the ring even started` : ''}.</p>`
     +`<p class="hob">Nothing here used oxygen. The cycle still stops without it,
       because the chain has to empty these carriers before they can be filled
       again — which is what turn two needed.</p>`;
@@ -2272,6 +2288,7 @@ L.afterFrame=()=>{
 
 if(OPEN_STEP!=null){ intro=false; done=OPEN_STEP-1; }
 if(LINK){ intro=false; done=0; }
+if(CYCLE){ intro=false; done=Math.max(FIRST,done); }
 syncLanes(); refresh(); applyCam(); resize();
 // Re-solve AFTER refresh(): the first computeFit runs inside renderKeys(),
 // before the tray has children, so it measures a zero-height tray.

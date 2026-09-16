@@ -232,7 +232,7 @@
 
       <!-- ===== link step ===== -->
       <rect class="box" x="123" y="370" width="130" height="84" rx="8"></rect>
-      <rect class="box" x="323" y="370" width="130" height="84" rx="8"></rect>
+      <rect id="k-link" class="box" x="323" y="370" width="130" height="84" rx="8"></rect>
       <text class="ttl" x="188" y="396" text-anchor="middle">LINK STEP</text>
       <line class="rule" x1="137" y1="407" x2="239" y2="407"></line>
       <text class="sub" x="188" y="424" text-anchor="middle">→ acetyl-CoA</text>
@@ -528,7 +528,8 @@
     new MutationObserver(place).observe(card, { attributes: true, attributeFilter: ['class'] });
   }
   chartBadge('#k-glyco', 'edge', { src: 'glycolysis-lab.html?view=inset', title: 'glycolysis' });
-  chartBadge('#k-krebs', 'corner', { src: 'krebs-lab.html?view=inset', title: 'Krebs cycle' });
+  chartBadge('#k-link', 'corner', { src: 'link-step.html?enzyme=off', title: 'link step' });
+  chartBadge('#k-krebs', 'corner', { src: 'krebs-lab.html?view=cycle&view=inset', title: 'Krebs cycle' });
   figure.appendChild(cta);
   /* Where the next stage starts, in the figure's own coordinates. */
   const placeCta = () => {
