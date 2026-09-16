@@ -6,182 +6,142 @@
 <title>The Respiration Chart</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="stylesheet" href="../css/kodo.css">
+<script defer src="/demos/lib/site.js"></script>
 
 <style>
+  /* Document shell, narrowed to the chart's measure. Every colour is a kodo
+     role; the three chart hues map onto tokens the pathway lessons already
+     read, so a caption here and a caption there name one ATP red. */
   :root {
-    color-scheme: light;
-    --paper:      #F4F6F2;
-    --surface:    #FFFFFF;
-    --ink:        #16211E;
-    --ink-2:      #4E5B57;
-    --line:       #D5DDD5;
-    --line-soft:  #E4EAE3;
-    --lane:       #EAF0E9;
-    --accent:     #A85D0C;   /* energy / ATP */
-    --o2:         #1B6C9E;   /* oxygen */
-    --co2:        #78857F;   /* carbon leaving */
+    --page-max: 1180px;   /* the shelf pages' width; the chart has its own measure below */
+    --c-atp: var(--energy-atp);
+    --c-o2:  var(--accent-cold);
+    --c-co2: var(--text-dim);
+    --c-nad: var(--energy-nad);
   }
+  /* The heading is a sentence, not the page's name: keep its case and weight. */
+  .pagehead h1.claim { text-transform: none; font-weight: 500; letter-spacing: -.03em; font-size: clamp(1.9rem, 4.6vw, 2.9rem); line-height: 1.05; max-width: 18em }
+  /* Centred masthead, as the chart's own axis is: `.open` drops the rule. */
+  .pagehead.open { flex-direction: column; align-items: center; text-align: center; margin-bottom: var(--space-6) }
+  .pagehead .deck { max-width: 30em; margin-inline: auto }
+  .facts { max-width: 820px; margin-inline: auto }
 
-  body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
-    font-size: 16px;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap {
-    max-width: 784px;
-    margin: 0 auto;
-    padding-inline: 20px;
-    padding-block: 0 64px;
-  }
-
-  header {
-    padding-block: 48px 26px;
-    text-align: center;
-  }
-  .eyebrow {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
-    color: var(--ink-2);
-  }
-  h1 {
-    font-family: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
-    font-weight: 700;
-    font-size: clamp(30px, 6.5vw, 44px);
-    line-height: 1.05;
-    letter-spacing: -.02em;
-    margin: 12px 0 0;
-    text-wrap: balance;
-  }
-  .sub {
-    color: var(--ink-2);
-    margin: 12px auto 0;
-    max-width: 28rem;
-  }
-
-  /* legend — the three colors that repeat down the chart */
+  /* legend: the three colours that repeat down the chart */
   .legend {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px;
-    margin-top: 22px;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-    color: var(--ink-2);
+    display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5);
+    justify-content: center;
+    margin: 0 0 var(--space-5);
   }
-  .legend span { display: inline-flex; align-items: center; gap: 7px; }
-  .swatch { width: 11px; height: 11px; border-radius: 3px; border: 1.5px solid; }
-  .sw-o2  { border-color: var(--o2); background: color-mix(in srgb, var(--o2) 14%, #fff); }
-  .sw-atp { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, #fff); }
-  .sw-co2 { border-color: var(--co2); background: color-mix(in srgb, var(--co2) 16%, #fff); }
+  .legend span { display: inline-flex; align-items: center; gap: var(--space-2) }
+  /* The key shows the glow itself: a soft disc, the same fade the chart draws behind a molecule. */
+  .swatch { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--k) 45%, transparent), transparent 70%) }
+  .sw-o2  { --k: var(--c-o2) }
+  .sw-nad { --k: var(--c-nad) }
+  .sw-co2 { --k: var(--c-co2) }
 
   /* the chart */
-  figure { margin: 26px 0 0; }
-  svg.chart {
-    display: block;
-    width: 100%;
-    max-width: 744px;
-    height: auto;
-    margin: 0 auto;
-    color: var(--ink);
+  /* The chart's measure is its own, not the page's: a wider shelf does not
+     scale the diagram up, it just leaves more paper either side. */
+  figure { max-width: 900px; margin: 0 auto }
+  svg.chart { display: block; width: 100%; height: auto; color: var(--text-strong) }
+  /* Three type roles, and only three: a micro-cap names a thing, a body line
+     explains it, and a compartment label is the -lg cap scaled up because the
+     two compartments are the chart's outermost fact. */
+  .chart text { font-family: var(--font-ui); font-size: 12px; fill: var(--text-body) }
+  .chart .ttl, .chart .tiny, .chart .zone-l {
+    font-family: var(--font-display); font-weight: var(--cap-weight);
+    letter-spacing: var(--cap-track); text-transform: uppercase;
   }
-  .chart text { font-family: "IBM Plex Mono", monospace; font-size: 11px; fill: currentColor; }
-  .chart .ttl { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 14px; letter-spacing: .01em; }
-  .chart .big { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.01em; }
-  .chart .sub { font-size: 11px; fill: var(--ink-2); }
-  .chart .tiny { font-size: 10px; fill: var(--ink-2); letter-spacing: .08em; }
-  .chart .box { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
-  .chart .zone { fill: var(--lane); stroke: var(--line); stroke-width: 1; }
-  .chart .flow { stroke: var(--ink); stroke-width: 1.8; fill: none; }
-  .chart .dash { stroke-dasharray: 5 4; }
-  .chart .o2-l { stroke: var(--o2); stroke-width: 1.8; fill: none; }
-  .chart .o2-t { fill: var(--o2); }
-  .chart .co2-l { stroke: var(--co2); stroke-width: 1.3; fill: none; }
-  .chart .co2-t { fill: var(--co2); }
-  .chart .atp-t { fill: var(--accent); font-weight: 500; }
-  .chart .atp-box { fill: color-mix(in srgb, var(--accent) 7%, #fff); stroke: var(--accent); stroke-width: 2; }
+  .chart .ttl    { font-size: var(--cap-lg); fill: var(--text-strong) }
+  .chart .tiny   { font-size: var(--cap-sm); fill: var(--text-muted) }
+  .chart .zone-l { font-size: 18px; fill: var(--text-dim) }
+  .chart .big    { font-family: var(--font-display); font-weight: 500; font-size: 36px; letter-spacing: -.02em }
+  .chart .sub    { fill: var(--text-dim) }
 
-  figcaption {
-    margin: 22px auto 0;
-    max-width: 30rem;
-    font-size: 14px;
-    color: var(--ink-2);
-    text-align: center;
-  }
+  .chart .box  { fill: var(--surface-card); stroke: var(--border-hair); stroke-width: 1; filter: url(#lift) }
+  .chart .rule { stroke: var(--border-hair); stroke-width: 1 }
+  .chart .sub .n { fill: var(--text-strong); font-weight: 600; font-variant-numeric: tabular-nums }
+  .chart .zone { fill: var(--surface-stage); stroke: var(--border-hair); stroke-width: 1 }
+  .chart .flow { stroke: var(--text-strong); stroke-width: 1.5; fill: none }
+  .chart .o2-l  { stroke: var(--text-strong); stroke-width: 1.5; fill: none }
+  .chart .o2-t  { fill: var(--text-strong) }
+  .chart .co2-l { stroke: var(--c-co2); stroke-width: 1.25; fill: none }
+  .chart .co2-t { fill: var(--c-co2) }
+  .chart .atp-t { fill: var(--c-atp); font-weight: 600 }
+  .chart .atp-box { fill: var(--surface-card); stroke: var(--c-atp); stroke-width: 1.25; filter: url(#lift) }
 
   /* supporting facts */
   .facts {
-    margin-top: 40px;
-    border-top: 1px solid var(--line);
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0 32px;
+    margin: var(--space-7) 0 0;
+    border-top: 1px solid var(--border-hair);
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 var(--space-6);
   }
-  @media (max-width: 560px) {
-    .facts { grid-template-columns: 1fr; }
-  }
-  .facts div {
-    padding-block: 18px;
-    border-bottom: 1px solid var(--line-soft);
-  }
-  .facts div.wide { grid-column: 1 / -1; }
-  .facts dt {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--accent);
-  }
-  .facts dd { margin: 5px 0 0; font-size: 15px; line-height: 1.5; }
-
-  footer {
-    margin-top: 34px;
-    font-size: 14px;
-    color: var(--ink-2);
-    text-align: center;
-  }
-  footer a { color: var(--ink); text-decoration-color: var(--line); text-underline-offset: 3px; }
-  footer a:hover { text-decoration-color: var(--accent); }
+  @media (max-width: 560px) { .facts { grid-template-columns: 1fr } }
+  .facts div { padding-block: var(--space-4); border-bottom: 1px solid var(--border-hair) }
+  .facts dt { color: var(--accent) }
+  .facts dd { margin: var(--space-1) 0 0; font-size: 15px; line-height: var(--leading-body); color: var(--text-body) }
 </style>
 </head>
-<body>
+<body class="kodo">
+<div class="page">
 
-<div class="wrap">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <a class="crumb" href="../respiration-lab.html">cellular respiration</a>
+  </nav>
 
-  <header>
-    <div class="eyebrow">Cellular respiration · one glucose</div>
-    <h1>How a cell turns sugar into usable energy</h1>
-    <p class="sub"></p>
-    <div class="legend">
-      <span><i class="swatch sw-o2"></i> oxygen</span>
-      <span><i class="swatch sw-atp"></i> energy · ATP</span>
-      <span><i class="swatch sw-co2"></i> carbon leaving</span>
-    </div>
+  <header class="pagehead open">
+    <h1 class="claim">How a cell turns sugar into usable energy</h1>
+    <p class="deck">Cellular respiration, one glucose, read top to bottom.</p>
   </header>
 
+  <main>
+  <div class="legend cap-sm">
+    <span><i class="swatch sw-o2"></i> oxygen</span>
+    <span><i class="swatch sw-nad"></i> carriers</span>
+    <span><i class="swatch sw-co2"></i> carbon leaving</span>
+  </div>
+
   <figure>
-    <svg class="chart" viewBox="0 0 576 1234" role="img" aria-label="A tall vertical flowchart: glucose is split by glycolysis in the cytoplasm into two pyruvate molecules; each pyruvate runs its own lane through the link reaction and the Krebs cycle inside the mitochondrion, releasing carbon dioxide; both lanes hand their electron carriers to one electron transport chain, which makes about 26 ATP; oxygen feeds into the left of that chain as the final electron acceptor and leaves out the right side as water. The total is about 30 ATP per glucose.">
+    <svg class="chart" viewBox="-130 0 836 1380" role="img" aria-label="A tall vertical flowchart: glucose is split by glycolysis in the cytoplasm into two pyruvate molecules; each pyruvate runs its own lane through the link reaction and the Krebs cycle inside the mitochondrion, releasing carbon dioxide; both lanes hand their electron carriers to one electron transport chain, which makes about 26 ATP; oxygen feeds into the left of that chain as the final electron acceptor and leaves out the right side as water. The total is about 30 ATP per glucose.">
       <defs>
         <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
         </marker>
         <marker id="mc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="var(--co2)"></path>
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--c-co2)"></path>
         </marker>
         <marker id="mo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="var(--o2)"></path>
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
         </marker>
         <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"></path>
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--c-atp)"></path>
         </marker>
+        <filter id="lift" x="-10%" y="-10%" width="120%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#2b2723" flood-opacity=".12"></feDropShadow>
+        </filter>
         <radialGradient id="o2-glow">
-          <stop offset="0" style="stop-color: var(--o2); stop-opacity: .22"></stop>
-          <stop offset="1" style="stop-color: var(--o2); stop-opacity: 0"></stop>
+          <stop offset="0" style="stop-color: var(--c-o2); stop-opacity: .3"></stop>
+          <stop offset="1" style="stop-color: var(--c-o2); stop-opacity: 0"></stop>
+        </radialGradient>
+        <radialGradient id="atp-glow">
+          <stop offset="0" style="stop-color: var(--c-atp); stop-opacity: .16"></stop>
+          <stop offset="1" style="stop-color: var(--c-atp); stop-opacity: 0"></stop>
+        </radialGradient>
+        <radialGradient id="nad-glow">
+          <stop offset="0" style="stop-color: var(--c-nad); stop-opacity: .26"></stop>
+          <stop offset="1" style="stop-color: var(--c-nad); stop-opacity: 0"></stop>
+        </radialGradient>
+        <radialGradient id="co2-glow">
+          <stop offset="0" style="stop-color: var(--c-co2); stop-opacity: .3"></stop>
+          <stop offset="1" style="stop-color: var(--c-co2); stop-opacity: 0"></stop>
         </radialGradient>
       </defs>
 
       <!-- ===== compartments ===== -->
-      <rect class="zone" x="2" y="24" width="572" height="474" rx="12"></rect>
-      <text class="tiny" x="20" y="44">CYTOPLASM</text>
+      <rect class="zone" x="-128" y="24" width="832" height="490" rx="12"></rect>
+      <text class="zone-l" x="-104" y="52">CYTOPLASM</text>
 
       <!-- ===== glucose ===== -->
       <text class="ttl" x="288" y="76" text-anchor="middle">GLUCOSE</text>
@@ -191,68 +151,80 @@
       <line class="flow" x1="288" y1="100" x2="288" y2="128" marker-end="url(#m)"></line>
 
       <!-- ===== glycolysis ===== -->
-      <rect class="box" x="178" y="130" width="220" height="74" rx="8"></rect>
-      <text class="ttl" x="288" y="154" text-anchor="middle">GLYCOLYSIS</text>
-      <text class="sub" x="288" y="172" text-anchor="middle">splits the sugar in half</text>
-      <text class="sub" x="288" y="192" text-anchor="middle">net <tspan class="atp-t">2 ATP</tspan> · 2 NADH</text>
+      <rect class="box" x="178" y="130" width="220" height="90" rx="8"></rect>
+      <text class="ttl" x="288" y="158" text-anchor="middle">GLYCOLYSIS</text>
+      <line class="rule" x1="194" y1="169" x2="382" y2="169"></line>
+      <text class="sub" x="288" y="186" text-anchor="middle">splits the sugar in half</text>
+      <text class="sub" x="288" y="204" text-anchor="middle">net <tspan class="atp-t">2 ATP</tspan> · <tspan class="n">2</tspan> NADH</text>
 
       <!-- ===== the split ===== -->
-      <path class="flow" d="M288,204 V224 H188 V242" marker-end="url(#m)"></path>
-      <path class="flow" d="M288,204 V224 H388 V242" marker-end="url(#m)"></path>
-      <image href="../media/molecules/pyruvate.webp" x="133" y="288" width="110" height="72"></image>
-      <image href="../media/molecules/pyruvate.webp" x="333" y="288" width="110" height="72"></image>
-      <text class="ttl" x="188" y="266" text-anchor="middle">PYRUVATE</text>
-      <text class="sub" x="188" y="282" text-anchor="middle">3 carbons</text>
-      <text class="ttl" x="388" y="266" text-anchor="middle">PYRUVATE</text>
-      <text class="sub" x="388" y="282" text-anchor="middle">3 carbons</text>
+      <g transform="translate(0,16)">
+      <path class="flow" d="M288,220 V240 H188 V258" marker-end="url(#m)"></path>
+      <path class="flow" d="M288,220 V240 H388 V258" marker-end="url(#m)"></path>
+      <image href="../media/molecules/pyruvate.webp" x="133" y="294" width="110" height="72"></image>
+      <image href="../media/molecules/pyruvate.webp" x="333" y="294" width="110" height="72"></image>
+      <text class="ttl" x="188" y="284" text-anchor="middle">PYRUVATE</text>
+      <text class="ttl" x="388" y="284" text-anchor="middle">PYRUVATE</text>
       <g transform="translate(0,74)">
-      <rect class="zone" x="2" y="332" width="572" height="550" rx="12"></rect>
-      <text class="tiny" x="20" y="352">MITOCHONDRION</text>
+      <rect class="zone" x="-128" y="332" width="832" height="640" rx="12"></rect>
+      <text class="zone-l" x="-104" y="360">MITOCHONDRION</text>
 
       <!-- ===== into the mitochondrion ===== -->
       <line class="flow" x1="188" y1="290" x2="188" y2="368" marker-end="url(#m)"></line>
       <line class="flow" x1="388" y1="290" x2="388" y2="368" marker-end="url(#m)"></line>
 
       <!-- ===== link step ===== -->
-      <rect class="box" x="123" y="370" width="130" height="62" rx="8"></rect>
-      <rect class="box" x="323" y="370" width="130" height="62" rx="8"></rect>
-      <text class="ttl" x="188" y="392" text-anchor="middle">LINK STEP</text>
-      <text class="sub" x="188" y="409" text-anchor="middle">→ acetyl-CoA</text>
-      <text class="sub" x="188" y="425" text-anchor="middle">1 NADH</text>
-      <text class="ttl" x="388" y="392" text-anchor="middle">LINK STEP</text>
-      <text class="sub" x="388" y="409" text-anchor="middle">→ acetyl-CoA</text>
-      <text class="sub" x="388" y="425" text-anchor="middle">1 NADH</text>
-      <line class="co2-l" x1="121" y1="396" x2="92" y2="396" marker-end="url(#mc)"></line>
-      <image href="../media/molecules/co2.webp" x="46" y="366" width="44" height="28"></image>
-      <text class="co2-t tiny" x="88" y="400" text-anchor="end">1 CO₂</text>
-      <line class="co2-l" x1="455" y1="396" x2="484" y2="396" marker-end="url(#mc)"></line>
-      <image href="../media/molecules/co2.webp" x="486" y="366" width="44" height="28"></image>
-      <text class="co2-t tiny" x="488" y="400">1 CO₂</text>
+      <rect class="box" x="123" y="370" width="130" height="84" rx="8"></rect>
+      <rect class="box" x="323" y="370" width="130" height="84" rx="8"></rect>
+      <text class="ttl" x="188" y="396" text-anchor="middle">LINK STEP</text>
+      <line class="rule" x1="137" y1="407" x2="239" y2="407"></line>
+      <text class="sub" x="188" y="424" text-anchor="middle">→ acetyl-CoA</text>
+      <text class="sub" x="188" y="442" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
+      <text class="ttl" x="388" y="396" text-anchor="middle">LINK STEP</text>
+      <line class="rule" x1="337" y1="407" x2="439" y2="407"></line>
+      <text class="sub" x="388" y="424" text-anchor="middle">→ acetyl-CoA</text>
+      <text class="sub" x="388" y="442" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
+      <line class="co2-l" x1="121" y1="412" x2="62" y2="412" marker-end="url(#mc)"></line>
+      <ellipse cx="28" cy="405" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
+      <image href="../media/molecules/co2.webp" x="-2" y="385" width="60" height="38"></image>
+      <text class="co2-t tiny" x="28" y="435" text-anchor="middle">1 CO₂</text>
+      <line class="co2-l" x1="455" y1="412" x2="514" y2="412" marker-end="url(#mc)"></line>
+      <ellipse cx="548" cy="405" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
+      <image href="../media/molecules/co2.webp" x="518" y="385" width="60" height="38"></image>
+      <text class="co2-t tiny" x="548" y="435" text-anchor="middle">1 CO₂</text>
 
-      <line class="flow" x1="188" y1="432" x2="188" y2="462" marker-end="url(#m)"></line>
-      <line class="flow" x1="388" y1="432" x2="388" y2="462" marker-end="url(#m)"></line>
+      <line class="flow" x1="188" y1="454" x2="188" y2="484" marker-end="url(#m)"></line>
+      <line class="flow" x1="388" y1="454" x2="388" y2="484" marker-end="url(#m)"></line>
 
       <!-- ===== krebs ===== -->
-      <rect class="box" x="123" y="464" width="130" height="62" rx="8"></rect>
-      <rect class="box" x="323" y="464" width="130" height="62" rx="8"></rect>
-      <text class="ttl" x="188" y="486" text-anchor="middle">KREBS CYCLE</text>
-      <text class="sub" x="188" y="503" text-anchor="middle"><tspan class="atp-t">1 ATP</tspan> · 3 NADH</text>
-      <text class="sub" x="188" y="519" text-anchor="middle">1 FADH₂</text>
-      <text class="ttl" x="388" y="486" text-anchor="middle">KREBS CYCLE</text>
-      <text class="sub" x="388" y="503" text-anchor="middle"><tspan class="atp-t">1 ATP</tspan> · 3 NADH</text>
-      <text class="sub" x="388" y="519" text-anchor="middle">1 FADH₂</text>
-      <line class="co2-l" x1="121" y1="494" x2="92" y2="494" marker-end="url(#mc)"></line>
-      <image href="../media/molecules/co2.webp" x="46" y="464" width="44" height="28"></image>
-      <text class="co2-t tiny" x="88" y="498" text-anchor="end">2 CO₂</text>
-      <line class="co2-l" x1="455" y1="494" x2="484" y2="494" marker-end="url(#mc)"></line>
-      <image href="../media/molecules/co2.webp" x="486" y="464" width="44" height="28"></image>
-      <text class="co2-t tiny" x="488" y="498">2 CO₂</text>
+      <g transform="translate(0,22)">
+      <rect class="box" x="123" y="464" width="130" height="84" rx="8"></rect>
+      <rect class="box" x="323" y="464" width="130" height="84" rx="8"></rect>
+      <text class="ttl" x="188" y="490" text-anchor="middle">KREBS CYCLE</text>
+      <line class="rule" x1="137" y1="501" x2="239" y2="501"></line>
+      <text class="sub" x="188" y="518" text-anchor="middle"><tspan class="atp-t">1 ATP</tspan> · <tspan class="n">3</tspan> NADH</text>
+      <text class="sub" x="188" y="536" text-anchor="middle"><tspan class="n">1</tspan> FADH₂</text>
+      <text class="ttl" x="388" y="490" text-anchor="middle">KREBS CYCLE</text>
+      <line class="rule" x1="337" y1="501" x2="439" y2="501"></line>
+      <text class="sub" x="388" y="518" text-anchor="middle"><tspan class="atp-t">1 ATP</tspan> · <tspan class="n">3</tspan> NADH</text>
+      <text class="sub" x="388" y="536" text-anchor="middle"><tspan class="n">1</tspan> FADH₂</text>
+      <line class="co2-l" x1="121" y1="506" x2="62" y2="506" marker-end="url(#mc)"></line>
+      <ellipse cx="28" cy="499" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
+      <image href="../media/molecules/co2.webp" x="-2" y="479" width="60" height="38"></image>
+      <text class="co2-t tiny" x="28" y="529" text-anchor="middle">2 CO₂</text>
+      <line class="co2-l" x1="455" y1="506" x2="514" y2="506" marker-end="url(#mc)"></line>
+      <ellipse cx="548" cy="499" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
+      <image href="../media/molecules/co2.webp" x="518" y="479" width="60" height="38"></image>
+      <text class="co2-t tiny" x="548" y="529" text-anchor="middle">2 CO₂</text>
 
       <!-- ===== lanes rejoin ===== -->
+      <g transform="translate(0,22)">
       <path class="flow" d="M188,526 V542 H288 V578" marker-end="url(#m)"></path>
       <path class="flow" d="M388,526 V542 H288 V578"></path>
 
       <!-- ===== carriers handed to the chain, per glucose (glycolysis 2 + link 2 + Krebs 6 NADH; Krebs 2 FADH2) ===== -->
+      <ellipse cx="186" cy="643" rx="96" ry="66" fill="url(#nad-glow)"></ellipse>
+      <ellipse cx="390" cy="643" rx="96" ry="66" fill="url(#nad-glow)"></ellipse>
       <image href="../media/molecules/nadhSkel.webp" x="96" y="580" width="180" height="126"></image>
       <image href="../media/molecules/fadh2.webp" x="300" y="580" width="180" height="126"></image>
       <text class="ttl" x="186" y="720" text-anchor="middle">10 NADH</text>
@@ -262,53 +234,59 @@
       <g transform="translate(0,182)">
 
       <!-- ===== electron transport chain ===== -->
-      <rect class="box" x="166" y="584" width="244" height="76" rx="8"></rect>
-      <text class="ttl" x="288" y="608" text-anchor="middle">ELECTRON TRANSPORT CHAIN</text>
-      <text class="sub" x="288" y="627" text-anchor="middle">H⁺ gradient spins ATP synthase</text>
-      <text class="sub" x="288" y="646" text-anchor="middle"><tspan class="atp-t">≈26 ATP</tspan> — the big payout</text>
+      <rect class="box" x="166" y="584" width="244" height="110" rx="8"></rect>
+      <text class="ttl" x="288" y="612" text-anchor="middle">ELECTRON TRANSPORT</text>
+      <text class="ttl" x="288" y="628" text-anchor="middle">CHAIN</text>
+      <line class="rule" x1="182" y1="639" x2="394" y2="639"></line>
+      <text class="sub" x="288" y="657" text-anchor="middle">H⁺ gradient spins ATP synthase</text>
+      <text class="sub" x="288" y="676" text-anchor="middle"><tspan class="atp-t">≈26 ATP</tspan> — the big payout</text>
 
       <!-- ===== oxygen feeds IN ===== -->
-      <ellipse cx="99" cy="622" rx="62" ry="54" fill="url(#o2-glow)"></ellipse>
-      <text class="ttl o2-t" x="99" y="598" text-anchor="middle">OXYGEN</text>
-      <image href="../media/molecules/o2.webp" x="71" y="602" width="56" height="44"></image>
-      <text class="sub o2-t" x="99" y="658" text-anchor="middle">6 O₂</text>
-      <line class="o2-l" x1="146" y1="622" x2="164" y2="622" marker-end="url(#mo)"></line>
-      <text class="tiny o2-t" x="99" y="680" text-anchor="middle">FINAL ELECTRON</text>
-      <text class="tiny o2-t" x="99" y="692" text-anchor="middle">ACCEPTOR</text>
+      <ellipse cx="39" cy="639" rx="62" ry="54" fill="url(#o2-glow)"></ellipse>
+      <text class="ttl o2-t" x="39" y="615" text-anchor="middle">OXYGEN</text>
+      <image href="../media/molecules/o2.webp" x="11" y="619" width="56" height="44"></image>
+      <text class="sub" x="39" y="675" text-anchor="middle">6 O₂</text>
+      <line class="o2-l" x1="86" y1="639" x2="164" y2="639" marker-end="url(#mo)"></line>
+      <text class="tiny o2-t" x="39" y="697" text-anchor="middle">FINAL ELECTRON</text>
+      <text class="tiny o2-t" x="39" y="709" text-anchor="middle">ACCEPTOR</text>
 
       <!-- ===== water leaves, same grammar as the CO₂ side arrows ===== -->
-      <line class="o2-l" x1="412" y1="622" x2="446" y2="622" stroke-width="1.3" marker-end="url(#mo)"></line>
-      <ellipse cx="474" cy="604" rx="50" ry="44" fill="url(#o2-glow)"></ellipse>
-      <image href="../media/molecules/water.webp" x="446" y="572" width="56" height="44"></image>
-      <text class="tiny o2-t" x="450" y="626">6 H₂O</text>
+      <line class="o2-l" x1="412" y1="639" x2="496" y2="639" stroke-width="1.3" marker-end="url(#mo)"></line>
+      <ellipse cx="534" cy="641" rx="50" ry="44" fill="url(#o2-glow)"></ellipse>
+      <image href="../media/molecules/water.webp" x="506" y="609" width="56" height="44"></image>
+      <text class="tiny o2-t" x="534" y="667" text-anchor="middle">6 H₂O</text>
 
       <!-- ===== total ===== -->
-      <line class="flow" x1="288" y1="660" x2="288" y2="712" marker-end="url(#ma)" stroke="var(--accent)"></line>
-      <rect class="atp-box" x="108" y="714" width="360" height="142" rx="12"></rect>
-      <image href="../media/molecules/atpSkel.webp" x="218" y="722" width="140" height="80"></image>
-      <text class="big atp-t" x="288" y="822" text-anchor="middle">≈30 ATP</text>
-      <text class="tiny" x="288" y="844" text-anchor="middle">PER GLUCOSE · 6 CO₂ OUT · 6 H₂O MADE</text>
+      <line class="flow" x1="288" y1="694" x2="288" y2="778" marker-end="url(#ma)" stroke="var(--accent)"></line>
+      <rect class="atp-box" x="88" y="780" width="400" height="176" rx="10"></rect>
+      <ellipse cx="288" cy="842" rx="96" ry="52" fill="url(#atp-glow)"></ellipse>
+      <image href="../media/molecules/atpSkel.webp" x="218" y="800" width="140" height="80"></image>
+      <text class="big atp-t" x="288" y="914" text-anchor="middle">≈30 ATP</text>
+      <text class="tiny" x="288" y="938" text-anchor="middle">PER GLUCOSE · 6 CO₂ OUT · 6 H₂O MADE</text>
+      </g>
+      </g>
+      </g>
       </g>
       </g>
       </g>
     </svg>
 
-    <figcaption></figcaption>
   </figure>
 
   <dl class="facts">
-    <div><dt>Why two lanes</dt><dd>Glucose has 6 carbons, pyruvate has 3. You get two, so the rest runs twice.</dd></div>
-    <div><dt>Per turn vs. per glucose</dt><dd>Krebs numbers are usually printed per turn. Double them for a glucose total.</dd></div>
-    <div><dt>Where the ATP is</dt><dd>Only 4 ATP are made directly. The other ~26 come from the H⁺ gradient.</dd></div>
-    <div><dt>Where do the H⁺ come from?</dt><dd>They’re already dissolved in the water of the matrix. The pumps grab them from the inside face of the membrane and release them on the outside.</dd></div>
-    <div><dt>What drives the steps?</dt><dd>Enzymes. Glycolysis alone uses about ten. They're why sugar comes apart in gentle steps instead of burning.</dd></div>
-    <div><dt>No oxygen?</dt><dd>The chain jams and the bottom three stages stop. The cell switches to <strong>fermentation</strong> — glycolysis alone, 2 ATP, and in muscle the pyruvate becomes lactic acid.</dd></div>
-    <div><dt>Why ≈30 and not exactly 30</dt><dd>NADH is worth about 2.5 ATP, FADH₂ about 1.5 — the H⁺ gradient doesn't divide into whole ATP. Most sources land between 30 and 32.</dd></div>
-    <div><dt>How glucose gets in</dt><dd>GLUT transporter proteins carry it across the membrane by facilitated diffusion — no ATP needed.</dd></div>
+    <div><dt class="cap-sm">Why two lanes</dt><dd>Glucose has 6 carbons, pyruvate has 3. You get two, so the rest runs twice.</dd></div>
+    <div><dt class="cap-sm">Per turn vs. per glucose</dt><dd>Krebs numbers are usually printed per turn. Double them for a glucose total.</dd></div>
+    <div><dt class="cap-sm">Where the ATP is</dt><dd>Only 4 ATP are made directly. The other ~26 come from the H⁺ gradient.</dd></div>
+    <div><dt class="cap-sm">Where do the H⁺ come from?</dt><dd>They’re already dissolved in the water of the matrix. The pumps grab them from the inside face of the membrane and release them on the outside.</dd></div>
+    <div><dt class="cap-sm">What drives the steps?</dt><dd>Enzymes. Glycolysis alone uses about ten. They're why sugar comes apart in gentle steps instead of burning.</dd></div>
+    <div><dt class="cap-sm">No oxygen?</dt><dd>The chain jams and the bottom three stages stop. The cell switches to <strong>fermentation</strong> — glycolysis alone, 2 ATP, and in muscle the pyruvate becomes lactic acid.</dd></div>
+    <div><dt class="cap-sm">Why ≈30 and not exactly 30</dt><dd>NADH is worth about 2.5 ATP, FADH₂ about 1.5 — the H⁺ gradient doesn't divide into whole ATP. Most sources land between 30 and 32.</dd></div>
+    <div><dt class="cap-sm">How glucose gets in</dt><dd>GLUT transporter proteins carry it across the membrane by facilitated diffusion — no ATP needed.</dd></div>
   </dl>
+  </main>
 
-  <footer>
-    <p>Want the longer walkthrough? <a href="index.html">Read the full version →</a></p>
+  <footer class="sitefoot">
+    
   </footer>
 
 </div>
