@@ -203,6 +203,10 @@
     letter-spacing:.02em}
   /* …and the arrow into the cycle proper, so the rail reads bridge → ring. */
   .rlead{color:var(--muted);font-size:14px;margin:0 -3px 0 -1px;user-select:none}
+  /* ?view=link: the stage and its bottom bar, nothing else */
+  .link #railbar,.link #side,.link #utils{display:none}
+  .link #app-sidebar{grid-template-rows:minmax(0,1fr);grid-template-columns:1fr}
+  .link #stage{grid-column:1;grid-row:1}
 </style>
 </head>
 <!-- The class has to land before the first paint, or a framed lesson
@@ -462,6 +466,11 @@
 /* ---------- shared stage (kit/stagekit.js over scene.js) + effects (fx.js) ----
  * The fit is this page's own for glycolysis's reason: it measures LANE LAYOUTS
  * and the reserves are chrome only this lesson has. */
+/* ?view=link: the link step alone (link-step.html). One step, no rail, no
+ * sidebar, no tally; the stage stops on the step's review beat. */
+const LINK=/[?&]view=link\b/.test(location.search);
+document.documentElement.classList.toggle('link',LINK);
+if(LINK) document.title='The link step';
 const canvas=document.getElementById('gl');
 const OPEN_THETA=0.10;
 const L=Lesson.create(canvas,{
@@ -725,7 +734,7 @@ const REG={
  * ============================================================= */
 let done=0;                          // how many STEPS of this lap are complete
 let intro=true;                      // the opening screen; see glycolysis
-const nSteps=STEPS.length;
+const nSteps=LINK?1:STEPS.length;
 /* WHICH TURN. Glucose makes two pyruvate, so the whole of this runs twice. Lap
  * 2 is played rather than clicked (see the header), so it is the one piece of
  * state the student does not drive step by step. */
@@ -1271,8 +1280,8 @@ const captionAt=i=>intro ? INTRO_MSG
 const headAt=i=>{ const st=STEPS[i];
   if(!st) return '';
   // The bridge is not one of the eight, so it is not given a number to recite.
-  const name = typeof st.n==='number' ? `Step ${st.n}` : st.n;
-  return `${name} <em>(${st.hook})</em>`; };
+  if(typeof st.n!=='number') return st.hook;
+  return `Step ${st.n} <em>(${st.hook})</em>`; };
 let shownCaption=null;
 function drawCaption(){
   // THE BAND IS THE INTRO AND THE HAND-OFF BETWEEN LAPS. Both are moments when
@@ -1681,7 +1690,7 @@ TALLY.forEach(t=>{
 // UP AT THE END OF EVERY LAP, not only the last: finishing turn one is the beat
 // where the numbers are worth reading, and it is where the second turn is
 // offered from.
-const tallyOn=()=>!intro && !reviewing && done>=nSteps;
+const tallyOn=()=>!LINK && !intro && !reviewing && done>=nSteps;
 /* THE THREE NOTES UNDER THE MOLECULES — the same arithmetic bracketed three
  * ways, which is the page's answer to "why does my textbook say 3 NADH?".
  * Pyruvate oxidation and one turn are the two halves; the total is what they
@@ -1882,7 +1891,7 @@ function drawAct(){
   const head = intro ? ''
              : autoplay ? `Turn ${lap} — watching`
              : reviewing ? (typeof STEPS[done-1].n==='number'
-                 ? `Step ${STEPS[done-1].n} complete` : `${STEPS[done-1].n} complete`)
+                 ? `Step ${STEPS[done-1].n} complete` : `${STEPS[done-1].hook} complete`)
              : hi<nSteps ? headAt(hi)
              : '';
   const tip = (head && hi<nSteps) ? captionAt(hi) : '';
@@ -1909,6 +1918,7 @@ function drawAct(){
   // race it.
   if(autoplay){ actEl.style.visibility='hidden'; actEl.onclick=null; return; }
   actEl.className = reviewing ? ACT_BASE+' revin' : ACT_BASE;
+  if(reviewing && LINK && done>=nSteps){ actEl.style.visibility='hidden'; actEl.onclick=null; return; }
   if(reviewing){
     actEl.style.visibility='visible';
     actEl.innerHTML=`${(STEPS[done-1]||{}).nextLabel||'Next'} `
@@ -1920,7 +1930,7 @@ function drawAct(){
   // THE END OF A TURN. After turn one the button offers the second — the ×2 the
   // student has to be able to state, and the only place this page says it.
   // After turn two it opens the hand-off to the electron transport chain.
-  if(!st && !busy && INSET){ actEl.style.visibility='hidden'; actEl.onclick=null; return; }
+  if(!st && !busy && (INSET||LINK)){ actEl.style.visibility='hidden'; actEl.onclick=null; return; }
   if(!st && !busy){
     actEl.style.visibility='visible';
     if(lap<LAPS){
@@ -2261,6 +2271,7 @@ L.afterFrame=()=>{
 };
 
 if(OPEN_STEP!=null){ intro=false; done=OPEN_STEP-1; }
+if(LINK){ intro=false; done=0; }
 syncLanes(); refresh(); applyCam(); resize();
 // Re-solve AFTER refresh(): the first computeFit runs inside renderKeys(),
 // before the tray has children, so it measures a zero-height tray.
