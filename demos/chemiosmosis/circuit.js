@@ -505,6 +505,7 @@
       for (const key of Object.keys(chips)) {
         const c = chips[key];
         const there = approach(c, c.to, dt, FUEL_SPEED);
+        if (there && !c.spent) c.docked = true;
         if (c.spent && there) {
           c.fade -= dt / FUEL_FADE;
           fade(c.obj, c.fade);
@@ -771,7 +772,11 @@
         if (!o.part.group.visible) { r.st = null; return null; }
         const n = o.n;
         const paying = o.rate();
-        const rate = paying > 0 ? paying : r.busy ? CPX_COAST : 0;
+        /* A LOADED MACHINE WAITS FOR ITS CARRIER TO DOCK: a hand-fed one can
+           still be rising from deep in the matrix, and spending it on
+           `occlude` before it arrives draws a fuel that never touched it. */
+        const rate = r.busy && chips[o.key] && !chips[o.key].spent && !chips[o.key].docked ? 0
+          : paying > 0 ? paying : r.busy ? CPX_COAST : 0;
         if (rate > 0) {
           const was = r.t;
           r.t = (r.t + dt * rate / period()) % 1;
