@@ -34,7 +34,9 @@
     border-radius: 0; border: 0; border-right: 1px solid var(--border-hair);
     background: var(--surface-page); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
   }
-  .lshell .lshell-scroll { padding: 84px 40px 40vh; }
+  .lshell .lshell-topbar { display: none; }
+  .lshell .lshell-scroll { padding: 48px 40px 40vh; }
+  .lshell-panel .eyebrow, .lshell-panel .title { text-align: center; }
   .lshell .lshell-stage { left: 50vw; }
   .lshell-panel .body { font-family: var(--font-ui); }
   .lshell-panel .title { font-size: 26px; line-height: 1.1; letter-spacing: -.02em; }
@@ -42,10 +44,10 @@
   /* Scenes cross-fade. The shell hides a scene with `visibility`, which
      cuts; here a scene that is off keeps its last frame and fades, so the
      cell dissolves into the organelle rather than blinking. */
-  .lshell .lshell-scene { transition: opacity .8s ease; opacity: 1; }
+  .lshell .lshell-scene { transition: opacity 1.4s ease; opacity: 1; }
   .lshell .lshell-scene.is-off { visibility: visible; opacity: 0; pointer-events: none; }
 
-  .legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0 0 var(--space-4); }
+  .lshell .lshell-panel .legend { display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: center; gap: var(--space-2) var(--space-5); margin: 0 0 var(--space-4); }
   .legend span { display: inline-flex; align-items: center; gap: var(--space-2) }
   .swatch { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--k) 45%, transparent), transparent 70%) }
   .sw-o2  { --k: var(--c-o2) }
@@ -278,18 +280,17 @@
 (function () {
   'use strict';
   const shell = LessonShell.create({
-    brand: 'Cellular respiration',
     hint: 'Drag to orbit',
     chrome: 'none',
     steps: [{
-      eyebrow: 'One glucose, top to bottom',
+      eyebrow: 'Cellular respiration',
       title: 'How a cell turns sugar into usable energy',
       body: document.getElementById('chart').innerHTML,
     }],
   });
 
   const centred = () => ({ x: 0, y: 0 });
-  const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', viewOffset: centred }));
+  const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', clickToFly: false, viewOffset: centred }));
   const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
   const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', viewOffset: centred,
@@ -369,19 +370,31 @@
   }
 
 
+  /* The shell stops a scene the moment it is hidden, so it would fade out
+     as a still. Keep the outgoing one running for the length of the fade. */
+  const SCENES = { cell, mito, chemi };
+  let onStage = 'cell';
+  function show(name) {
+    if (name === onStage) return;
+    const prev = SCENES[onStage];
+    onStage = name;
+    shell.showScene(name);
+    prev.start();
+    setTimeout(() => { if (onStage !== name) return; prev.stop(); }, 1500);
+  }
   const PHASES = {
-    cell()  { shell.showScene('cell');  cell.home(); },
-    fly()   { shell.showScene('cell');  frameMito(); },
-    mito()  { shell.showScene('mito');  mito.box.flyTo(MITO_VIEW); },
+    cell()  { show('cell');  cell.home(); },
+    fly()   { show('cell');  frameMito(); },
+    mito()  { show('mito');  mito.box.flyTo(MITO_VIEW); },
     chemi() {
-      shell.showScene('chemi');
+      show('chemi');
       chemi.set({ chain: 'lumped' });
       aimAt(chemi.box, 0); chemi.box.flyTo({ r: 412, phi: Math.PI / 2 - 0.09 });
     },
     etc() {
-      shell.showScene('chemi');
+      show('chemi');
       chemi.set({ chain: 'split' });
-      aimAt(chemi.box, INNER_Y); chemi.box.flyTo({ r: 300, phi: Math.PI / 2 - 0.14 });
+      aimAt(chemi.box, INNER_Y); chemi.box.flyTo({ r: 380, phi: Math.PI / 2 - 0.12 });
     },
   };
   const ZONE = { cell: '#z-cyto', fly: '#z-cyto', mito: '#z-mito', chemi: '#z-mito', etc: '#z-mito' };
