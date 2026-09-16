@@ -86,7 +86,7 @@
   /* The step button sits in the chart's flow, where the next stage will
      draw: under the heading first, then in the blank the stage will fill. */
   figure { position: relative }
-  .step { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: center; transition: opacity .5s, top .6s cubic-bezier(.2,.7,.2,1) }
+  .step { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: center; transition: opacity .5s }
   .step.is-done { opacity: 0; pointer-events: none }
 </style>
 </head>
@@ -290,7 +290,7 @@
 
   const centred = () => ({ x: 0, y: 0 });
   const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', viewOffset: centred }));
-  const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, viewOffset: centred }));
+  const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 0.62, phi: 0.92, r: 46 }, viewOffset: centred }));
   const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', viewOffset: centred,
   }));
@@ -343,11 +343,31 @@
     })(t0);
   }
   const INNER_Y = -85;
-  const FAR = { pos: [4, 26, 58], target: [0, -1.5, 0] };
+  /* A mitochondrion in its neighbourhood: the cell's own click-flight lands
+     2.6 radii out and centred, which is a portrait; this stops at four and
+     looks past it, so it sits up and to the left with cytoplasm and the
+     next organelles around it. */
+  function frameMito() {
+    /* The mitochondrion nearest the middle of the floor, so the flight stays
+       inside the bowl: one against the wall puts the camera through it. */
+    const mitos = cell.sim.organelles.filter(o => o.userData.organelle === 'mitochondrion' && o.parent);
+    if (!mitos.length) return cell.lookAt('mitochondrion');
+    const org = mitos.reduce((m, o) => (o.position.x ** 2 + o.position.z ** 2 < m.position.x ** 2 + m.position.z ** 2 ? o : m));
+    if (cell.state().detail === 'auto') cell.sim.mitoDetail(org, true);
+    const b = cell.sim.bounds(org);
+    /* Looking steeply down, as the home view does, with the target moved
+       right and toward the camera so the organelle sits up and to the left. */
+    const dir = new THREE.Vector3(0.1, 0.85, 0.5).normalize();
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize();
+    const toward = new THREE.Vector3(dir.x, 0, dir.z).normalize();
+    const target = b.center.clone().addScaledVector(right, b.radius * 0.9).addScaledVector(toward, b.radius * 0.7);
+    cell.flyTo(target.clone().addScaledVector(dir, b.radius * 3.6).toArray(), target.toArray(), 1.8);
+  }
+
 
   const PHASES = {
     cell()  { shell.showScene('cell');  cell.home(); },
-    fly()   { shell.showScene('cell');  cell.lookAt('mitochondrion'); },
+    fly()   { shell.showScene('cell');  frameMito(); },
     mito()  { shell.showScene('mito');  mito.home(); },
     chemi() {
       shell.showScene('chemi');
@@ -388,10 +408,10 @@
   window.addEventListener('resize', placeCta);
   const btn = cta.querySelector('button');
   const STEPS = [
-    { label: 'Enter the cell', hold: 1800, run() { go('cell'); reveal(1); } },
+    { label: 'Enter the cell', hold: 2200, run() { go('fly'); reveal(1); } },
+    /* The organelle arrives wide and closes in over three seconds. */
     { label: 'Enter the mitochondria', hold: 3600, run() {
-      go('fly');
-      setTimeout(() => { go('mito'); reveal(2); }, 1500);
+      go('mito'); mito.home(3.2); reveal(2);
     } },
     /* The hold outlasts the zoom: arming the scroll reads the phase off the
        panel, and read early it would already say 'etc' and the zoom would
@@ -429,10 +449,8 @@
   }
   function sync() { go(phaseNow()); }
 
-  /* The cell starts far out so the first button is an entrance; the two
-     scenes the reader has not reached are built while it is on screen, so
-     each swap is a fade and not a hitch. */
-  cell.flyTo(FAR.pos, FAR.target, 0.05);
+  /* The two scenes the reader has not reached are built while the cell is
+     on screen, so each swap is a fade and not a hitch. */
   shell.showScene('cell');
   setTimeout(() => { mito.state(); chemi.state(); }, 1500);
 })();
