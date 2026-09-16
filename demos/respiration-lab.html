@@ -308,7 +308,7 @@
   const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
   const PROTONS = { inside: { H: 50 }, outside: { H: 50 } };
   const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
-    context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', names: 'intro', viewOffset: centred,
+    context: 'mitochondrion', fuel: 'NADH', chain: 'split', span: 'cell', names: 'intro', viewOffset: centred,
     /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
     cellContents: { inside: {}, outside: {} },
     /* Denser than the default 30 a side, so complex I loads from protons already in frame. Equal on both sides, so the gradient still starts at zero. */
@@ -412,7 +412,7 @@
     mito()  { show('mito');  mito.box.flyTo(MITO_VIEW); },
     chemi() {
       show('chemi');
-      chemi.set({ chain: 'lumped' });
+      chemi.set({ chain: 'split' });
       aimAt(chemi.box, 0); chemi.box.flyTo({ r: 412, phi: Math.PI / 2 - 0.09 });
     },
     etc() {
@@ -502,7 +502,7 @@
   const DOOR = { NADH: 'I', FADH2: 'II' };
 
   /* Counted from when the controls appear. A complex's turns reset whenever
-     the chain is relaid (scrolling up lumps it), so the tally adds deltas and
+     the chain is reset, so the tally adds deltas and
      treats a drop as a fresh start. One turn of I is one NADH, of II one FADH₂. */
   const tally = { NADH: 0, FADH2: 0, ATP: 0 };
   let seen = null;
@@ -553,8 +553,7 @@
      scrolling back up walks the same stops in reverse. */
   const MARKS = [['fly', '#k-split'], ['mito', '#z-mito'], ['chemi', '#k-carriers'], ['etc', '#k-etc']];
   function phaseNow() {
-    /* The buttons drive the split chain, and a nudge that lumped it would
-       reset the chain and wipe the carriers waiting on it. */
+    /* While the buttons are on screen the scene stays framed on the chain they drive. */
     if (!etc.hidden && etc.getBoundingClientRect().top < scroller.getBoundingClientRect().bottom) return 'etc';
     const line = scroller.scrollTop + scroller.clientHeight * 0.4;
     let p = 'cell';
