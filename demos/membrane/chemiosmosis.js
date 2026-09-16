@@ -40,6 +40,11 @@
   const PROTONS_PER_TURN = 9;
   const ATP_PER_TURN = 3;
   const PROTONS_PER_ATP = PROTONS_PER_TURN / ATP_PER_TURN;
+  /* GETTING THE ATP OUT COSTS ONE MORE. The translocase's ATP⁴⁻-for-ADP³⁻
+     swap spends the membrane voltage, and phosphate comes back in with a
+     proton: about one proton per ATP exported. With it, NADH's 10 buy about
+     2.5 ATP and FADH₂'s 6 about 1.5; without it, 3.3 and 2. */
+  const PROTONS_PER_EXPORT = 1;
   const PROTONS_PER_PH = 24;      // drawn protons per pH unit (exaggeration)
   const PH_REF = 7.0;             // both sides start here, before any pumping
   const MV_PER_PH = 61;           // Nernst at 37 C, the same 61 membrane.js uses
@@ -355,7 +360,7 @@
   const chainProtons = fuel => chainPath(fuel).reduce((s, k) => { const r = tableOf(fuel)[k]; return s + r.pumps + (r.fromWater || 0); }, 0);
   const chainPhotons = fuel => chainPath(fuel).reduce((s, k) => s + (tableOf(fuel)[k].photons || 0), 0);
 
-  const API = { PROTONS_PER_TURN, ATP_PER_TURN, PROTONS_PER_ATP, PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
+  const API = { PROTONS_PER_TURN, ATP_PER_TURN, PROTONS_PER_ATP, PROTONS_PER_EXPORT, PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
                 CONTEXTS, sideName, pumpDir, protonState, synthaseDirection, rotor, FUELS, SPENT, ACCEPTOR, complexRate, Complex,
                 CHAIN, PHOTO_CHAIN, CARRIES, chainPath, chainProtons, chainPhotons, E_PER_O2: 4 };
   global.Chemiosmosis = API;

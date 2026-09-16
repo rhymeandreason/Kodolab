@@ -170,6 +170,10 @@ console.log('\n== 6. the chain, split: what each fuel is worth');
   is(C.CHAIN.II.pumps === 0, 'complex II pumps nothing');
   is(C.chainProtons('NADH') === 10, `${C.chainProtons('NADH')} protons per NADH, summed off the table`);
   is(C.chainProtons('FADH2') === 6, `${C.chainProtons('FADH2')} protons per FADH₂: the difference is complex I's ${C.CHAIN.I.pumps}`);
+  {
+    const per = C.PROTONS_PER_ATP + C.PROTONS_PER_EXPORT, n = C.chainProtons('NADH') / per, f = C.chainProtons('FADH2') / per;
+    is(Math.abs(n - 2.5) < 0.01 && Math.abs(f - 1.5) < 0.01, `${n} ATP per NADH, ${f} per FADH₂, with export's ${C.PROTONS_PER_EXPORT} H⁺ charged per ATP`);
+  }
   is(C.chainPath('light').join() === 'PSII,b6f,PSI', 'light: water at PSII, then b6f, then PSI to NADP⁺');
   is(C.PHOTO_CHAIN.PSII.pumps === 0 && C.PHOTO_CHAIN.PSI.pumps === 0, 'neither photosystem pumps: b6f is the only pump');
   is(C.chainProtons('light') === 6, `${C.chainProtons('light')} H⁺ into the lumen per pair: b6f's ${C.PHOTO_CHAIN.b6f.pumps} plus ${C.PHOTO_CHAIN.PSII.fromWater} from water`);

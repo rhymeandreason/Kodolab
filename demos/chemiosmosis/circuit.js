@@ -342,6 +342,24 @@
       atpChips.push({ obj:g, t:0, phase:Math.random() * 6.28, fade:1,
                       x:(synthX || 0), y:-pumpDir() * (SYNTH.height + 20), legs:atpRoute(), leg:0 });
     }
+    /* EXPORT IS PAID IN PROTONS, charged when the ATP is made rather than
+       when a drawn one reaches the door, because ATP_MAX caps the drawn ones
+       and every ATP made has to leave. A pumped-side proton comes home at the
+       translocase, which turns no rotor. No translocase on stage, no charge. */
+    function exportCost() {
+      if (antX == null) return;
+      const d = pumpDir();
+      for (let i = 0; i < CHEM.PROTONS_PER_EXPORT; i++) {
+        const pool = travellers.filter(t => t.kind === 'H' && !t.aboard && t.lane == null && Math.sign(t.y) === d);
+        if (!pool.length) return;
+        const t = pool.reduce((a, b) => (Math.abs(a.x - antX) < Math.abs(b.x - antX) ? a : b));
+        t.x = antX + rnd(-10, 10); t.y = -d * (HALF + 12); t.z = rnd(-8, 8);
+        t.obj.position.set(t.x, t.y, t.z);
+        t.bounded = true; eng.repick(t); t.vy = Math.abs(t.vy) * -d;
+        protonsForExport++; eng.crossed.H -= d; eng.chargeOut -= d;
+        eng.mV = eng.clampMV(P.mvPerIon * eng.chargeOut);
+      }
+    }
     function releaseADP(atX) {
       const d = pumpDir();
       const g = buildNucleotide(2);
@@ -420,10 +438,61 @@
       if (!nadp && (!f || !CHEM.SPENT[f])) return;   // light: nothing arrives, and nothing should be drawn
       const dock = dockOf(key);
       const succ = key === 'II' && P.names !== 'intro';
-      const g = succ ? buildToken('succinate', RESP.carrier, 1) : nadp ? buildToken('NADP⁺', PHO.carrier, 2) : buildToken(f === 'FADH2' ? 'FADH₂' : f, RESP.carrier, 2);
+      /* A carrier fed by hand is already on stage, waiting: it is the one that docks. */
+      const w = waiting[key] && waiting[key][0] && waiting[key][0].boarding ? waiting[key].shift() : null;
+      const g = w ? w.obj : fuelToken(key, f);
+      if (!w) root.add(g);
+      const from = w || dock.from;
+      chips[key] = { obj:g, spentName: succ ? 'fumarate' : nadp ? 'NADPH' : CHEM.SPENT[f], x:from.x, y:from.y, z:from.z || 0, to:dock.at, fade:1, spent:false };
+      seat(g, chips[key].x, chips[key].y, chips[key].z);
+    }
+    function fuelToken(key, f) {
+      if (key === 'II' && P.names !== 'intro') return buildToken('succinate', RESP.carrier, 1);
+      if (key === 'PSI') return buildToken('NADP⁺', PHO.carrier, 2);
+      return buildToken(f === 'FADH2' ? 'FADH₂' : f, RESP.carrier, 2);
+    }
+
+    /* ---- carriers fed by hand, waiting their turn ----
+       feed() puts the carrier on stage AT ONCE, rising out of the deep matrix
+       and hanging below its complex, so a click is always answered by a
+       molecule. The complex takes them one per turn, oldest first; a full
+       queue refuses the feed, and `state().waiting` says so before a page
+       offers the button. Thylakoid light has no token and never waits. */
+    const WAIT_MAX = 3, WAIT_SPEED = 22, WAIT_DEPTH = 90;
+    const waiting = {};
+    function waitSpot(key, i) {
+      const d = pumpDir(), from = dockOf(key).from;
+      return { x: from.x - 6 + i * 14 * (i % 2 ? 1 : -1), y: from.y - d * (8 + i * 16), z: 0 };
+    }
+    function enqueue(key, f) {
+      const q = waiting[key] || (waiting[key] = []);
+      if (q.length >= WAIT_MAX) return false;
+      const d = pumpDir(), spot = waitSpot(key, q.length);
+      const g = fuelToken(key, f);
       root.add(g);
-      chips[key] = { obj:g, spentName: succ ? 'fumarate' : nadp ? 'NADPH' : CHEM.SPENT[f], x:dock.from.x, y:dock.from.y, to:dock.at, fade:1, spent:false };
-      seat(g, chips[key].x, chips[key].y, 0);
+      const w = { obj:g, f, x: spot.x + rnd(-30, 30), y: -d * (H_() + WAIT_DEPTH), z: rnd(-10, 10), t: rnd(0, 6), boarding: false };
+      seat(g, w.x, w.y, w.z);
+      q.push(w);
+      return true;
+    }
+    function tickWaiting(dt) {
+      for (const key of Object.keys(waiting)) {
+        const q = waiting[key];
+        q.forEach((w, i) => {
+          w.t += dt;
+          const spot = waitSpot(key, i);
+          approach(w, { x: spot.x + Math.sin(w.t * 0.9) * 3, y: spot.y + Math.cos(w.t * 1.3) * 2, z: 0 }, dt, WAIT_SPEED);
+        });
+        /* The next one boards when the machine is free and the last carrier has gone. */
+        const r = key === 'complex' ? lumped : RUN[key];
+        if (q.length && !q[0].boarding && !pulse[key] && !r.busy && !chips[key]) {
+          q[0].boarding = true;
+          pulse[key] = q[0].f; r.kick();
+        }
+      }
+    }
+    function clearWaiting() {
+      for (const key of Object.keys(waiting)) { for (const w of waiting[key]) dropToken(w.obj); waiting[key].length = 0; }
     }
     function fuelSpend(key) {
       const c = chips[key];
@@ -636,7 +705,7 @@
     /* ---- the proton circuit's doors ----
        `protonRef` is the count each side started with, so pH is read as a
        departure from where the page set it. */
-    let protonRef = null, pumpedTotal = 0, protonsLeaked = 0, protonsThroughSynthase = 0;
+    let protonRef = null, pumpedTotal = 0, protonsLeaked = 0, protonsThroughSynthase = 0, protonsForExport = 0;
     /* A PROTON GOES ONE WAY THROUGH A DOOR: down the proton-motive force.
        Off the headcount, not state(), which walks every traveller. */
     const protonDir = () => CHEM.synthaseDirection(eng.sideCount('H'), eng.mV, { ref: protonRef, dir: pumpDir() });
@@ -689,7 +758,10 @@
           t.obj.position.set(t.x, t.y, t.z);
           t.lane = null; t.bounded = true;
           eng.repick(t); t.vy = Math.abs(t.vy) * to;
-          t.exitPt = { x:t.x, y:t.y, z:t.z };
+          /* NO exitPt: that holds a traveller off every funnel until it is
+             ESCAPE_R away, and under the outer membrane's lid a pumped proton
+             almost never gets that far, so the synthase starved beside a full
+             gradient. The complex is not a pore; nothing can recapture it. */
         }
         r.cargo.length = 0;
       }
@@ -970,7 +1042,7 @@
     function resetChain() {
       lumped.reset(); for (const k of ALL) RUN[k].reset();
       pulse.complex = pulse.I = pulse.II = pulse.PSII = null; credit.PSI = 0;
-      clearFuel(); clearO2(); clearLight();
+      clearFuel(); clearWaiting(); clearO2(); clearLight();
       if (qTokens.length) homeShuttles();
     }
 
@@ -985,11 +1057,13 @@
       if (split()) {
         const donors = line().donors, key = Object.keys(donors).find(k => donors[k] === f);
         if (!key) { console.warn(`Chemiosmosis: a split chain in a ${P.context} takes ${Object.values(donors).join(' or ')}, not ${f}`); return false; }
+        if (P.showFuel && CHEM.SPENT[f]) return enqueue(key, f);
         pulse[key] = f; clearFuel(key); RUN[key].kick();
         if (key === 'PSII') credit.PSI++;
         return true;
       }
       if (!CHEM.complexRate(f, 1, 0, P.oxygen)) return false;   // no O₂: the NADH docks and nothing takes its electrons
+      if (P.showFuel && CHEM.SPENT[f]) return enqueue('complex', f);
       pulse.complex = f; clearFuel('complex'); lumped.kick();
       return true;
     }
@@ -1115,7 +1189,7 @@
          of the same pass(). A proton down the uncoupler's hole turns nothing. */
       onConduct(t, dir) {
         if (t.kind !== 'H' || dir !== -pumpDir()) return;
-        if (synthX != null && t.lane === synthX) { protonsThroughSynthase++; if (ROT.pass(1)) { releaseATP(); eng.emit('atp', ROT.atp); } }
+        if (synthX != null && t.lane === synthX) { protonsThroughSynthase++; if (ROT.pass(1)) { releaseATP(); exportCost(); eng.emit('atp', ROT.atp); } }
         else protonsLeaked++;
       },
       withContents: withProtons,
@@ -1128,7 +1202,7 @@
       pre(dt) { for (const r of runners()) r.run(dt); },
       post(dt) {
         ROTOR.rotation.y += (ROT.angle - ROTOR.rotation.y) * Math.min(1, dt * 6);
-        tickATP(dt); tickFuel(dt); tickO2(dt); tickLight(dt);
+        tickATP(dt); tickFuel(dt); tickWaiting(dt); tickO2(dt); tickLight(dt);
         if (qTokens.length) tickShuttles(dt);
       },
       set(next) {
@@ -1167,12 +1241,14 @@
           sides: Object.assign(base.sides, { beyond: outerOn() ? 'the cytosol' : null }),
           pH: proton.pH, dpH: proton.dpH, pmf: proton.pmf,
           atpMade: ROT.atp, rotorTurns: ROT.protons / CHEM.PROTONS_PER_TURN,
-          protonsThroughSynthase, protonsLeaked, complexTurns: pumpedTotal,
+          protonsThroughSynthase, protonsLeaked, protonsForExport, complexTurns: pumpedTotal,
           fuel: P.fuel, oxygen: P.oxygen !== false, fuelRate: CHEM.complexRate(P.fuel, P.fuelRate, proton.pmf, P.oxygen), pmfStall: CHEM.PMF_STALL,
           complexPhase: st ? st.phase : null, complexLabel: st ? st.label : null,
           complexCaption: st ? st.caption : null, complexT: lead.t,
           complexStoichiometry: sp ? null : CHEM.Complex.PROTONS_PER_CYCLE,
           complexStarved: runners().some(r => r.starved),
+          /* Carriers fed and not yet docked, per complex, and how many may wait. */
+          waiting: Object.assign({ max: WAIT_MAX }, Object.fromEntries(Object.keys(waiting).map(k => [k, waiting[k].length]))),
           /* THE SPLIT CHAIN'S LEDGER, per complex, and what a fuel is worth
              walked off CHAIN rather than typed. */
           complexes: sp ? Object.fromEntries(line().keys.map(k => [k, {
@@ -1188,11 +1264,11 @@
             photonsPerPair: CHEM.chainPhotons('light'),
             protonsPerO2: CHEM.chainProtons('light') * CHEM.E_PER_O2 / 2,
           }) : null,
-          stoichiometry: { protonsPerTurn: CHEM.PROTONS_PER_TURN, atpPerTurn: CHEM.ATP_PER_TURN, protonsPerATP: CHEM.PROTONS_PER_ATP },
+          stoichiometry: { protonsPerTurn: CHEM.PROTONS_PER_TURN, atpPerTurn: CHEM.ATP_PER_TURN, protonsPerATP: CHEM.PROTONS_PER_ATP, protonsPerExport: antX == null ? 0 : CHEM.PROTONS_PER_EXPORT },
         };
       },
       reset() {
-        ROT.reset(); pumpedTotal = 0; protonsLeaked = 0; protonsThroughSynthase = 0;
+        ROT.reset(); pumpedTotal = 0; protonsLeaked = 0; protonsThroughSynthase = 0; protonsForExport = 0;
         for (const k in lightLedger) lightLedger[k] = 0;
         clearATP(); resetChain();
       },

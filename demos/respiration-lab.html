@@ -90,8 +90,10 @@
   figure { position: relative }
   .step { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; align-items: center; transition: opacity .5s }
   .etc { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); text-align: center; }
-  .etc[hidden], .etc .cta[hidden] { display: none; }
-  .etc-cap { margin: 0; max-width: 42ch; min-height: 3em; }
+  .etc[hidden] { display: none; }
+  .etc-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
+  .tally { display: flex; gap: var(--space-5); font-family: var(--font-ui); color: var(--text-muted); }
+  .tally b { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--text-strong); font-variant-numeric: tabular-nums; }
   .step-mol { width: 280px; height: auto; }
   .lshell .lshell-panel .legend { opacity: 0; transition: opacity .5s ease; }
   .lshell .lshell-panel .legend.is-in { opacity: 1; }
@@ -304,10 +306,13 @@
   const centred = () => ({ x: 0, y: 0 });
   const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', clickToFly: false, viewOffset: centred }));
   const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
+  const PROTONS = { inside: { H: 50 }, outside: { H: 50 } };
   const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', names: 'intro', viewOffset: centred,
     /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
     cellContents: { inside: {}, outside: {} },
+    /* Denser than the default 30 a side, so complex I loads from protons already in frame. Equal on both sides, so the gradient still starts at zero. */
+    contents: PROTONS,
   }).show('water', false));
   shell.goTo(0);
 
@@ -457,7 +462,8 @@
     { label: 'Electron transport chain', hold: 5000, run() {
       mito.box.flyTo(CRISTA_VIEW, 1.8); reveal(3);
       setTimeout(() => go('chemi'), 2000);
-      setTimeout(() => { go('etc'); chemi.set({ fuel: null }); }, 4400);
+      /* A clean slate for the count: the chain ran before, and its leftover gradient would add ATP no carrier paid for. */
+      setTimeout(() => { go('etc'); chemi.set({ fuel: null }); chemi.reset(); chemi.set({ contents: PROTONS }); }, 4400);
     } },
   ];
   let step = 0;
@@ -486,73 +492,70 @@
   const etc = document.createElement('div');
   etc.className = 'etc';
   etc.hidden = true;
-  etc.innerHTML = '<p class="etc-cap"></p><button class="cta" type="button"></button>';
+  etc.innerHTML = '<div class="tally"><span><b data-k="NADH">0</b> NADH used</span><span><b data-k="FADH2">0</b> FADH₂ used</span><span><b data-k="ATP">0</b> ATP made</span></div>'
+    + '<div class="etc-btns"><button class="cta" type="button" data-fuel="NADH"></button><button class="cta" type="button" data-fuel="FADH2"></button></div>';
   figure.after(etc);
-  const etcCap = etc.querySelector('.etc-cap'), etcBtn = etc.querySelector('button');
-  const pumped = st => Object.values(st.complexes || {}).reduce((n, c) => n + c.pumped, 0);
-  const idle = st => st.shuttles && !st.shuttles.ubiquinol && !st.shuttles.cytcLoaded;
-  const ETC = [
-    { label: 'Send one NADH', cap: 'The chain is idle: no fuel, no pumping. Send it one carrier.',
-      run() { chemi.clearNotes(); chemi.set({ chain: 'split' }); chemi.feed('NADH'); chemi.note('complex.I'); },
-      done: (st, st0) => st.complexes.IV.turns > st0.complexes.IV.turns && idle(st),
-      after: (st, st0) => `One NADH moved <b>${pumped(st) - pumped(st0)} H⁺</b> across the membrane, and oxygen took its electrons at complex IV.` },
-    { label: 'Send one FADH₂',
-      run() { chemi.clearNotes(); chemi.set({ chain: 'split' }); chemi.feed('FADH2'); chemi.note('complex.II'); },
-      done: (st, st0) => st.complexes.IV.turns > st0.complexes.IV.turns && idle(st),
-      after: (st, st0) => `FADH₂ enters at complex II, which pumps nothing: <b>${st.protonsPerFuel.FADH2} H⁺</b> against NADH's <b>${st.protonsPerFuel.NADH}</b>. Same pair of electrons, less gradient.` },
-    { label: 'Let it run',
-      run() { chemi.clearNotes(); chemi.set({ fuel: 'NADH' }); chemi.note('synthase'); },
-      live: st => `Protons flow back through ATP synthase. ATP made: <b>${st.atpMade}</b>`,
-      done: (st, st0) => st.atpMade >= st0.atpMade + 3,
-      after: st => `The gradient spins the synthase. ATP made: <b>${st.atpMade}</b>. What happens if nothing takes the electrons at the end?` },
-    { label: 'Take away oxygen',
-      run() { chemi.clearNotes(); chemi.set({ oxygen: false }); chemi.note('complex.IV'); },
-      live: () => 'No O₂ at complex IV. Watch the chain back up.',
-      done: st => st.shuttles.cytcLoaded > 0 && st.shuttles.ubiquinol > 0,
-      after: () => 'Cytochrome c waits full at IV, then III stops, then I. NADH has nowhere to go, so no gradient and no ATP.' },
-    { label: 'Restore oxygen',
-      run() { chemi.clearNotes(); chemi.set({ oxygen: true }); },
-      done: (st, st0) => st.atpMade > st0.atpMade,
-      after: () => 'Oxygen takes the electrons again and the whole chain starts moving.' },
-  ];
-  let etcStep = 0, etcPoll = 0;
-  function etcShow() {
-    const e = ETC[etcStep];
-    etcBtn.hidden = !e;
-    if (e) etcBtn.textContent = e.label;
+
+  /* One glucose's carriers into the chain: 2 NADH from glycolysis, 2 from the link step, 6 from Krebs; 2 FADH₂ from Krebs. The chart says the same. */
+  const GLUCOSE = { NADH: 10, FADH2: 2 };
+  const NAME = { NADH: 'NADH', FADH2: 'FADH₂' };
+  const DOOR = { NADH: 'I', FADH2: 'II' };
+
+  /* Counted from when the controls appear. A complex's turns reset whenever
+     the chain is relaid (scrolling up lumps it), so the tally adds deltas and
+     treats a drop as a fresh start. One turn of I is one NADH, of II one FADH₂. */
+  const tally = { NADH: 0, FADH2: 0, ATP: 0 };
+  let seen = null;
+  /* Carriers put on stage. Each click is one molecule the student sees rise
+     out of the matrix; the component queues it at its complex, and refuses
+     one when the queue is full, which is when the button goes grey. */
+  const sent = { NADH: 0, FADH2: 0 };
+  function count() {
+    const st = chemi.state();
+    const now = { NADH: st.complexes ? st.complexes.I.turns : null, FADH2: st.complexes ? st.complexes.II.turns : null, ATP: st.atpMade };
+    if (seen) for (const k in tally) {
+      if (now[k] == null) continue;
+      const was = seen[k] == null || now[k] < seen[k] ? now[k] : seen[k];
+      tally[k] += now[k] - was;
+    }
+    seen = now;
+    for (const b of etc.querySelectorAll('.tally b')) b.textContent = tally[b.dataset.k];
+    buttons(st);
   }
+  function buttons(st = chemi.state()) {
+    const w = st.waiting || {};
+    for (const b of etc.querySelectorAll('button[data-fuel]')) {
+      const f = b.dataset.fuel, left = GLUCOSE[f] - sent[f];
+      b.textContent = `Send ${NAME[f]} (${left} left)`;
+      b.disabled = left <= 0 || (w[DOOR[f]] || 0) >= w.max;
+    }
+  }
+  etc.addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-fuel]');
+    if (!b || b.disabled) return;
+    const f = b.dataset.fuel;
+    chemi.set({ chain: 'split', fuel: null });
+    if (!chemi.feed(f)) return;
+    sent[f]++;
+    chemi.clearNotes(); chemi.note('complex.' + DOOR[f]);
+    buttons();
+  });
   function etcArm() {
     etc.hidden = false;
-    etcCap.innerHTML = ETC[0].cap;
-    etcShow();
+    count();
+    setInterval(count, 250);
     const top = etc.offsetTop + etc.offsetHeight + 40 - scroller.clientHeight;
     scroller.scrollTo({ top: Math.max(scroller.scrollTop, top), behavior: 'smooth' });
   }
-  etcBtn.addEventListener('click', () => {
-    const e = ETC[etcStep];
-    etcBtn.disabled = true;
-    e.run();
-    const st0 = chemi.state();
-    clearInterval(etcPoll);
-    etcPoll = setInterval(() => {
-      const st = chemi.state();
-      /* Scrolling above the chain box lumps it, and a lumped chain has no per-complex ledger. */
-      if (!st.complexes) return;
-      if (e.live) etcCap.innerHTML = e.live(st);
-      if (!e.done(st, st0)) return;
-      clearInterval(etcPoll);
-      etcCap.innerHTML = e.after(st, st0);
-      etcStep++;
-      etcBtn.disabled = false;
-      etcShow();
-    }, 250);
-  });
 
   /* Once every stage is drawn, a line 40% down the panel says where the
      reader is, and the phase is the last mark that line has passed, so
      scrolling back up walks the same stops in reverse. */
   const MARKS = [['fly', '#k-split'], ['mito', '#z-mito'], ['chemi', '#k-carriers'], ['etc', '#k-etc']];
   function phaseNow() {
+    /* The buttons drive the split chain, and a nudge that lumped it would
+       reset the chain and wipe the carriers waiting on it. */
+    if (!etc.hidden && etc.getBoundingClientRect().top < scroller.getBoundingClientRect().bottom) return 'etc';
     const line = scroller.scrollTop + scroller.clientHeight * 0.4;
     let p = 'cell';
     for (const [name, sel] of MARKS) if (line >= topOf(sel)) p = name;
