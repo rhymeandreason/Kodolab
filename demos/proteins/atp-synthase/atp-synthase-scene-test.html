@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ATP synthase scene bench</title>
+<link rel="stylesheet" href="../../css/kodo.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+<style>
+  body{margin:0}
+  #scene{position:fixed;inset:0}
+  #bar{position:fixed;left:16px;bottom:16px;z-index:2}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="bar"><button class="btn" id="spin">pause</button></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/skel.js"></script>
+<script src="../../lib/mol-carriers.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../lib/atomkit.js"></script>
+<script src="../../membrane/parts.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script src="atp-synthase-scene.js"></script>
+<script>
+const scene = ATPSynthase.mount(document.getElementById('scene'));
+const btn = document.getElementById('spin');
+btn.onclick = () => { const on = btn.textContent === 'play'; scene.spin(on); btn.textContent = on ? 'pause' : 'play'; };
+window.scene = scene;
+</script>
+</body>
+</html>
