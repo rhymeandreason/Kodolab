@@ -368,7 +368,7 @@ Every third of a turn a labelled ATP is released from the synthase head into the
 
 Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `spent` (n) · `oxygen` (n) and `nadph` (n), split thylakoid · `conduct` (traveller, dir).
 
-Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `complex.I`, `complex.II`, `complex.III`, `complex.IV`, `quinone`, `cytc` (split), `psii`, `b6f`, `psi`, `plastoquinone`, `plastocyanin`, `water.split`, `nadph` (split thylakoid; `complex` is b6f), `pump`, `pump.atp`, `cell.outside` (span `'cell'`), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
+`m.at(name)` is an anchor's world point, or null when that part is off stage, for pinning a page's own chrome (a `kit/badge.js` badge). Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `complex.I`, `complex.II`, `complex.III`, `complex.IV`, `quinone`, `cytc` (split), `psii`, `b6f`, `psi`, `plastoquinone`, `plastocyanin`, `water.split`, `nadph` (split thylakoid; `complex` is b6f), `pump`, `pump.atp`, `cell.outside` (span `'cell'`), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
 
 Layers for `show()`: `water`, `cut`, `membrane`, `outer`. Signals for Graph: `protons`, `voltage`, `dpH`, `pmf`, `atp`.
 

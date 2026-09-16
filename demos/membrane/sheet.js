@@ -1128,6 +1128,7 @@
       sim, box,
       note: (n, o) => nb && nb.note(n, o), notes: n => nb && nb.notes(n), clearNotes: () => nb && nb.clear(),
       anchors: () => nb ? nb.list() : [],
+      at: n => sim.anchors[n] ? sim.anchors[n]() : null,
       layers: sim.layers, show: (n, on) => { sim.show(n, on); if (!box.running) box.draw(); return handle; }, palette: sim.palette,
       set(next) { sim.set(next); if (sides) sides.paint(); return handle; },
       state: () => last || sim.state(),

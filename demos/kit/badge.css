@@ -1,0 +1,13 @@
+/* kit/badge.js: a round icon button pinned to a part of a 3D scene. */
+.badge {
+  position: absolute; z-index: 5; width: 30px; height: 30px; padding: 0;
+  display: grid; place-items: center; transform: translate(-50%, -50%);
+  border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--accent); color: var(--surface-page, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent), 0 4px 12px rgba(0, 0, 0, .18);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.badge[hidden] { display: none; }
+.badge:hover { transform: translate(-50%, -50%) scale(1.12); }
+.badge:focus-visible { outline: var(--focus-ring, 2px solid currentColor); outline-offset: 3px; }
+.badge svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }

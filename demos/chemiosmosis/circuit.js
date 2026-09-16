@@ -1559,6 +1559,8 @@
       sim: mito, cell, box,
       note: (n, o) => nb && nb.note(n, o), notes: n => nb && nb.notes(n), clearNotes: () => nb && nb.clear(),
       anchors: () => nb ? nb.list() : [],
+      /* An anchor's world point, or null when that part is off stage: what a page pins its own chrome to. */
+      at: n => anchors[n] ? anchors[n]() : null,
       layers: mito.layers,
       show: (n, on) => { mito.show(n, on); if (SHARED.includes(n)) cell.show(n, on); if (!box.running) box.draw(); return handle; },
       palette: () => { const seen = new Set(); return mito.palette().concat(cell.palette()).filter(p => !seen.has(p.name) && seen.add(p.name)); },
@@ -1600,7 +1602,7 @@
     const handle = {
       get sim() { return cur.sim; }, get box() { return cur.box; }, get cell() { return cur.cell || null; },
       note: (n, o) => cur.note(n, o), notes: n => cur.notes(n), clearNotes: () => cur.clearNotes(),
-      anchors: () => cur.anchors(), layers: () => cur.layers(), palette: () => cur.palette(),
+      anchors: () => cur.anchors(), at: n => cur.at(n), layers: () => cur.layers(), palette: () => cur.palette(),
       show: (n, on) => { cur.show(n, on); return handle; },
       set(next) {
         const was = P0.span === 'cell' ? 'cell' : 'other', chainWas = P0.chain;

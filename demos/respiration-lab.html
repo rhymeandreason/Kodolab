@@ -101,9 +101,36 @@
   .step-mol-cap[hidden] { display: none; }
   .step-mol-cap:not([hidden]) + .cta { margin-top: var(--space-6); }
   .step.is-done { opacity: 0; pointer-events: none }
+
+  /* Side doors off the scene, opened by a badge. kit/modal.js needs only [hidden]. */
+  .modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal[hidden] { display: none; }
+  .modal .mback { position: absolute; inset: 0; background: rgba(20, 22, 26, .45); }
+  .modal .mcard { position: relative; width: fit-content; max-width: 100%; padding: 22px; }
+  .modal .mclose { position: absolute; top: 10px; right: 12px; border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: var(--text-muted); }
+  .synth { display: grid; grid-template-columns: min(760px, 80vh) minmax(0, 300px); gap: var(--space-6); align-items: center; }
+  .synth-stage { position: relative; aspect-ratio: 1; background: var(--surface-stage); border-radius: var(--radius-md); overflow: hidden; }
+  :root .modal .synth-text h2 { font-size: 34px; }
+  :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
 </style>
+<link rel="stylesheet" href="kit/badge.css">
 </head>
 <body>
+
+<div id="synthmodal" class="modal" hidden>
+  <div class="mback"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-labelledby="synthtitle">
+    <button class="mclose" aria-label="Close">&times;</button>
+    <div class="synth">
+      <div class="synth-stage" id="synthstage"></div>
+      <div class="synth-text">
+        <p class="mkick">The real protein</p>
+        <h2 id="synthtitle">ATP synthase</h2>
+        <p class="msub">Protons flowing back into the matrix turn the rotor. Each full turn makes 3 ATP in the head. The real enzyme spins over a hundred times a second</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <template id="chart">
 <div class="legend cap-sm">
@@ -289,7 +316,12 @@
 </template>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="kit/app.js" data-shell="steps" data-use="AnimalCell,Mitochondrion,Chemiosmosis"></script>
+<script src="kit/app.js" data-shell="steps" data-use="AnimalCell,Mitochondrion,Chemiosmosis,Proteinbox"></script>
+<script src="lib/skel.js"></script>
+<script src="lib/mol-carriers.js"></script>
+<script src="proteins/atp-synthase/atp-synthase-scene.js"></script>
+<script src="kit/modal.js"></script>
+<script src="kit/badge.js"></script>
 <script>
 (function () {
   'use strict';
@@ -307,13 +339,24 @@
   const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', clickToFly: false, viewOffset: centred }));
   const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
   const PROTONS = { inside: { H: 50 }, outside: { H: 50 } };
-  const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
+  /* The real enzyme, mounted per open and destroyed on close: a second WebGL box left running behind the lesson costs every frame. */
+  let synth = null;
+  const synthModal = Modal.create({ el: 'synthmodal',
+    onShow: () => { synth = ATPSynthase.mount(document.getElementById('synthstage'), { context: 'mitochondrion' }); },
+    onHide: () => { if (synth) synth.destroy(); synth = null; } });
+  const chemi = shell.scene('chemi', el => withBadge(el, Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'split', span: 'cell', names: 'intro', viewOffset: centred,
     /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
     cellContents: { inside: {}, outside: {} },
     /* Denser than the default 30 a side, so complex I loads from protons already in frame. Equal on both sides, so the gradient still starts at zero. */
     contents: PROTONS,
-  }).show('water', false));
+  }).show('water', false)));
+  function withBadge(el, c) {
+    const b = Badge.create({ host: el, camera: c.box.camera, canvas: c.box.canvas, at: () => c.at('synthase'),
+      icon: 'more', label: 'See the real ATP synthase', offset: [34, 0], onClick: () => synthModal.show() });
+    c.on('frame', b.update);
+    return c;
+  }
   shell.goTo(0);
 
   const scroller = shell.el.querySelector('.lshell-scroll');
