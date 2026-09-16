@@ -94,6 +94,7 @@ const OUT_S = 5.2, IN_S = 5, IN_DELAY = 0.6;
    size in ångströms, so a proton and an ATP still read when the scene is
    embedded small. The enzyme and the distances they travel stay true. */
 const EXAG = 2;
+const SPREAD = 20 * EXAG;            // Å either side ADP and Pi start from each other
 const PROTON_R = 1.8 * EXAG, BADGE = 4 * EXAG, PILL = 6 * EXAG;   // Å, drawn
 
 /* ---- the membrane --------------------------------------------------------- *
@@ -306,9 +307,12 @@ function attach(box){
         const home = site.at.clone().add(geo.P);
         const side = new THREE.Vector3().crossVectors(geo.A, site.out).normalize();
         live.push({ kind: 'mol', ...withTag('atp'), from: home, to: home.clone().addScaledVector(site.out, DRIFT), clock: 0, delay: 0, dur: OUT_S, leaving: true });
-        for(const [kind, off] of [['adp', 7 * EXAG], ['pi', -7 * EXAG]])
-          live.push({ kind: 'mol', ...withTag(kind), to: home.clone().addScaledVector(side, off * .3),
-            from: home.clone().addScaledVector(site.out, DRIFT).addScaledVector(side, off), clock: 0, delay: IN_DELAY, dur: IN_S });
+        /* ADP (~20 Å drawn EXAG times) and Pi start a molecule's length and
+           more apart, sideways and along the axis, and close in on the site. */
+        for(const [kind, off] of [['adp', 1], ['pi', -1]])
+          live.push({ kind: 'mol', ...withTag(kind), to: home.clone().addScaledVector(side, off * 3 * EXAG),
+            from: home.clone().addScaledVector(site.out, DRIFT).addScaledVector(side, off * SPREAD).addScaledVector(geo.A, off * SPREAD * .4),
+            clock: 0, delay: IN_DELAY, dur: IN_S });
       }
       for(let i = live.length - 1; i >= 0; i--){
         const x = live[i];
