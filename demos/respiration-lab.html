@@ -25,10 +25,17 @@
     --c-co2: var(--text-dim);
     --c-nad: var(--energy-nad);
   }
-  /* The panel is the chart's reading width, not a step's: 430px scales the
-     diagram's 12px type below legibility. */
-  .lshell .lshell-panel { width: min(620px, calc(100vw - 48px)); }
-  .lshell .lshell-scroll { padding: 28px 26px 32vh; }
+  /* The panel is the left half of the window, a page beside the scene rather
+     than glass over it: the chart wants a reading width, and the membrane
+     stack wants a frame nothing covers. The stage is the right half, so the
+     mounts centre in it with no offset. */
+  .lshell .lshell-panel {
+    left: 0; top: 0; bottom: 0; width: 50vw; max-width: none;
+    border-radius: 0; border: 0; border-right: 1px solid var(--border-hair);
+    background: var(--surface-page); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  .lshell .lshell-scroll { padding: 84px 40px 32vh; }
+  .lshell .lshell-stage { left: 50vw; }
   .lshell-panel .body { font-family: var(--font-ui); }
   .lshell-panel .title { font-size: 26px; line-height: 1.1; letter-spacing: -.02em; }
 
@@ -271,10 +278,11 @@
     }],
   });
 
-  const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', viewOffset: shell.viewOffset }));
-  const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, viewOffset: shell.viewOffset }));
+  const centred = () => ({ x: 0, y: 0 });
+  const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', viewOffset: centred }));
+  const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, viewOffset: centred }));
   const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
-    context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', viewOffset: shell.viewOffset,
+    context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', viewOffset: centred,
   }));
   shell.goTo(0);
 
@@ -331,7 +339,7 @@
     etc() {
       shell.showScene('chemi');
       chemi.set({ chain: 'split' });
-      aimAt(chemi.box, INNER_Y); chemi.box.flyTo({ r: 230, phi: Math.PI / 2 - 0.16 });
+      aimAt(chemi.box, INNER_Y); chemi.box.flyTo({ r: 300, phi: Math.PI / 2 - 0.14 });
     },
   };
   const ZONE = { cell: '#z-cyto', fly: '#z-cyto', mito: '#z-mito', chemi: '#z-mito', etc: '#z-mito' };
