@@ -1316,8 +1316,17 @@ const ringEl=document.getElementById('ringbox');
  * the map instead of the molecule; the ledger's arithmetic is the punchline
  * rather than the running commentary; and the energy card is what the verdicts
  * on the stage open, so none of the three may arrive by itself. */
+/* ?view=inset: the cycle as a side door from another lesson (respiration's
+ * chart). The pathway, its ring and its ledger, both open together; no enzyme,
+ * no energy card or the verdicts that open it, and no second turn or payoff at
+ * the end, since the host is where next is. */
+const INSET=/[?&]view=inset\b/.test(location.search);
+const insetOpen=new Set(['ring','ledger']);
 let panel=null;
-const setPanel=p=>{ panel=(panel===p?null:p); refresh(); };
+const setPanel=p=>{
+  if(INSET){ insetOpen.has(p) ? insetOpen.delete(p) : insetOpen.add(p); refresh(); return; }
+  panel=(panel===p?null:p); refresh(); };
+const isOpen=k=>INSET ? insetOpen.has(k) : panel===k;
 const cplOpen=()=>panel==='energy';
 const accEl=document.getElementById('acc');
 const accSec={ring:document.getElementById('acc-ring'),
@@ -1343,10 +1352,10 @@ function drawAcc(){
   const live=!intro && !tallyOn();
   accSec.ring.hidden=!live;
   accSec.ledger.hidden=!live;
-  accSec.energy.hidden=!st;
+  accSec.energy.hidden=!st || INSET;
   accEl.hidden=!live && !st;
   for(const k in accSec){
-    const open=panel===k && !accSec[k].hidden;
+    const open=isOpen(k) && !accSec[k].hidden;
     accSec[k].querySelector('.acch').setAttribute('aria-expanded',open?'true':'false');
     accSec[k].querySelector('.accb').hidden=!open;
   }
@@ -1379,7 +1388,7 @@ function drawRing(){
    * closing tally is the receipt for both of them — a half-lit loop beside it
    * is answering a question nobody is asking any more, and it stands exactly
    * where the tally's third column needs to be. */
-  const on = panel==='ring' && !intro && !tallyOn();
+  const on = isOpen('ring') && !intro && !tallyOn();
   ringEl.hidden = !on;
   if(!on) return;
   const N=RING_STEPS.length, CX=130, CY=112, R=64, LR=90;
@@ -1452,7 +1461,7 @@ let prevLedger=null;
  * up on the results screen because that screen had no arithmetic of its own; it
  * has three notes now, and a fourth yellow card saying nearly the same thing is
  * one to read too many. */
-const ledgerOn=()=>panel==='ledger' && !tallyOn();
+const ledgerOn=()=>isOpen('ledger') && !tallyOn();
 function placeLedger(){
   const hid=ledgerEl.classList.contains('hid');
   if(intro || !ledgerOn()){ ledgerEl.classList.remove('pin'); ledgerEl.classList.add('hid'); return; }
@@ -1751,7 +1760,7 @@ const enzMetaEl=document.getElementById('enzmeta');
 const enzNoteEl=document.getElementById('enznote');
 // ALWAYS ON. The blob is what the step's catalyst does, not a view of it, and
 // a lesson about enzymes that opens with them switched off argues the reverse.
-const showEnz=true;
+const showEnz=!INSET;
 const enzOf=()=>{ const i=focusStep(); return (!intro && i<nSteps) ? STEPS[i] : null; };
 const enzLive=()=>showEnz && !!enzOf() && !tallyOn();
 /* WHICH LANES THE ENZYME IS ON — one GROUP of lanes per blob, because an enzyme
@@ -1800,7 +1809,7 @@ function drawEnz(){
 function drawEnzMeta(){
   const i=focusStep();
   const st=(!intro && i<nSteps && !tallyOn()) ? stepAt(i) : null;
-  enzMetaEl.hidden=!st;
+  enzMetaEl.hidden=!st || INSET;
   enzNoteEl.hidden=!(st&&st.takeaway);
   enzNoteEl.textContent=(st&&st.takeaway)||'';
   if(!st){ enzMetaEl.innerHTML=''; return; }
@@ -1915,6 +1924,7 @@ function drawAct(){
   // THE END OF A TURN. After turn one the button offers the second — the ×2 the
   // student has to be able to state, and the only place this page says it.
   // After turn two it opens the hand-off to the electron transport chain.
+  if(!st && !busy && INSET){ actEl.style.visibility='hidden'; actEl.onclick=null; return; }
   if(!st && !busy){
     actEl.style.visibility='visible';
     if(lap<LAPS){
