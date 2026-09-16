@@ -299,7 +299,7 @@ const SAYS = {
  *  the box builds a chain per frame and rAF stops in a hidden tab.
  * ========================================================================== */
 const DEG_PER_SEC = 30;
-let pivot = null, angle = 0, turned = 0, lastT = 0;
+let pivot = null, angle = 0, turned = 0, drive = 0, lastT = 0;
 const AXIS = new THREE.Vector3();
 
 function collect(t){
@@ -506,11 +506,17 @@ const flow = (() => {
 })();
 
 /* One clock for the rotor and everything it carries, so a test can drive it
-   where rAF does not run. */
+   where rAF does not run. The rotor does not glide: each proton through
+   subunit a advances the ring one c-subunit, 360/c degrees, then it dwells
+   until the next. `drive` is the steady clock; `turned` is where the rotor is. */
+const MOVE = 0.3;   // fraction of each step spent moving
 function advance(dt){
   if(!(current && current.spin && pivot)) return;
   const t = traces.human, prev = turned;
-  turned += DEG_PER_SEC * dt;
+  drive += DEG_PER_SEC * dt;
+  const stepDeg = 360 / count(t, 'c'), n = Math.floor(drive / stepDeg);
+  const k = Math.min(1, (drive / stepDeg - n) / MOVE);
+  turned = stepDeg * (n + k * k * (3 - 2 * k));
   angle = turned % 360;
   const s = t.spin.axis;
   AXIS.set(s[0], s[1], s[2]);
@@ -543,7 +549,7 @@ function show(part){
        another frame, so the box re-fits. */
     const sameFrame = shownId && v.group === ProteinLib.variantOf(ME, shownId).group;
     shownId = part.id;
-    pivot = null; angle = 0; turned = 0;
+    pivot = null; angle = 0; turned = 0; drive = 0;
     flow.reset();
     box.setData(t, { keep: !!sameFrame, colors: v.group === 'sites' ? null : ProteinLib.colorsOf(ME, v) });
   }
