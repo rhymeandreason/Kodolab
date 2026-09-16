@@ -45,11 +45,13 @@
 <link rel="stylesheet" href="../../kit/proteinbox.css">
 <style>
   #stage{background-image:none}
+  #membrane-toggle{position:absolute;right:16px;bottom:16px;z-index:5}
 </style>
 </head>
 <body>
 <div id="stage">
   <p id="specimen"></p>
+  <div id="membrane-toggle" class="segmented segmented--sm" role="group" aria-label="Which membrane" hidden></div>
 </div>
 <nav class="sitenav floating chrome-title">
   <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
@@ -228,7 +230,9 @@ const PARTS = [
         at:anchorAt(midCA(t, chainsOf(t, 'γ')[0])), offset:[-150, -30] },
     ],
     /* The axis and how well it was measured are the baker's. */
-    caption:()=>'protons, nucleotides and membrane drawn' },
+    caption:()=>context === 'thylakoid' ? 'human enzyme, turned as in a thylakoid' : 'protons, nucleotides and membrane drawn',
+    /* Which membrane: F1 faces the matrix in one and the stroma in the other. */
+    toggle:true },
 
   { key:'open', id:'open', close:true, title:'An empty site', sub:'one β subunit, up close',
     stats:t=>fileStats('open', t),
@@ -293,6 +297,22 @@ const SAYS = {
 
 /* The turn, the flow and the membrane: atp-synthase-scene.js. */
 const synth = ATPSynthase.attach(box);
+let context = 'mitochondrion';
+const toggle = $('membrane-toggle');
+toggle.innerHTML = Object.keys(ATPSynthase.CONTEXTS).map(c =>
+  `<button type="button" data-context="${c}" aria-pressed="${c === context}">${c}</button>`).join('');
+for(const b of toggle.children) b.onclick = () => setContext(b.dataset.context);
+function setContext(c){
+  context = c;
+  for(const b of document.querySelectorAll('[data-context]')) b.setAttribute('aria-pressed', String(b.dataset.context === c));
+  if(shownId !== 'human') return;
+  const t = traces.human, part = current;
+  synth.exit();
+  box.setData(t, { keep: true, view: ATPSynthase.viewFor(t, context), colors: ProteinLib.colorsOf(ME, ProteinLib.variantOf(ME, 'human')) });
+  synth.enter(t, context);
+  current = null;
+  show(part);
+}
 
 /* =============================================================================
  *  SHOWING A PART
@@ -305,6 +325,7 @@ function show(part){
   const v = ProteinLib.variantOf(ME, part.id);
 
   NOTES.clear();
+  toggle.hidden = !part.toggle;
   for(const el of secs) el.setAttribute('aria-current', String(el.dataset.key === part.key));
 
   if(shownId !== part.id){
@@ -313,8 +334,9 @@ function show(part){
     const sameFrame = shownId && v.group === ProteinLib.variantOf(ME, shownId).group;
     shownId = part.id;
     synth.exit();
-    box.setData(t, { keep: !!sameFrame, colors: v.group === 'sites' ? null : ProteinLib.colorsOf(ME, v) });
-    if(t.spin) synth.enter(t);
+    box.setData(t, { keep: !!sameFrame, view: t.spin ? ATPSynthase.viewFor(t, context) : undefined,
+      colors: v.group === 'sites' ? null : ProteinLib.colorsOf(ME, v) });
+    if(t.spin) synth.enter(t, context);
   }
   synth.spin(!!part.spin);
   /* During the turn the β sites are the animation's, so only α keeps what
@@ -359,6 +381,7 @@ Promise.all(NEEDED.map(id => {
       + claim(part.note(traces[part.id]))
       + tiles(part.stats && part.stats(traces[part.id]))
       + terms(part.dl)
+
       + (part.hint ? `<p class="hint">${part.hint}</p>` : '');
     host.appendChild(el);
     return el;

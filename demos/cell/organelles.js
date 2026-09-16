@@ -924,18 +924,19 @@
        the machine sites, and pockets of points inside each compartment.
        The geometry is here; the protons moving through it, the rotors
        turning and everything a page can click are the component's. */
-    /* The F1 heads, at one angle. Three lobes on a ring about the machine's
-       own axis, so a third of a turn is one ATP and the beat is countable.
-       Called once at build so a mitochondrion nobody steps still has heads,
-       and every frame by cell/mitochondrion.js while the chain is running. */
+    /* Lobes on a ring about each machine's own axis, at one angle: `n` per
+       machine, 3 unless the entry says otherwise. Called once at build so a
+       build nobody steps is still drawn, and every frame by the component
+       while the chain is running. */
     function spinRotors(mesh, list, angle) {
-      const m4 = new THREE.Matrix4(), p = new V3();
+      const m4 = new THREE.Matrix4(), p = new V3(), one = new V3(1, 1, 1), q0 = new THREE.Quaternion();
       for (const rt of list) {
-        for (let j = 0; j < 3; j++) {
-          const a = angle + (j / 3) * 2 * PI;
+        const n = rt.n || 3;
+        for (let j = 0; j < n; j++) {
+          const a = angle + (j / n) * 2 * PI;
           p.copy(rt.centre).addScaledVector(rt.u, Math.cos(a) * rt.lobeR).addScaledVector(rt.v, Math.sin(a) * rt.lobeR);
-          m4.makeTranslation(p.x, p.y, p.z);
-          mesh.setMatrixAt(rt.i * 3 + j, m4);
+          m4.compose(p, rt.q || q0, one);
+          mesh.setMatrixAt(rt.i * n + j, m4);
         }
       }
       mesh.instanceMatrix.needsUpdate = true;
@@ -1276,32 +1277,42 @@
             gComplex.add(armMesh);
           }
         }
-        /* ATP synthase: Fo in the membrane, a stalk, and an F1 head of three
-           αβ lobes — three because one ATP is made per third of a turn, and
-           a student should be able to count the beats. The head turns; the
-           component drives it. */
+        /* ATP synthase: an Fo c-ring in the membrane, a central stalk, and
+           an F1 head drawn as one mushroom cap. The ROTOR turns (c-ring and
+           stalk) and the head is held still by the peripheral stalk. A ring of
+           eight c subunits, a mammal's, so the turning is visible on a
+           shape that is otherwise round. The component drives the ring. */
         const ns = sites.synthase.length;
         if (ns) {
+          const C_RING = 8;
           const gold = mat({ color: RESP.synthase, roughness: 0.38, clearcoat: 0.45 });
           const stalkMat = mat({ color: RESP.stalk, roughness: 0.45, clearcoat: 0.3 });
-          const fo = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.030 * r, 0.030 * r, 0.046 * r, 10), gold, ns);
+          const hub = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.016 * r, 0.016 * r, 0.046 * r, 10), stalkMat, ns);
+          const ring = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.009 * r, 0.009 * r, 0.046 * r, 8), gold, ns * C_RING);
           const stalk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.009 * r, 0.009 * r, 0.044 * r, 6), stalkMat, ns);
-          const f1 = new THREE.InstancedMesh(new THREE.SphereGeometry(0.023 * r, 10, 8), gold, ns * 3);
+          // A lathe dome: flat underneath, rounding over the top along the axis.
+          const capPts = [new THREE.Vector2(0, 0), new THREE.Vector2(0.024 * r, 0), new THREE.Vector2(0.042 * r, 0.004 * r)];
+          for (let k = 1; k <= 8; k++) {
+            const t = (k / 8) * PI / 2;
+            capPts.push(new THREE.Vector2(0.042 * r * Math.cos(t), 0.004 * r + 0.030 * r * Math.sin(t)));
+          }
+          const capGeo = new THREE.LatheGeometry(capPts, 20);
+          const f1 = new THREE.InstancedMesh(capGeo, gold, ns);
           const rotors = [];
           sites.synthase.forEach((s, i) => {
-            place(fo, i, s.p.clone(), s.out);
+            place(hub, i, s.p.clone(), s.out);
             place(stalk, i, s.p.clone().addScaledVector(s.out, 0.044 * r), s.out);
-            // A frame on the axis, so the head's three lobes can be spun.
+            // A frame on the axis, so lobes can be laid out around it.
             const u = new V3(0, 1, 0).cross(s.out);
             if (u.lengthSq() < 1e-6) u.set(1, 0, 0);
             u.normalize();
             const v = s.out.clone().cross(u).normalize();
-            rotors.push({ i, centre: s.p.clone().addScaledVector(s.out, 0.079 * r), u, v, lobeR: 0.024 * r });
+            place(f1, i, s.p.clone().addScaledVector(s.out, 0.066 * r), s.out);
+            rotors.push({ i, n: C_RING, centre: s.p.clone(), u, v, lobeR: 0.025 * r, q: new THREE.Quaternion().setFromUnitVectors(Y, s.out) });
           });
-          gSynthase.add(fo, stalk, f1);
-          // At rest, so a build nobody steps (the cut cell's) still has heads.
-          spinRotors(f1, rotors, 0);
-          g.userData.rotors = { mesh: f1, list: rotors };
+          gSynthase.add(hub, ring, stalk, f1);
+          spinRotors(ring, rotors, 0);
+          g.userData.rotors = { mesh: ring, list: rotors };
         }
       }
 

@@ -337,7 +337,7 @@
       /* The rotor turns because protons went through it, not because time
          passed: PPT protons is one revolution, so the beat a student counts
          is the ledger. Chased rather than snapped, or a proton arriving would
-         jump the head a twelfth of a turn. */
+         jump the ring a notch. */
       const want = (through / PPT) * 2 * PI;
       rotorAngle += (want - rotorAngle) * Math.min(1, dt * 4);
       if (group.userData.rotors)

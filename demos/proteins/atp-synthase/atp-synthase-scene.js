@@ -5,10 +5,24 @@
  *  drawn over it: the rotor turning, protons riding the c-ring, ADP + Pi in
  *  and ATP out of the head, and the inner membrane as a grey band.
  *
- *    ATPSynthase.mount(el, {spin})       its own box: fetch, draw, turn
- *      → { box, trace, ready, spin(on), advance(dt), destroy }
+ *    ATPSynthase.mount(el, {spin, context})   its own box: fetch, draw, turn
+ *      → { box, trace, ready, spin(on), setContext(c), advance(dt), destroy }
  *    ATPSynthase.attach(box)             on a box the page already owns
- *      → { enter(t), exit(), spin(on), advance(dt), destroy }
+ *      → { enter(t, context), exit(), spin(on), advance(dt), destroy }
+ *    ATPSynthase.viewFor(t, context)     the basis to pass box.setData
+ *
+ *  CONTEXT IS WHICH MEMBRANE: 'mitochondrion' or 'thylakoid'. The machine is
+ *  the same either way: F1 sits on the low-proton side and protons enter from
+ *  the other. What flips is which compartment that is. A mitochondrion pumps
+ *  into the intermembrane space and makes ATP in the matrix; a thylakoid
+ *  pumps into its lumen and makes ATP in the stroma. Drawn the way the
+ *  respiration lesson draws both (chemiosmosis/circuit.js): the proton side
+ *  on top in a mitochondrion, at the bottom in a thylakoid, so F1 hangs down
+ *  in one and stands up in the other.
+ *
+ *  THE STRUCTURE IS STILL THE HUMAN ONE in a thylakoid. A chloroplast's
+ *  enzyme is the same machine with a larger c-ring (14 in spinach), and no
+ *  chloroplast bake is held; a page showing 'thylakoid' says so.
  *
  *  `attach` is for a page that swaps other structures into the same box
  *  (the story's 1BMF sites): call `enter(t)` right AFTER `box.setData(t)`
@@ -91,10 +105,25 @@ const WORD_H = 12;   // Å
    until it is inside the canvas, so a shorter window does not crop it. */
 const WORD_ASIDE = 0.55, EDGE = 0.85;   // fraction of SHEET_R; NDC
 
+const CONTEXTS = {
+  mitochondrion: { head: 'matrix', tail: 'intermembrane space', headUp: false },
+  thylakoid:     { head: 'stroma', tail: 'thylakoid lumen',     headUp: true },
+};
+const SIDE_H = 9, SIDE_GAP = 14;   // Å: the compartment words, and how far past the band
+
+/* The bake's basis, turned half a turn about the screen's x when F1 would
+   otherwise point the wrong way. */
+function viewFor(t, context){
+  const B = t.view || [[1, 0, 0], [0, 1, 0], [0, 0, 1]], a = t.spin.axis;
+  const up = B[1][0] * a[0] + B[1][1] * a[1] + B[1][2] * a[2] > 0;
+  if(up === CONTEXTS[context || 'mitochondrion'].headUp) return B.map(r => r.slice());
+  return [B[0].slice(), B[1].map(x => -x), B[2].map(x => -x)];
+}
+
 const ease = k => k * k * (3 - 2 * k);
 const V3 = p => new THREE.Vector3(p[0], p[1], p[2]);
 
-function word(text){
+function word(text, h = WORD_H){
   const cv = document.createElement('canvas'), x = cv.getContext('2d'), px = 64;
   const font = `500 ${px}px ${getComputedStyle(document.body).fontFamily}`;
   x.font = font;
@@ -102,12 +131,12 @@ function word(text){
   x.font = font; x.fillStyle = '#6b6b6b'; x.textAlign = 'center'; x.textBaseline = 'middle';
   x.fillText(text, cv.width / 2, cv.height / 2);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
-  sp.scale.set(WORD_H * cv.width / cv.height, WORD_H, 1);
+  sp.scale.set(h * cv.width / cv.height, h, 1);
   sp.renderOrder = 1;
   return sp;
 }
 
-function membrane(t){
+function membrane(t, context){
   const A = V3(t.spin.axis).normalize(), P = V3(t.spin.point);
   const mid = V3(centroidOf(t, chainsOf(t, 'c'))).sub(P).dot(A);
   /* Ends toward the camera, as in the respiration lesson. */
@@ -121,7 +150,8 @@ function membrane(t){
   g.userData.membrane = true;
   const sp = word('membrane');
   sp.position.copy(m.position);
-  g.add(m, sp);
+  const c = CONTEXTS[context];
+  g.add(m, sp, word(c.head, SIDE_H), word(c.tail, SIDE_H));
   return g;
 }
 
@@ -342,7 +372,7 @@ function attach(box){
 
   function placeBand(){
     if(!band) return;
-    const [strip, sp] = band.children;
+    const [strip, sp, head, tail] = band.children;
     const A = V3(t.spin.axis).normalize();
     box.group.worldToLocal(_n.copy(box.camera.position)).sub(strip.position);
     _n.addScaledVector(A, -_n.dot(A));
@@ -357,6 +387,9 @@ function attach(box){
       if(Math.abs(q.x) < EDGE && Math.abs(q.y) < EDGE) break;
     }
     sp.position.copy(_p);
+    /* The spin axis points from the c-ring to F1, so +A is F1's side. */
+    head.position.copy(_p).addScaledVector(A, BILAYER / 2 + SIDE_GAP);
+    tail.position.copy(_p).addScaledVector(A, -(BILAYER / 2 + SIDE_GAP));
   }
 
   (function frame(now){
@@ -376,11 +409,11 @@ function attach(box){
     if(pivot) box.group.remove(pivot);
     band = pivot = null;
   }
-  function enter(trace){
+  function enter(trace, context = 'mitochondrion'){
     exit();
     t = trace; on = true;
     turned = drive = 0;
-    band = membrane(t);
+    band = membrane(t, context);
     box.group.add(band);
     collect();
   }
@@ -403,19 +436,27 @@ function mount(el, opts = {}){
     stage: { ortho: false, turn: 'trackball' }, pad: 1.15, sub: 10,
   }, opts.box));
   const ctl = attach(box);
+  let context = opts.context || 'mitochondrion';
+  function draw(t, keep){
+    box.setData(t, { keep, view: viewFor(t, context), colors: ProteinLib.colorsOf(ME, v) });
+    if(t.site) box.setPocket(siteOnly(t.site, a => roleOf(t, a.chain).subunit === 'α'));
+    const spinning = ctl.spinning;
+    ctl.enter(t, context);
+    ctl.spin(spinning);
+    box.draw();
+  }
   const api = { box, trace: null, spin: ctl.spin, advance: ctl.advance, flow: ctl.flow,
+    get context(){ return context; },
+    setContext(c){ context = c; if(api.trace) draw(api.trace, true); },
     destroy(){ ctl.destroy(); box.destroy(); } };
   api.ready = fetch(DATA + v.read.baked).then(r => r.json()).then(t => {
     api.trace = t;
-    box.setData(t, { colors: ProteinLib.colorsOf(ME, v) });
-    if(t.site) box.setPocket(siteOnly(t.site, a => roleOf(t, a.chain).subunit === 'α'));
-    ctl.enter(t);
     ctl.spin(opts.spin !== false);
-    box.draw();
+    draw(t, false);
     return api;
   });
   return api;
 }
 
-global.ATPSynthase = { mount, attach, siteOnly };
+global.ATPSynthase = { mount, attach, viewFor, siteOnly, CONTEXTS };
 })(window);

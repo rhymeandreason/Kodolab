@@ -174,8 +174,8 @@
        mvPerIon is a timing knob rather than a measurement. */
     const ANT_R = 10.0, ANT_LOBE = 0.08;
     const ANT = Parts.transporter({ half:HALF, site:5.4, mouth:7.0, radius:ANT_R, lobes:0, color:RESP.translocase });
-    const ROTOR = buildRotor(SYNTH.height);
-    SYNTH.group.add(ROTOR);
+    const ROTOR = buildRotor(SYNTH.height), HEAD = buildHead(SYNTH.height);
+    SYNTH.group.add(ROTOR, HEAD);
     root.add(COMPLEX.group, SYNTH.group, LEAK.group, ANT.group, ...ALL.map(k => CX[k].group));
     const H_ = () => COMPLEX.height;
 
@@ -216,20 +216,38 @@
       OUTER.cut.enable(eng.cut);
     }
 
-    /* The F1 head: three αβ pairs on a shaft, one ATP per third of a turn. */
+    /* ATP synthase above the barrel. The ROTOR turns: a central stalk and
+       a ring of eight c subunits at the barrel's mouth, with an off-axis
+       foot on the stalk so the turning reads even where the ring is hidden.
+       The F1 HEAD is a dome that does not turn, held by the peripheral
+       stalk; its three αβ pairs are why a third of a turn is one ATP. */
     function buildRotor(h) {
       const g = new THREE.Group();
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 9, 12), Parts.flat(RESP.stalk));
-      shaft.userData.baseY = h + 4.5; g.add(shaft);
-      for (let i = 0; i < 3; i++) {
-        const lobe = new THREE.Mesh(new THREE.SphereGeometry(6.2, 18, 12), Parts.flat(RESP.synthase));
-        lobe.scale.set(1, 1.25, 1);
-        const th = (i / 3) * Math.PI * 2;
-        lobe.position.set(Math.cos(th) * 7.4, 0, Math.sin(th) * 7.4);
-        lobe.userData.baseY = h + 12.5;
-        g.add(lobe);
+      const stalkMat = Parts.flat(RESP.stalk), gold = Parts.flat(RESP.synthase);
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 12, 12), stalkMat);
+      shaft.userData.baseY = h + 5; g.add(shaft);
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(7, 2.2, 3), stalkMat);
+      foot.position.x = 3.5; foot.userData.baseY = h + 1.8; g.add(foot);
+      for (let i = 0; i < 8; i++) {
+        const c = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 4.5, 10), gold);
+        const th = (i / 8) * Math.PI * 2;
+        c.position.set(Math.cos(th) * 9.6, 0, Math.sin(th) * 9.6);
+        c.userData.baseY = h + 1.2; g.add(c);
       }
       return g;
+    }
+    /* A lathe profile, flat underneath and rounding over the top, so it
+       reads as a dome rather than a squashed ball. Pointing +y. */
+    function buildHead(h) {
+      const R = 19, H = 15, pts = [new THREE.Vector2(0, 0), new THREE.Vector2(R * 0.55, 0)];
+      pts.push(new THREE.Vector2(R * 0.93, 0.6), new THREE.Vector2(R, 2.4));
+      for (let i = 1; i <= 12; i++) {
+        const t = (i / 12) * Math.PI / 2;
+        pts.push(new THREE.Vector2(R * Math.cos(t), 2.4 + (H - 2.4) * Math.sin(t)));
+      }
+      const head = new THREE.Mesh(new THREE.LatheGeometry(pts, 36), Parts.flat(RESP.synthase));
+      head.userData.baseY = h + 10.5;
+      return head;
     }
 
     /* ---- small tokens: a sphere or two with a name on a pill ---- */
@@ -1179,6 +1197,7 @@
          scale, which would turn the lighting inside out. */
       orient(d) {
         for (const child of ROTOR.children) child.position.y = -d * child.userData.baseY;
+        HEAD.position.y = -d * HEAD.userData.baseY; HEAD.rotation.x = d > 0 ? Math.PI : 0;
         ARM_I.position.y = -d * ARM_I.userData.baseY; ARM_I.rotation.z = 0.45 * d;
         HEAD_II.position.y = -d * HEAD_II.userData.baseY;
         OEC.position.y = d * OEC.userData.baseY;               // the lumen face
