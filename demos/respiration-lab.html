@@ -120,6 +120,7 @@
   .synth { display: grid; grid-template-columns: min(760px, 80vh) minmax(0, 300px); gap: var(--space-6); align-items: center; }
   .synth-stage { position: relative; aspect-ratio: 1; background: var(--surface-stage); border-radius: var(--radius-md); overflow: hidden; }
   :root .modal .synth-text h2 { font-size: 34px; }
+  :root .modal .synth-text .msrc { font-size: 14px; color: var(--text-muted); margin-top: var(--space-4); }
   :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
 </style>
 <link rel="stylesheet" href="kit/badge.css">
@@ -136,6 +137,22 @@
         <p class="mkick">The real protein</p>
         <h2 id="synthtitle">ATP synthase</h2>
         <p class="msub">Protons flowing back into the matrix turn the rotor. Each full turn makes 3 ATP in the head. The real enzyme spins over a hundred times a second</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="molmodal" class="modal" hidden>
+  <div class="mback"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-labelledby="moltitle">
+    <button class="mclose" aria-label="Close">&times;</button>
+    <div class="synth">
+      <div class="synth-stage" id="molstage"></div>
+      <div class="synth-text">
+        <p class="mkick">The molecule</p>
+        <h2 id="moltitle"></h2>
+        <p class="msub" id="molsub"></p>
+        <p class="msrc" id="molsrc"></p>
       </div>
     </div>
   </div>
@@ -315,7 +332,7 @@
 
       <!-- ===== total ===== -->
       <line class="flow" x1="288" y1="694" x2="288" y2="778" marker-end="url(#ma)" stroke="var(--accent)"></line>
-      <rect class="atp-box" x="88" y="780" width="400" height="176" rx="10"></rect>
+      <rect id="k-atp" class="atp-box" x="88" y="780" width="400" height="176" rx="10"></rect>
       <ellipse cx="288" cy="842" rx="96" ry="52" fill="url(#atp-glow)"></ellipse>
       <image href="media/molecules/atpSkel.webp" x="218" y="800" width="140" height="80"></image>
       <text class="big atp-t" x="288" y="914" text-anchor="middle">≈30 ATP</text>
@@ -333,9 +350,7 @@
 </template>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="kit/app.js" data-shell="steps" data-use="AnimalCell,Mitochondrion,Chemiosmosis,Proteinbox"></script>
-<script src="lib/skel.js"></script>
-<script src="lib/mol-carriers.js"></script>
+<script src="kit/app.js" data-shell="steps" data-use="AnimalCell,Mitochondrion,Chemiosmosis,Proteinbox,Molecule"></script>
 <script src="proteins/atp-synthase/atp-synthase-scene.js"></script>
 <script src="kit/modal.js"></script>
 <script src="kit/badge.js"></script>
@@ -371,8 +386,21 @@
       f.src = l.src; f.title = l.title;
       frame.appendChild(f);
       frame.closest('.mcard').setAttribute('aria-label', l.title);
+      SCENES[onStage].stop();
     },
-    onHide: () => { frame.innerHTML = ''; } });
+    onHide: () => { frame.innerHTML = ''; SCENES[onStage].start(); } });
+  /* One molecule, spinning, per open: show({ molecule, say }). The name and
+     where the coordinates came from are the component's, never typed here. */
+  let mol = null;
+  const molModal = Modal.create({ el: 'molmodal',
+    onShow: m => {
+      mol = Molecule.mount(document.getElementById('molstage'), { molecule: m.molecule, spin: true });
+      const st = mol.state();
+      document.getElementById('moltitle').textContent = st.name;
+      document.getElementById('molsub').textContent = m.say;
+      document.getElementById('molsrc').textContent = st.source;
+    },
+    onHide: () => { if (mol) mol.destroy(); mol = null; } });
   const chemi = shell.scene('chemi', el => withBadge(el, Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'split', span: 'cell', names: 'intro', viewOffset: centred,
     /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
@@ -511,11 +539,11 @@
   cta.innerHTML = '<img class="step-mol" src="media/molecules/glucose.webp" alt="A glucose molecule"><span class="step-mol-cap cap-sm">1 glucose</span><button class="cta" type="button"></button>';
   const figure = chart.parentElement;
 
-  /* See-more badges on chart cards, each opening that step's lesson. A card
+  /* See-more badges on chart cards, each opening that step's lesson (or `open`). A card
      with a lane of CO₂ beside it takes the badge on its corner, not its edge. */
   function chartBadge(sel, where, lesson) {
     const card = chart.querySelector(sel);
-    const b = Badge.button({ icon: 'more', label: 'Open the ' + lesson.title + ' lesson', onClick: () => lessonModal.show(lesson) });
+    const b = Badge.button({ icon: 'more', label: 'Open ' + lesson.title, onClick: lesson.open || (() => lessonModal.show(lesson)) });
     figure.appendChild(b);
     const place = () => {
       const r = card.getBoundingClientRect(), f = figure.getBoundingClientRect();
@@ -529,6 +557,8 @@
   }
   chartBadge('#k-glyco', 'edge', { src: 'glycolysis-lab.html?view=inset', title: 'glycolysis' });
   chartBadge('#k-link', 'corner', { src: 'link-step.html?enzyme=off', title: 'link step' });
+  chartBadge('#k-atp', 'corner', { title: 'ATP', open: () => molModal.show({ molecule: 'atp',
+    say: 'The cell spends it by breaking off the last phosphate, and makes it again the other way.' }) });
   chartBadge('#k-krebs', 'corner', { src: 'krebs-lab.html?view=cycle&view=inset', title: 'Krebs cycle' });
   figure.appendChild(cta);
   /* Where the next stage starts, in the figure's own coordinates. */
@@ -657,7 +687,7 @@
   /* The two scenes the reader has not reached are built while the cell is
      on screen, so each swap is a fade and not a hitch. */
   shell.showScene('cell');
-  setTimeout(() => { mito.state(); chemi.state(); }, 1500);
+  setTimeout(() => { for (const n of ['mito', 'chemi']) if (n !== onStage) { SCENES[n].state(); SCENES[n].stop(); } }, 1500);
 })();
 </script>
 </body>
