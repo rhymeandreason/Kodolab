@@ -306,7 +306,9 @@
   const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
   const chemi = shell.scene('chemi', el => Chemiosmosis.mount(el, {
     context: 'mitochondrion', fuel: 'NADH', chain: 'lumped', span: 'cell', names: 'intro', viewOffset: centred,
-  }));
+    /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
+    cellContents: { inside: {}, outside: {} },
+  }).show('water', false));
   shell.goTo(0);
 
   const scroller = shell.el.querySelector('.lshell-scroll');
@@ -411,7 +413,7 @@
     etc() {
       show('chemi');
       chemi.set({ chain: 'split' });
-      aimAt(chemi.box, INNER_Y - 8, 1.1, -70); chemi.box.flyTo({ r: 460, phi: Math.PI / 2 - 0.12 });
+      aimAt(chemi.box, INNER_Y - 8, 1.1, -50); chemi.box.flyTo({ r: 460, phi: Math.PI / 2 - 0.12 });
     },
   };
   const ZONE = { cell: '#z-cyto', fly: '#z-cyto', mito: '#z-mito', chemi: '#z-mito', etc: '#z-mito' };
