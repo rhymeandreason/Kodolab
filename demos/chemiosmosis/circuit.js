@@ -63,6 +63,10 @@
     chain: 'lumped',          // 'lumped' | 'split'
     showATP: true,            // the synthase releases a drawn ATP per third-turn
     showFuel: true,           // a carrier arrives at the complex and leaves spent
+    /* 'intro' drops what an intro course never names: FADH₂ docks at complex
+       II instead of succinate, and the cards say what each part does without
+       its chemistry. A simplification: that FAD is bound in the enzyme. */
+    names: 'full',            // 'full' | 'intro'
     /* THE OUTER MEMBRANE IS A BACKDROP, not a second sim: a sheet with a
        porin in it, so the intermembrane space is a space with a lid. Nothing
        crosses it but the ATP. Mitochondrion only — a thylakoid's second
@@ -415,7 +419,7 @@
       if (!P.showFuel || chips[key]) return;
       if (!nadp && (!f || !CHEM.SPENT[f])) return;   // light: nothing arrives, and nothing should be drawn
       const dock = dockOf(key);
-      const succ = key === 'II';
+      const succ = key === 'II' && P.names !== 'intro';
       const g = succ ? buildToken('succinate', RESP.carrier, 1) : nadp ? buildToken('NADP⁺', PHO.carrier, 2) : buildToken(f === 'FADH2' ? 'FADH₂' : f, RESP.carrier, 2);
       root.add(g);
       chips[key] = { obj:g, spentName: succ ? 'fumarate' : nadp ? 'NADPH' : CHEM.SPENT[f], x:dock.from.x, y:dock.from.y, to:dock.at, fade:1, spent:false };
@@ -1006,7 +1010,21 @@
           + ' It is the same space as a mitochondrion\'s intermembrane space, both of them the OUTSIDE of the bacterium each organelle came from, which is why the two diagrams are mirrored.';
         library.oxygen.card = O2_CARD.thylakoid;
       }
+      if (P.names === 'intro' && P.context === 'mitochondrion') {
+        for (const k in INTRO_CARDS) library[k].card = INTRO_CARDS[k];
+        if (split()) library.complex.card = INTRO_CARDS['complex.I'];
+      }
     }
+    const INTRO_CARDS = {
+      'complex.I': 'NADH drops off two electrons here. Passing them on pays for pumping protons out.',
+      'complex.II': 'FADH₂ drops off its electrons here. This complex pumps no protons, so FADH₂ builds less gradient than NADH.',
+      'complex.III': 'Passes the electrons along and pumps more protons.',
+      'complex.IV': 'Hands the electrons to oxygen, which becomes water. It pumps protons too. Block it and the whole chain stops.',
+      quinone: 'A small carrier that moves electrons through the membrane.',
+      cytc: 'A small carrier that moves electrons along the membrane surface to the last complex.',
+      oxygen: 'The final electron acceptor. With no oxygen, electrons have nowhere to go and the chain stops.',
+      synthase: 'A turbine. Protons flow back through it and it spins, making ATP.',
+    };
     const O2_CARD = {
       mitochondrion: 'The last stop for the electrons. Each O₂ takes four, and four protons from the matrix, and leaves as two waters. With no oxygen the electrons have nowhere to go and the whole chain stops.',
       thylakoid: 'Waste. PSII pulls electrons out of water, and what is left of two waters is one O₂, which leaves the chloroplast. Every breath you take was split out of water this way.',

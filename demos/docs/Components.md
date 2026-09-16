@@ -319,6 +319,7 @@ const m = Chemiosmosis.mount(el, {
   sideLabels: true,           // both halves named on the stage; false only if you have your own
   showATP: true,              // an ATP leaves the F1 head per third-turn; false for the gradient alone
   showFuel: true,             // a carrier docks at the complex and leaves spent
+  names: 'full',              // 'intro': FADH₂ docks at complex II instead of succinate; the mitochondrion's cards drop chemistry an intro course never names
 });
 ```
 
