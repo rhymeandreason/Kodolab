@@ -491,6 +491,9 @@ const L=Lesson.create(canvas,{
   // NO WHEEL ZOOM: one scale for the whole cycle, so 6C → 5C → 4C is a size you
   // can see and not a number you are told.
   zoom:false,
+  // NO DRAG TO ROTATE: the reaction is framed per step, and a turned view
+  // hides the bond the hint points at.
+  orbit:false,
   focus:false,
   onResize:()=>{ computeFit(); },
 });

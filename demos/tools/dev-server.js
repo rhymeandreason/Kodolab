@@ -125,7 +125,13 @@ function loadRewrites() {
   }
   return { get: url => map.get(url) || (patterns.find(p => p.re.test(url)) || {}).dest };
 }
-const REWRITES = loadRewrites();
+// Re-read when vercel.json changes, so a new route answers without a restart.
+let rewrites = loadRewrites(), rewritesMtime = 0;
+const REWRITES = { get(url) {
+  const m = fs.statSync(path.join(ROOT, 'vercel.json')).mtimeMs;
+  if (m !== rewritesMtime) { rewritesMtime = m; rewrites = loadRewrites(); }
+  return rewrites.get(url);
+} };
 
 /* ---- the reload client, injected into HTML responses only ---------------- */
 // EventSource rather than a WebSocket: it is one line of client code, it

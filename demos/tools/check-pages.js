@@ -75,12 +75,13 @@ const PDB_PAGES = new Set();
 // edges, no stage. questions-cms.html edits that graph's data file as text.
 // clip-shelf.html files short animation clips; its only stage is an mp4 in the
 // node map's own thumb. tests/kodolab-anim.html animates the wordmark itself,
-// drawn as SVG primitives — no molecule, no MolLib.
+// drawn as SVG primitives — no molecule, no MolLib. link-step.html only
+// redirects to krebs-lab.html, which the check reads instead.
 const NO_SCENE = new Set(['index.html', 'admin.html', 'design-system.html',
                           'tests/droplet-test.html', 'tests/adhesion-test.html',
                           'tests/concept-map.html',
                           'questions-cms.html', 'map-cms.html', 'clip-shelf.html',
-                          'privacy.html', 'tests/kodolab-anim.html']);
+                          'privacy.html', 'tests/kodolab-anim.html', 'link-step.html']);
 
 // The lessons at the top level, plus the benches in tests/. Both directories,
 // because a bench builds a real scene out of the shared registry too — a

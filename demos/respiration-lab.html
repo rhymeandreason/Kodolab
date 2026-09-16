@@ -2,8 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<base href="/demos/">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cellular respiration — Kodolab</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.">
+<link rel="canonical" href="https://www.kodolab.org/respiration">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/respiration">
+<meta property="og:title" content="Cellular respiration — Kodolab">
+<meta property="og:description" content="Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
 <script defer src="/demos/lib/site.js"></script>
 <!-- ===================================================================
      THE CHART DRIVES THE STAGE. respiration/chart.html's flowchart sits in
@@ -120,6 +131,8 @@
   .synth { display: grid; grid-template-columns: min(760px, 80vh) minmax(0, 300px); gap: var(--space-6); align-items: center; }
   .synth-stage { position: relative; aspect-ratio: 1; background: var(--surface-stage); border-radius: var(--radius-md); overflow: hidden; }
   :root .modal .synth-text h2 { font-size: 34px; }
+  .molctl { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
+  #molhi[aria-pressed="true"] { background: var(--accent); color: var(--surface-page); border-color: var(--accent); }
   :root .modal .synth-text .msrc { font-size: 14px; color: var(--text-muted); margin-top: var(--space-4); }
   :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
 </style>
@@ -152,6 +165,13 @@
         <p class="mkick">The molecule</p>
         <h2 id="moltitle"></h2>
         <p class="msub" id="molsub"></p>
+        <div class="molctl">
+          <div class="segmented segmented--sm" role="group" aria-label="View" id="molview">
+            <button type="button" data-view="idealized" aria-pressed="true">Idealized</button>
+            <button type="button" data-view="measured" aria-pressed="false">Measured</button>
+          </div>
+          <button type="button" class="cta cta--ghost cta--sm" id="molhi" aria-pressed="false">Highlight phosphates</button>
+        </div>
         <p class="msrc" id="molsrc"></p>
       </div>
     </div>
@@ -389,16 +409,46 @@
       SCENES[onStage].stop();
     },
     onHide: () => { frame.innerHTML = ''; SCENES[onStage].start(); } });
-  /* One molecule, spinning, per open: show({ molecule, say }). The name and
-     where the coordinates came from are the component's, never typed here. */
-  let mol = null;
+  /* One molecule per open: show({ views: { idealized, measured }, say }). The
+     idealized skel build is held still; the deposited record turns. The name and where the coordinates came from are the
+     component's, never typed here. */
+  let mol = null, molOpen = null, molView = 'idealized', molHi = false;
+  /* The phosphates, read off the spec's bonds: every P, the O on it, the H on those O. */
+  function phosphateAtoms(key) {
+    const sp = MolLib.MOLECULES[key], nb = sp.atoms.map(() => []);
+    for (const [a, b] of sp.bonds) { nb[a].push(b); nb[b].push(a); }
+    const out = new Set();
+    sp.atoms.forEach((at, i) => {
+      if (at.el !== 'P') return;
+      out.add(i);
+      for (const o of nb[i]) if (sp.atoms[o].el === 'O') {
+        out.add(o);
+        for (const h of nb[o]) if (sp.atoms[h].el === 'H') out.add(h);
+      }
+    });
+    return [...out];
+  }
+  function molDraw() {
+    const key = molOpen.views[molView];
+    const opts = { molecule: key, spin: molView === 'measured', highlight: molHi ? phosphateAtoms(key) : null };
+    if (!mol) mol = Molecule.mount(document.getElementById('molstage'), opts);
+    else mol.set(opts);
+    const st = mol.state();
+    document.getElementById('moltitle').textContent = st.name;
+    document.getElementById('molsrc').textContent = st.source;
+    for (const b of document.querySelectorAll('#molview button')) b.setAttribute('aria-pressed', b.dataset.view === molView);
+    document.getElementById('molhi').setAttribute('aria-pressed', molHi);
+  }
+  document.getElementById('molview').addEventListener('click', e => {
+    const b = e.target.closest('button[data-view]');
+    if (b) { molView = b.dataset.view; molDraw(); }
+  });
+  document.getElementById('molhi').addEventListener('click', () => { molHi = !molHi; molDraw(); });
   const molModal = Modal.create({ el: 'molmodal',
     onShow: m => {
-      mol = Molecule.mount(document.getElementById('molstage'), { molecule: m.molecule, spin: true });
-      const st = mol.state();
-      document.getElementById('moltitle').textContent = st.name;
+      molOpen = m; molView = 'idealized'; molHi = false;
       document.getElementById('molsub').textContent = m.say;
-      document.getElementById('molsrc').textContent = st.source;
+      molDraw();
     },
     onHide: () => { if (mol) mol.destroy(); mol = null; } });
   const chemi = shell.scene('chemi', el => withBadge(el, Chemiosmosis.mount(el, {
@@ -557,7 +607,7 @@
   }
   chartBadge('#k-glyco', 'edge', { src: 'glycolysis-lab.html?view=inset', title: 'glycolysis' });
   chartBadge('#k-link', 'corner', { src: 'link-step.html?enzyme=off', title: 'link step' });
-  chartBadge('#k-atp', 'corner', { title: 'ATP', open: () => molModal.show({ molecule: 'atp',
+  chartBadge('#k-atp', 'corner', { title: 'ATP', open: () => molModal.show({ views: { idealized: 'atpSkel', measured: 'atp' },
     say: 'The cell spends it by breaking off the last phosphate, and makes it again the other way.' }) });
   chartBadge('#k-krebs', 'corner', { src: 'krebs-lab.html?view=cycle&view=inset', title: 'Krebs cycle' });
   figure.appendChild(cta);
