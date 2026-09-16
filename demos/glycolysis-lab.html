@@ -128,6 +128,11 @@
   #tally{grid-template-columns:repeat(2,minmax(0,1fr));
     grid-template-rows:repeat(2,minmax(0,1fr));
     gap:10px 26px;padding:14px 9% 0}
+  /* inset has no site header, so the step rail floats over the stage top */
+  .inset #tally{padding-top:84px}
+  /* the shorter row can't hold a square note, so it sizes to its content */
+  .inset #tally #ledger{aspect-ratio:auto;height:auto;width:min(100%,340px);
+    align-self:start;overflow:visible}
   /* THE NOTE IN THE GRID IS A SQUARE, and the size comes from the ROW: a
      width-driven square is as tall as its cell is wide, which overruns the
      tally the moment the window is. It also has to give up the sidebar's own
@@ -1237,6 +1242,7 @@ let prevLedger=null;
  * chart). The pathway and its ledger only: no enzyme, no energy card or the
  * verdicts that open it, and no fork at the end, since the host is where next is. */
 const INSET=/[?&]view=inset\b/.test(location.search);
+document.documentElement.classList.toggle('inset',INSET);
 let panel=INSET?'ledger':null;
 const setPanel=p=>{ panel=(panel===p?null:p); refresh(); };
 const cplOpen=()=>panel==='energy';

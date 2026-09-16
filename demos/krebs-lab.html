@@ -521,12 +521,9 @@ const carrierKey=n=>n==='NAD+'?'NAD':n==='FADH₂'?'FADH2':n;
  * the three effectively irreversible steps, which are also the three the cell
  * regulates — the point, not a coincidence. */
 const STEPS=[
-  { n:'Bridge', stage:1, reagent:'NAD', need:'Load NAD⁺',
+  { n:'Link', stage:1, reagent:'NAD', need:'Load NAD⁺',
     species:['acetylcoa'], enz:'Pyruvate dehydrogenase complex',
-    // THE NAME EVERY TEXTBOOK USES. "The bridge" says what it does between two
-    // pathways; "pyruvate oxidation" is what it is called in the index a
-    // student will look it up in, and the heading carries both.
-    hook:'Pyruvate oxidation', rev:false,
+    hook:'Link Step', rev:false,
     // …and what the button off its review beat says. "Next" is right for a step
     // inside the cycle; this one ENDS the bridge, and the click after it is the
     // student entering the pathway the page is named for.
@@ -544,8 +541,7 @@ const STEPS=[
     spot:{ at:'decarb', say:'Take the first carbon off' },
     takeaway:`One carbon leaves as CO₂`,
     msg:`<b>Pyruvate dehydrogenase</b> strips a CO₂ from pyruvate and hands the
-      remaining two carbons to <b>coenzyme A</b>. Makes NADH. Textbooks call this
-      step <b>pyruvate oxidation</b>; it is the bridge
+      remaining two carbons to <b>coenzyme A</b>. Makes NADH. This is the <b>link step</b>
       between glycolysis (cytosol) and the cycle (mitochondrial matrix) — and
       the step that commits carbon to being burned rather than stored.` },
 
@@ -603,7 +599,7 @@ const STEPS=[
     spot:{ at:'decarb', say:'Take the last carbon off' },
     takeaway:`5C → 4C`,
     msg:`<b>α-Ketoglutarate dehydrogenase</b> does the same chemistry as the
-      bridge reaction — same kind of complex, same CO₂, same NADH — and hands the
+      link step — same kind of complex, same CO₂, same NADH — and hands the
       four carbons left to coenzyme A as <b>succinyl-CoA</b>. From here the cycle
       only rebuilds oxaloacetate.` },
 
@@ -689,7 +685,7 @@ const STEPS=[
 const STAGES=[
   // Stage 0 is a STATE, not a group: where the page opens and Restart returns.
   { n:0 },
-  { n:1, block:'The bridge',  label:'Bridge: pyruvate → acetyl-CoA', delta:'−1 C' },
+  { n:1, block:'The link step',  label:'Link: pyruvate → acetyl-CoA', delta:'−1 C' },
   { n:2, block:'Build',       label:'Build: 2C + 4C → 6C',           delta:'4C → 6C' },
   { n:3, block:'Burn',        label:'Burn: two CO₂ leave',           delta:'−2 C' },
   { n:4, block:'Bank',        label:'Bank: ATP and FADH₂',           delta:'+1 ATP' },
@@ -1371,7 +1367,7 @@ const BRIDGE_STEPS=STEPS.filter(s=>typeof s.n!=='number');
 const sumOver=(list,k)=>list.reduce((n,s)=>n+(s[k]||0),0);
 const fromRing=k=>sumOver(RING_STEPS,k);
 const fromBridge=k=>sumOver(BRIDGE_STEPS,k);
-const BRIDGE_NAME='pyruvate oxidation';
+const BRIDGE_NAME='the link step';
 const sourceNote=k=>{
   const r=fromRing(k), b=fromBridge(k);
   if(!r && !b) return '';
@@ -1699,7 +1695,7 @@ const NOTE_ROWS=[
   ['NADH','nadh'], ['FADH₂','fadh2'], ['ATP','made'], ['CO₂','co2'],
 ];
 const TALLY_NOTES=[
-  {k:'bridge', head:'Pyruvate oxidation', sub:'per pyruvate', n:k=>fromBridge(k)},
+  {k:'bridge', head:'Link Step', sub:'per pyruvate', n:k=>fromBridge(k)},
   {k:'turn',   head:'One turn',           sub:'of the cycle', n:k=>fromRing(k)},
   {k:'total',  head:'Total per glucose',  sub:`${LAPS} pyruvate, ${LAPS} turns`,
    n:k=>(fromBridge(k)+fromRing(k))*LAPS},
@@ -2216,7 +2212,7 @@ const Handoff=(()=>{
       worth less. Cash them all in and these two turns are worth about
       <b>${worth} ATP</b> against the <b>${atp}</b> the cycle made itself. That
       gap is the answer to “why bother”, and ${bridge} of the ${nadh} NADH were
-      made by the bridge reaction before the ring even started.</p>`
+      made by the link step before the ring even started.</p>`
     +`<p class="hob">Nothing here used oxygen. The cycle still stops without it,
       because the chain has to empty these carriers before they can be filled
       again — which is what turn two needed.</p>`;
