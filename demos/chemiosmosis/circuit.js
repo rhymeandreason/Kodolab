@@ -184,8 +184,9 @@
        so the space between the membranes is continuous with the cytosol and
        the ATP is home once it is through. OUTER_GAP is drawn, not measured:
        wide enough that the protons pumped into it are visibly SITTING there,
-       tuned against the F1 head. */
-    const OUTER_GAP = 82;
+       tuned against the F1 head, and tall enough that a band's name sits
+       clear of both sheets' names. */
+    const OUTER_GAP = STACK.OUTER_GAP;
     const POR_R = 6.6, POR_HOLE = 8.4;
     const PORIN = Parts.transporter({ half:HALF * 0.62, over:4.0, wall:2.2, site:4.9, mouth:5.4, radius:POR_R, lobes:0, color:RESP.porin });
     root.add(PORIN.group);
@@ -1283,7 +1284,7 @@
          out drift straight through the outer sheet. */
       bandCap: () => outerOn() ? OUTER_GAP - 8 : Infinity,
       clearXs: () => outerOn() && porinX != null ? [porinX] : [],
-      api: { feed },
+      api: { feed, get outer() { return OUTER; }, doors: { translocase: ANT, porin: PORIN } },
       layers: {
         outer: { label: 'the outer membrane', get: () => outerOn(), set: v => eng.set({ outerMembrane: !!v }) },
       },
@@ -1407,7 +1408,7 @@
      a mitochondrion sits microns below the cell surface, so this cytosol is
      perhaps a hundred times too thin. Which side is which, and which way each
      machine carries, is to scale with itself. */
-  const STACK = { INNER_Y: -85, PLASMA_Y: 105, OUTER_GAP: 82 };
+  const STACK = { INNER_Y: -85, PLASMA_Y: 150, OUTER_GAP: 115 };
   const CELL_CONTENTS = { inside: { water: 18, NA: 9, K: 12, A: 5 }, outside: { water: 16, NA: 14, K: 4, CL: 8 } };
   let bandCss = false;
   function stackMount(el, params) {
@@ -1459,26 +1460,56 @@
       bandCss = true;
       const st = document.createElement('style');
       st.textContent = `
-.chem-band, .chem-sheet { position:absolute; z-index:3; pointer-events:none;
+.chem-band { position:absolute; z-index:3; pointer-events:none;
   font-family:var(--font-display, inherit); font-size:var(--cap-sm, 11px);
   font-weight:var(--cap-weight, 600); letter-spacing:var(--cap-track, .12em);
   text-transform:uppercase; white-space:nowrap;
   text-shadow:0 1px 10px rgba(255,255,255,.85); transform:translateY(-50%); }
 .chem-band  { right:18px; opacity:.55; }
-.chem-sheet { left:18px;  opacity:.8; }`;
+.chem-tip { position:absolute; z-index:4; pointer-events:none; padding:4px 9px; border-radius:6px;
+  background:rgba(255,255,255,.94); box-shadow:0 2px 10px rgba(0,0,0,.12); color:#1f2430;
+  font:600 12px/1.3 var(--font-ui, system-ui, sans-serif); white-space:nowrap; transform:translate(12px, -130%); }`;
       document.head.appendChild(st);
     }
     if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
     const LABELS = params.sideLabels === false ? [] : [
-      { cls:'chem-sheet', y: () => PLASMA_Y, text: () => 'plasma membrane' },
-      { cls:'chem-sheet', y: () => OUTER_Y,  text: () => 'outer membrane' },
-      { cls:'chem-sheet', y: () => INNER_Y,  text: () => 'inner membrane' },
       { cls:'chem-band', y: () => PLASMA_Y + 46, text: () => cell.state().sides.outside },
       { cls:'chem-band', y: () => (PLASMA_Y + OUTER_Y) / 2, text: () => cell.state().sides.inside },
       { cls:'chem-band', y: () => (OUTER_Y + INNER_Y) / 2, text: () => mito.state().sides.outside },
       { cls:'chem-band', y: () => INNER_Y - 52, text: () => mito.state().sides.inside },
     ];
     for (const L of LABELS) { L.el = document.createElement('div'); L.el.className = L.cls; el.appendChild(L.el); }
+    /* THE SHEETS AND PROTEINS ARE NAMED ON HOVER, not down the edge: names on
+       the left crowd the chain. The first thing under the pointer decides, so
+       a protein standing in a sheet is not called the membrane. */
+    const tip = document.createElement('div');
+    tip.className = 'chem-tip'; tip.hidden = true; el.appendChild(tip);
+    const ray = new THREE.Raycaster(), _p = new THREE.Vector2();
+    const PROTEIN_NAME = { complex: 'Electron transport chain', I: 'Complex I', II: 'Complex II', III: 'Complex III', IV: 'Complex IV',
+      PSII: 'Photosystem II', b6f: 'Cytochrome b6f', PSI: 'Photosystem I', synthase: 'ATP synthase', leak: 'Uncoupler',
+      translocase: 'ADP/ATP translocase', porin: 'Porin', pump: 'Na⁺/K⁺ pump', K: 'K⁺ channel', CL: 'Cl⁻ channel' };
+    const sheets = () => [
+      ...Object.entries(Object.assign({}, cell.proteins, mito.proteins, mito.doors))
+        .filter(([k, part]) => PROTEIN_NAME[k] && part && part.group).map(([k, part]) => [part.group, PROTEIN_NAME[k]]),
+      [cell.membrane && cell.membrane.group, 'Plasma membrane'],
+      [mito.outer && mito.outer.group, 'Outer membrane'],
+      [mito.membrane && mito.membrane.group, 'Inner membrane'],
+    ].filter(s => s[0] && s[0].visible);
+    const within = (o, g) => { for (; o; o = o.parent) if (o === g) return true; return false; };
+    function hover(ev) {
+      const r = box.canvas.getBoundingClientRect();
+      _p.set((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(_p, box.camera);
+      const hit = ray.intersectObject(box.root, true).find(h => h.object.visible);
+      const s = hit && sheets().find(([g]) => within(hit.object, g));
+      tip.hidden = !s;
+      if (!s) return;
+      tip.textContent = s[1];
+      tip.style.left = (ev.clientX - el.getBoundingClientRect().left) + 'px';
+      tip.style.top = (ev.clientY - el.getBoundingClientRect().top) + 'px';
+    }
+    box.canvas.addEventListener('pointermove', hover);
+    box.canvas.addEventListener('pointerleave', () => { tip.hidden = true; });
     const _l = new THREE.Vector3();
     function placeLabels() {
       const h = box.canvas.clientHeight;
@@ -1527,7 +1558,7 @@
       add: mito.add, scatter: mito.scatter, clear: mito.clear,
       reset() { spent = 0; mito.reset(); cell.reset(); cell.set({ contents: params.cellContents || CELL_CONTENTS }); },
       start: box.start, stop: box.stop, pump: box.pump,
-      destroy() { if (nb) nb.clear(); for (const L of LABELS) L.el.remove(); box.destroy(); },
+      destroy() { if (nb) nb.clear(); for (const L of LABELS) L.el.remove(); tip.remove(); box.destroy(); },
     };
     return handle;
   }
