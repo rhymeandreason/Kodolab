@@ -72,11 +72,11 @@
     font-family: var(--font-display); font-weight: var(--cap-weight);
     letter-spacing: var(--cap-track); text-transform: uppercase;
   }
-  .chart .ttl    { font-size: var(--cap-lg); fill: var(--text-strong) }
+  .chart .ttl    { font-size: 15px; letter-spacing: .04em; fill: var(--text-strong) }
   .chart .tiny   { font-size: var(--cap-sm); fill: var(--text-muted) }
   .chart .zone-l { font-size: 18px; fill: var(--text-dim) }
   .chart .big    { font-family: var(--font-display); font-weight: 500; font-size: 36px; letter-spacing: -.02em }
-  .chart .sub    { fill: var(--text-dim) }
+  .chart .sub    { font-size: 14px; fill: var(--text-dim) }
   .chart .box  { fill: var(--surface-card); stroke: var(--border-hair); stroke-width: 1; filter: url(#lift) }
   .chart .rule { stroke: var(--border-hair); stroke-width: 1 }
   .chart .sub .n { fill: var(--text-strong); font-weight: 600; font-variant-numeric: tabular-nums }
@@ -242,9 +242,9 @@
       <line class="flow" x1="288" y1="100" x2="288" y2="128" marker-end="url(#m)"></line>
 
       <!-- ===== glycolysis ===== -->
-      <rect id="k-glyco" class="box" x="178" y="130" width="220" height="90" rx="8"></rect>
+      <rect id="k-glyco" class="box" x="168" y="130" width="240" height="90" rx="8"></rect>
       <text class="ttl" x="288" y="158" text-anchor="middle">GLYCOLYSIS</text>
-      <line class="rule" x1="194" y1="169" x2="382" y2="169"></line>
+      <line class="rule" x1="184" y1="169" x2="392" y2="169"></line>
       <text class="sub" x="288" y="186" text-anchor="middle">splits the sugar in half</text>
       <text class="sub" x="288" y="204" text-anchor="middle">net <tspan class="atp-t">2 ATP</tspan> · <tspan class="n">2</tspan> NADH</text>
 
@@ -269,21 +269,21 @@
       <line class="flow" x1="388" y1="300" x2="388" y2="368" marker-end="url(#m)"></line>
 
       <!-- ===== link step ===== -->
-      <rect class="box" x="123" y="370" width="130" height="84" rx="8"></rect>
-      <rect id="k-link" class="box" x="323" y="370" width="130" height="84" rx="8"></rect>
+      <rect class="box" x="103" y="370" width="170" height="84" rx="8"></rect>
+      <rect id="k-link" class="box" x="303" y="370" width="170" height="84" rx="8"></rect>
       <text class="ttl" x="188" y="396" text-anchor="middle">LINK STEP</text>
-      <line class="rule" x1="137" y1="407" x2="239" y2="407"></line>
+      <line class="rule" x1="117" y1="407" x2="259" y2="407"></line>
       <text class="sub" x="188" y="424" text-anchor="middle">→ acetyl-CoA</text>
       <text class="sub" x="188" y="442" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
       <text class="ttl" x="388" y="396" text-anchor="middle">LINK STEP</text>
-      <line class="rule" x1="337" y1="407" x2="439" y2="407"></line>
+      <line class="rule" x1="317" y1="407" x2="459" y2="407"></line>
       <text class="sub" x="388" y="424" text-anchor="middle">→ acetyl-CoA</text>
       <text class="sub" x="388" y="442" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
-      <line class="co2-l" x1="121" y1="412" x2="62" y2="412" marker-end="url(#mc)"></line>
+      <line class="co2-l" x1="101" y1="412" x2="62" y2="412" marker-end="url(#mc)"></line>
       <ellipse cx="28" cy="405" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
       <image href="media/molecules/co2.webp" x="-2" y="385" width="60" height="38"></image>
       <text class="co2-t tiny" x="28" y="435" text-anchor="middle">1 CO₂</text>
-      <line class="co2-l" x1="455" y1="412" x2="514" y2="412" marker-end="url(#mc)"></line>
+      <line class="co2-l" x1="475" y1="412" x2="514" y2="412" marker-end="url(#mc)"></line>
       <ellipse cx="548" cy="405" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
       <image href="media/molecules/co2.webp" x="518" y="385" width="60" height="38"></image>
       <text class="co2-t tiny" x="548" y="435" text-anchor="middle">1 CO₂</text>
@@ -293,21 +293,21 @@
 
       <!-- ===== krebs ===== -->
       <g transform="translate(0,22)">
-      <rect class="box" x="123" y="464" width="130" height="84" rx="8"></rect>
-      <rect id="k-krebs" class="box" x="323" y="464" width="130" height="84" rx="8"></rect>
+      <rect class="box" x="103" y="464" width="170" height="84" rx="8"></rect>
+      <rect id="k-krebs" class="box" x="303" y="464" width="170" height="84" rx="8"></rect>
       <text class="ttl" x="188" y="490" text-anchor="middle">KREBS CYCLE</text>
-      <line class="rule" x1="137" y1="501" x2="239" y2="501"></line>
+      <line class="rule" x1="117" y1="501" x2="259" y2="501"></line>
       <text class="sub" x="188" y="518" text-anchor="middle"><tspan class="atp-t">1 ATP</tspan> · <tspan class="n">3</tspan> NADH</text>
       <text class="sub" x="188" y="536" text-anchor="middle"><tspan class="n">1</tspan> FADH₂</text>
       <text class="ttl" x="388" y="490" text-anchor="middle">KREBS CYCLE</text>
-      <line class="rule" x1="337" y1="501" x2="439" y2="501"></line>
+      <line class="rule" x1="317" y1="501" x2="459" y2="501"></line>
       <text class="sub" x="388" y="518" text-anchor="middle"><tspan class="atp-t">1 ATP</tspan> · <tspan class="n">3</tspan> NADH</text>
       <text class="sub" x="388" y="536" text-anchor="middle"><tspan class="n">1</tspan> FADH₂</text>
-      <line class="co2-l" x1="121" y1="506" x2="62" y2="506" marker-end="url(#mc)"></line>
+      <line class="co2-l" x1="101" y1="506" x2="62" y2="506" marker-end="url(#mc)"></line>
       <ellipse cx="28" cy="499" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
       <image href="media/molecules/co2.webp" x="-2" y="479" width="60" height="38"></image>
       <text class="co2-t tiny" x="28" y="529" text-anchor="middle">2 CO₂</text>
-      <line class="co2-l" x1="455" y1="506" x2="514" y2="506" marker-end="url(#mc)"></line>
+      <line class="co2-l" x1="475" y1="506" x2="514" y2="506" marker-end="url(#mc)"></line>
       <ellipse cx="548" cy="499" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
       <image href="media/molecules/co2.webp" x="518" y="479" width="60" height="38"></image>
       <text class="co2-t tiny" x="548" y="529" text-anchor="middle">2 CO₂</text>
@@ -329,10 +329,10 @@
       <g transform="translate(0,182)">
 
       <!-- ===== electron transport chain ===== -->
-      <rect id="k-etc" class="box" x="166" y="584" width="244" height="110" rx="8"></rect>
+      <rect id="k-etc" class="box" x="141" y="584" width="294" height="110" rx="8"></rect>
       <text class="ttl" x="288" y="612" text-anchor="middle">ELECTRON TRANSPORT</text>
       <text class="ttl" x="288" y="628" text-anchor="middle">CHAIN</text>
-      <line class="rule" x1="182" y1="639" x2="394" y2="639"></line>
+      <line class="rule" x1="157" y1="639" x2="419" y2="639"></line>
       <text class="sub" x="288" y="657" text-anchor="middle">H⁺ gradient spins ATP synthase</text>
       <text class="sub" x="288" y="676" text-anchor="middle"><tspan class="atp-t">≈26 ATP</tspan> — the big payout</text>
 
@@ -340,16 +340,16 @@
       <ellipse cx="39" cy="639" rx="62" ry="54" fill="url(#o2-glow)"></ellipse>
       <text class="ttl o2-t" x="39" y="615" text-anchor="middle">OXYGEN</text>
       <image href="media/molecules/o2.webp" x="11" y="619" width="56" height="44"></image>
-      <text class="sub" x="39" y="675" text-anchor="middle">6 O₂</text>
-      <line class="o2-l" x1="86" y1="639" x2="164" y2="639" marker-end="url(#mo)"></line>
-      <text class="tiny o2-t" x="39" y="697" text-anchor="middle">FINAL ELECTRON</text>
-      <text class="tiny o2-t" x="39" y="709" text-anchor="middle">ACCEPTOR</text>
+      <text class="tiny o2-t" x="39" y="675" text-anchor="middle">6 O₂</text>
+      <line class="o2-l" x1="86" y1="639" x2="139" y2="639" marker-end="url(#mo)"></line>
+      <text class="sub" x="39" y="697" text-anchor="middle">final electron</text>
+      <text class="sub" x="39" y="714" text-anchor="middle">acceptor</text>
 
-      <!-- ===== water leaves, same grammar as the CO₂ side arrows ===== -->
-      <line class="o2-l" x1="412" y1="639" x2="496" y2="639" stroke-width="1.3" marker-end="url(#mo)"></line>
+      <!-- ===== water leaves, same grammar as the CO₂ side arrows. 6 O₂ + 24 H⁺ + 24 e⁻ make 12 H₂O; glycolysis and Krebs use back 6, so the total says 6 net ===== -->
+      <line class="o2-l" x1="437" y1="639" x2="496" y2="639" stroke-width="1.3" marker-end="url(#mo)"></line>
       <ellipse cx="534" cy="641" rx="50" ry="44" fill="url(#o2-glow)"></ellipse>
       <image href="media/molecules/water.webp" x="506" y="609" width="56" height="44"></image>
-      <text class="tiny o2-t" x="534" y="667" text-anchor="middle">6 H₂O</text>
+      <text class="tiny o2-t" x="534" y="667" text-anchor="middle">12 H₂O</text>
 
       <!-- ===== total ===== -->
       <line class="flow" x1="288" y1="694" x2="288" y2="778" marker-end="url(#ma)" stroke="var(--accent)"></line>
@@ -357,7 +357,7 @@
       <ellipse cx="288" cy="842" rx="96" ry="52" fill="url(#atp-glow)"></ellipse>
       <image href="media/molecules/atpSkel.webp" x="218" y="800" width="140" height="80"></image>
       <text class="big atp-t" x="288" y="914" text-anchor="middle">≈30 ATP</text>
-      <text class="tiny" x="288" y="938" text-anchor="middle">PER GLUCOSE · 6 CO₂ OUT · 6 H₂O MADE</text>
+      <text class="tiny" x="288" y="938" text-anchor="middle">PER GLUCOSE · 6 CO₂ OUT · 6 H₂O NET</text>
       </g>
       </g>
       </g>
