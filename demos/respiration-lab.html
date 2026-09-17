@@ -783,7 +783,11 @@
     const done = !!shown && goal != null && shown.ATP >= goal && sent.NADH >= GLUCOSE.NADH && sent.FADH2 >= GLUCOSE.FADH2;
     const doneEl = etc.querySelector('.etc-done');
     if (doneEl.hidden === done) doneEl.hidden = !done;
-    if (done && !completed) { completed = true; quizBtn.hidden = false; if (window.Track) Track.event('complete'); }
+    if (done && !completed) {
+      completed = true; quizBtn.hidden = false;
+      try { localStorage.setItem(DONE_KEY, '1'); } catch (e) { /* the button lasts this load */ }
+      if (window.Track) Track.event('complete');
+    }
     const note = etc.querySelector('.etc-note');
     if (note.hidden !== done) note.hidden = done;
     for (const b of etc.querySelectorAll('button[data-fuel]')) {
@@ -937,7 +941,9 @@
   quizModal = Modal.create({ el: 'quizmodal', onShow: runQuiz });
   const quizBtn = document.createElement('button');
   quizBtn.type = 'button'; quizBtn.className = 'cta cta--ghost cta--sm quiz-open'; quizBtn.textContent = 'Quiz';
-  quizBtn.hidden = true;   // until the chain has made a glucose's worth of ATP
+  // Until the chain has made a glucose's worth of ATP, once, on this browser.
+  const DONE_KEY = 'ss.respiration.done';
+  quizBtn.hidden = !(() => { try { return localStorage.getItem(DONE_KEY); } catch (e) { return false; } })();
   quizBtn.addEventListener('click', () => quizModal.show());
   /* Beside it, a slot lib/track.js fills with the class gear when this browser is in a class. */
   const foot = document.createElement('div');
