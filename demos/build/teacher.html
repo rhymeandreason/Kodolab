@@ -72,7 +72,7 @@
           </div>
           <div class="tablewrap">
             <table class="sessions">
-              <thead><tr><th>Name</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th>Done</th><th class="num">Quiz</th><th>Survey</th><th class="num">Asked</th></tr></thead>
+              <thead><tr><th>Name · browser</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th>Done</th><th class="num">Quiz</th><th>Survey</th><th class="num">Asked</th></tr></thead>
               <tbody id="sessions"></tbody>
             </table>
           </div>
@@ -281,6 +281,8 @@
   const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?' };
   const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
   // Deployed a lesson is its short URL; on the dev server it is the file. Same lesson.
+  // The browser's code, as lib/track.js shows it in the class card: first eight hex of the visitor id.
+  const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
   const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p] || p);
 
   function paintSessions() {
@@ -291,7 +293,7 @@
     $('sessionCount').textContent = rows.length || '';
     $('noSessions').hidden = !!rows.length;
     $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
-      <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || 'anonymous')}</button></td>
+      <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${shortId(r.visitor_id)}</code></button></td>
       <td class="dim">${esc((r.pages || []).map(pageName).join(', '))}</td>
       <td class="dim">${esc(ago(r.first_seen))}</td>
       <td class="dim">${esc(ago(r.last_seen))}</td>
@@ -306,7 +308,7 @@
     $('noQuestions').hidden = !!qs.length;
     $('questions').innerHTML = qs.map(q => `<li>
       <div class="qrow">
-        <span class="who"><b>${esc(q.name || 'anonymous')}</b>${q.lesson ? ` · ${esc(q.lesson)}` : ''}</span>
+        <span class="who"><b>${esc(q.name || '')}</b> <code class="bid">${shortId(q.visitor_id)}</code>${q.lesson ? ` · ${esc(q.lesson)}` : ''}</span>
         <span class="when">${esc(ago(q.created_at))}</span>
         <span class="q">${esc(q.q)}</span>
         ${q.answer ? `<span class="s">${esc(q.answer)}</span>` : ''}
@@ -331,7 +333,7 @@
   });
   const dl = (k, v) => `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`;
   function openSession(r) {
-    $('sessionName').textContent = r.name || 'anonymous';
+    $('sessionName').textContent = (r.name ? r.name + ' · ' : '') + shortId(r.visitor_id);
     $('sessionClass').textContent = current.class.name;
     const parts = [];
     parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', r.phase ? esc(PHASES[r.phase] || r.phase) : '—')
@@ -355,8 +357,8 @@
   $('exportCsv').addEventListener('click', () => {
     const rows = current.sessions || [];
     const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
-    const head = ['name', 'lessons', 'first_seen', 'last_seen', 'on_screen_s', 'phase', 'phase_i', 'complete', 'quiz_score', 'quiz_total', 'survey', 'questions'];
-    const lines = [head.join(',')].concat(rows.map(r => [r.name, (r.pages || []).join(' '), r.first_seen, r.last_seen, r.active_s, r.phase, r.phase_i,
+    const head = ['name', 'browser', 'lessons', 'first_seen', 'last_seen', 'on_screen_s', 'phase', 'phase_i', 'complete', 'quiz_score', 'quiz_total', 'survey', 'questions'];
+    const lines = [head.join(',')].concat(rows.map(r => [r.name, shortId(r.visitor_id), (r.pages || []).join(' '), r.first_seen, r.last_seen, r.active_s, r.phase, r.phase_i,
       r.complete, r.quiz && r.quiz.score, r.quiz && r.quiz.total, r.survey ? JSON.stringify(r.survey.answers) : '', r.questions].map(cell).join(',')));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));

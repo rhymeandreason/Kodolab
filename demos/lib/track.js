@@ -101,7 +101,7 @@
     '#classcard h2{margin:4px 0 18px;font-size:24px;color:var(--text-strong,#111)}' +
     '#classcard label{display:block;font-weight:600;color:var(--text-strong,#111);margin:0 0 6px}' +
     '#classcard input{width:100%;box-sizing:border-box;font:inherit;padding:9px 12px;border:1px solid var(--border-strong,#bbb);border-radius:10px;background:var(--surface-page,#fff);color:inherit}' +
-    '#classcard .sub{font-size:13px;color:var(--text-muted,#666);margin:8px 0 20px}' +
+    '#classcard .sub{font-size:13px;color:var(--text-muted,#666);margin:8px 0 12px}#classcard .sub:last-of-type{margin-bottom:20px}#classcard .bid{font-family:ui-monospace,Menlo,monospace;color:var(--text-strong,#111)}' +
     '#classcard .row{display:flex;gap:10px;align-items:center}#classcard .row .sp{flex:1}' +
     '#classcard button{font:600 13px var(--font-ui,system-ui,sans-serif);padding:8px 14px;border-radius:10px;border:1px solid var(--border-strong,#bbb);background:var(--surface-page,#fff);color:var(--text-strong,#111);cursor:pointer}' +
     '#classcard button.go{background:var(--text-strong,#111);color:var(--surface-page,#fff);border-color:var(--text-strong,#111)}' +
@@ -109,6 +109,10 @@
     '#classcard .x{position:absolute;top:10px;right:14px;border:0;background:none;font-size:24px;line-height:1;color:var(--text-muted,#666);padding:4px 6px}';
   var GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+
+  /* The first eight hex digits of the visitor id, as 'xxxx-xxxx': readable off a
+     screen, and the same function on the dashboard prints the same code. */
+  function shortId(v) { var h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); }
 
   var card = null;
   function openCard() {
@@ -121,6 +125,7 @@
         '<form><label for="classname">Your name or initials <span style="font-weight:400;color:var(--text-muted,#666)">(optional)</span></label>' +
         '<input id="classname" maxlength="40" autocomplete="off">' +
         '<p class="sub">Only your teacher sees it, next to how far you got in the lesson. Leave it blank to stay anonymous.</p>' +
+        '<p class="sub">This browser\'s code: <b class="bid"></b>. Your teacher sees the same code, so you can tell them which row is yours without giving a name.</p>' +
         '<div class="row"><button type="button" class="leave">Leave this class</button><span class="sp"></span><button type="submit" class="go">Save</button></div></form></div>';
       document.body.appendChild(card);
       var form = card.querySelector('form');
@@ -143,6 +148,7 @@
       });
     }
     card.querySelector('h2').textContent = className || 'Class ' + CLASS;
+    card.querySelector('.bid').textContent = shortId(VISITOR);
     card.querySelector('input').value = get(NAME_KEY) || '';
     card.hidden = false;
     card.querySelector('input').focus();
