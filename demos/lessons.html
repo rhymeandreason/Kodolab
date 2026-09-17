@@ -407,7 +407,7 @@
 const SITE = 'https://www.kodolab.org';
 const UNITS = [
   { key: 'chem',  n: '01', hue: 'var(--blue)',   title: 'The chemistry of life', why: 'Why water behaves as it does, and how atoms decide what they bond to.' },
-  { key: 'macro', n: '02', hue: 'var(--coral)',  title: 'Macromolecules',        why: 'A protein is a chain that folds, and one letter in it can change a body.' },
+  { key: 'macro', n: '02', hue: 'var(--coral)',  title: 'Proteins',              why: 'A chain that folds, one letter that changes a body, and a gallery of real structures to turn over.' },
   { key: 'cell',  n: '03', hue: 'var(--amber)',  title: 'The cell',              why: 'What the membrane lets through, and what it costs to push the rest.' },
   { key: 'energy',n: '04', hue: 'var(--violet)', title: 'Energy',                why: 'One glucose, followed from the cytosol to the last electron. Start with the overview, then open any stage.' },
   { key: 'plant', n: '05', hue: 'var(--green)',  title: 'Plants',                why: 'Where the mass of a tree comes from, which is not the soil.' },
@@ -418,7 +418,7 @@ const LESSONS = [
   { key: 'bonds',        unit: 'chem',   url: '/molecular-bonds',    file: '/demos/molecule-builder.html', title: 'Covalent & Ionic Bonds',        blurb: 'Drag atoms together and let valence decide what you get.', still: '/demos/media/kodo-bonding.webp', status: 'featured' },
   { key: 'protein',      unit: 'macro',  url: '/protein',            file: '/demos/hemoglobin-lab.html',   title: 'Levels of Protein Structure',   blurb: 'Haemoglobin, from a chain of amino acids to four folded chains.', still: '/demos/proteins/stills/hemoglobin.webp', status: 'featured', bare: true },
   { key: 'sickle',       unit: 'macro',  url: '/sickle-cell',        file: '/demos/sickle-lab.html',       title: 'Sickle Cell',                   blurb: 'One letter changes, a protein sticks to itself, and a red cell jams.', still: '/demos/media/components/bloodcell.webp', status: 'preview' },
-  { key: 'contrast',     unit: 'macro',  title: 'Spot the Difference',          blurb: 'Glucose or galactose, ribose or deoxyribose, L- or D-alanine: six pairs that differ by one atom, and what that atom changes.', soon: true },
+  { key: 'gallery',      unit: 'macro',  url: '/proteins',           title: 'The Protein Gallery',           blurb: 'Real structures at real ångströms, from haemoglobin and collagen to ATP synthase. Turn one over and see how its shape does its job.', still: '/demos/proteins/stills/atp-synthase.webp', status: 'gallery', noEmbed: true },
   { key: 'membrane',     unit: 'cell',   url: '/membrane',           file: '/demos/membrane-lab.html',     title: 'The Membrane',                  blurb: 'What gets through, what does not, and what a pump costs.', still: '/demos/media/kodo-membrane.webp', status: 'featured', bare: true },
   { key: 'celltour',     unit: 'cell',   title: 'Inside the Cell',              blurb: 'An animal cell and a plant cell cut open, organelle by organelle, and what each one is for.', soon: true },
   { key: 'respiration',  unit: 'energy', url: '/respiration',        file: '/demos/respiration-lab.html',  title: 'Cellular Respiration',          blurb: 'How a cell turns sugar into usable energy: the whole route on one chart, from the cell to the mitochondrion to the chain, with a door into each stage.', still: '/demos/media/components/mitochondrion.webp', status: 'featured', quiz: true, hub: true },
@@ -431,7 +431,7 @@ const LESSONS = [
   { key: 'dna',          unit: 'gene',   url: '/dna',                file: '/demos/dna-structure.html',    title: 'Structure of DNA',              blurb: 'A helix from real coordinates, part by part.', still: '/demos/proteins/stills/dna.webp', status: 'featured' },
   { key: 'replication',  unit: 'gene',   title: 'DNA Replication',              blurb: 'The fork opens and you copy the template a letter at a time: each nucleotide pairs and joins the backbone in one beat.', soon: true },
 ];
-const STATUS = { featured: 'Featured', new: 'New', preview: 'Preview' };
+const STATUS = { featured: 'Featured', new: 'New', preview: 'Preview', gallery: 'Gallery' };
 const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const EMB_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>';
 
@@ -449,7 +449,7 @@ function card(l, extra = '') {
     <div class="body">
       <h3><a href="${l.url}">${esc(l.title)}</a></h3>
       <p>${esc(l.blurb)}</p>
-      <div class="foot"><div class="marks">${marks}</div><button class="emb" type="button" data-embed="${l.key}" aria-label="Embed code for ${esc(l.title)}">${EMB_ICON}Embed</button></div>
+      <div class="foot"><div class="marks">${marks}</div>${l.noEmbed ? '' : `<button class="emb" type="button" data-embed="${l.key}" aria-label="Embed code for ${esc(l.title)}">${EMB_ICON}Embed</button>`}</div>
     </div>
     ${l.path && l.path < 3 ? `<span class="arrow" aria-hidden="true">${l.path === 1 ? '<span>with O₂</span>' : ''}</span>` : ''}
   </article>`;
@@ -478,7 +478,7 @@ function card(l, extra = '') {
   const note = document.getElementById('s-note'), facts = document.getElementById('s-facts');
   const code = document.getElementById('s-code'), open = document.getElementById('s-open'), frame = document.getElementById('s-frame');
   const ok = document.getElementById('s-ok');
-  sel.innerHTML = LESSONS.filter(l => !l.soon).map(l => `<option value="${l.key}">${esc(l.title)}</option>`).join('');
+  sel.innerHTML = LESSONS.filter(l => !l.soon && !l.noEmbed).map(l => `<option value="${l.key}">${esc(l.title)}</option>`).join('');
   const byKey = k => LESSONS.find(l => l.key === k);
   let okTimer = 0;
 
