@@ -499,7 +499,7 @@
         cam.target.z+cam.r*Math.sin(cam.phi)*Math.cos(cam.theta));
       camera.lookAt(cam.target);
     }
-    // Camera orbit. Pages pass `orbit:false` when dragging should turn the MODELS
+    // Camera orbit. `orbit:'pan'` drags the view flat instead. Pages pass `orbit:false` when dragging should turn the MODELS
     // instead of swinging the camera — a comparison page showing two molecules
     // side by side must not orbit, because orbiting puts one of them nearer the
     // camera than the other and perspective then magnifies it. Those pages take
@@ -522,7 +522,18 @@
       canvas.addEventListener('pointermove',e=>{ if(!drag||pts.size>1)return;
         if(o.onDrag)o.onDrag();
         const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
-        if(o.turn==='trackball'){
+        if(o.orbit==='pan'){
+          // `orbit:'pan'` slides the target in the view plane, for a flat
+          // scene with nothing to turn. One pixel moves one pixel's worth of
+          // world at the target's depth, so the scene tracks the pointer.
+          const V=THREE.Vector3, h=canvas.clientHeight||1;
+          const k=camera.isPerspectiveCamera
+            ? 2*cam.r*Math.tan(camera.fov*Math.PI/360)/h
+            : (camera.top-camera.bottom)/camera.zoom/h;
+          const right=new V().setFromMatrixColumn(camera.matrixWorld,0);
+          const up=new V().setFromMatrixColumn(camera.matrixWorld,1);
+          cam.target.addScaledVector(right,-dx*k).addScaledVector(up,dy*k);
+        } else if(o.turn==='trackball'){
           // Composed in the camera's own frame (multiply, not premultiply), so
           // the axes turn with the view and there is nothing to clamp.
           const k=0.008, Q=THREE.Quaternion, V=THREE.Vector3;

@@ -102,6 +102,7 @@
   .step { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; align-items: center; transition: opacity .5s }
   .etc { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); text-align: center; }
   .etc[hidden] { display: none; }
+  .reset-view { position: absolute; right: var(--space-5); bottom: var(--space-5); z-index: 2; }
   .etc-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
   .tally { display: flex; gap: var(--space-5); font-family: var(--font-ui); color: var(--text-muted); }
   .tally b { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--text-strong); font-variant-numeric: tabular-nums; }
@@ -458,6 +459,12 @@
     /* Denser than the default 30 a side, so complex I loads from protons already in frame. Equal on both sides, so the gradient still starts at zero. */
     contents: PROTONS,
   }).show('water', false)));
+  {
+    const b = document.createElement('button');
+    b.className = 'btn reset-view'; b.type = 'button'; b.textContent = 'Reset view';
+    b.addEventListener('click', () => PHASES.etc(true));
+    chemi.box.canvas.parentElement.appendChild(b);
+  }
   function withBadge(el, c) {
     const b = Badge.create({ host: el, camera: c.box.camera, canvas: c.box.canvas, at: () => c.at('synthase'),
       icon: 'more', label: 'See the real ATP synthase', offset: [34, 0], onClick: () => synthModal.show() });
@@ -553,6 +560,7 @@
     const prev = SCENES[onStage];
     onStage = name;
     shell.showScene(name);
+    shell.el.querySelector('.lshell-hint').hidden = name === 'chemi';
     prev.start();
     setTimeout(() => { if (onStage !== name) return; prev.stop(); }, 1500);
   }

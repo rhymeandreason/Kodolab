@@ -1442,7 +1442,7 @@
     const box = global.CardStage.create({
       mount: el,
       cam: params.cam || { theta: 0, phi: Math.PI / 2 - 0.09, r: params.chain === 'split' ? 500 : 412 },
-      stage: Object.assign({ orbit: false, rMin: 120, rMax: 900 }, params.stage || {}),
+      stage: Object.assign({ orbit: 'pan', rMin: 120, rMax: 900 }, params.stage || {}),
       step: dt => { if (!mito) return; const k = dt * (mito.params().timeScale || 1); last = mito.step(k); cell.step(k); },
       afterFrame: () => { if (nb) { nb.step(); placeLabels(); } },
       viewOffset: params.viewOffset,
