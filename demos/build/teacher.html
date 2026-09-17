@@ -348,7 +348,15 @@
 
   $('exportCsv').addEventListener('click', () => {
     const rows = current.sessions || [];
-    const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    /* A cell opening with = + - @ or a control character is a formula to a
+       spreadsheet, and a nickname is student-typed. Quoting is not a defence:
+       the reader unquotes first. A number keeps its sign; anything else gets
+       the apostrophe every reader strips on open. */
+    const cell = v => {
+      let s = String(v == null ? '' : v);
+      if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
     const head = ['name', 'browser', 'lessons', 'first_seen', 'last_seen', 'on_screen_s', 'phase', 'phase_i', 'complete', 'quiz_score', 'quiz_total', 'survey', 'questions'];
     const lines = [head.join(',')].concat(rows.map(r => [r.name, shortId(r.visitor_id), (r.pages || []).join(' '), r.first_seen, r.last_seen, r.active_s, r.phase, r.phase_i,
       r.complete, r.quiz && r.quiz.score, r.quiz && r.quiz.total, r.survey ? JSON.stringify(r.survey.answers) : '', r.questions].map(cell).join(',')));
