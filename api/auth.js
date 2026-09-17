@@ -1,8 +1,10 @@
 /* =============================================================================
- *  api/auth.js — sign in with Google, redeem an invite, sign out
+ *  api/auth.js — sign in with Google or an email code, redeem an invite, sign out
  * =============================================================================
  *  GET  /api/auth                      → {clientId, user}
  *  POST {action: 'google', credential} → verifies the ID token, sets the session cookie
+ *  POST {action: 'code', email}        → mails a six-digit code
+ *  POST {action: 'verify', email, code} → sets the session cookie
  *  POST {action: 'redeem', code}       → a member invite, a teacher invite, or the pilot's teacher code
  *  POST {action: 'claim', apps}        → [{id, token}] this browser can edit and nobody owns → this account's
  *  POST {action: 'logout'}
@@ -12,6 +14,7 @@
 'use strict';
 
 const accounts = require('./_accounts.js');
+const mail     = require('./_mail.js');
 const apps     = require('./_apps.js');
 const log      = require('./_log.js');
 const { local } = require('./_local.js');
@@ -45,10 +48,41 @@ module.exports = async function handler(req, res) {
       let claims;
       try { claims = await accounts.verifyGoogle(body.credential); }
       catch (err) { return res.status(401).json({ error: 'Google sign-in failed: ' + err.message }); }
-      const u = await accounts.upsertUser(claims);
-      if (u.disabled_at) return res.status(403).json({ error: 'This account has been turned off.' });
-      res.setHeader('Set-Cookie', accounts.cookie(await accounts.startSession(u.id), { secure }));
-      return res.status(200).json({ user: accounts.describeUser(u) });
+      const got = await accounts.upsertUser(claims);
+      if (got.error) return res.status(409).json({ error: got.error });
+      return signIn(res, got.user, secure);
+    }
+
+    // Asking for a code is not a sign-in, so it is deliberately not told
+    // whether the address has an account: it makes one on `verify` either way.
+    if (action === 'code') {
+      // With no key, `_mail.js` prints the code. That is a working sign-in on
+      // the dev machine and a silent dead end anywhere else, so say so instead.
+      if (!mail.enabled() && !local(req))
+        return res.status(503).json({ error: 'Email sign-in is not configured. Use Google, or email mary@kodolab.org.' });
+      const got = await accounts.codeSend(body.email);
+      if (got.error) return res.status(429).json({ error: got.error });
+      const sent = await mail.send({
+        to: got.email,
+        subject: `Your Kodo Lab sign-in code: ${got.code}`,
+        text: `${got.code}\n\nType this to sign in. It lasts ${got.minutes} minutes.\n\n`
+            + `If you did not ask for it, nothing has happened to your account and you can ignore this.\n`,
+      });
+      accounts.codeSweep();   // nothing waits on it
+      if (sent.error) {
+        // FAILS CLOSED: a code nobody received must not be reported as sent.
+        console.error('[auth] mail: ' + sent.error);
+        return res.status(502).json({ error: 'Could not send the email. Try again in a moment.' });
+      }
+      return res.status(200).json({ sent: true, console: !!sent.console });
+    }
+
+    if (action === 'verify') {
+      const got = await accounts.codeVerify(body.email, body.code);
+      if (got.error) return res.status(401).json({ error: got.error });
+      const u = await accounts.emailUser(got.email);
+      if (!u) return res.status(500).json({ error: 'could not open the account' });
+      return signIn(res, u, secure);
     }
 
     if (action === 'logout') {
@@ -72,12 +106,21 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ claimed: await apps.adopt(list, 'user:' + u.id) });
     }
 
-    return res.status(400).json({ error: 'action must be google, redeem, claim or logout' });
+    return res.status(400).json({ error: 'action must be google, code, verify, redeem, claim or logout' });
   } catch (err) {
     console.error('[auth] ' + ((err && err.message) || err));
     return res.status(500).json({ error: 'sign-in failed: ' + ((err && err.message) || 'unknown error') });
   }
 };
+
+/* The last two steps of every way in, so one place decides that a turned-off
+   account is refused after the proof and not before: the person is told the
+   account is off, not that the code was wrong. */
+async function signIn(res, u, secure) {
+  if (u.disabled_at) return res.status(403).json({ error: 'This account has been turned off.' });
+  res.setHeader('Set-Cookie', accounts.cookie(await accounts.startSession(u.id), { secure }));
+  return res.status(200).json({ user: accounts.describeUser(u) });
+}
 
 /* No Origin is curl, or a same-origin request from an old browser; either is fine. */
 function sameOrigin(req) {

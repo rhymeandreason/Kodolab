@@ -406,3 +406,46 @@ CREATE TABLE IF NOT EXISTS links (
   revoked_at    timestamptz,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
+
+-- =============================================================================
+--  login_codes - sign in with an email code, no password
+-- =============================================================================
+--  A CODE, NOT A LINK. A link in an email is a bearer token that mail scanners
+--  fetch: Defender and Proofpoint follow every URL they see, so a single-use
+--  link is spent before the person clicks it. A code survives that, and it
+--  works when the mail opens on a phone and the lesson is on a laptop.
+--
+--  NO PASSWORD COLUMN, AND NOT BECAUSE ONE IS HARD. Once codes are delivered, a
+--  password is a second credential guarding the same mailbox, and its reset
+--  flow IS this table. It would add a hash to get wrong, a strength rule, and
+--  two more endpoints, to save the person nothing they notice.
+--
+--  ONE ROW PER ADDRESS, so a new send replaces the live code rather than
+--  leaving several valid at once, and `sent_at` is the cooldown without a
+--  second table. The row OUTLIVES the sign-in with `code_hash` cleared, because
+--  deleting it on use would make the daily cap forget everything it counted;
+--  `codeSweep` drops rows a day old.
+--
+--  `email` is stored lowercase, which is what `users_email_key` indexes: an
+--  address typed with a capital must not get its own code, its own cooldown, or
+--  its own account.
+CREATE TABLE IF NOT EXISTS login_codes (
+  email       text PRIMARY KEY,
+  code_hash   text,                        -- null once spent, or once too many tries
+  expires_at  timestamptz NOT NULL,
+  attempts    int NOT NULL DEFAULT 0,
+  sends       int NOT NULL DEFAULT 1,      -- to this address in the last day
+  sent_at     timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS login_codes_sent_idx ON login_codes (sent_at DESC);
+
+-- An account may now exist without Google, so `google_sub` is null for one that
+-- signed in by email and gains a value if the same person later uses Google.
+ALTER TABLE users ALTER COLUMN google_sub DROP NOT NULL;
+
+-- THE EMAIL IS THE PERSON, and this index is what says so. Without it a teacher
+-- who used Google in September and typed the same address in October gets a
+-- SECOND row, and her apps stay on the first one. Unique on `lower(email)`
+-- because Google's claim and a typed address differ in case. Postgres allows
+-- many nulls, so the pilot's code-only rows are unaffected.
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_key ON users (lower(email));

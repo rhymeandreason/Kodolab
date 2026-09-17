@@ -316,3 +316,26 @@ ln -sfn /Users/maryhuang/Projects/Eureka/dev/kodolab.env.local .env.local
 ```
 
 A worktree needs its own; the link does not propagate. Symptom is the missing-key answer above, not a missing file, because the dev server reads through the link.
+
+## Sign-in
+
+Two ways in, one account. `api/_accounts.js` is the checking, `api/auth.js` the transport, `api/_mail.js` the sender.
+
+| Action | Does |
+| --- | --- |
+| `google` | verifies the ID token against Google's JWKS, no library |
+| `code` | mails a six-digit code to an address |
+| `verify` | trades a code for the session cookie |
+| `redeem` · `claim` · `logout` | unchanged |
+
+**The email is the person.** `users_email_key` is unique on `lower(email)`, so Google and a code land on one row. Both ways prove the address before attaching — Google by `email_verified`, a code by arriving — and that proof is the only licence for matching on it. `upsertUser` refuses rather than merges when two rows would claim one address; nobody reaches that by accident.
+
+**No passwords, and not because hashing is hard.** Once codes are delivered a password guards the same mailbox and its reset flow *is* `login_codes`. It would buy a strength rule, a hash to get wrong and two more endpoints, for nothing the person notices. Keychain autofill is the real want behind asking for one, and passkeys are what answers it.
+
+**A code, not a link.** Mail scanners fetch every URL they see, so a single-use link is spent before the click. A code also survives mail-on-phone, lesson-on-laptop. It rides in the subject so it shows in a notification, which is a lock-screen tradeoff taken deliberately.
+
+**Sending fails closed**, unlike `_limit.js`: an undelivered code is an account nobody can enter, so `code` answers 502 rather than reporting a send. With no `RESEND_API_KEY` the code prints to the dev-server console, and `auth.js` gates that on `local(req)` — on a deployment a console send is a sign-in nobody receives.
+
+**Caps** are `_accounts.js`'s constants: ten minutes, five guesses, one live code per address, a minute between sends, ten a day to one address, ninety addresses a day. The last is Resend's free 100/day, which is a hard cap and not a bill.
+
+Env: `RESEND_API_KEY`. Sending is from `mail.kodolab.org`, DKIM-aligned, with the apex left to iCloud; DMARC sits at `p=none` collecting reports.

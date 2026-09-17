@@ -1,6 +1,16 @@
 /* =============================================================================
- *  api/_accounts.js — Google sign-in, sessions, invites
+ *  api/_accounts.js — Google and email sign-in, sessions, invites
  * =============================================================================
+ *  TWO WAYS IN, ONE PERSON. Google, and a code mailed to an address. The email
+ *  is what joins them: `users_email_key` makes it unique, so a teacher who used
+ *  Google in September and typed the same address in October lands on the ROW
+ *  SHE ALREADY HAS, with her apps on it, instead of a second account. Both ways
+ *  prove the address before they attach - Google by `email_verified`, a code by
+ *  arriving - which is the whole licence for matching on it.
+ *
+ *  NEITHER WAY ADMITS ANYBODY. Signing in makes an account; `admitted_at` comes
+ *  from redeeming an invite, and that is unchanged.
+ *
  *  THE GOOGLE ID TOKEN IS CHECKED HERE, WITH NO LIBRARY. It is a JWT signed
  *  RS256 by a key in Google's published JWKS; Node verifies that with a JWK
  *  directly. What is checked is the whole of what makes it Google's word about
@@ -22,7 +32,24 @@ const log    = require('./_log.js');
 
 const COOKIE = 'kl_session';
 const SESSION_DAYS = 30;
+
+/* A code is short because it is typed from a phone onto a laptop, and short is
+   safe only with all three of these: ten minutes, five guesses, one live code
+   per address. A million codes and five guesses is one chance in 200,000 per
+   send, and the cooldown is what stops that being retried in bulk. */
+const CODE_TTL_MIN   = 10;
+const MAX_ATTEMPTS   = 5;
+const COOLDOWN_S     = 60;
+const MAX_SENDS_DAY  = 10;   // to one address
+/* Under Resend's free 100 a day, which is a hard cap and not a bill: past it a
+   sign-in silently does not arrive, so the endpoint must refuse before then. */
+const MAX_EMAILS_DAY = 90;
 const ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
+
+/* The one spelling of an address, everywhere: the table, the index, the code's
+   row and the cooldown. Anything else gives `Mary@` its own account. */
+const normEmail = e => String(e || '').trim().toLowerCase();
+const looksLikeEmail = e => /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/.test(e);
 
 const hash   = s => crypto.createHash('sha256').update(String(s)).digest('hex');
 const mintId = () => crypto.randomBytes(8).toString('base64url');
@@ -71,17 +98,80 @@ async function verifyGoogle(credential) {
 
 /* ---- users and sessions -------------------------------------------------- */
 
+/* An account, read the way every caller wants it: the teacher row joined on, so
+   sign-in answers without a second query. */
+async function readUser(id) {
+  const [u] = await log.sql()`
+    SELECT u.id, u.email, u.name, u.picture, u.admitted_at, u.invite_label, u.disabled_at,
+           u.google_sub, t.id AS teacher_id
+    FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ${id}`;
+  return u || null;
+}
+
+/* Google's word about a person, turned into the account. Returns {user} or
+   {error}.
+
+   THREE CASES, IN THIS ORDER, and the order is the point. A known `google_sub`
+   is a returning user and wins even if the address on the token changed. Then a
+   known ADDRESS with no Google on it is the account that signed in by code, and
+   this is the link: the token's `email_verified` is what makes attaching safe.
+   Only then is it somebody new.
+
+   IT REFUSES RATHER THAN MERGES. Two rows, one address - a Google account whose
+   address changed to one another row already holds - is two people's apps and
+   two people's classes, and picking either is a wrong answer that looks fine.
+   Nobody can reach it by accident, so it asks for a human instead. */
 async function upsertUser(claims) {
   const db = log.sql();
-  // The teacher row comes back in the same statement, so sign-in can answer without reading again.
-  const [u] = await db`
-    WITH u AS (
-      INSERT INTO users (id, google_sub, email, name, picture)
-      VALUES (${mintId()}, ${claims.sub}, ${claims.email || null}, ${claims.name || null}, ${claims.picture || null})
-      ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture
-      RETURNING id, email, name, picture, admitted_at, disabled_at)
-    SELECT u.*, t.id AS teacher_id FROM u LEFT JOIN teachers t ON t.user_id = u.id`;
-  return u;
+  const sub = String(claims.sub);
+  const email = normEmail(claims.email);
+  const name = claims.name || null;
+  const picture = claims.picture || null;
+
+  const [mine] = await db`SELECT id, lower(email) AS email FROM users WHERE google_sub = ${sub}`;
+  if (mine) {
+    if (email && email !== mine.email) {
+      const [other] = await db`SELECT id FROM users WHERE lower(email) = ${email} AND id <> ${mine.id}`;
+      if (other) return { error: 'Another account already uses ' + email + '. Email mary@kodolab.org to merge them.' };
+    }
+    await db`UPDATE users SET email = COALESCE(${email || null}, email), name = ${name}, picture = ${picture}
+             WHERE id = ${mine.id}`;
+    return { user: await readUser(mine.id) };
+  }
+
+  if (email) {
+    const [byEmail] = await db`SELECT id, google_sub FROM users WHERE lower(email) = ${email}`;
+    if (byEmail) {
+      if (byEmail.google_sub) return { error: 'That address is already linked to a different Google account.' };
+      await db`UPDATE users SET google_sub = ${sub}, name = COALESCE(name, ${name}), picture = ${picture}
+               WHERE id = ${byEmail.id} AND google_sub IS NULL`;
+      return { user: await readUser(byEmail.id) };
+    }
+  }
+
+  // Two first sign-ins for one person at once: one insert lands, the other
+  // takes no row, and reading back finds the row that did.
+  const [made] = await db`
+    INSERT INTO users (id, google_sub, email, name, picture)
+    VALUES (${mintId()}, ${sub}, ${email || null}, ${name}, ${picture})
+    ON CONFLICT DO NOTHING RETURNING id`;
+  if (made) return { user: await readUser(made.id) };
+  const [raced] = await db`SELECT id FROM users WHERE google_sub = ${sub} OR lower(email) = ${email}`;
+  return raced ? { user: await readUser(raced.id) } : { error: 'could not create the account' };
+}
+
+/* The account for an address whose code just arrived. No Google on it, and none
+   needed: the code proved the address, which is the same proof `email_verified`
+   gives. A row already there is hers, whether she made it with Google or not. */
+async function emailUser(email) {
+  const db = log.sql();
+  const e = normEmail(email);
+  const [made] = await db`
+    INSERT INTO users (id, email) VALUES (${mintId()}, ${e})
+    ON CONFLICT DO NOTHING RETURNING id`;
+  if (made) return await readUser(made.id);
+  const [found] = await db`SELECT id FROM users WHERE lower(email) = ${e}`;
+  return found ? await readUser(found.id) : null;
 }
 
 async function startSession(userId) {
@@ -124,6 +214,98 @@ async function endSession(req) {
 
 function describeUser(u) {
   return u ? { name: u.name || u.email, email: u.email, picture: u.picture || null, admitted: !!u.admitted_at, teacher: !!u.teacher_id } : null;
+}
+
+/* ---- email codes --------------------------------------------------------- */
+
+/* A six-digit code, uniform. `randomInt` over the whole range and then padded,
+   never `Math.random`, and never a digit at a time: both make some codes likelier. */
+const mintCode = () => String(crypto.randomInt(0, 1e6)).padStart(6, '0');
+
+/* Mint a code for an address, or say why not. Returns {code, email} for the
+   caller to mail, or {error} in words a person can act on.
+
+   THE ROW IS THE RATE LIMIT. One row per address, so the upsert's own WHERE is
+   the cooldown and the per-address daily cap, checked in the statement that
+   would replace the code rather than in a read before it: two taps on Send at
+   once cannot both pass. Storing the code hashed means a database dump is not a
+   pile of live sign-ins.
+
+   THE DAILY CAP ACROSS ADDRESSES IS A READ, and so is racy by a few. That is
+   the right trade: it guards Resend's 100-a-day, and overshooting by three
+   costs nothing while refusing a real teacher costs her the lesson. */
+async function codeSend(email) {
+  const db = log.sql();
+  const e = normEmail(email);
+  if (!looksLikeEmail(e)) return { error: 'That does not look like an email address.' };
+
+  const [{ n }] = await db`SELECT count(*)::int AS n FROM login_codes
+                           WHERE sent_at > now() - '1 day'::interval AND email <> ${e}`;
+  if (n >= MAX_EMAILS_DAY) return { error: 'Too many sign-ins today. Try again tomorrow, or email mary@kodolab.org.' };
+
+  const code = mintCode();
+  const [row] = await db`
+    INSERT INTO login_codes (email, code_hash, expires_at)
+    VALUES (${e}, ${hash(code)}, now() + ${CODE_TTL_MIN + ' minutes'}::interval)
+    ON CONFLICT (email) DO UPDATE
+      SET code_hash  = EXCLUDED.code_hash,
+          expires_at = EXCLUDED.expires_at,
+          attempts   = 0,
+          sends      = CASE WHEN login_codes.sent_at > now() - '1 day'::interval
+                            THEN login_codes.sends + 1 ELSE 1 END,
+          sent_at    = now()
+      WHERE login_codes.sent_at < now() - ${COOLDOWN_S + ' seconds'}::interval
+        AND (login_codes.sent_at < now() - '1 day'::interval OR login_codes.sends < ${MAX_SENDS_DAY})
+    RETURNING email`;
+  if (row) return { code, email: e, minutes: CODE_TTL_MIN };
+
+  // The upsert declined. Which guard it was is a read, and only now.
+  const [live] = await db`SELECT sends, sent_at > now() - '1 day'::interval AS today FROM login_codes WHERE email = ${e}`;
+  if (live && live.today && live.sends >= MAX_SENDS_DAY)
+    return { error: 'Too many codes sent to that address today. Try again tomorrow.' };
+  return { error: 'A code was just sent. Wait a minute, then ask again.' };
+}
+
+/* Check a typed code. Returns {ok} or {error}.
+
+   THE ATTEMPT IS COUNTED BY THE STATEMENT THAT FETCHES THE HASH, so a wrong
+   guess costs a try even if this function never finishes, and five guesses is
+   five however they are made. Comparing with `timingSafeEqual` on the hashes,
+   which are one length, so the compare cannot leak how much of a code is right.
+
+   SPENDING IT IS CONDITIONAL ON THE HASH IT MATCHED, which is what makes a code
+   single use: two requests holding the same right code both reach the clear,
+   and only the one that finds the hash still there takes the row. */
+async function codeVerify(email, code) {
+  const db = log.sql();
+  const e = normEmail(email);
+  const typed = String(code || '').replace(/\D/g, '');
+  if (typed.length !== 6) return { error: 'A code is six digits.' };
+
+  const [row] = await db`
+    UPDATE login_codes SET attempts = attempts + 1
+    WHERE email = ${e} AND code_hash IS NOT NULL AND expires_at > now() AND attempts < ${MAX_ATTEMPTS}
+    RETURNING code_hash, attempts`;
+  if (!row) return { error: 'That code has expired or been used. Ask for a new one.' };
+
+  const want = Buffer.from(row.code_hash, 'utf8');
+  const got  = Buffer.from(hash(typed), 'utf8');
+  if (want.length !== got.length || !crypto.timingSafeEqual(want, got)) {
+    const left = MAX_ATTEMPTS - row.attempts;
+    return { error: left > 0 ? `That code is not right. ${left} ${left === 1 ? 'try' : 'tries'} left.`
+                             : 'Too many wrong tries. Ask for a new code.' };
+  }
+  const [spent] = await db`UPDATE login_codes SET code_hash = NULL
+                           WHERE email = ${e} AND code_hash = ${row.code_hash} RETURNING email`;
+  if (!spent) return { error: 'That code has already been used. Ask for a new one.' };
+  return { ok: true, email: e };
+}
+
+/* Rows a day old have nothing left to say: the code is spent or expired and
+   both caps have moved past them. Called on send, so nothing schedules it. */
+async function codeSweep() {
+  try { await log.sql()`DELETE FROM login_codes WHERE sent_at < now() - '1 day'::interval`; }
+  catch (err) { console.error('[accounts] sweep: ' + ((err && err.message) || err)); }
 }
 
 /* ---- invites -------------------------------------------------------------- */
@@ -214,5 +396,6 @@ function mintInviteCode() {
   return require('./_access.js').mintSeatCode();
 }
 
-module.exports = { COOKIE, clientId, verifyGoogle, upsertUser, startSession, userFrom, endSession,
-                   cookie, describeUser, redeem, mintInviteCode };
+module.exports = { COOKIE, clientId, verifyGoogle, upsertUser, emailUser, readUser, startSession,
+                   userFrom, endSession, cookie, describeUser, redeem, mintInviteCode,
+                   codeSend, codeVerify, codeSweep, CODE_TTL_MIN };
