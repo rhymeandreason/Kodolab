@@ -144,11 +144,10 @@
     /* COMPLEX II IS NOT A PUMP, so it is not drawn on the pump's lathe: no
        lumen, no mouths, no gates. Succinate dehydrogenase (PDB 1ZOY) is
        mostly a soluble head in the matrix, the flavoprotein SdhA, where
-       succinate meets the bound FAD, on the iron-sulfur SdhB. The small
+       succinate meets the bound FAD, on the iron-sulfur SdhB, drawn as one. The small
        anchor, SdhC and SdhD, does span the bilayer, but as a solid bundle
        of six helices with the ubiquinone site near the matrix face and no
-       path for a proton. Proportions follow the structure: the head stands
-       about twice the membrane's thickness into the matrix. */
+       path for a proton. */
     /* A solid rod through the bilayer: a lathe capsule with no lumen, widened
        in x so one reads as two bundles side by side. */
     function solidPart(color, r, h, sx) {
@@ -204,12 +203,12 @@
     const ARM_I = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(RESP.complex));
     ARM_I.scale.set(1, 2.1, 1); ARM_I.position.x = -5; ARM_I.userData.baseY = CX.I.height + 12;
     CX.I.group.add(ARM_I);
+    /* one head for SdhA and SdhB together */
+    const II_HEAD_R = 9, II_HEAD_Y = HALF + 1.5 + II_HEAD_R - 1;
     const HEAD_II = new THREE.Group();
-    const SDHB = new THREE.Mesh(new THREE.SphereGeometry(7.5, 18, 12), Parts.flat(RESP.complexII));
-    SDHB.scale.set(1.15, 0.9, 1); SDHB.userData.baseY = HALF + 7;
-    const SDHA = new THREE.Mesh(new THREE.SphereGeometry(11, 20, 14), Parts.flat(RESP.complexII));
-    SDHA.position.x = -2; SDHA.userData.baseY = HALF + 22;
-    HEAD_II.add(SDHB, SDHA);
+    const SDH = new THREE.Mesh(new THREE.SphereGeometry(II_HEAD_R, 20, 14), Parts.flat(RESP.complexII));
+    SDH.userData.baseY = II_HEAD_Y;
+    HEAD_II.add(SDH);
     CX.II.group.add(HEAD_II);
     /* userData.side: +1 on the pumped-into face, −1 on the loading face */
     const knob = (color, r, x, baseY, side, sy = 1) => {
@@ -584,8 +583,8 @@
          height past that, less a little so it touches. */
       if (key === 'I') { const x = xs.I; return { from:{ x:x - 20, y:-d * (H + 52) }, at:{ x:x + 1, y:-d * (H + 27) }, away:{ x:x - 30, y:-d * (H + 54) } }; }
       if (key === 'PSI') { const x = xs.PSI; return { from:{ x:x + 36, y:-d * (H + 46) }, at:{ x:x + 12, y:-d * (H + 20) }, away:{ x:x + 42, y:-d * (H + 50) } }; }
-      /* II's substrate meets the FAD in SdhA, the far lobe of the head */
-      if (key === 'II') { const x = xs.II, y = HALF + 22; return { from:{ x:x - 38, y:-d * (y + 20) }, at:{ x:x - 19, y:-d * y }, away:{ x:x - 42, y:-d * (y + 24) } }; }
+      /* II's substrate meets the FAD in the head: the token (half width 6.7) against its side */
+      if (key === 'II') { const x = xs.II, y = II_HEAD_Y, ax = II_HEAD_R + 6.7 - 1; return { from:{ x:x - ax - 10, y:-d * (y + 24) }, at:{ x:x - ax, y:-d * y }, away:{ x:x - ax - 24, y:-d * (y + 26) } }; }
       const x = complexX;
       return { from:{ x:x - 34, y:-d * (H + 30) }, at:{ x:x - 15, y:-d * (H + 13) }, away:{ x:x - 40, y:-d * (H + 34) } };
     }
@@ -1398,7 +1397,7 @@
             const chip = chips[key], d = pumpDir();
             const from = chip ? posOf(chip) : key === 'PSII' ? oecAt() : faceOf(key, -1);
             const via = chip && chip.shuttle ? [{ x: xs.II - 6, y: d * HALF * 0.5 }]
-                      : key === 'II' ? [{ x: xs.II - 1, y: -d * (HALF + 7) }, { x: xs.II, y: -d * HALF * 0.5 }]
+                      : key === 'II' ? [{ x: xs.II, y: -d * II_HEAD_Y }, { x: xs.II, y: -d * HALF * 0.5 }]
                       : key === 'I' ? [{ x: xs.I - 5, y: -d * (CX.I.height + 10) }, faceOf('I', -1), midOf('I')]
                       : [midOf(key)];
             sendE(E_PER_TURN, from, via, q, () => { q.charged = true; protonateQ(q); });
@@ -1745,7 +1744,7 @@
         complex:  () => { const k = !split() ? 'complex' : photo() ? 'b6f' : 'I', x = k === 'complex' ? complexX : xs[k];
                           return P.proteins[k] ? at(x, H_() * 0.98) : null; },
         'complex.I':   () => split() && P.proteins.I ? at(xs.I, H_() * 0.98) : null,
-        'complex.II':  () => split() && P.proteins.II ? at(xs.II, -pumpDir() * (HALF + 22)) : null,
+        'complex.II':  () => split() && P.proteins.II ? at(xs.II, -pumpDir() * II_HEAD_Y) : null,
         'complex.III': () => split() && P.proteins.III ? at(xs.III, H_() * 0.98) : null,
         'complex.IV':  () => split() && P.proteins.IV ? at(xs.IV, H_() * 0.98) : null,
         quinone:  () => !photo() && qTokens.length ? qTokens[0].obj.position : null,
