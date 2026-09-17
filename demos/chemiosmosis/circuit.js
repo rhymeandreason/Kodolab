@@ -461,7 +461,7 @@
 
        Timed off the machine's own cycle: it arrives as the machine opens to
        load and is spent on `occlude`. */
-    const FUEL_SPEED = 34, FUEL_FADE = 0.9;
+    const FUEL_SPEED = 60, FUEL_FADE = 0.9;
     const LEAVE_X = 420;   // past the frame's edge at the default camera
     const leaving = [];
     const chips = {};
@@ -506,7 +506,7 @@
        molecule. The complex takes them one per turn, oldest first; a full
        queue refuses the feed, and `state().waiting` says so before a page
        offers the button. Thylakoid light has no token and never waits. */
-    const WAIT_MAX = 3, WAIT_SPEED = 22, WAIT_DEPTH = 90;
+    const WAIT_MAX = 3, WAIT_SPEED = 45, WAIT_DEPTH = 90;
     const waiting = {};
     function waitSpot(key, i) {
       const d = pumpDir(), from = dockOf(key).from;
@@ -854,6 +854,18 @@
        route inside a complex is schematic, entry face to exit site. */
     const E_SPEED = 55, E_R = 1.9;
     const eTokens = [];
+    /* The minus is drawn, not typed, for atomkit's charge() reason: a glyph
+       sits on the math axis, not the dot's centre. One texture for all. */
+    let eMinusMat = null;
+    function eMinus() {
+      if (eMinusMat) return eMinusMat;
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const x = c.getContext('2d');
+      x.strokeStyle = kit.labelInk('H'); x.lineWidth = 12; x.lineCap = 'round';
+      x.beginPath(); x.moveTo(16, 32); x.lineTo(48, 32); x.stroke();
+      eMinusMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, depthWrite: false, transparent: true });
+      return eMinusMat;
+    }
     function makeE() {
       const m = new THREE.Mesh(new THREE.SphereGeometry(E_R, 12, 8),
         new THREE.MeshBasicMaterial({ color: RESP.electron, depthTest: false, depthWrite: false, transparent: true }));
@@ -861,7 +873,8 @@
       const halo = new THREE.Mesh(new THREE.SphereGeometry(E_R * 1.9, 12, 8),
         new THREE.MeshBasicMaterial({ color: RESP.electron, depthTest: false, depthWrite: false, transparent: true, opacity: 0.25 }));
       halo.renderOrder = 29;
-      const g = new THREE.Group(); g.add(halo, m);
+      const g = new THREE.Group(); g.add(halo, m, new THREE.Sprite(eMinus()));
+      g.children[2].scale.set(E_R * 1.5, E_R * 1.5, 1); g.children[2].renderOrder = 31;
       return g;
     }
     const posOf = t => ({ x: t.x, y: t.y, z: t.z || 0 });
