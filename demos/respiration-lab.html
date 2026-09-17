@@ -142,12 +142,8 @@
   :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
 </style>
 <link rel="stylesheet" href="kit/badge.css">
-<link rel="stylesheet" href="ask/chat.css">
 <style>
-  /* The tutor's way in, pinned to the panel's foot; the sheet it opens covers the panel (ask/chat.css). */
-  #askslot { position: absolute; left: 24px; bottom: 16px; z-index: 5; }
-  #askslot #askopen { margin: 0; }
-  /* The quiz door, opposite the tutor. Always there while the lesson is under test. */
+  /* The quiz door, at the panel's foot. Always there while the lesson is under test. */
   .panel-foot { position: absolute; right: 24px; bottom: 16px; z-index: 5; display: flex; align-items: center; gap: 10px; }
   #classslot:empty { display: none; }
 
@@ -420,7 +416,6 @@
 <script src="proteins/atp-synthase/atp-synthase-scene.js"></script>
 <script src="kit/modal.js"></script>
 <script src="kit/badge.js"></script>
-<script src="ask/chat.js"></script>          <!-- the tutor drawer; DOM only, never touches the scene -->
 <script>
 (function () {
   'use strict';
@@ -950,44 +945,6 @@
   classslot.id = 'classslot';
   foot.appendChild(classslot);
   shell.panel.appendChild(foot);
-
-  /* ---- the tutor ----
-     Mounted over the panel; the chart is what it covers, the scene stays. It
-     reads the phase as the step and the chain's tally as the screen. A step
-     target scrolls the chart to that phase's mark. */
-  const askslot = document.createElement('div');
-  askslot.id = 'askslot';
-  shell.panel.appendChild(askslot);
-  Ask.chat({
-    rail: shell.panel,
-    slot: askslot,
-    lesson: 'respiration-lab',
-    step: () => ORDER.indexOf(phase),
-    state: () => {
-      const st = { stage: SAID[phase] || phase };
-      if (!etc.hidden) {
-        st.nadhSent = `${sent.NADH} of ${GLUCOSE.NADH}`;
-        st.fadh2Sent = `${sent.FADH2} of ${GLUCOSE.FADH2}`;
-        st.atpMadeByChain = tally.ATP;
-        st.chainComplete = completed ? 'yes' : 'not yet';
-      }
-      return st;
-    },
-    examples: [
-      'Where does the CO₂ actually come from?',
-      'Why does the chain need oxygen?',
-      'Why is it about 30 ATP and not 38?',
-    ],
-    act: t => {
-      if (t.kind !== 'step') return false;
-      const p = ORDER[t.at];
-      if (!p) return false;
-      const mark = MARKS.find(m => m[0] === p);
-      const top = mark ? topOf(mark[1]) - scroller.clientHeight * 0.4 + 2 : 0;
-      scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-      return true;
-    },
-  });
 })();
 </script>
 </body>
