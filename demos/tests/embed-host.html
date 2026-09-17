@@ -123,19 +123,21 @@ function build() {
     return;
   }
 
+  /* The same box lessons.html's snippet() writes, so what this page frames is
+     what a teacher pastes. Diverge here and the harness starts passing embeds
+     that crop, which is exactly how the sheet's old preview hid the bug. */
   const w = Math.max(320, +$('w').value || 960), h = Math.max(200, +$('h').value || 600);
-  const scale = Math.min(1, w / LAPTOP), lw = Math.round(w / scale), lh = Math.round(h / scale);
+  const lw = Math.max(LAPTOP, w), lh = Math.round(lw * h / w), scale = w / lw;
   const box = document.createElement('div');
-  box.style.cssText = `width:${w}px;max-width:100%`;
+  box.style.cssText = `container-type:inline-size;width:${w}px;max-width:100%`;
   const clip = document.createElement('div');
-  clip.style.cssText = `position:relative;overflow:hidden;height:${h}px;border-radius:12px`;
+  clip.style.cssText = `position:relative;overflow:hidden;aspect-ratio:${w} / ${h};border-radius:12px`;
   const f = document.createElement('iframe');
   f.src = frameOrigin() + $('lesson').value + $('view').value;
   f.title = 'Kodolab lesson';
   f.setAttribute('allow', 'fullscreen');
-  f.style.cssText = `position:absolute;left:0;top:0;border:0;` + (scale < 1
-    ? `width:${lw}px;height:${lh}px;transform:scale(${scale.toFixed(4)});transform-origin:0 0`
-    : 'width:100%;height:100%');
+  f.style.cssText = `position:absolute;left:0;top:0;border:0;width:${lw}px;height:${lh}px;transform-origin:0 0;`
+    + `transform:scale(${scale.toFixed(4)});transform:scale(calc(100cqw / ${lw}px))`;
   /* Canvas serves user content sandboxed. allow-same-origin is in the list on
      purpose: without it the frame gets an opaque origin and localStorage throws
      outright, which is a harsher test than any real host applies. */
@@ -147,7 +149,8 @@ function build() {
   box.appendChild(credit);
   wrap.appendChild(box);
   watch(f);
-  say(`${scale < 1 ? `laid out at ${lw}×${lh}, shown at ${Math.round(scale * 100)}%` : `laid out at ${w}×${h}`} · ${f.src}`);
+  const got = Math.round(f.getBoundingClientRect().width), want = Math.round(clip.getBoundingClientRect().width);
+  say(`laid out at ${lw}×${lh}; the column gave it ${want} px and it painted ${got}`, got !== want);
 }
 
 function watch(f) {
