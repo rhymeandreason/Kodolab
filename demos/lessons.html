@@ -264,7 +264,8 @@
   .sheet .prev { position: relative; min-height: 0; background: var(--paper-2); display: flex; align-items: center; justify-content: center; padding: 1.6rem; overflow: hidden; }
   .sheet .stack { display: flex; flex-direction: column; gap: .5rem; }
   .sheet .credit { margin: 0; font: 400 13px/1.4 var(--sans); color: var(--mute); }
-  .sheet .credit a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: .4rem; }
+  /* The wordmark's baseline is the bottom of its box, so it sits on the text's baseline, not centred. */
+  .sheet .credit a { color: inherit; text-decoration: none; display: inline-flex; align-items: baseline; gap: .4rem; }
   .sheet .credit img { height: 14px; width: auto; }
   .sheet .frame { width: 100%; aspect-ratio: var(--ar, 16 / 10); background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(var(--ink-t), .4); position: relative; }
   /* THE PREVIEW IS A LAPTOP, SCALED DOWN. The frame here is ~700px wide and
@@ -532,7 +533,7 @@ function card(l, extra = '') {
     const inner = z.scale < 1
       ? `width:${z.lw}px;height:${z.lh}px;transform:scale(${z.scale.toFixed(4)});transform-origin:0 0`
       : 'width:100%;height:100%';
-    return `<div style="width:${z.w}px;max-width:100%">\n<div style="position:relative;overflow:hidden;height:${z.h}px;border-radius:12px">\n  <iframe src="${src}" title="${esc(l.title)} — Kodolab"\n    style="position:absolute;left:0;top:0;border:0;${inner}"\n    allow="fullscreen" loading="lazy"></iframe>\n</div>\n${credit(l, 'style="margin:6px 0 0;font:13px/1.4 -apple-system,Segoe UI,sans-serif;color:#6b7280"', 'style="color:inherit;text-decoration:none"', 'style="height:14px;vertical-align:-2px;margin-right:6px"')}\n</div>`;
+    return `<div style="width:${z.w}px;max-width:100%">\n<div style="position:relative;overflow:hidden;height:${z.h}px;border-radius:12px">\n  <iframe src="${src}" title="${esc(l.title)} — Kodolab"\n    style="position:absolute;left:0;top:0;border:0;${inner}"\n    allow="fullscreen" loading="lazy"></iframe>\n</div>\n${credit(l, 'style="margin:6px 0 0;font:13px/1.4 -apple-system,Segoe UI,sans-serif;color:#6b7280"', 'style="color:inherit;text-decoration:none"', 'style="height:14px;vertical-align:baseline;margin-right:6px"')}\n</div>`;
   }
   /* THE CREDIT under the frame, in the snippet and the preview alike: the
      wordmark and a link back to the lesson page. target=_blank is load-bearing
