@@ -262,6 +262,10 @@
   .sheet .btns .ok { font: 500 13px var(--sans); color: var(--deep); }
   /* Centred; fit() caps the frame's width so it also fits the pane's height. */
   .sheet .prev { position: relative; min-height: 0; background: var(--paper-2); display: flex; align-items: center; justify-content: center; padding: 1.6rem; overflow: hidden; }
+  .sheet .stack { display: flex; flex-direction: column; gap: .5rem; }
+  .sheet .credit { margin: 0; font: 400 13px/1.4 var(--sans); color: var(--mute); }
+  .sheet .credit a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: .4rem; }
+  .sheet .credit img { height: 14px; width: auto; }
   .sheet .frame { width: 100%; aspect-ratio: var(--ar, 16 / 10); background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(var(--ink-t), .4); position: relative; }
   /* THE PREVIEW IS A LAPTOP, SCALED DOWN. The frame here is ~700px wide and
      every lesson stacks into its narrow layout under 920px, which is not what a
@@ -405,7 +409,10 @@
       </div>
     </form>
     <div class="prev">
-      <div class="frame" id="s-frame"><span class="cap">Live preview</span></div>
+      <div class="stack" id="s-stack">
+        <div class="frame" id="s-frame"><span class="cap">Live preview</span></div>
+        <p class="credit" id="s-credit"></p>
+      </div>
     </div>
   </div>
 </dialog>
@@ -503,12 +510,13 @@ function card(l, extra = '') {
     return { w, h, scale, lw: Math.round(w / scale), lh: Math.round(h / scale) };
   }
   function fit() {
-    const f = frame.querySelector('iframe'), z = size(), pane = frame.parentElement;
+    const f = frame.querySelector('iframe'), z = size(), pane = frame.parentElement.parentElement;
     frame.style.setProperty('--ar', `${z.w} / ${z.h}`);
     // as wide as the pane allows, unless the height runs out first
-    const room = pane.clientHeight - 2 * parseFloat(getComputedStyle(pane).paddingTop);
+    const room = pane.clientHeight - 2 * parseFloat(getComputedStyle(pane).paddingTop) - 30;   // less the credit line
     // at the size asked for, when the pane has room for it; scaled down when not
-    frame.style.width = Math.min(z.w, pane.clientWidth, room * z.w / z.h) + 'px';
+    const want = Math.min(z.w, pane.clientWidth, room * z.w / z.h) + 'px', stack = document.getElementById('s-stack');
+    if (stack.style.width !== want) stack.style.width = want;   // an unchanged write still re-fires the observer
     if (!f) return;
     f.style.width = z.lw + 'px'; f.style.height = z.lh + 'px';
     f.style.transform = `scale(${frame.clientWidth / z.lw})`;
@@ -524,7 +532,13 @@ function card(l, extra = '') {
     const inner = z.scale < 1
       ? `width:${z.lw}px;height:${z.lh}px;transform:scale(${z.scale.toFixed(4)});transform-origin:0 0`
       : 'width:100%;height:100%';
-    return `<div style="position:relative;overflow:hidden;width:${z.w}px;height:${z.h}px;max-width:100%;border-radius:12px">\n  <iframe src="${src}" title="${esc(l.title)} — Kodolab"\n    style="position:absolute;left:0;top:0;border:0;${inner}"\n    allow="fullscreen" loading="lazy"></iframe>\n</div>`;
+    return `<div style="width:${z.w}px;max-width:100%">\n<div style="position:relative;overflow:hidden;height:${z.h}px;border-radius:12px">\n  <iframe src="${src}" title="${esc(l.title)} — Kodolab"\n    style="position:absolute;left:0;top:0;border:0;${inner}"\n    allow="fullscreen" loading="lazy"></iframe>\n</div>\n${credit(l, 'style="margin:6px 0 0;font:13px/1.4 -apple-system,Segoe UI,sans-serif;color:#6b7280"', 'style="color:inherit;text-decoration:none"', 'style="height:14px;vertical-align:-2px;margin-right:6px"')}\n</div>`;
+  }
+  /* THE CREDIT under the frame, in the snippet and the preview alike: the
+     wordmark and a link back to the lesson page. target=_blank is load-bearing
+     inside a host page: a plain link would navigate the teacher's page. */
+  function credit(l, pStyle = '', aStyle = '', imgStyle = '') {
+    return `<p ${pStyle}><a href="${SITE + l.url}?from=embed" target="_blank" rel="noopener" ${aStyle}><img src="${SITE}/kodolab-wordmark.svg" alt="Kodolab" ${imgStyle}>Open this lesson on Kodolab →</a></p>`;
   }
   function draw() {
     const l = byKey(sel.value);
@@ -537,6 +551,7 @@ function card(l, extra = '') {
       ? `Laid out at ${z.lw} px, the laptop layout, and shown at ${Math.round(z.scale * 100)}%.`
       : `Laid out at its own ${z.w} px.`;
     code.textContent = snippet(l);
+    document.getElementById('s-credit').innerHTML = credit(l).replace(/^<p >|<\/p>$/g, '').replace(SITE + '/kodolab', '/kodolab');
     open.href = l.url + query(l);
     ok.hidden = true;
   }
