@@ -145,7 +145,11 @@ function build() {
   clip.appendChild(f); box.appendChild(clip);
   const credit = document.createElement('p');
   credit.style.cssText = 'margin:6px 0 0;font:13px/1.4 -apple-system,sans-serif;color:#6b7280';
-  credit.innerHTML = `<a href="${frameOrigin()}${$('lesson').value}?from=embed" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Open this lesson on Kodolab →</a>`;
+  /* The wordmark and the styles are the snippet's, verbatim. target=_blank is
+     the load-bearing part: a plain link navigates the teacher's page. */
+  credit.innerHTML = `<a href="${frameOrigin()}${$('lesson').value}?from=embed" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">`
+    + `<img src="${frameOrigin()}/kodolab-wordmark.svg" alt="Kodolab" style="height:14px;vertical-align:baseline;margin-right:6px">`
+    + `Open this lesson on Kodolab →</a>`;
   box.appendChild(credit);
   wrap.appendChild(box);
   watch(f);
