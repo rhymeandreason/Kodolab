@@ -366,6 +366,7 @@
          pump, which is why FADH2 is worth less ATP than NADH, and a reader
          should be able to find it without reading. */
       complex:0x4d5fa6, complexII:0x8b93c0,
+      electron:0x2fd8e0,      // an electron in transit: electric cyan, apart from the photon's yellow and the synthase's gold
       synthase:0xd9a13b, stalk:0xb8862c,
       leak:0x8e939b,          // an uncoupler's hole: grey, because it is a hole
       /* THE TWO DOORS THE ATP LEAVES BY, and neither is part of the chain, so

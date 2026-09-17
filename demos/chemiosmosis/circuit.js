@@ -843,6 +843,72 @@
       tok.e.position.set(0, -6.5 * pumpDir() * -1, 0);
       tok.obj.add(tok.e);
     }
+    /* ---- electrons, drawn ----
+       THE CHAIN IS A PATH FOR ELECTRONS, so they are drawn walking it: off
+       the carrier, through the complex, onto the shuttle, and on. A pair
+       leaves NADH or FADH₂ and rides ubiquinone; III splits it onto two
+       cytochromes c, one each; IV collects them for O₂. The shuttle waits for
+       its electrons before it leaves, so the picture cannot run ahead of them.
+       DRAWN OVER THE PROTEIN (no depth test): the route runs through
+       cofactors inside it, and a hidden electron is a missing step. The
+       route inside a complex is schematic, entry face to exit site. */
+    const E_SPEED = 55, E_R = 1.9;
+    const eTokens = [];
+    function makeE() {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(E_R, 12, 8),
+        new THREE.MeshBasicMaterial({ color: RESP.electron, depthTest: false, depthWrite: false, transparent: true }));
+      m.renderOrder = 30;
+      const halo = new THREE.Mesh(new THREE.SphereGeometry(E_R * 1.9, 12, 8),
+        new THREE.MeshBasicMaterial({ color: RESP.electron, depthTest: false, depthWrite: false, transparent: true, opacity: 0.25 }));
+      halo.renderOrder = 29;
+      const g = new THREE.Group(); g.add(halo, m);
+      return g;
+    }
+    const posOf = t => ({ x: t.x, y: t.y, z: t.z || 0 });
+    /* send(n, from, via, onto, done): n electrons from a point along `via`
+       to ride token `onto` (or stop at its last point), then done(). */
+    function sendE(n, from, via, onto, done) {
+      let left = n;
+      for (let i = 0; i < n; i++) {
+        const e = { obj: makeE(), x: from.x, y: from.y, z: from.z || 0, path: via.map(p => Object.assign({}, p)), onto, i, n,
+                    done: () => { if (--left === 0 && done) done(); } };
+        e.x += (i - (n - 1) / 2) * 3;
+        root.add(e.obj); seat(e.obj, e.x, e.y, e.z); eTokens.push(e);
+      }
+    }
+    /* Electrons riding `tok` leave it along `via` for `onto`. */
+    function handOff(tok, via, onto, done) {
+      const es = eTokens.filter(e => e.ride === tok);
+      if (!es.length) { if (done) done(); return; }
+      let left = es.length;
+      es.forEach((e, i) => {
+        e.ride = null; e.path = via.map(p => Object.assign({}, p)); e.onto = Array.isArray(onto) ? onto[i] : onto;
+        e.done = () => { if (--left === 0 && done) done(); };
+      });
+    }
+    function tickE(dt) {
+      for (let i = eTokens.length - 1; i >= 0; i--) {
+        const e = eTokens[i];
+        if (e.ride) {
+          const r = e.ride, off = (e.i - (e.n - 1) / 2) * 3.4;
+          e.x = r.x + off; e.y = r.y - pumpDir() * 5; e.z = (r.z || 0) + 2;
+          seat(e.obj, e.x, e.y, e.z);
+          continue;
+        }
+        const target = e.path.length ? e.path[0] : e.onto ? posOf(e.onto) : null;
+        if (target && !approach(e, target, dt, E_SPEED)) continue;
+        if (e.path.length) { e.path.shift(); continue; }
+        const done = e.done; e.done = null;
+        if (e.onto && e.onto.obj) e.ride = e.onto;
+        else { dropToken(e.obj); eTokens.splice(i, 1); }
+        if (done) done();
+      }
+    }
+    function clearE() { for (const e of eTokens) dropToken(e.obj); eTokens.length = 0; }
+    /* waypoints inside a complex: its face on side s (+1 pumped-into, -1 loading), and mid-membrane */
+    const faceOf = (key, s, dx = 0) => ({ x: xs[key] + dx, y: s * pumpDir() * CX[key].height * 0.75, z: 0 });
+    const midOf = (key, dx = 0) => ({ x: xs[key] + dx, y: 0, z: 0 });
+
     function buildShuttles() {
       if (qTokens.length && shuttleCtx === P.context) return;
       dropShuttles();
@@ -864,6 +930,7 @@
     function homeShuttles() {
       for (const q of qTokens) { if (q.state !== 'free') relabel(q.obj, line().q[0], 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); }
       for (const c of cTokens) { ePill(false, c); c.state = 'home'; c.to = cHome(c.i); }
+      clearE();
     }
     function tickShuttles(dt) {
       for (const q of qTokens) {
@@ -1165,7 +1232,18 @@
           q.state = 'toDonor'; q.charged = false; q.to = qDock(key, q.x, q.i); r.q = q;
         },
         onLoad: () => { fuelArrive(key, pulse[key] || fuel); if (more.onLoad) more.onLoad(); },
-        onOcclude: () => { fuelSpend(key); if (r.q) { r.q.charged = true; r.q = null; } if (more.onOcclude) more.onOcclude(); },
+        onOcclude: () => {
+          const q = r.q; r.q = null;
+          if (q) {
+            const chip = chips[key], d = pumpDir();
+            const from = chip ? posOf(chip) : key === 'PSII' ? oecAt() : faceOf(key, -1);
+            const via = key === 'II' ? [{ x: xs.II - 1, y: -d * (HALF + 7) }, { x: xs.II, y: -d * HALF * 0.5 }]
+                      : key === 'I' ? [{ x: xs.I - 5, y: -d * (CX.I.height + 10) }, faceOf('I', -1), midOf('I')]
+                      : [midOf(key)];
+            sendE(E_PER_TURN, from, via, q, () => { q.charged = true; });
+          }
+          fuelSpend(key); if (more.onOcclude) more.onOcclude();
+        },
         onWrap: () => { pulse[key] = null; },
       });
       return r;
@@ -1184,9 +1262,13 @@
         },
         onOcclude: () => {
           const q = r.q;
-          if (q) { relabel(q.obj, line().q[0], 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); r.q = null; }
-          for (const c of r.c || []) { ePill(true, c); c.state = 'toEnd'; c.to = cDock(c.i); }
-          r.c = null;
+          const cs = r.c || []; r.c = null;
+          const go = () => { for (const c of cs) if (c.state === 'held') { c.state = 'toEnd'; c.to = cDock(c.i); } };
+          const via = [midOf(key), faceOf(key, 1)];
+          if (q) {
+            handOff(q, via, cs.length === 1 ? cs[0] : cs, go);
+            relabel(q.obj, line().q[0], 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); r.q = null;
+          } else go();
         },
       });
       return r;
@@ -1198,7 +1280,9 @@
         rate: more.rate,
         ready: () => more.ready() && cTokens.filter(c => c.state === 'atEnd').length * cCarries() >= E_PER_TURN,
         load: () => {
+          const end = line().end, site = end === 'IV' ? o2Site() : chips.PSI ? posOf(chips.PSI) : faceOf(end, -1);
           for (const c of cTokens.filter(c => c.state === 'atEnd').slice(0, E_PER_TURN / cCarries())) {
+            handOff(c, [faceOf(end, 1, -3), midOf(end)], site);
             ePill(false, c); c.state = 'returning'; c.to = cHome(c.i);
           }
         },
@@ -1226,7 +1310,7 @@
     function resetChain() {
       lumped.reset(); for (const k of ALL) RUN[k].reset();
       pulse.complex = pulse.I = pulse.II = pulse.PSII = null; credit.PSI = 0;
-      clearFuel(); clearWaiting(); clearO2(); clearLight();
+      clearFuel(); clearWaiting(); clearO2(); clearLight(); clearE();
       if (qTokens.length) homeShuttles();
     }
 
@@ -1390,6 +1474,7 @@
         ROTOR.rotation.y += (ROT.angle - ROTOR.rotation.y) * Math.min(1, dt * 6);
         tickATP(dt); tickFuel(dt); tickWaiting(dt); tickO2(dt); tickLight(dt);
         if (qTokens.length) tickShuttles(dt);
+        tickE(dt);
       },
       set(next) {
         let relay = false;
