@@ -111,6 +111,9 @@
   .card .pic { display: block; aspect-ratio: 3 / 2; background: var(--paper-2); position: relative; overflow: hidden; }
   .card .pic img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--soft); }
   .card:hover .pic img { transform: scale(1.03); }
+  /* A molecule still is drawn on paper with air round it: shown whole, enlarged to fill. */
+  .card .pic.mol img { object-fit: contain; transform: scale(1.3); }
+  .card:hover .pic.mol img { transform: scale(1.34); }
   .card .pic .tag { position: absolute; left: 12px; top: 11px; font: 600 10.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink); background: rgba(255, 255, 255, .8); backdrop-filter: blur(6px); padding: 6px 9px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
   .card .pic .tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--hue); display: inline-block; }
   .card .pic .tag.soon { color: var(--ink-3); }
@@ -431,10 +434,10 @@ const LESSONS = [
   { key: 'membrane',     unit: 'cell',   url: '/membrane',           file: '/demos/membrane-lab.html',     title: 'The Membrane',                  blurb: 'What gets through, what does not, and what a pump costs.', still: '/demos/media/kodo-membrane.webp', status: 'featured', bare: true },
   { key: 'celltour',     unit: 'cell',   title: 'Inside the Cell',              blurb: 'An animal cell and a plant cell cut open, organelle by organelle, and what each one is for.', soon: true },
   { key: 'respiration',  unit: 'energy', url: '/respiration',        file: '/demos/respiration-lab.html',  title: 'Cellular Respiration',          blurb: 'How a cell turns sugar into usable energy: the whole route on one chart, from the cell to the mitochondrion to the chain, with a door into each stage.', still: '/demos/media/components/mitochondrion.webp', status: 'featured', hub: true },
-  { key: 'glycolysis',   unit: 'energy', url: '/glycolysis',         file: '/demos/glycolysis-lab.html',   title: 'Glycolysis',                    blurb: 'Ten steps, every one drawn as the real molecule.', still: '/demos/media/kodo-glycolysis.webp', status: 'featured', bare: true, simple: 'view=inset', path: 1 },
-  { key: 'krebs',        unit: 'energy', url: '/krebs',              file: '/demos/krebs-lab.html',        title: 'The Krebs Cycle',               blurb: 'Pyruvate oxidation, then eight steps round the ring. Where the carbon goes.', still: '/demos/media/kodo-krebs.webp', status: 'new', bare: true, simple: 'view=inset', path: 2 },
+  { key: 'glycolysis',   unit: 'energy', url: '/glycolysis',         file: '/demos/glycolysis-lab.html',   title: 'Glycolysis',                    blurb: 'Ten steps, every one drawn as the real molecule.', still: '/demos/media/molecules/glucose.webp', mol: true, status: 'featured', bare: true, simple: 'view=inset', path: 1 },
+  { key: 'krebs',        unit: 'energy', url: '/krebs',              file: '/demos/krebs-lab.html',        title: 'The Krebs Cycle',               blurb: 'Pyruvate oxidation, then eight steps round the ring. Where the carbon goes.', still: '/demos/media/molecules/citrate.webp', mol: true, status: 'new', bare: true, simple: 'view=inset', path: 2 },
   { key: 'etc',          unit: 'energy', url: '/electron-transport', file: '/demos/etc-lab.html',          title: 'Electron Transport Chain',      blurb: 'Where the electrons go, and why the ledger counts protons, not ATP.', still: '/demos/media/components/chemiosmosis.webp', status: 'new', bare: true, simple: 'view=inset', path: 3 },
-  { key: 'fermentation', unit: 'energy', url: '/fermentation',       file: '/demos/fermentation-lab.html', title: 'Fermentation',                  blurb: 'Where pyruvate goes with no O₂, and why the point is NAD⁺.', still: '/demos/media/kodo-fermentation-lactate.webp', status: 'new', bare: true, simple: 'view=inset', branch: true },
+  { key: 'fermentation', unit: 'energy', url: '/fermentation',       file: '/demos/fermentation-lab.html', title: 'Fermentation',                  blurb: 'Where pyruvate goes with no O₂, and why the point is NAD⁺.', still: '/demos/media/molecules/lactate.webp', mol: true, status: 'new', bare: true, simple: 'view=inset', branch: true },
   { key: 'tree',         unit: 'plant',  url: '/tree',               file: '/demos/tree/tree-lab.html',    title: 'The Mass of a Tree',            blurb: 'Van Helmont’s willow, photosynthesis as traffic, and the tree taken apart by where each part came from.', still: '/demos/media/components/tree.webp', status: 'preview', build: true },
   { key: 'photosynth',   unit: 'plant',  title: 'Photosynthesis',               blurb: 'Into the leaf, into the chloroplast: where the light lands, where the water is split, and where the sugar is made.', soon: true },
   { key: 'dna',          unit: 'gene',   url: '/dna',                file: '/demos/dna-structure.html',    title: 'Structure of DNA',              blurb: 'A helix from real coordinates, part by part.', still: '/demos/proteins/stills/dna.webp', status: 'featured' },
@@ -454,7 +457,7 @@ function card(l, extra = '') {
   if (l.soon) return teaser(l);
   const marks = [l.build && '<span class="mark build">⌘ Made with Build</span>'].filter(Boolean).join('');
   return `<article class="card ${extra}" data-key="${l.key}">
-    <a class="pic" href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"><span class="tag ${l.status === 'preview' ? 'soon' : ''}"><i></i>${l.hub ? 'Start here' : STATUS[l.status]}</span></a>
+    <a class="pic ${l.mol ? 'mol' : ''}" href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"><span class="tag ${l.status === 'preview' ? 'soon' : ''}"><i></i>${l.hub ? 'Start here' : STATUS[l.status]}</span></a>
     <div class="body">
       <h3><a href="${l.url}">${esc(l.title)}</a></h3>
       <p>${esc(l.blurb)}</p>
