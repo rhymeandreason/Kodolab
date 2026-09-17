@@ -25,6 +25,14 @@
   /* THE BRANCH TABS, in the rail bar beside the numbers. A branch is not a
      step: both tabs run the same three complexes and differ only in which door
      the electrons came in by. */
+  /* The chain is drawn to the full height of the stage, so a bar with paper of
+     its own cuts the top off it — same reason #side has none. The numbers lie
+     OVER the scene: stage takes both rows, rail floats on row 1. */
+  @media (min-width:921px){
+    #railbar{grid-row:1;z-index:9;background:none;pointer-events:none}
+    #railbar>*{pointer-events:auto}
+    #stage{grid-row:1 / -1}
+  }
   #branchtabs{display:flex;gap:6px;position:absolute;right:22px;top:50%;
     transform:translateY(-50%)}
   .btab{font-family:var(--font-ui);font-weight:600;font-size:13px;
@@ -34,26 +42,6 @@
   .btab:hover{color:var(--ink);border-color:var(--ink)}
   .btab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);
     color:var(--paper);cursor:default}
-  /* WHERE THE CARRIER CAME FROM, under its own tab. Which door an electron
-     enters by is a fact about the step BEFORE this pathway, so it has no step
-     of its own to live on. */
-  #branchwhen{position:absolute;left:50%;transform:translateX(-50%);
-    top:calc(50% + 19px);white-space:nowrap;
-    font-family:var(--font-sans);font-size:12.5px;letter-spacing:.2px;
-    color:var(--muted);text-align:center;pointer-events:none}
-  #railbar{padding-bottom:24px}
-
-  /* WHICH SIDE IS WHICH, over the stage. The protons leave upward all lesson
-     and the ones that finish the water come up from below, so the two sides of
-     the membrane are the one piece of geography the stage needs — and it is a
-     caption, not a drawing: no bilayer is rendered here (see the script). */
-  #sides{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none}
-  #sides div{position:absolute;left:50%;transform:translateX(-50%);
-    font-family:var(--font-display);font-size:var(--cap-sm);
-    font-weight:var(--cap-weight);letter-spacing:var(--cap-track);
-    text-transform:uppercase;color:var(--text-muted);opacity:.75}
-  #sides .up{top:14px}
-  #sides .dn{bottom:14px}
 
   /* THE ENZYME'S NAME, BOTTOM-RIGHT, on the sidebar's left margin. The two
      numbers are pathways.css's 316px sidebar and its 20px padding. */
@@ -122,13 +110,11 @@
     <h1 id="pagetitle" class="chrome-title">Electron transport chain</h1>
     <div id="rail"></div>
     <div id="branchtabs"></div>
-    <div id="branchwhen"></div>
   </div>
   <div id="stage">
     <div id="spotglow"></div>
     <div id="enzymes" hidden></div>
     <canvas id="gl"></canvas>
-    <div id="sides" hidden><div class="up">Intermembrane space</div><div class="dn">Matrix</div></div>
     <div id="plates" aria-live="polite"></div>
     <div id="flyers" aria-hidden="true"></div>
     <div id="spots"></div>
@@ -232,7 +218,7 @@
  *  NO MEMBRANE IS DRAWN. This is the molecule scale: `chemiosmosis/circuit.js`
  *  is the component that draws the bilayer, the pumps and the turbine, and a
  *  bilayer sketched behind these molecules would be at neither scale. The two
- *  sides are a caption (#sides), because the protons have to leave somewhere.
+ *  sides go unlabelled on the stage; where a proton went is said in the text.
  *
  *  DERIVED STATE, NOT MUTATED STATE. `branch` and a `done` per branch are the
  *  only mutable lesson state; species, ledger and rail are pure functions of
@@ -349,10 +335,8 @@ const H_PER_ATP=4;
 
 const BRANCHES=[
   { key:'nadh', tab:'From NADH',
-    when:'NADH from glycolysis, pyruvate oxidation and the Krebs cycle',
     spent:'nad' },
   { key:'fadh2', tab:'From FADH₂',
-    when:'FADH₂ made at Krebs step 6, held inside complex II',
     spent:'fad' },
 ];
 
@@ -660,8 +644,16 @@ function sideReservePx(){
  * width in every state of this lesson, so nothing the page does at an edge can
  * move the subject. A page whose chrome comes and goes should take fit's
  * default instead. */
+/* THE RAIL LIES OVER THE STAGE (see the page's #railbar rule), so its height is
+ * canvas the scene may not use — reserved, not padded: padding would shrink the
+ * canvas and the fit would simply refill it. */
+const railReservePx=()=>{
+  // stacked, the rail is its own row and costs the canvas nothing
+  if(!matchMedia('(min-width:921px)').matches) return 0;
+  const r=document.getElementById('railbar');
+  return r ? r.offsetHeight : 0; };
 const RESERVES=()=>{ const half=sideReservePx()/2;
-  return { top:plateHeightPx(), bottom:barReservePx()+capReservePx(),
+  return { top:plateHeightPx()+railReservePx(), bottom:barReservePx()+capReservePx(),
            left:half, right:half }; };
 const FIT=Fit.create({canvas, camera, cam, reserve:()=>RESERVES()});
 const orthoFrustum=()=>FIT.frustum();
@@ -978,7 +970,6 @@ function drawTally(){
   const on=tallyOn();
   tallyEl.hidden=!on;
   document.getElementById('tools').hidden=on||intro;
-  document.getElementById('sides').hidden=on||intro;
   // THE STICKER MOVES, never a second copy — drawLedger keeps writing into the
   // same element wherever it is standing.
   const home=on?document.getElementById('tledger')
@@ -1095,7 +1086,6 @@ function drawNote(){ noteEl.innerHTML=''; noteEl.style.display='none'; }
  * and both branches run the same three complexes: putting the second entrance
  * on the rail would make complex II look like a fourth step. */
 const tabsEl=document.getElementById('branchtabs');
-const whenEl=document.getElementById('branchwhen');
 function setBranch(k){
   if(k===branch || busy) return;
   cancelTimers(); busy=false; reviewing=false;
@@ -1117,7 +1107,6 @@ function drawTabs(){
     el.onclick=()=>setBranch(b.key);
     tabsEl.appendChild(el);
   });
-  whenEl.textContent=branchOf(branch).when;
 }
 
 /* ---- the rail ------------------------------------------------------------- */
