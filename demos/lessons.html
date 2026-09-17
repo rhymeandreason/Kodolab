@@ -252,14 +252,11 @@
   .sheet .dims input { width: 5.2em; font: 400 15px var(--sans); padding: .45rem .6rem; border-radius: 10px; border: 1.5px solid rgba(var(--ink-t), .2); background: #fff; color: var(--ink); }
   .sheet .dims .by { color: var(--ink-3); font-size: 14px; }
   .sheet .size .note { margin-top: .5rem; font-size: .82rem; color: var(--ink-3); }
-  .sheet .facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; font: 400 13px var(--sans); color: var(--ink-3); }
-  .sheet .facts li::before { content: '· '; color: var(--coral); }
   .sheet pre { margin: 0; text-transform: none; letter-spacing: 0; padding: .9rem 1rem; border-radius: 12px; background: var(--ink); color: rgba(var(--paper-t), .9); font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; user-select: all; }
   .sheet .btns { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
   .sheet .btns .ok { font: 500 13px var(--sans); color: var(--deep); }
-  /* The frame sits at the top of the pane, never centred: on a short window
-     it is the width that limits it and a centred frame reads as a gap above. */
-  .sheet .prev { position: relative; min-height: 0; background: var(--paper-2); display: flex; align-items: flex-start; justify-content: center; padding: 1.6rem; overflow: hidden; }
+  /* Centred; fit() caps the frame's width so it also fits the pane's height. */
+  .sheet .prev { position: relative; min-height: 0; background: var(--paper-2); display: flex; align-items: center; justify-content: center; padding: 1.6rem; overflow: hidden; }
   .sheet .frame { width: 100%; aspect-ratio: var(--ar, 16 / 10); background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(var(--ink-t), .4); position: relative; }
   /* THE PREVIEW IS A LAPTOP, SCALED DOWN. The frame here is ~700px wide and
      every lesson stacks into its narrow layout under 920px, which is not what a
@@ -391,7 +388,6 @@
         </div>
       </div>
       <p class="note" id="s-note"></p>
-      <ul class="facts" id="s-facts"></ul>
       <div class="f size"><span>Size on your page</span>
         <div class="dims"><label><input type="number" id="s-w" min="320" max="2400" step="10" value="960"> <span>wide</span></label><span class="by">×</span><label><input type="number" id="s-h" min="200" max="1600" step="10" value="600"> <span>tall</span></label></div>
         <p class="note" id="s-size"></p>
@@ -486,7 +482,7 @@ function card(l, extra = '') {
 (() => {
   const dlg = document.getElementById('sheet'), sel = document.getElementById('s-lesson');
   const full = document.getElementById('v-full'), simple = document.getElementById('v-simple');
-  const note = document.getElementById('s-note'), facts = document.getElementById('s-facts');
+  const note = document.getElementById('s-note');
   const code = document.getElementById('s-code'), open = document.getElementById('s-open'), frame = document.getElementById('s-frame');
   const ok = document.getElementById('s-ok');
   /* THE LAYOUT WIDTH. Every pathway lesson stacks into its phone layout under
@@ -528,13 +524,8 @@ function card(l, extra = '') {
     const l = byKey(sel.value);
     simple.disabled = !l.simple;
     if (!l.simple && simple.checked) full.checked = true;
-    note.textContent = l.simple
-      ? 'Simple view is the pathway and its ledger: no enzyme card, no energy curve. For a class that is not ready for the detail.'
-      : 'This lesson has one view.';
-    facts.innerHTML = [
-      l.bare ? 'Inside a frame it drops its own title bar.' : 'Keeps its own title bar inside a frame.',
-      'No login, no cookies. The frame is the whole lesson.',
-    ].filter(Boolean).map(f => `<li>${f}</li>`).join('');
+    note.textContent = l.simple ? 'Simple view: the pathway and its ledger, without the enzyme and energy detail.' : '';
+    note.hidden = !l.simple;
     const z = size();
     sizeNote.textContent = z.scale < 1
       ? `Laid out at ${z.lw} px, the laptop layout, and shown at ${Math.round(z.scale * 100)}%.`
@@ -550,7 +541,7 @@ function card(l, extra = '') {
     const l = byKey(sel.value);
     frame.querySelectorAll('iframe').forEach(f => f.remove());
     const f = document.createElement('iframe');
-    f.src = l.file + query(l); f.title = l.title + ' preview'; f.loading = 'lazy';
+    f.src = l.file + query(l); f.title = l.title; f.loading = 'lazy';
     frame.appendChild(f);
     fit();
   }
