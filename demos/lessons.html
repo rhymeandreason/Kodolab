@@ -234,8 +234,10 @@
      a WebGL page left running behind this one costs every frame. */
   dialog.sheet { width: min(1180px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); padding: 0; border: 0; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 40px 100px -30px rgba(var(--ink-t), .6); overflow: hidden; }
   dialog.sheet::backdrop { background: rgba(20, 33, 61, .55); backdrop-filter: blur(3px); }
-  .sheet .in { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); max-height: calc(100vh - 2rem); }
-  .sheet .ctl { padding: 1.8rem 1.7rem 1.6rem; display: flex; flex-direction: column; gap: 1.1rem; overflow: auto; border-right: 1px solid rgba(var(--ink-t), .1); }
+  /* A fixed height, so the controls column has something to scroll inside of:
+     a grid with only a max-height gives its rows no height to overflow. */
+  .sheet .in { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); height: calc(100vh - 2rem); }
+  .sheet .ctl { min-height: 0; padding: 1.8rem 1.7rem 1.6rem; display: flex; flex-direction: column; gap: 1.1rem; overflow: auto; border-right: 1px solid rgba(var(--ink-t), .1); }
   .sheet .ctl h2 { font-size: 1.55rem; line-height: 1.1; }
   .sheet label.f { display: flex; flex-direction: column; gap: .35rem; font: 500 11.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
   .sheet select { font: 400 15px var(--sans); padding: .55rem .8rem; border-radius: 10px; border: 1.5px solid rgba(var(--ink-t), .2); background: #fff; color: var(--ink); }
@@ -255,7 +257,9 @@
   .sheet pre { margin: 0; text-transform: none; letter-spacing: 0; padding: .9rem 1rem; border-radius: 12px; background: var(--ink); color: rgba(var(--paper-t), .9); font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; user-select: all; }
   .sheet .btns { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
   .sheet .btns .ok { font: 500 13px var(--sans); color: var(--deep); }
-  .sheet .prev { position: relative; background: var(--paper-2); display: grid; place-items: center; padding: 1.6rem; }
+  /* The frame sits at the top of the pane, never centred: on a short window
+     it is the width that limits it and a centred frame reads as a gap above. */
+  .sheet .prev { position: relative; min-height: 0; background: var(--paper-2); display: flex; align-items: flex-start; justify-content: center; padding: 1.6rem; overflow: hidden; }
   .sheet .frame { width: 100%; aspect-ratio: var(--ar, 16 / 10); background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(var(--ink-t), .4); position: relative; }
   /* THE PREVIEW IS A LAPTOP, SCALED DOWN. The frame here is ~700px wide and
      every lesson stacks into its narrow layout under 920px, which is not what a
@@ -498,8 +502,11 @@ function card(l, extra = '') {
     return { w, h, scale, lw: Math.round(w / scale), lh: Math.round(h / scale) };
   }
   function fit() {
-    const f = frame.querySelector('iframe'), z = size();
+    const f = frame.querySelector('iframe'), z = size(), pane = frame.parentElement;
     frame.style.setProperty('--ar', `${z.w} / ${z.h}`);
+    // as wide as the pane allows, unless the height runs out first
+    const room = pane.clientHeight - 2 * parseFloat(getComputedStyle(pane).paddingTop);
+    frame.style.width = Math.min(pane.clientWidth, room * z.w / z.h) + 'px';
     if (!f) return;
     f.style.width = z.lw + 'px'; f.style.height = z.lh + 'px';
     f.style.transform = `scale(${frame.clientWidth / z.lw})`;
