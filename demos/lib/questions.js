@@ -146,7 +146,7 @@
     ['What makes hair different from silk?',                   ['protein','folding','macromol'], 1, { macromol: 2 }],
     ['Why does a protein fold the same way every time?',       ['folding','protein','shape'], 1, { protein: 2 }],
     ['How does blood know where to drop its oxygen?',          ['cooperat','protein','binding'], 1, { binding: 2, protein: 2 }],
-    ['Why does haemoglobin have four parts and not one?',      ['cooperat','protein'], 1, { protein: 2 }],
+    ['Why does hemoglobin have four parts and not one?',      ['cooperat','protein'], 1, { protein: 2 }],
     ['Why do you need to breathe oxygen at all?',              ['etc','krebs','ferment'], 1, { ferment: 2, krebs: 2 }],
     ['Where does the energy in food end up?',                  ['etc','ledger','krebs'], 1, { krebs: 2, ledger: 2 }],
     ['Why does everything in a cell run on the same molecule?', ['coupling','glycolys','membrane'], 1, { glycolys: 2, membrane: 3 }],

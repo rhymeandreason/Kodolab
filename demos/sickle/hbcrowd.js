@@ -907,7 +907,7 @@
     };
     const library = {
       patch: { text: 'β6', card: P.variant === 'HbS'
-        ? 'The greasy spot. One valine where normal haemoglobin has a charged glutamate.'
+        ? 'The greasy spot. One valine where normal hemoglobin has a charged glutamate.'
         : 'A charged glutamate. It sits happily in water, and nothing sticks to it.' },
       chain: { text: 'the chain', card: 'Every molecule holds the next by the same contact. Straight here; in the cell, seven of these twist into a fibre.' },
     };

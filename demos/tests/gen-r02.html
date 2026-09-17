@@ -37,9 +37,9 @@ const shell = LessonShell.create({
     },
     {
       eyebrow: '2. Cellular specialisation',
-      title: 'A biconcave package of haemoglobin',
+      title: 'A biconcave package of hemoglobin',
       scene: 'cell',
-      body: '<p><b>Mature mammalian red blood cells lack a nucleus and organelles to dedicate all internal volume to haemoglobin.</b> The biconcave disc geometry provides a high surface-area-to-volume ratio for rapid gas exchange.</p>',
+      body: '<p><b>Mature mammalian red blood cells lack a nucleus and organelles to dedicate all internal volume to hemoglobin.</b> The biconcave disc geometry provides a high surface-area-to-volume ratio for rapid gas exchange.</p>',
       onEnter(ctx) {
         cell.notes(['haemoglobin', 'dimple']);
         ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Cell surface area</div><div class="stat-value" id="c-area">-</div><div class="stat-sub">&micro;m&sup2;</div></div><div class="stat"><div class="stat-label">Cell volume</div><div class="stat-value" id="c-vol">-</div><div class="stat-sub">&micro;m&sup3;</div></div></div>');
@@ -68,9 +68,9 @@ const shell = LessonShell.create({
     },
     {
       eyebrow: '4. Molecular capture',
-      title: 'Haemoglobin binds and traps oxygen',
+      title: 'Hemoglobin binds and traps oxygen',
       scene: 'protein',
-      body: '<p><b>Haemoglobin is a globular tetramer that binds dissolved oxygen at four heme subunits.</b> By sequestering free O₂, haemoglobin keeps cytosolic free oxygen low, sustaining the concentration gradient that drives ongoing diffusion into the cell.</p>',
+      body: '<p><b>Hemoglobin is a globular tetramer that binds dissolved oxygen at four heme subunits.</b> By sequestering free O₂, hemoglobin keeps cytosolic free oxygen low, sustaining the concentration gradient that drives ongoing diffusion into the cell.</p>',
       onEnter(ctx) {
         ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Polypeptide chains</div><div class="stat-value" id="p-chains">-</div></div><div class="stat"><div class="stat-label">Total residues</div><div class="stat-value" id="p-res">-</div></div></div>');
         const s = protein.state();

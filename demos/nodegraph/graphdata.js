@@ -233,7 +233,7 @@
     kinds:[
       ['Enzyme', 'Lowers a barrier and comes out unchanged.'],
       ['Structural', 'Holds things up. Collagen, keratin, the cytoskeleton.'],
-      ['Transport', 'Carries or admits. Haemoglobin, channels, pumps.'],
+      ['Transport', 'Carries or admits. Hemoglobin, channels, pumps.'],
       ['Receptor', 'Binds a signal and changes shape, so a message crosses a membrane.'],
       ['Motor', 'Turns ATP into movement. Myosin, kinesin, the flagellar motor.'],
     ] },

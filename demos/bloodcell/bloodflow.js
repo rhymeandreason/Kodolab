@@ -292,7 +292,7 @@
     const library = {
       throat: { text: 'the vessel narrows', card: 'A capillary is narrower than a red cell. A round cell folds to fit; a stiff one cannot.' },
       jam: { text: 'a jam', card: 'One crescent catches, and every one that touches it sticks. The blockage grows upstream until the flow stops.' },
-      cell: { text: 'a red cell', card: 'No nucleus, no organelles: a bag of haemoglobin with a flexible skin, built to bend.' },
+      cell: { text: 'a red cell', card: 'No nucleus, no organelles: a bag of hemoglobin with a flexible skin, built to bend.' },
     };
 
     function set(next) {

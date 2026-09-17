@@ -840,7 +840,7 @@
       dimple: { text: 'the dimple', card: 'The disc is pinched to about 0.8 µm in the middle: the biconcave face. The slack it leaves is what lets an 8 µm cell fold through a 3 µm capillary without tearing.' },
       // Leftward: the cut plane is at the far side of the frame, and the default label offset walks it off the edge.
       cutFace: { text: 'the membrane, cut', offset: [-38, -26], card: 'The cell is a shell, not a bag, and the cut shows its thickness. Drawn about twenty times too thick: a real bilayer is 5 nm, which at this magnification is a fraction of a pixel.' },
-      haemoglobin: { text: 'haemoglobin', card: 'Around 270 million copies fill the cell, a third of its weight, and each carries four oxygens. There is no nucleus and there are no mitochondria in here; the space went to cargo.' },
+      haemoglobin: { text: 'hemoglobin', card: 'Around 270 million copies fill the cell, a third of its weight, and each carries four oxygens. There is no nucleus and there are no mitochondria in here; the space went to cargo.' },
       horn: { text: 'a sickled point', card: 'Deoxygenated HbS polymerises into stiff fibres that push the membrane out into points. A cell this shape is rigid, jams in small vessels, and is destroyed early.' },
       spicule: { text: 'a spicule', card: 'Water has left, so the volume fell while the membrane area could not. The surplus membrane buckles outward into spikes: a crenated cell, or echinocyte.' },
     };
@@ -849,7 +849,7 @@
        standing in the shape of the cell it was filling, which is the picture
        for "what is inside". */
     const vis = { membrane: true, hb: true };
-    const LAYER_LABEL = { membrane: 'membrane', hb: 'haemoglobin' };
+    const LAYER_LABEL = { membrane: 'membrane', hb: 'hemoglobin' };
     function show(name, on) {
       if (!(name in vis)) return;
       vis[name] = !!on;
@@ -864,7 +864,7 @@
     const palette = () => [
       { name: 'membrane', color: hex(matOut.color) },
       { name: 'cut face', color: hex(matEdge.color) },
-      { name: 'haemoglobin', color: hex(hbMat.color) },
+      { name: 'hemoglobin', color: hex(hbMat.color) },
     ];
 
     reindex(); apply(); paint();

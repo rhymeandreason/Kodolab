@@ -25,7 +25,7 @@ const shell = LessonShell.create({
       eyebrow: 'Isotonic Balance',
       title: 'A red blood cell in normal plasma',
       scene: 'cell',
-      body: '<p class="lead">In isotonic plasma, water enters and leaves the cell at equal rates.</p><p>The red blood cell maintains its flexible, biconcave disc shape. Halved open, we can see the dense interior packed with haemoglobin.</p>',
+      body: '<p class="lead">In isotonic plasma, water enters and leaves the cell at equal rates.</p><p>The red blood cell maintains its flexible, biconcave disc shape. Halved open, we can see the dense interior packed with hemoglobin.</p>',
       nextLabel: 'Zoom into membrane',
       onEnter(ctx) {
         BC.set({ tonicity: 0, spill: 0, cut: 1 });
@@ -103,7 +103,7 @@ const shell = LessonShell.create({
       eyebrow: 'Lysis',
       title: 'Membrane rupture and bursting',
       scene: 'cell',
-      body: '<p class="lead">Unlike plant cells, an animal cell lacks a rigid cell wall to resist internal turgor pressure.</p><p>A sphere maximizes volume for a given surface area. Once spherical capacity is exceeded, the plasma membrane tears, haemoglobin spills out, and only a pale ghost remains.</p>',
+      body: '<p class="lead">Unlike plant cells, an animal cell lacks a rigid cell wall to resist internal turgor pressure.</p><p>A sphere maximizes volume for a given surface area. Once spherical capacity is exceeded, the plasma membrane tears, hemoglobin spills out, and only a pale ghost remains.</p>',
       nextLabel: 'Reset',
       onEnter(ctx) {
         BC.set({ tonicity: -1, spill: 1, cut: 1 });

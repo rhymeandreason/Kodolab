@@ -52,7 +52,7 @@ const shell = LessonShell.create({
     {
       eyebrow: 'Biconcave Architecture',
       title: 'Why a Dented Disc?',
-      body: '<p><strong>A mature red blood cell is a biconcave disc packed with haemoglobin and devoid of a nucleus.</strong></p><p>This geometry provides a high surface-area-to-volume ratio that speeds oxygen uptake and lets the cell deform through narrow capillaries.</p>',
+      body: '<p><strong>A mature red blood cell is a biconcave disc packed with hemoglobin and devoid of a nucleus.</strong></p><p>This geometry provides a high surface-area-to-volume ratio that speeds oxygen uptake and lets the cell deform through narrow capillaries.</p>',
       nextLabel: 'Dilute the solution',
       onEnter(ctx) {
         cell.set({ tonicity: 0, spill: 0, sickle: 0, cut: 1, hb: true });
@@ -121,7 +121,7 @@ const shell = LessonShell.create({
     {
       eyebrow: 'Osmotic Lysis',
       title: 'Lysis in Pure Water',
-      body: '<p><strong>In pure water, osmotic pressure exceeds the mechanical strength of the membrane.</strong></p><p>Once the cell reaches maximum spherical volume, the membrane ruptures, haemoglobin spills into the surrounding fluid, and an empty membrane ghost remains.</p>',
+      body: '<p><strong>In pure water, osmotic pressure exceeds the mechanical strength of the membrane.</strong></p><p>Once the cell reaches maximum spherical volume, the membrane ruptures, hemoglobin spills into the surrounding fluid, and an empty membrane ghost remains.</p>',
       nextLabel: 'Compare tonicities',
       onEnter(ctx) {
         cell.notes(false);
@@ -129,7 +129,7 @@ const shell = LessonShell.create({
         ctx.ui.controls(`
           <div class="slider">
             <div class="slider-head">
-              <span class="label">Lysis & Haemoglobin Spill</span>
+              <span class="label">Lysis & Hemoglobin Spill</span>
               <span class="value" id="spill-val">Ruptured</span>
             </div>
             <input type="range" id="spill" min="0" max="1" step="0.05" value="0.85">

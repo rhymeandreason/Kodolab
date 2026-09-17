@@ -63,7 +63,7 @@
   const step1 = {
     eyebrow: 'One letter',
     title: 'A point mutation',
-    body: `One base in the gene for the β chain of haemoglobin: an A becomes a T.
+    body: `One base in the gene for the β chain of hemoglobin: an A becomes a T.
       That is the whole mutation.`,
     onExit: leave,
     onEnter(ctx) {

@@ -267,7 +267,7 @@
     ['How does one wrong amino acid cause a disease?',          { levels:1 }],
     ['How do vent bacteria run enzymes above 100°C?',           { levels:2, denature:1 }],
     ['Why does carbon monoxide kill at 0.1% of the air?',       { levels:2, cooperat:1 }],
-    ['Why does haemoglobin have four parts and not one?',       { cooperat:1 }],
+    ['Why does hemoglobin have four parts and not one?',       { cooperat:1 }],
     ['How does a fetus take oxygen from its mother’s blood?',   { cooperat:2 }],
     ['How does a cell move molecules against their gradient?',  { pumps:1, glycolysis:2, bilayer:2 }],
     ['How does cholera dehydrate you without entering a cell?', { pumps:1, osmosis:1 }],

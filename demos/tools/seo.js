@@ -74,7 +74,7 @@ const PAGES = {
   '/fermentation': {
     description: 'Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.' },
   '/sickle-cell': {
-    description: 'Sickle cell in 3D: one letter changes in the haemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.' },
+    description: 'Sickle cell in 3D: one letter changes in the hemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.' },
   '/tree': {
     description: "Where a tree's mass comes from: Van Helmont's willow, photosynthesis as traffic in and out of the leaf, and the tree taken apart by origin." },
   '/lessons': {

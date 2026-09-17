@@ -223,7 +223,7 @@
     { id: '2HHB-B',
       purpose: 'the same fold, doing a job a monomer cannot',
       species: 'human',
-      section: 'relatives', label: 'haemoglobin β', chip: '1 of 4',
+      section: 'relatives', label: 'hemoglobin β', chip: '1 of 4',
       source: { kind: 'repo', id: '2HHB', path: 'hemoglobin/data/2HHB.pdb' },
       chains: 'B',
       pocket: { prox: 92, dist: 63 },
@@ -1373,7 +1373,7 @@
       ],
     },
     {
-      key: 'hemoglobin', name: 'Haemoglobin', dir: 'proteins/hemoglobin',
+      key: 'hemoglobin', name: 'Hemoglobin', dir: 'proteins/hemoglobin',
       blurb: 'The oxygen carrier in red blood cells: four chains, each holding '
            + 'one iron. Binding one oxygen changes the shape of the whole '
            + 'tetramer, so the next three bind more easily and all four are '
@@ -1455,7 +1455,7 @@
             ec: null,
             baked: "hb-2HHB.json" } },
         { id: '2HBS',
-          purpose: 'sickle haemoglobin: the same fold, and the contact the one '
+          purpose: 'sickle hemoglobin: the same fold, and the contact the one '
                  + 'changed residue makes',
           species: 'human', state: 'mutant',
           /* TETRAMER 1 ONLY, the same four chains bake-hbs.js takes. The
@@ -1477,7 +1477,7 @@
             ec: null,
             baked: "hb-2HBS.json" } },
         { id: '1FDH',
-          purpose: 'the haemoglobin a fetus makes, and why it wins the oxygen',
+          purpose: 'the hemoglobin a fetus makes, and why it wins the oxygen',
           species: 'human', state: 'healthy',
           /* ALPHA AND GAMMA, NOT ALPHA AND BETA. Fetal haemoglobin swaps the
              two beta chains for gamma, a different gene rather than a mutated

@@ -623,9 +623,9 @@
     const library = {
       patch: { text: 'β6 valine',
         card: 'The one residue the mutation changed. On the surface it is a small greasy '
-            + 'knob where haemoglobin A carries a charged one.' },
+            + 'knob where hemoglobin A carries a charged one.' },
       pocket: { text: 'Phe85 / Leu88',
-        card: 'A greasy dent on a NEIGHBOURING molecule. It is there in normal haemoglobin '
+        card: 'A greasy dent on a NEIGHBOURING molecule. It is there in normal hemoglobin '
             + 'too — what is missing there is anything to put in it.' },
       fibre: { text: 'the fibre',
         card: 'Seven double strands wound together. Every contact along it is the same '

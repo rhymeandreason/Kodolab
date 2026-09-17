@@ -85,7 +85,7 @@
 <div id="app">
   <div id="stage"></div>
   <div class="panel">
-    <h1>Haemoglobin</h1>
+    <h1>Hemoglobin</h1>
     <p class="deck">Four chains, four irons, one job. Three versions of it: the
       adult molecule, the one residue that turns it into a disease, and the one
       a fetus makes to take oxygen from its mother.</p>
@@ -94,7 +94,7 @@
     <button class="mode" id="v-2HHB" aria-pressed="true">
       <span class="who">adult, deoxy &middot; 2HHB</span><span class="chip">adult</span></button>
     <button class="mode disease" id="v-2HBS" aria-pressed="false">
-      <span class="who">haemoglobin S &middot; 2HBS</span><span class="chip disease">sickle</span></button>
+      <span class="who">hemoglobin S &middot; 2HBS</span><span class="chip disease">sickle</span></button>
     <button class="mode" id="v-1FDH" aria-pressed="false">
       <span class="who">fetal &middot; 1FDH</span><span class="chip">fetal</span></button>
 
@@ -123,7 +123,7 @@
     <p class="frag" id="d-frag">&mdash;</p>
     <p class="prov" id="d-prov">&mdash;</p>
     <p class="note">Colour is secondary structure (helix, strand, coil), the repo
-      default &mdash; haemoglobin is all helix, so the ribbon is nearly one colour
+      default &mdash; hemoglobin is all helix, so the ribbon is nearly one colour
       and the chains read by shape. Ball-and-stick inside: the hemes with their
       irons in rust, the two histidines that hold each one, and &beta;6 with the
       pocket it reaches for.</p>
@@ -186,19 +186,19 @@ const said = id => ProteinLib.variantOf(ME, id);
    here. Keyed by variant id, so a button and its paragraph cannot come apart. */
 const SAYS = {
   '2HHB': {
-    claim: 'Human deoxyhaemoglobin: two alpha chains and two beta, each folded '
+    claim: 'Human deoxyhemoglobin: two alpha chains and two beta, each folded '
          + 'around one heme.',
     prov:  'Fermi and Perutz, X-ray at 1.74 A. The T state — no oxygen bound, '
          + 'which is the shape the molecule holds in tissue after it has let go. '
          + 'Every iron here is empty and waiting.' },
   '1FDH': {
-    claim: 'The haemoglobin a fetus makes: the two beta chains replaced by '
+    claim: 'The hemoglobin a fetus makes: the two beta chains replaced by '
          + 'gamma, a different gene rather than a mutated one.',
     prov:  'X-ray at 2.5 A. Gamma is 72% beta\u2019s sequence on beta\u2019s numbering, and '
          + 'the backbone lands on the adult molecule at 0.42 A. Position 143 is '
          + 'where it matters: beta puts a histidine there and gamma a serine, so '
          + 'the fetal molecule grips 2,3-BPG weakly \u2014 and BPG is what makes '
-         + 'haemoglobin let go of oxygen. Weaker grip, tighter oxygen, which is '
+         + 'hemoglobin let go of oxygen. Weaker grip, tighter oxygen, which is '
          + 'how a fetus pulls oxygen across the placenta out of its mother\u2019s '
          + 'blood. Position 87 is the other one: gamma\u2019s glutamine will not join '
          + 'a sickle fibre, which is why babies with sickle-cell disease are well '
