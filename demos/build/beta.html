@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Beta — Kodolab</title>
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at /beta by a vercel.json rewrite, so relative paths need this. -->
+<base href="/demos/build/">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="teacher.css">
+<!-- =========================================================================
+     THE BETA VIEW: every teacher's classes, the way each teacher sees them
+     on /teach's Lessons tab. Class links, sessions, quiz, survey, questions.
+
+     LOCALHOST ONLY. Reads api/log.js, which answers only from the machine it
+     runs on and is kept out of the deploy; this file is .vercelignored too,
+     so /beta is a 404 on the live site. There is no secret and no sign-in:
+     the dev server's .env.local points at the production database.
+
+     Read-only. To change a class, open /teach as its teacher. The roster is
+     painted by the same code /teach uses, copied rather than shared, so this
+     page can take its own styling without dragging the teacher's along.
+     ========================================================================= -->
+<style>
+  /* This page's own styling goes here. teacher.css gives it the teacher's
+     tables and dialog to start from. */
+  .pagehead .deck { margin: .2rem 0 0; }
+  .classbar .segmented button .dim { font-weight: 400; }
+  .classbar .chip { display: inline-block; margin-left: .5em; padding: 0 .5em; border-radius: 999px; font-size: .85em; line-height: 1.5; font-variant-numeric: tabular-nums; background: color-mix(in srgb, currentColor 14%, transparent); }
+</style>
+</head>
+<body class="kodo">
+<div class="page">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  </nav>
+
+  <header class="pagehead">
+    <h1>beta</h1>
+    <p class="deck">Every class, as its teacher sees it. Local only.</p>
+  </header>
+
+  <main>
+    <p class="err" id="err" hidden></p>
+    <section id="dash" hidden>
+      <div class="classbar">
+        <div class="segmented" id="classTabs" role="tablist"></div>
+      </div>
+      <p class="empty" id="noClass" hidden>No classes yet.</p>
+
+      <div id="classView" hidden>
+        <section class="lessons">
+          <div class="card linkcard">
+            <label for="classLink">Class link</label>
+            <div class="line">
+              <input id="classLink" readonly>
+              <button class="btn" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy</button>
+            </div>
+            <p class="sub">The code is <code id="classCode"></code>; it works on any lesson URL as <code>?class=…</code>.</p>
+          </div>
+
+          <div class="line sesshead">
+            <h3 class="cap">Sessions</h3>
+            <span class="spacer"></span>
+            <button class="btn" type="button" id="exportCsv"><i class="ph-bold ph-download-simple"></i>CSV</button>
+          </div>
+          <div class="tablewrap">
+            <table class="sessions">
+              <thead><tr><th>Name · browser</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th>Done</th><th class="num">Quiz</th><th>Survey</th><th class="num">Asked</th></tr></thead>
+              <tbody id="sessions"></tbody>
+            </table>
+          </div>
+          <p class="empty" id="noSessions" hidden>Nobody has opened the link yet.</p>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- One session: its quiz, its survey, and the questions it asked. -->
+<dialog class="studentbox" id="session">
+  <header>
+    <div><span class="cap" id="sessionClass"></span><h2 id="sessionName"></h2></div>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="closeSession" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
+  </header>
+  <div class="sessionbody" id="sessionBody"></div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fileForm = /\.html$/.test(location.pathname);
+  const LESSON_PATH = fileForm ? '/demos/respiration-lab.html' : '/respiration';
+
+  async function api(q) {
+    const r = await fetch('../../api/log' + q, { cache: 'no-store' });
+    let json = null;
+    try { json = await r.json(); } catch { json = { error: `HTTP ${r.status}` }; }
+    if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+    return json;
+  }
+
+  let data = null, current = null, classId = null;
+
+  function ago(ts) {
+    if (!ts) return '';
+    const d = new Date(ts), s = (Date.now() - d) / 1000;
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + ' min ago';
+    if (s < 86400 && d.getDate() === new Date().getDate()) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  // The same words /teach uses for respiration-lab.html's phases and survey ids.
+  const PHASES = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
+  const N_PHASES = Object.keys(PHASES).length;
+  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?' };
+  const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
+  const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
+  const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p] || p);
+  const classLink = () => `${location.origin}${LESSON_PATH}?class=${current.class.code}`;
+
+  async function load() {
+    try { data = await api('?classes=1'); }
+    catch (err) { $('err').textContent = err.message + ' (this page reads only from localhost)'; $('err').hidden = false; return; }
+    $('dash').hidden = false;
+    const want = new URLSearchParams(location.hash.slice(1)).get('class');
+    classId = (data.classes.find(c => c.id === want) || data.classes[0] || {}).id || null;
+    paintClasses();
+    if (classId) await openClass(classId);
+  }
+  function paintClasses() {
+    $('classTabs').innerHTML = data.classes.map(c =>
+      `<button type="button" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}"><span class="dim">${esc(c.teacher)} · </span>${esc(c.name)}${c.sessions ? `<span class="chip">${c.sessions}</span>` : ''}</button>`).join('');
+    $('noClass').hidden = !!data.classes.length;
+    $('classView').hidden = !classId;
+  }
+  $('classTabs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-id]'); if (b) openClass(b.dataset.id);
+  });
+  async function openClass(id) {
+    classId = id;
+    history.replaceState(null, '', location.pathname + location.search + '#class=' + id);
+    paintClasses();
+    if ($('session').open) $('session').close();
+    current = await api('?class=' + encodeURIComponent(id));
+    paint();
+  }
+
+  function paint() {
+    const c = current, rows = c.sessions || [];
+    $('classLink').value = c.class.code ? classLink() : '';
+    $('classCode').textContent = c.class.code || '';
+    $('noSessions').hidden = !!rows.length;
+    $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
+      <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${shortId(r.visitor_id)}</code></button></td>
+      <td class="dim">${esc((r.pages || []).map(pageName).join(', '))}</td>
+      <td class="dim">${esc(ago(r.first_seen))}</td>
+      <td class="dim">${esc(ago(r.last_seen))}</td>
+      <td class="num">${mins(r.active_s || 0)}</td>
+      <td>${r.phase ? `${esc(PHASES[r.phase] || r.phase)} <span class="dim">${(r.phase_i || 0) + 1}/${N_PHASES}</span>` : '—'}</td>
+      <td>${r.complete ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td class="num">${r.quiz ? `${r.quiz.score}/${r.quiz.total}` : ''}</td>
+      <td>${r.survey ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td class="num">${r.questions || 0}</td></tr>`).join('');
+  }
+
+  $('copyLink').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('classLink').value); $('copyLink').textContent = 'Copied'; }
+    catch { $('classLink').select(); }
+    setTimeout(() => { $('copyLink').innerHTML = '<i class="ph-bold ph-copy"></i>Copy'; }, 1500);
+  });
+
+  $('sessions').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act="session"]'); if (!b) return;
+    openSession(current.sessions[Number(b.closest('tr').dataset.i)]);
+  });
+  const dl = (k, v) => `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`;
+  function openSession(r) {
+    $('sessionName').textContent = (r.name ? r.name + ' · ' : '') + shortId(r.visitor_id);
+    $('sessionClass').textContent = `${current.class.teacher} · ${current.class.name}`;
+    const parts = [];
+    parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', r.phase ? esc(PHASES[r.phase] || r.phase) : '—')
+      + dl('Completed', r.complete ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
+    if (r.quiz) {
+      parts.push(`<h3 class="cap">Quiz · ${r.quiz.score}/${r.quiz.total}</h3>`
+        + (r.quiz.answers || []).map(a => `<p class="qa ${a.correct ? 'ok' : 'bad'}"><i class="ph-bold ${a.correct ? 'ph-check' : 'ph-x'}"></i> ${esc(a.q)}<br><span class="dim">${esc(a.answer)}</span></p>`).join(''));
+    }
+    if (r.survey) {
+      parts.push('<h3 class="cap">Survey</h3>'
+        + Object.entries(r.survey.answers || {}).map(([k, v]) => `<p class="qa">${esc(SURVEY_Q[k] || k)}<br><span class="dim">${esc(v == null || v === '' ? '—' : String(v))}</span></p>`).join(''));
+    }
+    const qs = (current.questions || []).filter(q => q.visitor_id === r.visitor_id);
+    if (qs.length) parts.push('<h3 class="cap">Asked the tutor</h3>' + qs.map(q => `<p class="qa">${esc(q.q)}${q.answer ? `<br><span class="dim">${esc(q.answer)}</span>` : ''}</p>`).join(''));
+    $('sessionBody').innerHTML = parts.join('');
+    if (!$('session').open) $('session').showModal();
+  }
+  $('closeSession').addEventListener('click', () => $('session').close());
+  $('session').addEventListener('click', e => { if (e.target === $('session')) $('session').close(); });
+
+  $('exportCsv').addEventListener('click', () => {
+    const rows = current.sessions || [];
+    const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const head = ['name', 'browser', 'lessons', 'first_seen', 'last_seen', 'on_screen_s', 'phase', 'phase_i', 'complete', 'quiz_score', 'quiz_total', 'survey', 'questions'];
+    const lines = [head.join(',')].concat(rows.map(r => [r.name, shortId(r.visitor_id), (r.pages || []).join(' '), r.first_seen, r.last_seen, r.active_s, r.phase, r.phase_i,
+      r.complete, r.quiz && r.quiz.score, r.quiz && r.quiz.total, r.survey ? JSON.stringify(r.survey.answers) : '', r.questions].map(cell).join(',')));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+    a.download = `${current.class.name.replace(/[^\w-]+/g, '_')}-sessions.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>

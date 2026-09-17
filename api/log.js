@@ -2,7 +2,7 @@
  *  api/log.js — read the tutor's log
  * =============================================================================
  *  GET /api/log?limit=&offset=&lesson=&cohort=&aimed=none  → {stats, turns}
- *  GET /api/log?classes=1     → every teacher's classes, for /teach?all
+ *  GET /api/log?classes=1     → every teacher's classes, for /beta (build/beta.html)
  *  GET /api/log?class=ID      → that class as api/teacher.js answers its teacher
  *
  *  A LOCAL TOOL. `.vercelignore` keeps this out of production, and this answers
@@ -32,8 +32,8 @@ module.exports = async function handler(req, res) {
 
   if (!log.enabled()) return res.status(503).json({ error: 'DATABASE_URL is not set: nothing is logged' });
 
-  /* Every class, as its teacher sees it. build/teacher.html?all paints these
-     with the teacher's own page, so what you see here is what they see. */
+  /* Every class, as its teacher sees it: build/beta.html paints these the way
+     /teach's Lessons tab does. */
   if (q.classes || q.class) {
     const db = log.sql();
     const teacher = require('./teacher.js');

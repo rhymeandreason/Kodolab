@@ -6,6 +6,8 @@
 # is nothing the deployed copy would add except a way to get it wrong.
 demos/ask/log.html
 api/log.js
+# /beta: every class as its teacher sees it, over the same local-only api/log.js.
+demos/build/beta.html
 
 # The question-bank editor is a local tool. It writes demos/questions.js through
 # the dev server's /api/questions, an endpoint that lives in tools/dev-server.js

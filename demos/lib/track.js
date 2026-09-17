@@ -38,7 +38,7 @@
   /* The site's own rooms are not lessons. A teacher whose browser holds the
      class (they opened their own link) must not appear on their roster for
      opening the dashboard. */
-  if (/^\/(build|teach|login|join|apps|admin|privacy|contribute)(\/|$)/.test(location.pathname.replace(/^\/demos/, '').replace(/\.html$/, ''))) return;
+  if (/^\/(build|teach|beta|login|join|apps|admin|privacy|contribute)(\/|$)/.test(location.pathname.replace(/^\/demos/, '').replace(/\.html$/, ''))) return;
 
   function uuid() {
     if (crypto.randomUUID) return crypto.randomUUID();
