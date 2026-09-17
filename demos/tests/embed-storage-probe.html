@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>storage probe</title>
+<!-- embed-storage-probe.html — framed by embed-host.html to find out what a
+     lesson may remember inside somebody else's page.
+
+     Safari partitions third-party storage by the TOP page's origin and, with
+     "prevent cross-site tracking" on, can refuse it outright. Every localStorage
+     call in lib/site.js and lib/track.js is wrapped in try/catch, so a lesson
+     never throws — it just quietly forgets, which is the failure that reaches a
+     student as a quiz button that will not appear (respiration-lab's DONE_KEY).
+
+     A lesson cannot report this itself: the host is cross-origin and cannot read
+     into the frame. So this stands in for a lesson, runs the same calls, and
+     posts the answer back. Nothing here is loaded by a lesson. -->
+<body style="margin:0;font:13px/1.5 ui-monospace,Menlo,monospace;padding:10px">
+<div id="say"></div>
+<script>
+const r = { framed: false, write: false, read: false, session: false, cookie: false, error: '' };
+try { r.framed = window.self !== window.top; } catch (e) { r.framed = true; }
+
+const KEY = 'kodolab-embed-probe';
+try {
+  localStorage.setItem(KEY, 'ok');
+  r.write = true;
+  r.read = localStorage.getItem(KEY) === 'ok';
+  localStorage.removeItem(KEY);
+} catch (e) { r.error = e.name; }
+
+try { sessionStorage.setItem(KEY, 'ok'); r.session = sessionStorage.getItem(KEY) === 'ok'; sessionStorage.removeItem(KEY); } catch (e) {}
+try { document.cookie = KEY + '=ok;SameSite=None;Secure'; r.cookie = document.cookie.indexOf(KEY) > -1; } catch (e) {}
+
+document.getElementById('say').textContent = JSON.stringify(r, null, 1);
+try { parent.postMessage({ kodolabStorageProbe: r }, '*'); } catch (e) {}
+</script>

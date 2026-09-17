@@ -191,6 +191,23 @@ function probeFit() {
 }
 probeFit();
 
+/* WHAT MAY A LESSON REMEMBER IN HERE? Safari partitions third-party storage by
+   the top page's origin and can refuse it outright. The lesson cannot answer:
+   it is cross-origin, so nothing in this page can read into it. So a stand-in
+   runs the same calls in the same frame and posts the answer back. */
+addEventListener('message', e => {
+  const r = e.data && e.data.kodolabStorageProbe;
+  if (!r) return;
+  if (r.write && r.read) say(`storage in a ${r.framed ? 'third-party' : 'same-origin'} frame: localStorage works${r.cookie ? ', cookies too' : ', cookies blocked'}. A lesson can remember a finished chain in here.`);
+  else say(`STORAGE BLOCKED in this frame (${r.error || 'write refused'}). Nothing throws — lib/site.js and lib/track.js catch it — but the lesson forgets everything on reload, so the respiration quiz button never appears.`, true);
+});
+{
+  const f = document.createElement('iframe');
+  f.src = frameOrigin() + '/demos/tests/embed-storage-probe.html';
+  f.style.cssText = 'width:0;height:0;border:0;position:absolute;left:-9999px';
+  document.body.appendChild(f);
+}
+
 /* A lesson that navigates the HOST page is the failure teachers notice. */
 addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });
 say('top-frame navigation guard armed: a “leave site?” prompt means the lesson tried to navigate this page');
