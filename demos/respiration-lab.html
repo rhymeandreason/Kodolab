@@ -565,18 +565,25 @@
       chemi.set({ chain: 'split' });
       aimAt(chemi.box, 0); chemi.box.flyTo({ r: 412, phi: Math.PI / 2 - 0.09 });
     },
-    etc() {
+    etc(snap) {
       show('chemi');
       chemi.set({ chain: 'split' });
+      if (snap) {
+        cancelAnimationFrame(targetRaf);
+        Object.assign(chemi.box.cam, { r: 460, phi: Math.PI / 2 - 0.12 });
+        chemi.box.cam.target.y = INNER_Y - 8; chemi.box.cam.target.x = -50;
+        chemi.box.applyCam();
+        return;
+      }
       aimAt(chemi.box, INNER_Y - 8, 1.1, -50); chemi.box.flyTo({ r: 460, phi: Math.PI / 2 - 0.12 });
     },
   };
   const ZONE = { cell: '#z-cyto', fly: '#z-cyto', mito: '#z-mito', chemi: '#z-mito', etc: '#z-mito' };
   let phase = null;
-  function go(p) {
+  function go(p, snap) {
     if (p === phase) return;
     phase = p;
-    PHASES[p]();
+    PHASES[p](snap);
     for (const z of chart.querySelectorAll('.zone')) z.classList.toggle('is-here', z.matches(ZONE[p]));
   }
 
@@ -626,16 +633,12 @@
     { label: 'Enter the mitochondria', hold: 3600, run() {
       go('mito'); mito.box.flyTo(MITO_VIEW, 3.2); reveal(2);
     } },
-    /* The hold outlasts the zoom: arming the scroll reads the phase off the
-       panel, and read early it would already say 'etc' and the zoom would
-       be skipped as a repeat. */
     /* Into the cristae first, so the membrane the next scene is cut from is
        the one on screen when it fades in. */
-    { label: 'Electron transport chain', hold: 5000, run() {
+    { label: 'Electron transport chain', hold: 2600, run() {
       mito.box.flyTo(CRISTA_VIEW, 1.8); reveal(3);
-      setTimeout(() => go('chemi'), 2000);
-      /* A clean slate for the count: the chain ran before, and its leftover gradient would add ATP no carrier paid for. */
-      setTimeout(() => { go('etc'); chemi.set({ fuel: null }); chemi.reset(); chemi.set({ contents: PROTONS }); }, 4400);
+      /* Lands on the chain's framing, no flight. A clean slate for the count: the chain ran before, and its leftover gradient would add ATP no carrier paid for. */
+      setTimeout(() => { go('etc', true); chemi.set({ fuel: null }); chemi.reset(); chemi.set({ contents: PROTONS }); }, 2000);
     } },
   ];
   let step = 0;
