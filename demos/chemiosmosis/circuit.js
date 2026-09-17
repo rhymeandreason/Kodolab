@@ -1877,9 +1877,27 @@
       cam: params.cam || { theta: 0, phi: Math.PI / 2 - 0.09, r: params.chain === 'split' ? 500 : 412 },
       stage: Object.assign({ orbit: 'pan', rMin: 120, rMax: 900 }, params.stage || {}),
       step: dt => { if (!mito) return; const k = dt * (mito.params().timeScale || 1); last = mito.step(k); cell.step(k); },
-      afterFrame: () => { if (nb) { nb.step(); placeLabels(); } },
+      afterFrame: () => { fillWidth(); if (nb) { nb.step(); placeLabels(); } },
       viewOffset: params.viewOffset,
     });
+    /* THE SHEETS NEVER END ON SCREEN: a membrane stopping short of the frame
+       reads as a raft, not a cell. Zoom out stops where the narrower sheet's
+       ends reach the canvas edges, and a pan stops at them too. A bowed
+       sheet's ends are BOW·sin(reach/BOW) across, not its arc length. */
+    function sheetHalfWidth(sim) {
+      const q = sim.params(), span = 150, bow = q.curve > 0 ? (span * span + q.curve * q.curve) / (2 * q.curve) : 0;
+      return bow ? bow * Math.sin(Math.min(Math.PI / 2, q.reach / bow)) : q.reach;
+    }
+    function fillWidth() {
+      if (!mito || !cell || params.fillWidth === false) return;
+      const W = box.canvas.clientWidth, H = box.canvas.clientHeight;
+      if (!W || !H) return;
+      const edge = Math.min(sheetHalfWidth(mito), sheetHalfWidth(cell)) - 4;
+      const perR = Math.tan(box.camera.fov * Math.PI / 360) * W / H;   // visible half-width per unit of distance
+      box.stage.setZoomLimits(NaN, edge / perR);
+      const room = Math.max(0, edge - box.cam.r * perR), t = box.cam.target;
+      if (Math.abs(t.x) > room) { t.x = Math.sign(t.x) * room; box.applyCam(); }
+    }
     box.renderer.localClippingEnabled = true;
     const gMito = new THREE.Group(); gMito.position.y = INNER_Y; box.root.add(gMito);
     const gCell = new THREE.Group(); gCell.position.y = PLASMA_Y; box.root.add(gCell);

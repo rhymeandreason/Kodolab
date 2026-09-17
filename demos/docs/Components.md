@@ -315,6 +315,7 @@ const m = Chemiosmosis.mount(el, {
   o2Stock: null,              // a number: that many O₂ wait in the intermembrane space, each used one is gone, and at 0 the chain stops. 6 is one glucose's worth. While a `fuel` supply runs it refills from the cytosol; `feed()` alone never refills. Read state().o2Left, never a typed count
   chain: 'lumped',            // 'lumped': one complex stands for the chain · 'split': I–IV, ubiquinone, cytochrome c; in a thylakoid PSII, b6f, PSI, plastoquinone, plastocyanin
   span: 'inner',              // 'inner' · 'mitochondrion': + outer membrane, porin, translocase · 'cell': + cytosol and a plasma membrane whose pump spends the ATP
+  fillWidth: true,            // span 'cell': zoom out and pan stop where the membranes still reach both canvas edges; false frees them
   proteins: { complex:{ x:-80 }, synthase:{ x:40 }, leak:null },   // omitted: a layout that fits the chain and span. `complex` is spread into I–IV when split
   contents: { inside:{ water:30, H:22 }, outside:{ water:30, H:22 } },   // 'H' is a proton. Omitted, a complex gets these 22 a side; H:0 means none
   sideLabels: true,           // both halves named on the stage; false only if you have your own
