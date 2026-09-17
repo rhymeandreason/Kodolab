@@ -148,7 +148,8 @@
   #askslot { position: absolute; left: 24px; bottom: 16px; z-index: 5; }
   #askslot #askopen { margin: 0; }
   /* The quiz door, opposite the tutor. Always there while the lesson is under test. */
-  .quiz-open { position: absolute; right: 24px; bottom: 16px; z-index: 5; }
+  .panel-foot { position: absolute; right: 24px; bottom: 16px; z-index: 5; display: flex; align-items: center; gap: 10px; }
+  #classslot:empty { display: none; }
 
   /* The quiz: one question at a time, then the survey, then the score. */
   .quiz { width: min(560px, 90vw); }
@@ -941,7 +942,14 @@
   const quizBtn = document.createElement('button');
   quizBtn.type = 'button'; quizBtn.className = 'cta cta--ghost cta--sm quiz-open'; quizBtn.textContent = 'Quiz';
   quizBtn.addEventListener('click', () => quizModal.show());
-  shell.panel.appendChild(quizBtn);
+  /* Beside it, a slot lib/track.js fills with the class gear when this browser is in a class. */
+  const foot = document.createElement('div');
+  foot.className = 'panel-foot';
+  foot.appendChild(quizBtn);
+  const classslot = document.createElement('div');
+  classslot.id = 'classslot';
+  foot.appendChild(classslot);
+  shell.panel.appendChild(foot);
 
   /* ---- the tutor ----
      Mounted over the panel; the chart is what it covers, the scene stays. It

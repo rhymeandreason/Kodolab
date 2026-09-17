@@ -19,13 +19,13 @@
  *  time on task is time the lesson was actually on screen, not time a tab sat
  *  open behind another. The identity is the tutor's own visitor id
  *  (`ss.tutor.visitor`), so a session's questions and its progress share one
- *  id; the nickname is optional, typed once into the join chip, and is the one
- *  thing here a student says about themselves.
+ *  id; the nickname is optional, behind a gear the page never pushes, and is
+ *  the one thing here a student says about themselves.
  * ========================================================================== */
 (function () {
   'use strict';
 
-  var CLASS_KEY = 'ss.class', NAME_KEY = 'ss.class.name', SEEN_KEY = 'ss.class.seen';
+  var CLASS_KEY = 'ss.class', NAME_KEY = 'ss.class.name';
   var VISITOR_KEY = 'ss.tutor.visitor';
   var ENDPOINT = '/api/event';
   var TICK = 15, FLUSH = 60;   // seconds: how often visibility is sampled, how often a beat is sent
@@ -80,47 +80,88 @@
 
   event('view', { ref: document.referrer ? document.referrer.slice(0, 200) : '' });
 
-  /* ---- the join chip ----
-   * Once per class per browser: says which class this browser joined, offers a
-   * name, and says who reads it. Skip and it never asks again; the teacher's
-   * roster shows the row unnamed. */
-  function chip(className) {
-    var el = document.createElement('div');
-    el.id = 'classchip';
-    el.innerHTML =
-      '<style>' +
-      '#classchip{position:fixed;left:18px;bottom:18px;z-index:70;width:min(320px,calc(100vw - 36px));padding:14px 16px;' +
-      'background:var(--surface-card,#fff);color:var(--text-body,#222);border:1px solid var(--border-hair,#ddd);border-radius:14px;' +
-      'box-shadow:0 12px 32px -12px rgba(0,0,0,.35);font:14px/1.45 var(--font-ui,system-ui,sans-serif)}' +
-      '#classchip b{color:var(--text-strong,#111)}' +
-      '#classchip p{margin:0 0 10px}#classchip .sub{font-size:12.5px;color:var(--text-muted,#666);margin:8px 0 0}' +
-      '#classchip form{display:flex;gap:8px}' +
-      '#classchip input{flex:1;min-width:0;font:inherit;padding:7px 10px;border:1px solid var(--border-strong,#bbb);border-radius:8px;background:var(--surface-page,#fff);color:inherit}' +
-      '#classchip button{font:600 13px var(--font-ui,system-ui,sans-serif);padding:7px 12px;border-radius:8px;border:1px solid var(--border-strong,#bbb);background:var(--surface-page,#fff);color:var(--text-strong,#111);cursor:pointer}' +
-      '#classchip button.go{background:var(--text-strong,#111);color:var(--surface-page,#fff);border-color:var(--text-strong,#111)}' +
-      '</style>' +
-      '<p>You joined <b></b>.</p>' +
-      '<form><input maxlength="40" placeholder="Your name or initials (optional)" aria-label="Your name, optional">' +
-      '<button type="submit" class="go">Save</button><button type="button" class="skip">Skip</button></form>' +
-      '<p class="sub">Only your teacher sees it, next to how far you got.</p>';
-    el.querySelector('b').textContent = className;
-    var form = el.querySelector('form');
-    function done() { set(SEEN_KEY, CLASS); el.remove(); }
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var name = form.querySelector('input').value.replace(/\s+/g, ' ').trim().slice(0, 40);
-      if (name) { set(NAME_KEY, name); queue.push({ kind: 'name', payload: { name: name } }); send({ name: name }); }
-      done();
-    });
-    el.querySelector('.skip').addEventListener('click', done);
-    document.body.appendChild(el);
-  }
-  if (get(SEEN_KEY) !== CLASS) {
-    fetch(ENDPOINT + '?class=' + encodeURIComponent(CLASS), { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (k) { if (k && k.name) chip(k.name); })
-      .catch(function () {});
+  /* ---- class settings ----
+   * A small gear, not a prompt: the class is already joined by the link, and
+   * the name is optional, so nothing asks for it. The gear goes in the page's
+   * `#classslot` when it offers one (respiration puts it beside its Quiz
+   * button), else the window's bottom-left. It opens a card that says which
+   * class this browser is in, takes a name or initials, says who reads it,
+   * and lets the student leave the class. */
+  var className = null;
+  var STYLE =
+    '#classgear{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;' +
+    'border:1px solid var(--border-strong,#bbb);background:var(--surface-page,#fff);color:var(--text-muted,#666);cursor:pointer;opacity:.7}' +
+    '#classgear:hover{opacity:1;color:var(--text-strong,#111)}#classgear svg{width:16px;height:16px}' +
+    '#classgear.fixed{position:fixed;left:18px;bottom:18px;z-index:70}' +
+    '#classcard{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px}' +
+    '#classcard[hidden]{display:none}#classcard .back{position:absolute;inset:0;background:rgba(20,22,26,.45)}' +
+    '#classcard .card{position:relative;width:min(520px,100%);padding:28px 30px;border-radius:16px;background:var(--surface-card,#fff);' +
+    'color:var(--text-body,#222);box-shadow:0 24px 60px -24px rgba(0,0,0,.5);font:15px/1.5 var(--font-ui,system-ui,sans-serif)}' +
+    '#classcard .kick{margin:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim,#777)}' +
+    '#classcard h2{margin:4px 0 18px;font-size:24px;color:var(--text-strong,#111)}' +
+    '#classcard label{display:block;font-weight:600;color:var(--text-strong,#111);margin:0 0 6px}' +
+    '#classcard input{width:100%;box-sizing:border-box;font:inherit;padding:9px 12px;border:1px solid var(--border-strong,#bbb);border-radius:10px;background:var(--surface-page,#fff);color:inherit}' +
+    '#classcard .sub{font-size:13px;color:var(--text-muted,#666);margin:8px 0 20px}' +
+    '#classcard .row{display:flex;gap:10px;align-items:center}#classcard .row .sp{flex:1}' +
+    '#classcard button{font:600 13px var(--font-ui,system-ui,sans-serif);padding:8px 14px;border-radius:10px;border:1px solid var(--border-strong,#bbb);background:var(--surface-page,#fff);color:var(--text-strong,#111);cursor:pointer}' +
+    '#classcard button.go{background:var(--text-strong,#111);color:var(--surface-page,#fff);border-color:var(--text-strong,#111)}' +
+    '#classcard button.leave{border:0;background:none;color:var(--text-muted,#666);padding-left:0}' +
+    '#classcard .x{position:absolute;top:10px;right:14px;border:0;background:none;font-size:24px;line-height:1;color:var(--text-muted,#666);padding:4px 6px}';
+  var GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+
+  var card = null;
+  function openCard() {
+    if (!card) {
+      card = document.createElement('div');
+      card.id = 'classcard';
+      card.innerHTML = '<div class="back"></div><div class="card" role="dialog" aria-modal="true" aria-labelledby="classcardtitle">' +
+        '<button type="button" class="x" aria-label="Close">&times;</button>' +
+        '<p class="kick">Your class</p><h2 id="classcardtitle"></h2>' +
+        '<form><label for="classname">Your name or initials <span style="font-weight:400;color:var(--text-muted,#666)">(optional)</span></label>' +
+        '<input id="classname" maxlength="40" autocomplete="off">' +
+        '<p class="sub">Only your teacher sees it, next to how far you got in the lesson. Leave it blank to stay anonymous.</p>' +
+        '<div class="row"><button type="button" class="leave">Leave this class</button><span class="sp"></span><button type="submit" class="go">Save</button></div></form></div>';
+      document.body.appendChild(card);
+      var form = card.querySelector('form');
+      var close = function () { card.hidden = true; };
+      card.querySelector('.back').addEventListener('click', close);
+      card.querySelector('.x').addEventListener('click', close);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !card.hidden) close(); });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var name = form.querySelector('input').value.replace(/\s+/g, ' ').trim().slice(0, 40);
+        set(NAME_KEY, name);
+        queue.push({ kind: 'name', payload: { name: name } });
+        send({ name: name });
+        close();
+      });
+      card.querySelector('.leave').addEventListener('click', function () {
+        if (!confirm('Leave ' + (className || 'this class') + ' on this browser? Your teacher keeps what was already recorded.')) return;
+        [CLASS_KEY, NAME_KEY].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+        location.reload();
+      });
+    }
+    card.querySelector('h2').textContent = className || 'Class ' + CLASS;
+    card.querySelector('input').value = get(NAME_KEY) || '';
+    card.hidden = false;
+    card.querySelector('input').focus();
   }
 
-  window.Track = { event: event, class: CLASS, visitor: VISITOR, page: PAGE };
+  function gear() {
+    var st = document.createElement('style'); st.textContent = STYLE; document.head.appendChild(st);
+    var b = document.createElement('button');
+    b.id = 'classgear'; b.type = 'button'; b.innerHTML = GEAR;
+    b.setAttribute('aria-label', 'Class settings'); b.title = 'Class settings';
+    b.addEventListener('click', openCard);
+    var slot = document.getElementById('classslot');
+    if (slot) slot.appendChild(b); else { b.classList.add('fixed'); document.body.appendChild(b); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', gear); else gear();
+  fetch(ENDPOINT + '?class=' + encodeURIComponent(CLASS), { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (k) { if (k && k.name) className = k.name; })
+    .catch(function () {});
+
+  window.Track = { event: event, settings: openCard, class: CLASS, visitor: VISITOR, page: PAGE };
 })();

@@ -47,7 +47,7 @@
       if (q) {
         klass = q.toLowerCase().replace(/[^a-z0-9]/g, '');
         klass = klass.length === 8 ? klass.slice(0, 4) + '-' + klass.slice(4) : null;
-        if (klass) { try { localStorage.setItem(CLASS_KEY, klass); localStorage.removeItem('ss.class.seen'); } catch (e) {} }
+        if (klass) { try { localStorage.setItem(CLASS_KEY, klass); } catch (e) {} }
         url.searchParams.delete('class');
         history.replaceState(null, '', url.pathname + url.search + url.hash);
       }
@@ -90,7 +90,7 @@
      link, or the edit tokens for the apps the last one opened. The visitor id
      stays; it admits nobody. */
   var PERSON_KEYS = [ACCOUNT_KEY, 'ss.teacher.code', 'ss.class.code', 'ss.tutor.key', 'ss.apps',
-                     CLASS_KEY, 'ss.class.name', 'ss.class.seen'];
+                     CLASS_KEY, 'ss.class.name'];
 
   function stored() {
     var raw = null;
