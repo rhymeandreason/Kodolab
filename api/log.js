@@ -2,6 +2,8 @@
  *  api/log.js — read the tutor's log
  * =============================================================================
  *  GET /api/log?limit=&offset=&lesson=&cohort=&aimed=none  → {stats, turns}
+ *  GET /api/log?classes=1     → every teacher's classes, for /teach?all
+ *  GET /api/log?class=ID      → that class as api/teacher.js answers its teacher
  *
  *  A LOCAL TOOL. `.vercelignore` keeps this out of production, and this answers
  *  only to a request from the machine it runs on, so the two would both have to
@@ -29,6 +31,29 @@ module.exports = async function handler(req, res) {
   if (!local(req)) return res.status(403).json({ error: 'the log reads only from localhost' });
 
   if (!log.enabled()) return res.status(503).json({ error: 'DATABASE_URL is not set: nothing is logged' });
+
+  /* Every class, as its teacher sees it. build/teacher.html?all paints these
+     with the teacher's own page, so what you see here is what they see. */
+  if (q.classes || q.class) {
+    const db = log.sql();
+    const teacher = require('./teacher.js');
+    try {
+      if (q.class) {
+        const [klass] = await db`SELECT c.id, c.name, c.code, c.created_at, t.name AS teacher FROM classes c JOIN teachers t ON t.id = c.teacher_id WHERE c.id = ${String(q.class)}`;
+        if (!klass) return res.status(404).json({ error: 'no such class' });
+        const [sessions, questions] = await Promise.all([teacher.sessionsOf(db, klass.id), teacher.questionsOf(db, klass.id)]);
+        return res.status(200).json({ class: klass, seats: [], feed: [], sessions, questions });
+      }
+      const classes = await db`
+        SELECT c.id, c.name, c.code, c.created_at, t.name AS teacher,
+               (SELECT count(*) FROM class_sessions s WHERE s.class_id = c.id)::int AS sessions
+        FROM classes c JOIN teachers t ON t.id = c.teacher_id ORDER BY t.name, c.created_at`;
+      return res.status(200).json({ teacher: { name: 'every teacher' }, classes, apps: [] });
+    } catch (err) {
+      console.error('[log] classes failed:', err.message);
+      return res.status(502).json({ error: err.message });
+    }
+  }
 
   try {
     /* The searches are settled separately and allowed to fail on their own: a

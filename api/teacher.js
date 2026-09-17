@@ -258,3 +258,7 @@ async function withFreshCode(write) {
 }
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return {}; } }
+
+// For api/log.js's localhost view of every class: the same roll-ups a teacher reads.
+module.exports.sessionsOf = sessionsOf;
+module.exports.questionsOf = questionsOf;

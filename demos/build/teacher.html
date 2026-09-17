@@ -162,7 +162,15 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const fileForm = /\.html$/.test(location.pathname);
   const BUILD = fileForm ? `${location.origin}/demos/build/build.html` : `${location.origin}/build`;
-  const t = (q = '', body) => Apps.api('../../api/teacher' + q, body ? { method: 'POST', body } : {});
+  /* ?all: every teacher's classes, read-only, through api/log.js, which
+     answers only from localhost and is not deployed. Same page, same paint,
+     so what this shows is exactly what a teacher sees. */
+  const ALL = new URLSearchParams(location.search).has('all');
+  const t = (q = '', body) => {
+    if (!ALL) return Apps.api('../../api/teacher' + q, body ? { method: 'POST', body } : {});
+    if (body) return Promise.reject(new Error('read-only: open /teach as the teacher to change a class'));
+    return Apps.api('../../api/log' + (q ? q.replace('?class=', '?class=') : '?classes=1'));
+  };
 
   let data = null;         // { teacher, classes, apps }
   let current = null;      // { class, seats, feed }
@@ -195,7 +203,8 @@
       return true;
     }
     $('dash').hidden = false;
-    $('newClass').hidden = false;
+    $('newClass').hidden = ALL;
+    if (ALL) { document.querySelector('h1').textContent = 'teach · every class'; $('newCode').hidden = true; }
     $('buildUrl').textContent = BUILD.replace(/^https?:\/\//, '');
     const want = new URLSearchParams(location.hash.slice(1)).get('class');
     classId = (data.classes.find(c => c.id === want) || data.classes[0] || {}).id || null;
@@ -206,7 +215,7 @@
   /* ---- classes ---------------------------------------------------------- */
   function paintClasses() {
     $('classTabs').innerHTML = data.classes.map(c =>
-      `<button type="button" title="Double-click to rename" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
+      `<button type="button" title="Double-click to rename" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${c.teacher ? `<span class="dim">${esc(c.teacher)} · </span>` : ''}${esc(c.name)}</button>`).join('');
     $('classTabs').hidden = !data.classes.length;
     $('noClass').hidden = !!data.classes.length;
     $('classView').hidden = !classId;
@@ -354,7 +363,7 @@
   });
 
   $('classTabs').addEventListener('dblclick', async e => {
-    if (!e.target.closest('button[data-id]')) return;
+    if (ALL || !e.target.closest('button[data-id]')) return;
     const name = prompt('Rename the class', current.class.name);
     if (!name || !name.trim()) return;
     await t('', { action: 'rename', class: classId, name });
