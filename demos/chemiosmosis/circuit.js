@@ -127,11 +127,10 @@
     /* THE SPLIT CHAIN. One blue for I, III and IV and a paler one for II,
        palette.js's rule. The shapes are a schematic whose one job is to be
        told apart: I is the biggest and has the long arm hanging into the
-       matrix where NADH docks; II is small, with its catalytic head in the
-       matrix and no path through; III and IV are dimers. */
+       matrix where NADH docks; II is built apart, below; III and IV are dimers. */
     const SPEC = {
       I:   { R: 16.5, lobes: 3, lobe: 0.12, color: RESP.complex },
-      II:  { R: 10.5, lobes: 2, lobe: 0.10, color: RESP.complexII },
+      II:  { R: 9.0,  lobes: 2, lobe: 0.10, color: RESP.complexII },
       III: { R: 15.5, lobes: 2, lobe: 0.16, color: RESP.complex },
       IV:  { R: 13.5, lobes: 2, lobe: 0.10, color: RESP.complex },
       /* PSII and b6f are dimers. PSII's oxygen-evolving complex hangs into
@@ -142,7 +141,27 @@
       PSI:  { R: 15.0, lobes: 3, lobe: 0.10, color: PHO.psi },
     };
     const CX = {};
-    for (const k of ALL) CX[k] = Parts.transporter({ half:HALF, site:6.2, mouth:8.0, radius:SPEC[k].R, lobes:SPEC[k].lobes, lobeDepth:SPEC[k].lobe, color:SPEC[k].color });
+    /* COMPLEX II IS NOT A PUMP, so it is not drawn on the pump's lathe: no
+       lumen, no mouths, no gates. Succinate dehydrogenase (PDB 1ZOY) is
+       mostly a soluble head in the matrix, the flavoprotein SdhA, where
+       succinate meets the bound FAD, on the iron-sulfur SdhB. The small
+       anchor, SdhC and SdhD, does span the bilayer, but as a solid bundle
+       of six helices with the ubiquinone site near the matrix face and no
+       path for a proton. Proportions follow the structure: the head stands
+       about twice the membrane's thickness into the matrix. */
+    function succinateDH() {
+      const color = SPEC.II.color, h = HALF + 1.5, r = 6.8;
+      const prof = [];
+      for (let i = 0; i <= 8; i++) { const a = -Math.PI / 2 + (i / 8) * Math.PI / 2; prof.push(new THREE.Vector2(r * Math.cos(a) + 1e-3, -h + r + r * Math.sin(a))); }
+      for (let i = 0; i <= 8; i++) { const a = (i / 8) * Math.PI / 2; prof.push(new THREE.Vector2(r * Math.cos(a) + 1e-3, h - r + r * Math.sin(a))); }
+      const geo = new THREE.LatheGeometry(prof, 40);
+      const mesh = new THREE.Mesh(geo, Parts.flat(color));
+      mesh.scale.set(1.35, 1, 1);      // SdhC beside SdhD
+      const group = new THREE.Group(); group.add(mesh);
+      return { group, mesh, geometry: geo, height: h, setGates() {}, get gates() { return { top: 0, bottom: 0 }; },
+               site: new THREE.Vector3(), dispose() { geo.dispose(); mesh.material.dispose(); } };
+    }
+    for (const k of ALL) CX[k] = k === 'II' ? succinateDH() : Parts.transporter({ half:HALF, site:6.2, mouth:8.0, radius:SPEC[k].R, lobes:SPEC[k].lobes, lobeDepth:SPEC[k].lobe, color:SPEC[k].color });
     const OEC = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(PHO.psii));
     OEC.scale.set(1.3, 0.8, 1); OEC.userData.baseY = CX.PSII.height + 3;
     CX.PSII.group.add(OEC);
@@ -153,10 +172,13 @@
     const ARM_I = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(RESP.complex));
     ARM_I.scale.set(1, 2.1, 1); ARM_I.position.x = -5; ARM_I.userData.baseY = CX.I.height + 12;
     CX.I.group.add(ARM_I);
-    const HEAD_II = new THREE.Mesh(new THREE.SphereGeometry(8, 18, 12), Parts.flat(RESP.complexII));
-    HEAD_II.userData.baseY = CX.II.height + 5;
+    const HEAD_II = new THREE.Group();
+    const SDHB = new THREE.Mesh(new THREE.SphereGeometry(7.5, 18, 12), Parts.flat(RESP.complexII));
+    SDHB.scale.set(1.15, 0.9, 1); SDHB.userData.baseY = HALF + 7;
+    const SDHA = new THREE.Mesh(new THREE.SphereGeometry(11, 20, 14), Parts.flat(RESP.complexII));
+    SDHA.position.x = -2; SDHA.userData.baseY = HALF + 22;
+    HEAD_II.add(SDHB, SDHA);
     CX.II.group.add(HEAD_II);
-    CX.II.setGates(0, 0);
 
     const SYN_R = 13.2, SYN_LOBE = 0.09;
     const SYNTH   = Parts.transporter({ half:HALF, site:6.0, mouth:8.2, radius:SYN_R, lobes:8, lobeDepth:SYN_LOBE, color:RESP.synthase });
@@ -451,7 +473,8 @@
       const d = pumpDir(), H = H_();
       if (key === 'I') { const x = xs.I; return { from:{ x:x - 36, y:-d * (H + 50) }, at:{ x:x - 14, y:-d * (H + 30) }, away:{ x:x - 42, y:-d * (H + 54) } }; }
       if (key === 'PSI') { const x = xs.PSI; return { from:{ x:x + 36, y:-d * (H + 46) }, at:{ x:x + 12, y:-d * (H + 20) }, away:{ x:x + 42, y:-d * (H + 50) } }; }
-      if (key === 'II') { const x = xs.II; return { from:{ x:x - 32, y:-d * (H + 34) }, at:{ x:x - 13, y:-d * (H + 14) }, away:{ x:x - 36, y:-d * (H + 38) } }; }
+      /* II's substrate meets the FAD in SdhA, the far lobe of the head */
+      if (key === 'II') { const x = xs.II, y = HALF + 22; return { from:{ x:x - 38, y:-d * (y + 20) }, at:{ x:x - 19, y:-d * y }, away:{ x:x - 42, y:-d * (y + 24) } }; }
       const x = complexX;
       return { from:{ x:x - 34, y:-d * (H + 30) }, at:{ x:x - 15, y:-d * (H + 13) }, away:{ x:x - 40, y:-d * (H + 34) } };
     }
@@ -1337,7 +1360,7 @@
         for (const child of ROTOR.children) child.position.y = -d * child.userData.baseY;
         HEAD.position.y = -d * HEAD.userData.baseY; HEAD.rotation.x = d > 0 ? Math.PI : 0;
         ARM_I.position.y = -d * ARM_I.userData.baseY; ARM_I.rotation.z = 0.45 * d;
-        HEAD_II.position.y = -d * HEAD_II.userData.baseY;
+        for (const m of HEAD_II.children) m.position.y = -d * m.userData.baseY;
         OEC.position.y = d * OEC.userData.baseY;               // the lumen face
         RIDGE_PSI.position.y = -d * RIDGE_PSI.userData.baseY;  // the stroma face
       },
@@ -1450,7 +1473,7 @@
         complex:  () => { const k = !split() ? 'complex' : photo() ? 'b6f' : 'I', x = k === 'complex' ? complexX : xs[k];
                           return P.proteins[k] ? at(x, H_() * 0.98) : null; },
         'complex.I':   () => split() && P.proteins.I ? at(xs.I, H_() * 0.98) : null,
-        'complex.II':  () => split() && P.proteins.II ? at(xs.II, -pumpDir() * (H_() + 10)) : null,
+        'complex.II':  () => split() && P.proteins.II ? at(xs.II, -pumpDir() * (HALF + 22)) : null,
         'complex.III': () => split() && P.proteins.III ? at(xs.III, H_() * 0.98) : null,
         'complex.IV':  () => split() && P.proteins.IV ? at(xs.IV, H_() * 0.98) : null,
         quinone:  () => !photo() && qTokens.length ? qTokens[0].obj.position : null,
