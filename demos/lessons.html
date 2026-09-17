@@ -135,7 +135,7 @@
   .card .foot { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-top: auto; padding-top: .6rem; }
   .marks { display: flex; gap: .35rem; flex-wrap: wrap; }
   .mark { display: inline-flex; align-items: center; gap: .3rem; font: 500 11px/1 var(--sans); letter-spacing: .06em; padding: .38em .6em; border-radius: 6px; background: var(--paper-2); color: var(--ink-2); }
-  .mark.build { background: #FFF3D6; }
+  .mark.made { background: #FFF3D6; }   /* not `.build`: that is the band's class */
   /* Sits above the card-wide link, so it is clickable. */
   .emb { position: relative; z-index: 1; cursor: pointer; font: 600 11.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); background: none; border: 1.5px solid rgba(var(--ink-t), .18); border-radius: 999px; padding: .42em .8em; transition: color .15s, border-color .15s; display: inline-flex; align-items: center; gap: .35em; white-space: nowrap; }
   .emb:hover { color: var(--ink); border-color: var(--ink); }
@@ -426,7 +426,7 @@ const UNITS = [
   { key: 'gene',  n: '06', hue: 'var(--blue)',   title: 'Genetics',              why: 'The helix, from real coordinates, taken apart.' },
 ];
 const LESSONS = [
-  { key: 'water',        unit: 'chem',   url: '/water',              file: '/demos/water-lab.html',        title: 'Structure of Water',            blurb: 'Hydrogen bonds, why ice floats, and why salt falls apart in it.', still: '/demos/media/kodo-water.webp', status: 'featured', bare: true },
+  { key: 'water',        unit: 'chem',   url: '/water',              file: '/demos/water-lab.html',        title: 'Structure of Water',            blurb: 'Hydrogen bonds, why ice floats, and why salt falls apart in it.', still: '/demos/media/components/watersim.webp', status: 'featured', bare: true },
   { key: 'bonds',        unit: 'chem',   url: '/molecular-bonds',    file: '/demos/molecule-builder.html', title: 'Covalent & Ionic Bonds',        blurb: 'Drag atoms together and let valence decide what you get.', still: '/demos/media/molecules/methane.webp', mol: true, status: 'featured' },
   { key: 'protein',      unit: 'macro',  url: '/protein',            file: '/demos/hemoglobin-lab.html',   title: 'Levels of Protein Structure',   blurb: 'Haemoglobin, from a chain of amino acids to four folded chains.', still: '/demos/proteins/stills/hemoglobin.webp', status: 'featured', bare: true },
   { key: 'sickle',       unit: 'macro',  title: 'Sickle Cell',                   blurb: 'One letter changes, a protein sticks to itself, and a red cell jams.', soon: true },
@@ -455,7 +455,7 @@ function teaser(l) {
 }
 function card(l, extra = '') {
   if (l.soon) return teaser(l);
-  const marks = [l.build && '<span class="mark build">⌘ Made with Build</span>'].filter(Boolean).join('');
+  const marks = [l.build && '<span class="mark made">⌘ Made with Build</span>'].filter(Boolean).join('');
   return `<article class="card ${extra}" data-key="${l.key}">
     <a class="pic ${l.mol ? 'mol' : ''}" href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"><span class="tag ${l.status === 'preview' ? 'soon' : ''}"><i></i>${l.hub ? 'Start here' : STATUS[l.status]}</span></a>
     <div class="body">
