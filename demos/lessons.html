@@ -251,6 +251,8 @@
   .sheet .dims label { display: flex; align-items: baseline; gap: .35rem; font: 400 13px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink-3); }
   .sheet .dims input { width: 5.2em; font: 400 15px var(--sans); padding: .45rem .6rem; border-radius: 10px; border: 1.5px solid rgba(var(--ink-t), .2); background: #fff; color: var(--ink); }
   .sheet .dims .by { color: var(--ink-3); font-size: 14px; }
+  .sheet .dims .lock { margin-left: .4rem; white-space: nowrap; }
+  .sheet .dims .lock input { width: auto; padding: 0; accent-color: var(--ink); }
   .sheet .size .note { margin-top: .5rem; font-size: .82rem; color: var(--ink-3); }
   .sheet pre { margin: 0; text-transform: none; letter-spacing: 0; padding: .9rem 1rem; border-radius: 12px; background: var(--ink); color: rgba(var(--paper-t), .9); font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; user-select: all; max-height: 7.5em; overflow: auto; }
   .sheet .btns { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
@@ -389,7 +391,7 @@
       </div>
       <p class="note" id="s-note"></p>
       <div class="f size"><span>Size on your page</span>
-        <div class="dims"><label><input type="number" id="s-w" min="320" max="2400" step="10" value="960"> <span>wide</span></label><span class="by">×</span><label><input type="number" id="s-h" min="200" max="1600" step="10" value="600"> <span>tall</span></label></div>
+        <div class="dims"><label><input type="number" id="s-w" min="320" max="2400" step="10" value="960"> <span>wide</span></label><span class="by">×</span><label><input type="number" id="s-h" min="200" max="1600" step="10" value="600"> <span>tall</span></label><label class="lock"><input type="checkbox" id="s-lock" checked> <span>keep ratio</span></label></div>
         <p class="note" id="s-size"></p>
       </div>
       <label class="f">Paste this<pre id="s-code"></pre></label>
@@ -554,8 +556,14 @@ function card(l, extra = '') {
   }
   function hide() { frame.querySelectorAll('iframe').forEach(f => f.remove()); }
   sel.addEventListener('change', redraw);
-  wEl.addEventListener('input', () => { fit(); draw(); });
-  hEl.addEventListener('input', () => { fit(); draw(); });
+  /* KEEP RATIO: editing one side sets the other from the ratio the pair had
+     when the lock was last on. Rounded to the field's step. */
+  const lock = document.getElementById('s-lock');
+  let ratio = (Number(wEl.value) || 960) / (Number(hEl.value) || 600);
+  const snap = v => Math.max(0, Math.round(v / 10) * 10);
+  lock.addEventListener('change', () => { if (lock.checked) ratio = size().w / size().h; });
+  wEl.addEventListener('input', () => { if (lock.checked && Number(wEl.value) > 0) hEl.value = snap(Number(wEl.value) / ratio); fit(); draw(); });
+  hEl.addEventListener('input', () => { if (lock.checked && Number(hEl.value) > 0) wEl.value = snap(Number(hEl.value) * ratio); fit(); draw(); });
   full.addEventListener('change', redraw);
   simple.addEventListener('change', redraw);
   dlg.addEventListener('close', hide);
