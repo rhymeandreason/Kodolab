@@ -18,7 +18,7 @@ The reload client is injected into responses, never written to disk. **The site 
 python3 -m http.server 8818     # from the repo root; no injection, no reload
 ```
 
-**The pages are dependency-free; the tutor is not.** `water-lab`'s ask box needs SDKs and a key that are not in the working tree; setup is in `ai-tutor.md`. **The tutor is live on `kodolab.org`, behind an access link.** No `?k=` means no Ask button, which is also what every checkout without a key sees, so its absence locally is normal and not a fault to chase.
+**The pages are dependency-free; the tutor is not.** `water-lab`'s ask box needs SDKs and a key that are not in the working tree; setup is in the root `docs/api.md`. **The tutor is live on `kodolab.org`, behind an access link.** No `?k=` means no Ask button, which is also what every checkout without a key sees, so its absence locally is normal and not a fault to chase.
 
 ## Checkers
 

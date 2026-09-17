@@ -176,6 +176,8 @@ A 401 on the first of those is the gate working, not a broken deploy.
 
 ## After it is live
 
+**A schema change ships as `node demos/tools/db.js init`** against the production `DATABASE_URL`, run by hand before the deploy that needs it; it is idempotent. `_schema.sql` is the only place a table is defined, and a function that reaches a column the database lacks fails quietly in the log, not loudly in the browser.
+
 `node demos/tools/db.js cost` and the log viewer read the same Neon database
 production writes to, from a laptop, with nothing public in the path. Watch the
 per-class counts: a cohort at its hourly cap is what a leaked link looks like.

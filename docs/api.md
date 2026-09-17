@@ -1,4 +1,8 @@
-<!-- KIND: recipe + reference — load when working on the tutor or `api/`. The lessons themselves need nothing here. -->
+<!-- KIND: recipe + reference — load when working on `api/`: the tutor, the access gate, the log, class codes. A lesson that only reports progress needs the "Class codes" section alone. -->
+
+# The backend: `api/`
+
+Everything the static lessons reach over HTTP. Four things live here, each a Vercel function over one Neon database: the **AI tutor** (`ask.js`, most of this file), the **access gate** that keys it (`_keys.js`), the **log** it writes (`_log.js`), and **class codes**, which turn a lesson into something a class reports from (`_classes.js`, `event.js`). The builder has its own doc, `demos/docs/Generator.md`.
 
 # AI tutor chat
 
@@ -40,7 +44,24 @@ Reordered again: **deploying water-lab alone is what produces the logged questio
 
 ## Class codes
 
-A class in the teacher dashboard (`/teach`) has a lesson code, shown on its Lessons tab as a link: `/respiration?class=abcd-efgh`. One code per class, shared on the board. `lib/site.js` keeps it as `ss.class`, strips it from the address bar, and loads `lib/track.js`, which posts `view`, a `beat` of visible seconds every minute, and whatever the page reports (`phase`, `complete`, `quiz`, `survey`) to `api/event.js` by beacon. `ask/chat.js` sends it as `X-Class-Code`, and `_keys.cohort` turns it into the tutor's cohort `class:<id>`, so the class's threads and its events join on the visitor id. `_access.js` uses `_keys.linkCohort` instead: a class code admits to a lesson and its tutor, never to the builder. The roll-up the teacher reads is `sessionsOf` in `api/teacher.js`.
+A class in the teacher dashboard (`/teach`) has a lesson code, shown on its Lessons tab as a link: `/respiration?class=abcd-efgh`. One code per class, shared on the board; any lesson URL takes it. `lib/site.js` keeps it as `ss.class`, strips it from the address bar, and loads `lib/track.js`, which posts `view`, a `beat` of visible seconds every minute, and whatever the page reports to `api/event.js` by beacon. Nothing loads and nothing is sent for a browser with no code, signed in or not, and that is deliberate: events carry a random browser id, never an account.
+
+**What a lesson does to report progress.** Views and time come free from track.js. Progress, completion, quiz and survey are the page's to send, guarded because track.js is absent for most visitors:
+
+```js
+window.Track && Track.event('phase',    { phase: 'mito', i: 2 });      // i orders the phases; the roster shows the furthest
+window.Track && Track.event('complete');                                // once
+window.Track && Track.event('quiz',     { score, total, answers: [{ q, answer, correct }] });
+window.Track && Track.event('survey',   { answers: { clear: 4, confusing: '…', again: 'Maybe' } });
+```
+
+The kinds are a closed set in `api/event.js`. The shapes above are what `/teach` renders and what respiration-lab sends; a second lesson keeps them. A page may offer an empty `#classslot` for the class gear (respiration puts it beside its Quiz button); otherwise the gear pins to the window's corner. The gear opens the class card: the class name, an optional name or initials, the browser's short code (first eight hex of the visitor id, shown the same way on `/teach`), and Leave.
+
+**The tutor.** `ask/chat.js` sends the code as `X-Class-Code`, and `_keys.cohort` turns it into the cohort `class:<id>`, so a class's threads and its events join on the visitor id: the session dialog on `/teach` shows what that browser asked. `_access.js` uses `_keys.linkCohort` instead: a class code admits to a lesson and its tutor, never to the builder.
+
+**Reading it.** `sessionsOf` in `api/teacher.js` is the roll-up: one row per browser, on-screen seconds summed from beats, the furthest phase, completion, latest quiz and survey, questions asked. CSV from the same tab. **New code** on a class cuts the old link off and keeps every row.
+
+**Deploying it.** The schema adds `classes.code`, `events` and `class_sessions`: `node demos/tools/db.js init` once against the database, as `docs/deploy.md` says. Applied to production on 2026-09-17.
 
 ## Logging
 

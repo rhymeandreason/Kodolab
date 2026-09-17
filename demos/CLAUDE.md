@@ -54,7 +54,7 @@ Every doc lives in `demos/docs/` except the node graph's two and the clipper's, 
 | Curating images for the node graph | `tools/clipper/README.md` — the extension, and why a clip carries its source page. The registry it writes is `nodegraph/images.js`; placement stays `graphcontent.js`'s job |
 | A solvation page | `WaterSim.md`, then `Modules.md`'s `water/` note — `water/watersim.js` is the liquid itself |
 | A new `reaction/` verb | `reaction/reaction.js`'s header, `reaction/check-reaction.js` |
-| The AI tutor, or `api/` | `docs/ai-tutor.md` |
+| Anything in `api/`: the AI tutor, the access gate, the log, class codes and what a lesson reports to `/teach` | `docs/api.md` (root `docs/`). A lesson that only reports progress reads its "Class codes" section |
 | Deploying, short URLs, promoting a page to featured | `docs/deploy.md` |
 | Running locally, the checkers | `docs/dev.md` |
 | Questions-composer, or the door map | `tests/question-composer.md`, beside the page. **Being deprecated**: the node graph is its successor, and nothing new should depend on `lib/mapcontent.js`. A page mounting SEVERAL live 3D boxes reads `kit/card-stage.js`'s header instead |
