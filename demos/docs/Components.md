@@ -621,6 +621,7 @@ const C = AnimalCell.mount(el, {
   seed: 1234,       // a different seed is a different arrangement (rebuild)
   detail: 'auto',   // 'auto' resolves the mitochondrion a click flies to; 'low' never; 'high' all five, and costs it
   clickToFly: true, // false: a click still fires 'pick' but the camera stays where the page put it
+  flows: { glucose: 0, o2: 0, co2: 0 },   // each 0..1, live: molecules crossing the membrane
 });
 ```
 
@@ -628,13 +629,15 @@ A bowl of cytoplasm cut on a wavy line, with a nucleus, five mitochondria, a Gol
 
 **This is the default animal cell.** Reach for it when the step asks WHAT IS IN A CELL, what an animal cell has that a plant cell does not, or whenever a lesson needs one cell to point at and the subject is not some particular cell's speciality. PlantCell is the same default on the plant side. Hover brightens an organelle, a click flies to it, a double-click comes home, so "find the Golgi" is a thing the student does rather than reads. **Fly to a mitochondrion and it resolves**: the same organelle, in the same place, swaps its folded ribbon for two membranes and cristae as sacs, and drops back on the way home. A step about one organelle's own machinery is still not this component — that is Mitochondrion, a rung down, and a different box.
 
-Snaps: everything. `motion` is the only live param; geometry rebuilds, and nothing glides across a rebuild.
+**`flows` is respiration's traffic, not to scale**: glucose enters only through the glucose transporters and ends in the cytosol, O₂ crosses the bilayer anywhere and ends in a mitochondrion, CO₂ leaves a mitochondrion and the cell the same way. The routes are the claim; the molecules are drawn thousands of times too big.
 
-`state()`: `motion`, `detail`, `detailed` (how many mitochondria are resolved), `hovered`, `counts` (how many of each are drawn), `shown`. Events: `frame`, `hover`, `pick`.
+Snaps: everything. `motion` and `flows` are the live params; geometry rebuilds, and nothing glides across a rebuild.
 
-One list of parts serves `note()`, `lookAt()` and `show()`: `membrane`, `nucleus`, `er`, `golgi`, `mitochondrion`, `centrosome`, `vesicle`, `ribosome`. Every one carries a card, so `showPanel` gives a working panel with no copy of your own. **No part declares a view**, so a `notes` chip labels and never moves the camera; put the two or three worth travelling to in `zoom` instead.
+`state()`: `motion`, `flows`, `detail`, `detailed` (how many mitochondria are resolved), `hovered`, `counts` (how many of each are drawn), `shown`. Events: `frame`, `hover`, `pick`.
 
-Good for: naming the parts of a cell, animal against plant, where proteins are made and how they leave, what an organelle is. Not for: cell division, anything inside one organelle, or a number in micrometres.
+One list of parts serves `note()`, `lookAt()` and `show()`: `membrane`, `nucleus`, `er`, `golgi`, `mitochondrion`, `centrosome`, `vesicle`, `ribosome`, `transporter` (drawn only while `flows.glucose` > 0). Every one carries a card, so `showPanel` gives a working panel with no copy of your own. **No part declares a view**, so a `notes` chip labels and never moves the camera; put the two or three worth travelling to in `zoom` instead.
+
+Good for: naming the parts of a cell, animal against plant, what crosses the membrane to feed respiration, where proteins are made and how they leave, what an organelle is. Not for: cell division, anything inside one organelle, or a number in micrometres.
 
 ## PlantCell — a plant cell cut open, and what water does to it
 

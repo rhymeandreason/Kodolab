@@ -26,11 +26,12 @@
  *
  *  THE COMPONENT CONTRACT (docs/AddingAComponent.md, docs/Components.md):
  *
- *      params   motion 0..3 (default 1, live) · seed, tilt (rebuild only) · clickToFly (default true)
- *      state()  motion · hovered · counts (per organelle) · shown
+ *      params   motion 0..3 (default 1, live) · flows { glucose, o2, co2 } each 0..1 (live)
+ *               seed, tilt (rebuild only) · clickToFly (default true)
+ *      state()  motion · flows · hovered · counts (per organelle) · shown
  *      events   frame · hover · pick
  *      parts    membrane · nucleus · er · golgi · mitochondrion ·
- *               centrosome · vesicle · ribosome. One list serves three
+ *               centrosome · vesicle · ribosome · transporter. One list serves three
  *               jobs: anchors for note(), names for show(), and the
  *               targets lookAt() flies to. LIBRARY carries a label and a
  *               two-sentence card for each, which is the teaching text —
@@ -60,10 +61,11 @@
      'auto' raises the one a click flies to and drops it again on the way
      home, 'high' raises all five (five detailed organelles is a real cost),
      'low' never raises any. */
-  const DEFAULTS = { seed: 1234, tilt: 0.32, motion: 1, detail: 'auto' };
+  const DEFAULTS = { seed: 1234, tilt: 0.32, motion: 1, detail: 'auto', flows: { glucose: 0, o2: 0, co2: 0 } };
 
   function create(THREE, root, camera, opts = {}) {
     const P = Object.assign({}, DEFAULTS, opts);
+    P.flows = Object.assign({}, DEFAULTS.flows, opts.flows || {});
     if (!global.CellOrganelles) throw new Error('cell/animalcell.js: load cell/organelles.js first');
     /* The nucleus, mitochondrion, Golgi and ER are cell/organelles.js's, and
        the plant cell builds the same four from the same kit. What is left in
@@ -295,6 +297,179 @@
       cell.add(register(inst, 'ribosome'));
     }
 
+    /* ---- traffic: glucose and O₂ in, CO₂ out ----
+       CHOREOGRAPHY AT THE WRONG SCALE, AND THE ROUTES ARE THE CLAIM. A
+       glucose is a nanometre and this cell is ten units across, so the
+       molecules are drawn thousands of times too big; what must be true is
+       where each one crosses and where it goes. Glucose is large and polar
+       and enters only through a GLUT, down its gradient, then ends in the
+       cytosol, where glycolysis happens. O₂ and CO₂ are small and nonpolar
+       and cross the bilayer anywhere: O₂ ends in a mitochondrion, CO₂ starts
+       in one. H₂O is left out; it is true and it teaches nothing here.
+
+       ITS OWN RANDOM STREAM, so turning flows on moves no organelle (see
+       the header on the kit's stream). Built after every organelle for the
+       same reason. */
+    const traffic = (() => {
+      const PAL = global.MolPalette || (global.MolLib && global.MolLib.PALETTE);
+      const rnd = global.CellOrganelles.seededRandom(P.seed ^ 0x5eed);
+      const rg = (a, b) => a + (b - a) * rnd();
+      const N = { glucose: 10, o2: 14, co2: 14 };
+      // Drawn size of every molecule. The lesson zooms into the cytoplasm, so small still reads.
+      const MOL = 0.4;
+      const out = (d, k) => { const p = d.clone().multiplyScalar(cellRadius(d) + k); p.y *= YS; return p; };
+      const inn = (d, k) => { const p = d.clone().multiplyScalar(innerR(d) - k); p.y *= YS; return p; };
+      // Crossings stay below the cut, on the wall's side, so none enters over the rim.
+      const wallDir = () => dirUW(rg(0, 2 * PI), rg(0.28 * PI, 0.5 * PI));
+      const cytosol = () => {
+        for (let i = 0; i < 40; i++) {
+          const q = dirUW(rg(0, 2 * PI), rg(0.12 * PI, 0.5 * PI)).multiplyScalar(rg(3, 8));
+          q.y *= YS;
+          if (insideCell(q, 1) && q.distanceTo(nucPos) > Rn + 1.2 && q.y < -0.8) return q;
+        }
+        return new V3(-5, -4, 1);
+      };
+
+      /* the doors: four GLUTs through the wall, the first on the front rim so a note on it reads */
+      const glutDirs = [PI / 2 + 0.55, PI / 2 - 0.75, -PI / 2 + 0.6, PI + 0.2].map(u => dirUW(u, 0.42 * PI));
+      // a thick-walled tube: the rectangle (inner..outer radius, full length) turned once round
+      const gh = (TH + 0.12) / 2;
+      const glutGeo = new THREE.LatheGeometry([[0.15, -gh], [0.26, -gh], [0.26, gh], [0.15, gh], [0.15, -gh]].map(([r, y]) => new THREE.Vector2(r, y)), 18);
+      glutGeo.computeVertexNormals();
+      const glutMat = mat({ color: PAL.respiration.glut, roughness: 0.55, side: THREE.DoubleSide });
+      const doors = glutDirs.map(d => {
+        const m = new THREE.Mesh(glutGeo, glutMat);
+        m.position.copy(d.clone().multiplyScalar(cellRadius(d) - TH / 2)).setY(m.position.y * YS);
+        m.quaternion.setFromUnitVectors(new V3(0, 1, 0), unsq(m.position).normalize());
+        m.userData.nopick = true;
+        cell.add(register(m, 'transporter'));
+        return m;
+      });
+
+      /* ONE SCALE FOR ALL THREE: A scene units per ångström. Glucose is the
+         library's own spec, atom for atom, centred and taken from the
+         library's display scale to this one; O₂ and CO₂ are placed from
+         their real bond lengths. Every atom is the palette radius at A. */
+      const A = 0.215;
+      const G = global.MolLib.MOLECULES.glucose.atoms;
+      const gc = G.reduce((acc, x) => acc.add(new V3().fromArray(x.pos)), new V3()).divideScalar(G.length);
+      const GK = A / global.MolLib.SCALE;
+      const glucoseAtoms = el => G.filter(x => x.el === el).map(x => new V3().fromArray(x.pos).sub(gc).multiplyScalar(GK).toArray());
+      const ball = el => new THREE.SphereGeometry(PAL.radii[el] * A, 10, 8);
+      const OO = 1.21 * A / 2, CO = 1.16 * A;     // O=O 1.21 Å, C=O 1.16 Å
+      const species = {
+        glucC: { kind: 'glucose', geo: ball('C'), color: PAL.atoms.C, atoms: glucoseAtoms('C') },
+        glucO: { kind: 'glucose', geo: ball('O'), color: PAL.atoms.O, atoms: glucoseAtoms('O') },
+        glucH: { kind: 'glucose', geo: ball('H'), color: PAL.atoms.H, atoms: glucoseAtoms('H') },
+        o2: { kind: 'o2', geo: ball('O'), color: PAL.atoms.O, atoms: [[-OO, 0, 0], [OO, 0, 0]] },
+        co2O: { kind: 'co2', geo: ball('O'), color: PAL.atoms.O, atoms: [[-CO, 0, 0], [CO, 0, 0]] },
+        co2C: { kind: 'co2', geo: ball('C'), color: PAL.atoms.C, atoms: [[0, 0, 0]] },
+      };
+      const meshes = {};
+      for (const [k, s] of Object.entries(species)) {
+        const m = new THREE.InstancedMesh(s.geo, mat({ color: s.color, roughness: 0.4, clearcoat: 0.4 }), N[s.kind] * s.atoms.length);
+        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        m.frustumCulled = false;
+        m.count = 0;
+        cell.add(m);
+        meshes[k] = m;
+      }
+      /* A soft yellow halo behind each glucose: charcoal-and-red atoms on a
+         red cytoplasm disappear, and the fuel is the one molecule to follow. */
+      const glow = (() => {
+        const c = document.createElement('canvas'); c.width = c.height = 64;
+        const g = c.getContext('2d'), grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+        const rgb = new THREE.Color(PAL.respiration.glucose);
+        const css = a => `rgba(${rgb.r * 255 | 0},${rgb.g * 255 | 0},${rgb.b * 255 | 0},${a})`;
+        grad.addColorStop(0, css(1)); grad.addColorStop(0.4, css(0.6)); grad.addColorStop(1, css(0));
+        g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N.glucose * 3), 3).setUsage(THREE.DynamicDrawUsage));
+        const pts = new THREE.Points(geo, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), size: 1.55, sizeAttenuation: true,
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+        pts.frustumCulled = false;
+        cell.add(pts);
+        return pts;
+      })();
+
+      /* A trip is waypoints with durations; a waypoint may be a function, so
+         a molecule heading for a mitochondrion follows it as it wanders. */
+      const mitoAt = i => () => mitos[i].position;
+      function trip(kind) {
+        const mi = Math.floor(rnd() * mitos.length);
+        if (kind === 'glucose') {
+          const d = glutDirs[Math.floor(rnd() * glutDirs.length)];
+          const far = out(d, rg(3, 6)).add(new V3(rg(-2, 2), rg(-1.5, 0), rg(-2, 2)));
+          return { pts: [far, out(d, 0.35), inn(d, 0.35), cytosol()], dur: [rg(4, 6), 0.9, rg(4, 6)] };
+        }
+        if (kind === 'o2') {
+          const d = wallDir();
+          return { pts: [out(d, rg(3, 6)), out(d, 0.2), inn(d, 0.2), mitoAt(mi)], dur: [rg(3, 5), 0.5, rg(3, 5)] };
+        }
+        const d = wallDir();
+        return { pts: [mitoAt(mi), inn(d, 0.2), out(d, 0.2), out(d, rg(3, 6))], dur: [rg(3, 5), 0.5, rg(3, 5)] };
+      }
+      const pool = {};
+      for (const kind of Object.keys(N)) {
+        pool[kind] = [];
+        for (let i = 0; i < N[kind]; i++) {
+          const tr = trip(kind), total = tr.dur.reduce((a, b) => a + b, 0);
+          pool[kind].push(Object.assign(tr, { age: rnd() * total, ph: [rg(0, 9), rg(0, 9), rg(0, 9)], spin: new V3(rg(-1, 1), rg(-1, 1), rg(-1, 1)).normalize() }));
+        }
+      }
+
+      const _p = new V3(), _a = new V3(), _b = new V3(), _j = new V3(), _q = new THREE.Quaternion(), _s = new V3(), _m = new THREE.Matrix4(), _o = new THREE.Matrix4();
+      const at = w => (typeof w === 'function' ? w() : w);
+      const smooth = k => k * k * (3 - 2 * k);
+      function place(mol) {
+        let a = mol.age, i = 0;
+        while (i < mol.dur.length - 1 && a > mol.dur[i]) { a -= mol.dur[i]; i++; }
+        const k = Math.min(a / mol.dur[i], 1);
+        _a.copy(at(mol.pts[i])); _b.copy(at(mol.pts[i + 1]));
+        _p.lerpVectors(_a, _b, i === 1 ? k : smooth(k));
+        // Brownian-looking wander, zero at the ends of each leg so the crossing stays on the door.
+        const env = Math.sin(PI * k) * (i === 1 ? 0 : 0.7);
+        _j.set(Math.sin(t * 1.7 + mol.ph[0] + a), Math.sin(t * 1.3 + mol.ph[1] + 2 * a), Math.sin(t * 1.9 + mol.ph[2] - a));
+        _p.addScaledVector(_j, env);
+        const total = mol.dur.reduce((x, y) => x + y, 0);
+        // grow in at the start of the trip and shrink out at its end: made, or used up
+        return MOL * Math.min(1, mol.age / 0.6, (total - mol.age) / 0.8);
+      }
+
+      const KEYS = {};
+      for (const [k, sp] of Object.entries(species)) (KEYS[sp.kind] = KEYS[sp.kind] || []).push(k);
+      function step(dt) {
+        let glowN = 0;
+        const fill = {};
+        for (const k of Object.keys(meshes)) fill[k] = 0;
+        for (const kind of Object.keys(N)) {
+          const live = Math.round(N[kind] * clamp(P.flows[kind] || 0, 0, 1));
+          for (let i = 0; i < live; i++) {
+            const mol = pool[kind][i];
+            mol.age += dt * P.motion;
+            if (mol.age >= mol.dur.reduce((a, b) => a + b, 0)) Object.assign(mol, trip(kind), { age: 0 });
+            const sc = Math.max(0.001, place(mol));
+            _q.setFromAxisAngle(mol.spin, t * 0.8 + mol.ph[0]);
+            _s.setScalar(sc);
+            _m.compose(_p, _q, _s);
+            if (kind === 'glucose') { glow.geometry.attributes.position.setXYZ(i, _p.x, _p.y, _p.z); glowN = i + 1; }
+            for (const key of KEYS[kind]) {
+              for (const off of species[key].atoms) {
+                _o.makeTranslation(off[0], off[1], off[2]).premultiply(_m);
+                meshes[key].setMatrixAt(fill[key]++, _o);
+              }
+            }
+          }
+        }
+        for (const k of Object.keys(meshes)) { meshes[k].count = fill[k]; meshes[k].instanceMatrix.needsUpdate = true; }
+        glow.geometry.setDrawRange(0, glowN);
+        glow.geometry.attributes.position.needsUpdate = true;
+        const doorsOn = (P.flows.glucose || 0) > 0 && !parts.hidden.transporter;
+        for (const m of doors) m.visible = doorsOn;
+      }
+      return { step };
+    })();
+
     /* ---- hover, and the per-frame motion ---- */
     const raycaster = new THREE.Raycaster();
     const rootOf = o => { while (o && !o.userData.organelle) o = o.parent; return o; };
@@ -405,6 +580,7 @@
          scaling the offsets would do. */
       t += dt * P.motion;
       solve(dt);
+      traffic.step(dt);
       nucleolus.material.emissiveIntensity = 0.4 + 0.12 * Math.sin(t * 1.3);
       emit('frame', state(), dt);
     }
@@ -429,6 +605,7 @@
       mitochondrion:{ text: 'mitochondrion', offset: [44, -24], card: 'Two membranes, the inner one folded into cristae, where most of the cell\u2019s ATP is made. It carries its own small genome, which is the clue that it was once a free-living bacterium.' },
       centrosome:   { text: 'centrosome', offset: [-48, -24], card: 'Two centrioles at right angles, each a barrel of nine microtubule triplets. It is where the cell\u2019s microtubules radiate from, and it organises the spindle when the cell divides.' },
       vesicle:      { text: 'vesicles', offset: [46, 24], card: 'Small membrane bubbles ferrying cargo between the ER, the Golgi and the surface. The orange ones here stand for peroxisomes and lysosomes, which digest things the cell wants broken down.' },
+      transporter:  { text: 'glucose transporter', offset: [46, -24], card: 'A protein door through the membrane. Glucose is too big and too polar to slip between the oily tails, so it enters only here, running down its concentration gradient. O\u2082 and CO\u2082 are small and nonpolar, and cross the membrane anywhere.' },
       ribosome:     { text: 'ribosomes', offset: [46, 26], card: 'The dots throughout the cytoplasm and over the ER. Each one reads a strand of mRNA and builds the protein it codes for, which is why a busy cell has millions.' },
     };
     /* The legend, off the same palette the meshes were built from, so it
@@ -460,18 +637,20 @@
     const emit = (name, ...a) => { CardStage.fire(listeners[name], a, 'AnimalCell ' + name); };
     const on = (name, fn) => { (listeners[name] = listeners[name] || []).push(fn); return () => { listeners[name] = (listeners[name] || []).filter(f => f !== fn); }; };
     const state = () => ({
-      motion: P.motion, detail: P.detail,
+      motion: P.motion, detail: P.detail, flows: Object.assign({}, P.flows),
       detailed: mitos.filter(m => m.userData.detailed).length,
       hovered: hovered && hovered.userData.organelle || null,
       counts: Object.fromEntries(parts.order().map(n => [n, parts.of(n).length])),
       shown: parts.layers(),
     });
-    /* The only live param. Everything else about this cell is its geometry,
+    /* Two live params. Everything else about this cell is its geometry,
        and geometry rebuilds, so there is nothing to glide: `motion` scales
-       the wander straight through and a page that wants a still cell sets 0. */
+       the wander straight through and a page that wants a still cell sets 0,
+       and `flows` sets how many of each molecule are in transit. */
     function set(next = {}) {
       if (next.motion != null) P.motion = clamp(next.motion, 0, 3);
       if (next.detail != null) setDetail(next.detail);
+      if (next.flows) Object.assign(P.flows, next.flows);
       return api;
     }
 

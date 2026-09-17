@@ -388,6 +388,11 @@
          heme, the colour the protein really is in a test tube. */
       quinone:0x9d9a3a, cytc:0xb0483e,
       porin:0x8e939b,
+      /* THE FUEL AND ITS DOOR, for cell/animalcell.js's traffic. Glucose's
+         halo is a bright yellow that stands off a red cytoplasm; the GLUT is
+         organelles.plasma.outer a step darker, so the door reads as part of
+         the membrane it sits in. */
+      glucose:0xffd84a, glut:0xbc5a50,
       /* A PROTON IS A HYDROGEN, so it is atoms.H and not a colour of its own.
          Set below the literal, because an object cannot read itself while it
          is being built. It was a red once, which made the one thing crossing

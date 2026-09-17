@@ -389,7 +389,7 @@
   });
 
   const centred = () => ({ x: 0, y: 0 });
-  const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, detail: 'auto', clickToFly: false, viewOffset: centred }));
+  const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, flows: { glucose: 1, o2: 1, co2: 1 }, detail: 'auto', clickToFly: false, viewOffset: centred }));
   const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
   const PROTONS = { inside: { H: 50 }, outside: { H: 50 } };
   /* The real enzyme, mounted per open and destroyed on close: a second WebGL box left running behind the lesson costs every frame. */

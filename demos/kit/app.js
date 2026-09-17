@@ -167,7 +167,7 @@
     BloodFlow:  ['lib/mol-small.js', 'bloodcell/bloodcell.js', 'bloodcell/bloodflow.js'],
     HbCrowd:    ['kit/ribbon.js', 'kit/tube.js', 'kit/surface.js',
                  'sickle/sickle-fibre.js', 'sickle/hbcrowd.js'],
-    AnimalCell: ['lib/mol-small.js', 'cell/organelles.js', 'cell/animalcell.js'],
+    AnimalCell: ['lib/mol-small.js', 'lib/skel.js', 'lib/mol-sugars.js', 'cell/organelles.js', 'cell/animalcell.js'],
     /* chemiosmosis.js is arithmetic with no THREE and no DOM, and the
        organelle loads it for one thing: the rotor's stoichiometry, so this
        box and a Membrane beside it cannot disagree about what an ATP costs. */

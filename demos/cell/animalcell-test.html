@@ -39,6 +39,8 @@
 <script src="../lib/annotate.js"></script>
 <script src="../kit/card-stage.js"></script>
 <script src="../kit/lesson-shell.js"></script>
+<script src="../lib/skel.js"></script>
+<script src="../lib/mol-sugars.js"></script>
 <script src="../cell/organelles.js"></script>
 <script src="../cell/animalcell.js"></script>
 <script>
@@ -70,6 +72,8 @@ function bench(ctx) {
       <div class="bench-hd">the cell</div>
       <div class="slider"><div class="slider-head"><span class="label">motion</span><span class="value" data-v="motion"></span></div>
         <input type="range" id="motion" min="0" max="2" step="0.05" value="1"></div>
+      <div class="slider"><div class="slider-head"><span class="label">traffic (glucose, O₂, CO₂)</span><span class="value" data-v="flows"></span></div>
+        <input type="range" id="flows" min="0" max="1" step="0.05" value="0"></div>
       <div class="row"><button class="btn ghost" type="button" id="home">Home view</button></div>
     </div>
 
@@ -94,6 +98,7 @@ function bench(ctx) {
     </div>`);
 
   ui.range(ui.q('#motion'), v => { C.set({ motion: v }); ui.q('[data-v=motion]').textContent = v === 0 ? 'still' : v.toFixed(2); });
+  ui.range(ui.q('#flows'), v => { C.set({ flows: { glucose: v, o2: v, co2: v } }); ui.q('[data-v=flows]').textContent = v.toFixed(2); });
   ui.q('#home').onclick = () => C.home();
 
   /* Read off the component, so an organelle added to animalcell.js appears
