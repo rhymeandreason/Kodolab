@@ -160,6 +160,11 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  /* A quiz payload is whatever a browser posted: api/event.js caps its size,
+     not its shape. So a score is drawn only if it is a pair of numbers, and
+     the answers only if they are a list. */
+  const score = q => { const s = Number(q.score), t = Number(q.total);
+    return Number.isFinite(s) && Number.isFinite(t) ? `${s}/${t}` : ''; };
   const fileForm = /\.html$/.test(location.pathname);
   const BUILD = fileForm ? `${location.origin}/demos/build/build.html` : `${location.origin}/build`;
   const t = (q = '', body) => Apps.api('../../api/teacher' + q, body ? { method: 'POST', body } : {});
@@ -295,7 +300,7 @@
       <td class="num">${mins(r.active_s || 0)}</td>
       <td>${r.phase ? `${esc(PHASES[r.phase] || r.phase)} <span class="dim">${(r.phase_i || 0) + 1}/${N_PHASES}</span>` : '—'}</td>
       <td>${r.complete ? '<i class="ph-bold ph-check"></i>' : ''}</td>
-      <td class="num">${r.quiz ? `${r.quiz.score}/${r.quiz.total}` : ''}</td>
+      <td class="num">${r.quiz ? score(r.quiz) : ''}</td>
       <td>${r.survey ? '<i class="ph-bold ph-check"></i>' : ''}</td>
       <td class="num">${r.questions || 0}</td></tr>`).join('');
 
@@ -325,8 +330,9 @@
     parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', r.phase ? esc(PHASES[r.phase] || r.phase) : '—')
       + dl('Completed', r.complete ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
     if (r.quiz) {
-      parts.push(`<h3 class="cap">Quiz · ${r.quiz.score}/${r.quiz.total}</h3>`
-        + (r.quiz.answers || []).map(a => `<p class="qa ${a.correct ? 'ok' : 'bad'}"><i class="ph-bold ${a.correct ? 'ph-check' : 'ph-x'}"></i> ${esc(a.q)}<br><span class="dim">${esc(a.answer)}</span></p>`).join(''));
+      const s = score(r.quiz);
+      parts.push(`<h3 class="cap">Quiz${s ? ' · ' + s : ''}</h3>`
+        + (Array.isArray(r.quiz.answers) ? r.quiz.answers : []).map(a => `<p class="qa ${a.correct ? 'ok' : 'bad'}"><i class="ph-bold ${a.correct ? 'ph-check' : 'ph-x'}"></i> ${esc(a.q)}<br><span class="dim">${esc(a.answer)}</span></p>`).join(''));
     }
     if (r.survey) {
       parts.push('<h3 class="cap">Survey</h3>'
