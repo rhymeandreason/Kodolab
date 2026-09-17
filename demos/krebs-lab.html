@@ -2,8 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Served at a short URL by a vercel.json rewrite, which does not move the file:
+     relative paths resolve against this folder either way. lib/site.js is
+     absolute for the same reason. -->
+<base href="/demos/">
+<script defer src="/demos/lib/site.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Krebs cycle</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="The Krebs cycle in 3D: pyruvate oxidation, then eight steps round the ring drawn as the real molecules, and where each carbon goes.">
+<link rel="canonical" href="https://www.kodolab.org/krebs">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/krebs">
+<meta property="og:title" content="The Krebs cycle">
+<meta property="og:description" content="The Krebs cycle in 3D: pyruvate oxidation, then eight steps round the ring drawn as the real molecules, and where each carbon goes.">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">

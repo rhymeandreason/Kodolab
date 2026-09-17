@@ -67,6 +67,18 @@ const PAGES = {
     } },
   '/respiration': {
     description: 'Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.' },
+  '/krebs': {
+    description: 'The Krebs cycle in 3D: pyruvate oxidation, then eight steps round the ring drawn as the real molecules, and where each carbon goes.' },
+  '/electron-transport': {
+    description: 'The electron transport chain in 3D: NADH and FADH2 hand electrons to the complexes, protons are pumped, and the ledger counts what the gradient is worth.' },
+  '/fermentation': {
+    description: 'Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.' },
+  '/sickle-cell': {
+    description: 'Sickle cell in 3D: one letter changes in the haemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.' },
+  '/tree': {
+    description: "Where a tree's mass comes from: Van Helmont's willow, photosynthesis as traffic in and out of the leaf, and the tree taken apart by origin." },
+  '/lessons': {
+    description: 'Every Kodolab lesson in teaching order: water, bonding, proteins, the membrane, cellular respiration stage by stage, plants and DNA, with embed codes for teachers.' },
   '/membrane': { image: 'membrane',
     description: 'The cell membrane in 3D: the phospholipid bilayer, simple diffusion, selective channels, the sodium-potassium pump, and active versus passive transport.',
     about: {

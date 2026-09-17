@@ -2,8 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Served at a short URL by a vercel.json rewrite, which does not move the file:
+     relative paths resolve against this folder either way. lib/site.js is
+     absolute for the same reason. -->
+<base href="/demos/">
+<script defer src="/demos/lib/site.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fermentation</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.">
+<link rel="canonical" href="https://www.kodolab.org/fermentation">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/fermentation">
+<meta property="og:title" content="Fermentation">
+<meta property="og:description" content="Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
@@ -880,6 +895,12 @@ let prevLedger=null;
  * THE LEDGER IS THE ONE THAT STARTS OPEN — the NAD⁺ balance is this lesson's
  * whole argument, where the siblings' arithmetic is their punchline. The energy
  * card is what the verdicts on the stage open, so it never arrives by itself. */
+/* ?view=inset: the reduced view, for a host framing this page (respiration's
+ * chart, a teacher's slide). The pathway and its ledger only: no enzyme card,
+ * no energy card or the verdicts that open it. The branch handoff at the end
+ * stays, since the other branch is half the lesson. */
+const INSET=/[?&]view=inset\b/.test(location.search);
+document.documentElement.classList.toggle('inset',INSET);
 let panel='ledger';
 const setPanel=p=>{ panel=(panel===p?null:p); refresh(); };
 const cplOpen=()=>panel==='energy';
@@ -906,7 +927,7 @@ function drawAcc(){
   if(metaStep!==key){ metaStep=key; if(cplOpen()) panel=null; }
   const showL=!intro && !tallyOn();
   accSec.ledger.hidden=!showL;
-  accSec.energy.hidden=!st;
+  accSec.energy.hidden=!st || INSET;
   accEl.hidden=!showL && !st;
   for(const k in accSec){
     const open=panel===k && !accSec[k].hidden;
@@ -1029,9 +1050,10 @@ const enzEl=document.getElementById('enzymes');
 const enzNameEl=document.getElementById('enzname');
 const enzMetaEl=document.getElementById('enzmeta');
 const enzNoteEl=document.getElementById('enznote');
-// ALWAYS ON. The blob is what the step's catalyst does, not a view of it, and
-// a lesson about enzymes that opens with them switched off argues the reverse.
-const showEnz=true;
+// ON except in the inset view. The blob is what the step's catalyst does, not
+// a view of it, and a lesson about enzymes that opens with them switched off
+// argues the reverse; the inset is the view that leaves the enzyme out.
+const showEnz=!INSET;
 const enzOf=()=>{ const i=focusStep(); return (!intro && i<nSteps()) ? stepAt(i) : null; };
 const enzLive=()=>showEnz && !!enzOf() && !tallyOn();
 const enzLanes=i=>{ const b=speciesAt(i), a=speciesAt(i+1);
@@ -1062,10 +1084,10 @@ function placeEnz(){
 function drawEnzMeta(){
   const i=focusStep();
   const st=(!intro && i<nSteps() && !tallyOn()) ? stepAt(i) : null;
-  enzMetaEl.hidden=!st;
+  enzMetaEl.hidden=!st || INSET;
   enzNoteEl.hidden=!(st&&st.takeaway);
   enzNoteEl.textContent=(st&&st.takeaway)||'';
-  if(!st){ enzMetaEl.innerHTML=''; return; }
+  if(!st || INSET){ enzMetaEl.innerHTML=''; return; }
   const on=cplOpen()?'true':'false';
   const first = st.couple ? 'k-cpl' : (st.rev===false ? 'k-irr' : 'k-rev');
   enzMetaEl.innerHTML=
@@ -1075,7 +1097,7 @@ function drawEnzMeta(){
         st.rev===false?'Irreversible':'Reversible'}</button>`;
 }
 enzMetaEl.addEventListener('click',e=>{
-  if(!e.target.closest('[data-cpl]')) return;
+  if(!e.target.closest('[data-cpl]') || INSET) return;
   setPanel('energy');
 });
 

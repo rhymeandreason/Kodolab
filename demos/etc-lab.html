@@ -2,8 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Served at a short URL by a vercel.json rewrite, which does not move the file:
+     relative paths resolve against this folder either way. lib/site.js is
+     absolute for the same reason. -->
+<base href="/demos/">
+<script defer src="/demos/lib/site.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Electron transport chain</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="The electron transport chain in 3D: NADH and FADH2 hand electrons to the complexes, protons are pumped, and the ledger counts what the gradient is worth.">
+<link rel="canonical" href="https://www.kodolab.org/electron-transport">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/electron-transport">
+<meta property="og:title" content="Electron transport chain">
+<meta property="og:description" content="The electron transport chain in 3D: NADH and FADH2 hand electrons to the complexes, protons are pumped, and the ledger counts what the gradient is worth.">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
@@ -881,6 +896,12 @@ let prevLedger=null;
  * after the last click first says something at the moment it can no longer
  * teach anything. The energy card is what the verdicts on the stage open, so
  * it never arrives by itself. */
+/* ?view=inset: the reduced view, for a host framing this page (respiration's
+ * chart, a teacher's slide). The pathway and its ledger only: no enzyme card,
+ * no energy card or the verdicts that open it. The branch handoff at the end
+ * stays, since the other branch is half the lesson. */
+const INSET=/[?&]view=inset\b/.test(location.search);
+document.documentElement.classList.toggle('inset',INSET);
 let panel='ledger';
 const setPanel=p=>{ panel=(panel===p?null:p); refresh(); };
 const cplOpen=()=>panel==='energy';
@@ -903,7 +924,7 @@ function drawAcc(){
   if(metaStep!==key){ metaStep=key; if(cplOpen()) panel=null; }
   const showL=!intro && !tallyOn();
   accSec.ledger.hidden=!showL;
-  accSec.energy.hidden=!st;
+  accSec.energy.hidden=!st || INSET;
   accEl.hidden=!showL && !st;
   for(const k in accSec){
     const open=panel===k && !accSec[k].hidden;
@@ -1024,17 +1045,17 @@ function placeEnz(){
 function drawEnzMeta(){
   const i=focusStep();
   const st=(!intro && i<nSteps() && !tallyOn()) ? stepAt(i) : null;
-  enzMetaEl.hidden=!st;
+  enzMetaEl.hidden=!st || INSET;
   enzNoteEl.hidden=!(st&&st.takeaway);
   enzNoteEl.textContent=(st&&st.takeaway)||'';
-  if(!st){ enzMetaEl.innerHTML=''; return; }
+  if(!st || INSET){ enzMetaEl.innerHTML=''; return; }
   const on=cplOpen()?'true':'false';
   enzMetaEl.innerHTML=
       `<span class="east k-irr" aria-hidden="true"></span>`
     + `<button class="estat k-irr" data-cpl aria-pressed="${on}">Irreversible</button>`;
 }
 enzMetaEl.addEventListener('click',e=>{
-  if(!e.target.closest('[data-cpl]')) return;
+  if(!e.target.closest('[data-cpl]') || INSET) return;
   setPanel('energy');
 });
 

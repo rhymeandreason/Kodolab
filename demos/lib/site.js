@@ -65,11 +65,11 @@
   /* THE FOUR PLACES THIS SITE HAS, and the pattern that says you are in one.
      Here rather than in each page's own bar: a link typed into one bar is a
      link the other nine do not have, and which pages carry the nav then
-     depends on when each was last edited. Lessons is the front door's own
-     shelf — the homepage IS the lesson index, so it is a fragment on it and
-     not a page of its own. */
+     depends on when each was last edited. Lessons is /lessons, the course in
+     teaching order; the front door counts as being there too, since it is the
+     same shelf, shorter. */
   var NAV = [
-    { text: 'Lessons',    href: '/#field',     at: /^$/ },
+    { text: 'Lessons',    href: '/lessons',    at: /^(\/lessons)?$/ },
     // The collections are one place: a protein's own page and the molecule
     // shelf are both "in the library", and a reader who got there from it
     // should still be able to see where they are.
