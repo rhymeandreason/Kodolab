@@ -504,7 +504,8 @@ function card(l, extra = '') {
     frame.style.setProperty('--ar', `${z.w} / ${z.h}`);
     // as wide as the pane allows, unless the height runs out first
     const room = pane.clientHeight - 2 * parseFloat(getComputedStyle(pane).paddingTop);
-    frame.style.width = Math.min(pane.clientWidth, room * z.w / z.h) + 'px';
+    // at the size asked for, when the pane has room for it; scaled down when not
+    frame.style.width = Math.min(z.w, pane.clientWidth, room * z.w / z.h) + 'px';
     if (!f) return;
     f.style.width = z.lw + 'px'; f.style.height = z.lh + 'px';
     f.style.transform = `scale(${frame.clientWidth / z.lw})`;
