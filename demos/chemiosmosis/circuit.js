@@ -436,6 +436,8 @@
        Timed off the machine's own cycle: it arrives as the machine opens to
        load and is spent on `occlude`. */
     const FUEL_SPEED = 34, FUEL_FADE = 0.9;
+    const LEAVE_X = 420;   // past the frame's edge at the default camera
+    const leaving = [];
     const chips = {};
     const pulse = { complex: null, I: null, II: null, PSII: null };
     /* A flash is one PSII turn, and PSI owes it one turn later, whenever its
@@ -525,11 +527,25 @@
         const c = chips[key];
         const there = approach(c, c.to, dt, FUEL_SPEED);
         if (there && !c.spent) c.docked = true;
-        if (c.spent && there) {
-          c.fade -= dt / FUEL_FADE;
-          fade(c.obj, c.fade);
-          if (c.fade <= 0) clearFuel(key);
-        }
+        if (c.spent && there) { leaving.push(c); delete chips[key]; }
+      }
+      /* A SPENT CARRIER IS A FREE MOLECULE: NAD⁺ wanders back into the matrix
+         to be reduced again, so it drifts off the side of the frame instead
+         of vanishing beside the complex. Out of `chips`, so the next carrier
+         need not wait for it. Kept in the band between the membrane and the
+         drawn floor of the compartment. */
+      const d = pumpDir(), H = H_(), floor = Math.min(P.bounds && P.bounds.down != null ? P.bounds.down : P.extent, P.extent) - 10;
+      for (let i = leaving.length - 1; i >= 0; i--) {
+        const c = leaving[i];
+        if (!c.vx) { c.vx = (c.x < 0 ? -1 : 1) * rnd(10, 16); c.vy = rnd(-6, 6); }
+        c.vy = Math.max(-14, Math.min(14, c.vy + rnd(-40, 40) * dt));
+        c.x += c.vx * dt; c.y += c.vy * dt;
+        const depth = -d * c.y;
+        if (depth < H + 14) { c.y = -d * (H + 14); c.vy = -d * Math.abs(c.vy); }
+        if (depth > floor) { c.y = -d * floor; c.vy = d * Math.abs(c.vy); }
+        seat(c.obj, c.x, c.y, 0);
+        if (Math.abs(c.x) > LEAVE_X) { c.fade -= dt / FUEL_FADE; fade(c.obj, c.fade); }
+        if (c.fade <= 0) { dropToken(c.obj); leaving.splice(i, 1); }
       }
     }
     function clearFuel(key) {
@@ -538,6 +554,7 @@
         dropToken(chips[k].obj);
         delete chips[k];
       }
+      if (!key) { for (const c of leaving) dropToken(c.obj); leaving.length = 0; }
     }
 
     /* ---- oxygen, where the electrons end ----

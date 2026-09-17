@@ -702,15 +702,17 @@
       tally[k] += now[k] - was;
     }
     seen = now;
-    for (const b of etc.querySelectorAll('.tally b')) b.textContent = tally[b.dataset.k];
+    for (const b of etc.querySelectorAll('.tally b')) if (b.textContent !== String(tally[b.dataset.k])) b.textContent = tally[b.dataset.k];
     buttons(st);
   }
   function buttons(st = chemi.state()) {
     const w = st.waiting || {};
     for (const b of etc.querySelectorAll('button[data-fuel]')) {
       const f = b.dataset.fuel, left = GLUCOSE[f] - sent[f];
-      b.textContent = `Send ${NAME[f]} (${left} left)`;
-      b.disabled = left <= 0 || (w[DOOR[f]] || 0) >= w.max;
+      /* Written only on change: Safari drops a click whose button was rewritten between press and release, and count() runs every 250 ms. */
+      const text = `Send ${NAME[f]} (${left} left)`, off = left <= 0 || (w[DOOR[f]] || 0) >= w.max;
+      if (b.textContent !== text) b.textContent = text;
+      if (b.disabled !== off) b.disabled = off;
     }
   }
   etc.addEventListener('click', ev => {
