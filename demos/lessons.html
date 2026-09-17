@@ -123,7 +123,6 @@
   .card .foot { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-top: auto; padding-top: .6rem; }
   .marks { display: flex; gap: .35rem; flex-wrap: wrap; }
   .mark { display: inline-flex; align-items: center; gap: .3rem; font: 500 11px/1 var(--sans); letter-spacing: .06em; padding: .38em .6em; border-radius: 6px; background: var(--paper-2); color: var(--ink-2); }
-  .mark.tutor { background: #EAF3FF; }
   .mark.quiz { background: #EAFBEF; }
   .mark.build { background: #FFF3D6; }
   /* Sits above the card-wide link, so it is clickable. */
@@ -280,7 +279,6 @@
     <div>
       <p class="lede">Every lesson is a 3D scene drawn from real structures, with the text on the model where you are looking. <b>Free, no account.</b> Any of them can go inside your own slides or course page.</p>
       <ul class="legend" aria-label="What the marks mean">
-        <li><span class="sw" style="background:#EAF3FF">✦</span> AI tutor</li>
         <li><span class="sw" style="background:#EAFBEF">✓</span> Quiz</li>
         <li><span class="sw" style="background:#FFF3D6">⌘</span> Made with Build</li>
         <li><span class="sw" style="border:1.5px solid rgba(var(--ink-t),.2)">⧉</span> Embed code</li>
@@ -319,16 +317,16 @@
       <div class="col">
         <span class="k">Class links</span>
         <h3>One link, and the class reports back</h3>
-        <p>Sign in as a teacher and make a class. It gets one link; hand it out, and every session on a lesson lands on your Teach page, with quiz scores and the questions students asked the tutor.</p>
+        <p>Sign in as a teacher and make a class. It gets one link; hand it out, and every session on a lesson lands on your Teach page, with the quiz scores.</p>
         <p>Students never make an account. The link carries the class, and nothing else.</p>
         <div class="act"><a class="cta ghost" href="/teach">Open Teach</a></div>
       </div>
       <div class="col">
-        <span class="k">Tutor and quiz</span>
-        <h3>A model that answers about the model</h3>
-        <p>Water and Cellular respiration carry a tutor: a student asks about what is on the stage, and the answer comes from the lesson, not the whole internet. Respiration ends in a short quiz whose score reaches your class page.</p>
-        <p>The tutor answers for a class with a key. Teaching one? Say so on the waitlist and you go to the front.</p>
-        <div class="act"><a class="cta ghost" href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Ask for a key →</a></div>
+        <span class="k">Quiz</span>
+        <h3>A short check at the end</h3>
+        <p>Cellular respiration ends in a short quiz, one question at a time, on what the lesson showed. With a class link the score reaches your Teach page.</p>
+        <p>Teaching a class? Say so on the waitlist and you go to the front.</p>
+        <div class="act"><a class="cta ghost" href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist →</a></div>
       </div>
     </div>
   </div>
@@ -405,12 +403,12 @@ const UNITS = [
   { key: 'gene',  n: '06', hue: 'var(--blue)',   title: 'Genetics',              why: 'The helix, from real coordinates, taken apart.' },
 ];
 const LESSONS = [
-  { key: 'water',        unit: 'chem',   url: '/water',              file: '/demos/water-lab.html',        title: 'Structure of Water',            blurb: 'Hydrogen bonds, why ice floats, and why salt falls apart in it.', still: '/demos/media/kodo-water.webp', status: 'featured', tutor: true, bare: true },
+  { key: 'water',        unit: 'chem',   url: '/water',              file: '/demos/water-lab.html',        title: 'Structure of Water',            blurb: 'Hydrogen bonds, why ice floats, and why salt falls apart in it.', still: '/demos/media/kodo-water.webp', status: 'featured', bare: true },
   { key: 'bonds',        unit: 'chem',   url: '/molecular-bonds',    file: '/demos/molecule-builder.html', title: 'Covalent & Ionic Bonds',        blurb: 'Drag atoms together and let valence decide what you get.', still: '/demos/media/kodo-bonding.webp', status: 'featured' },
   { key: 'protein',      unit: 'macro',  url: '/protein',            file: '/demos/hemoglobin-lab.html',   title: 'Levels of Protein Structure',   blurb: 'Haemoglobin, from a chain of amino acids to four folded chains.', still: '/demos/proteins/stills/hemoglobin.webp', status: 'featured', bare: true },
   { key: 'sickle',       unit: 'macro',  url: '/sickle-cell',        file: '/demos/sickle-lab.html',       title: 'Sickle Cell',                   blurb: 'One letter changes, a protein sticks to itself, and a red cell jams.', still: '/demos/media/components/bloodcell.webp', status: 'preview' },
   { key: 'membrane',     unit: 'cell',   url: '/membrane',           file: '/demos/membrane-lab.html',     title: 'The Membrane',                  blurb: 'What gets through, what does not, and what a pump costs.', still: '/demos/media/kodo-membrane.webp', status: 'featured', bare: true },
-  { key: 'respiration',  unit: 'energy', url: '/respiration',        file: '/demos/respiration-lab.html',  title: 'Cellular Respiration',          blurb: 'How a cell turns sugar into usable energy: the whole route on one chart, from the cell to the mitochondrion to the chain, with a door into each stage.', still: '/demos/media/components/mitochondrion.webp', status: 'featured', tutor: true, quiz: true, hub: true },
+  { key: 'respiration',  unit: 'energy', url: '/respiration',        file: '/demos/respiration-lab.html',  title: 'Cellular Respiration',          blurb: 'How a cell turns sugar into usable energy: the whole route on one chart, from the cell to the mitochondrion to the chain, with a door into each stage.', still: '/demos/media/components/mitochondrion.webp', status: 'featured', quiz: true, hub: true },
   { key: 'glycolysis',   unit: 'energy', url: '/glycolysis',         file: '/demos/glycolysis-lab.html',   title: 'Glycolysis',                    blurb: 'Ten steps, every one drawn as the real molecule.', still: '/demos/media/kodo-glycolysis.webp', status: 'featured', bare: true, simple: 'view=inset', path: 1 },
   { key: 'krebs',        unit: 'energy', url: '/krebs',              file: '/demos/krebs-lab.html',        title: 'The Krebs Cycle',               blurb: 'Pyruvate oxidation, then eight steps round the ring. Where the carbon goes.', still: '/demos/media/kodo-krebs.webp', status: 'new', bare: true, simple: 'view=inset', path: 2 },
   { key: 'etc',          unit: 'energy', url: '/electron-transport', file: '/demos/etc-lab.html',          title: 'Electron Transport Chain',      blurb: 'Where the electrons go, and why the ledger counts protons, not ATP.', still: '/demos/media/components/chemiosmosis.webp', status: 'new', bare: true, simple: 'view=inset', path: 3 },
@@ -423,7 +421,7 @@ const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g,
 const EMB_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>';
 
 function card(l, extra = '') {
-  const marks = [l.tutor && '<span class="mark tutor">✦ AI tutor</span>', l.quiz && '<span class="mark quiz">✓ Quiz</span>', l.build && '<span class="mark build">⌘ Made with Build</span>'].filter(Boolean).join('');
+  const marks = [l.quiz && '<span class="mark quiz">✓ Quiz</span>', l.build && '<span class="mark build">⌘ Made with Build</span>'].filter(Boolean).join('');
   return `<article class="card ${extra}" data-key="${l.key}">
     <a class="pic" href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"><span class="tag ${l.status === 'preview' ? 'soon' : ''}"><i></i>${l.hub ? 'Start here' : STATUS[l.status]}</span></a>
     <div class="body">
@@ -477,7 +475,6 @@ function card(l, extra = '') {
     facts.innerHTML = [
       l.bare ? 'Inside a frame it drops its own title bar.' : 'Keeps its own title bar inside a frame.',
       'No login, no cookies. The frame is the whole lesson.',
-      l.tutor ? 'The tutor stays out of a frame; students get it on the lesson page.' : null,
     ].filter(Boolean).map(f => `<li>${f}</li>`).join('');
     code.textContent = snippet(l);
     open.href = l.url + query(l);
