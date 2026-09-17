@@ -120,7 +120,7 @@
        thylakoid, drawn as ONE when the lesson's claim is "something with
        energy to spend pumps protons". INDIGO: a mitochondrion's lipid is
        orange, and a warm machine disappears into it. A carrier, so a snug
-       site. SYNTHASE: the c-ring is why it has that many lobes. */
+       site. */
     const holeOf = (R, lobe) => R * (1 + lobe) + 0.5;
     const CPX_R = 16.0, CPX_LOBE = 0.14;
     const COMPLEX = Parts.transporter({ half:HALF, site:6.2, mouth:8.0, radius:CPX_R, lobes:3, lobeDepth:CPX_LOBE, color:RESP.complex });
@@ -170,8 +170,8 @@
        the membrane is thick. On the other face, cytochrome c₁ and the Rieske
        iron-sulfur head make a low knob where cytochrome c docks.
        COMPLEX IV (PDB 1OCC) WORKS AS A MONOMER and IS a pump, so it keeps the
-       lathe and its gates, but squat and wide: mostly buried, a small bump
-       into the matrix, and subunit II's Cu_A domain as a knob on the outer
+       lathe and its gates, but squat and wide: mostly buried, with
+       subunit II's Cu_A domain as a knob on the outer
        face, cytochrome c's dock. */
     const III_DROP = 34;   // how far the core hangs below the membrane's centre, past HALF
     function bc1() {
@@ -220,14 +220,36 @@
     const III_C1 = HALF + 3;
     const KNOBS = {
       III: [knob(RESP.complex, 6, -5, III_C1, 1, 0.8), knob(RESP.complex, 4.5, 7, III_C1 - 1, 1, 0.8)],
-      IV:  [knob(RESP.complex, 7, 2, CX.IV.height, -1, 0.55), knob(RESP.complex, 6.5, -4, CX.IV.height + 2, 1, 0.85)],
+      IV:  [knob(RESP.complex, 6.5, -4, CX.IV.height + 2, 1, 0.85)],
     };
     for (const k in KNOBS) CX[k].group.add(...KNOBS[k]);
     /* where cytochrome c sits: on c₁ at III, on Cu_A at IV */
     const cSeat = key => key === 'III' ? III_C1 + 6 + 5 : key === 'IV' ? CX.IV.height + 2 + 6.5 * 0.85 + 5 : H_() + 7;
 
-    const SYN_R = 13.2, SYN_LOBE = 0.09;
-    const SYNTH   = Parts.transporter({ half:HALF, site:6.0, mouth:8.2, radius:SYN_R, lobes:8, lobeDepth:SYN_LOBE, color:RESP.synthase });
+    /* ATP SYNTHASE HAS NO TUBE THROUGH IT (bovine, PDB 6ZPO). In the membrane
+       is Fo: a ring of eight c subunits that turns, with lipid in its middle,
+       and beside it the stator subunit a. A proton comes in through a
+       half-channel in a, rides a c subunit most of a turn, and leaves by a's
+       other half-channel, so the path is AT THE a/c INTERFACE, not down an
+       axis. The ring drives the narrow central stalk up into F1, the αβ
+       head in the matrix, which the peripheral stalk holds still from a.
+       Proportions follow the structure: ring about half the head's width,
+       stalk a head's radius long. */
+    const RING_R = 7.5, C_R = 2.4, A_X = RING_R + C_R + 4.2, LANE_DX = RING_R + C_R + 0.6;
+    const STALK_L = 15, F1_R = 19, F1_H = 15;
+    const F1_BASE = HALF + 1 + STALK_L;               // the head's flat underside, from the membrane's centre
+    /* the membrane is cleared from the ring's far edge to a's */
+    const SYN_MID = (A_X + 4.2 - RING_R - C_R) / 2, SYN_HALFW = (A_X + 4.2 + RING_R + C_R) / 2 + 1, SYN_LOBE = 0;
+    function buildSynthase() {
+      const aGeo = new THREE.CylinderGeometry(4.2, 4.2, 2 * HALF + 3, 16);
+      const mesh = new THREE.Mesh(aGeo, Parts.flat(RESP.stalk));
+      mesh.position.x = A_X; mesh.scale.set(1, 1, 1.5);
+      const group = new THREE.Group(); group.add(mesh);
+      /* height is the reach a proton is captured at, as a transporter's is */
+      return { group, mesh, geometry: aGeo, height: HALF + 14, setGates() {}, get gates() { return { top: 1, bottom: 1 }; },
+               site: new THREE.Vector3(), dispose() { aGeo.dispose(); mesh.material.dispose(); } };
+    }
+    const SYNTH = buildSynthase();
     /* An UNCOUPLER's hole: dinitrophenol, or thermogenin in brown fat.
        Protons come back without touching the synthase, so the gradient
        collapses and no ATP is made. Grey: it is a hole, not a machine. */
@@ -246,7 +268,7 @@
        mvPerIon is a timing knob rather than a measurement. */
     const ANT_R = 10.0, ANT_LOBE = 0.08;
     const ANT = Parts.transporter({ half:HALF, site:5.4, mouth:7.0, radius:ANT_R, lobes:0, color:RESP.translocase });
-    const ROTOR = buildRotor(SYNTH.height), HEAD = buildHead(SYNTH.height);
+    const ROTOR = buildRotor(), HEAD = buildHead();
     SYNTH.group.add(ROTOR, HEAD);
     root.add(COMPLEX.group, SYNTH.group, LEAK.group, ANT.group, ...ALL.map(k => CX[k].group));
     const H_ = () => COMPLEX.height;
@@ -288,38 +310,64 @@
       OUTER.cut.enable(eng.cut);
     }
 
-    /* ATP synthase above the barrel. The ROTOR turns: a central stalk and
-       a ring of eight c subunits at the barrel's mouth, with an off-axis
-       foot on the stalk so the turning reads even where the ring is hidden.
-       The F1 HEAD is a dome that does not turn, held by the peripheral
-       stalk; its three αβ pairs are why a third of a turn is one ATP. */
-    function buildRotor(h) {
+    /* The ROTOR turns: the c ring in the membrane and the central stalk
+       above it, with an off-axis foot so the turning reads. The STATOR does
+       not: F1, the peripheral stalk and its cap. F1's three αβ pairs are why
+       a third of a turn is one ATP. Children are
+       placed by baseY and a side, so orient() can mirror them by sign. */
+    function buildRotor() {
       const g = new THREE.Group();
       const stalkMat = Parts.flat(RESP.stalk), gold = Parts.flat(RESP.synthase);
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 12, 12), stalkMat);
-      shaft.userData.baseY = h + 5; g.add(shaft);
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(7, 2.2, 3), stalkMat);
-      foot.position.x = 3.5; foot.userData.baseY = h + 1.8; g.add(foot);
       for (let i = 0; i < 8; i++) {
-        const c = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 4.5, 10), gold);
+        const c = new THREE.Mesh(new THREE.CylinderGeometry(C_R, C_R, 2 * HALF + 2, 12), gold);
         const th = (i / 8) * Math.PI * 2;
-        c.position.set(Math.cos(th) * 9.6, 0, Math.sin(th) * 9.6);
-        c.userData.baseY = h + 1.2; g.add(c);
+        c.position.set(Math.cos(th) * RING_R, 0, Math.sin(th) * RING_R);
+        c.userData.baseY = 0; g.add(c);
       }
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, STALK_L + 6, 12), stalkMat);
+      shaft.userData.baseY = HALF + 1 + (STALK_L + 6) / 2; g.add(shaft);
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(8, 2.4, 3), stalkMat);
+      foot.position.x = 3.5; foot.userData.baseY = HALF + 2.5; g.add(foot);
       return g;
     }
-    /* A lathe profile, flat underneath and rounding over the top, so it
-       reads as a dome rather than a squashed ball. Pointing +y. */
-    function buildHead(h) {
-      const R = 19, H = 15, pts = [new THREE.Vector2(0, 0), new THREE.Vector2(R * 0.55, 0)];
+    /* F1 as a dome: a lathe profile, flat underneath and rounding over the
+       top, so it reads as a dome rather than a squashed ball. */
+    function buildHead() {
+      const g = new THREE.Group();
+      const R = F1_R, H = F1_H, pts = [new THREE.Vector2(0, 0), new THREE.Vector2(R * 0.55, 0)];
       pts.push(new THREE.Vector2(R * 0.93, 0.6), new THREE.Vector2(R, 2.4));
       for (let i = 1; i <= 12; i++) {
         const t = (i / 12) * Math.PI / 2;
         pts.push(new THREE.Vector2(R * Math.cos(t), 2.4 + (H - 2.4) * Math.sin(t)));
       }
-      const head = new THREE.Mesh(new THREE.LatheGeometry(pts, 36), Parts.flat(RESP.synthase));
-      head.userData.baseY = h + 10.5;
-      return head;
+      const dome = new THREE.Mesh(new THREE.LatheGeometry(pts, 36), Parts.flat(RESP.synthase));
+      dome.userData.baseY = F1_BASE; dome.userData.dome = true;
+      const stalkMat = Parts.flat(RESP.stalk);
+      const b = new THREE.Mesh(new THREE.BufferGeometry(), stalkMat); b.userData.stalk = true;
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(3.4, 14, 10), stalkMat);
+      cap.position.x = F1_R * 0.45; cap.userData.baseY = F1_BASE + F1_H + 1.5;
+      g.add(dome, b, cap);
+      return g;
+    }
+    /* THE PERIPHERAL STALK BOWS around the head: out of a, up past F1's rim,
+       and over onto the OSCP cap on top. Rebuilt per side, since mirroring a
+       mesh by a negative scale would turn its lighting inside out. */
+    let stalkSide = 0;
+    function bendStalk(d) {
+      const b = HEAD.children.find(c => c.userData.stalk);
+      if (!b || stalkSide === d) return;
+      stalkSide = d;
+      const s = -d, V = THREE.Vector3;
+      const curve = new THREE.CatmullRomCurve3([
+        new V(A_X, s * (HALF + 1), 0),
+        new V(A_X + 5, s * (HALF + 8), 0),
+        new V(F1_R + 3, s * (F1_BASE + 2), 0),
+        new V(F1_R + 1, s * (F1_BASE + F1_H * 0.6), 0),
+        new V(F1_R * 0.75, s * (F1_BASE + F1_H + 1), 0),
+        new V(F1_R * 0.45, s * (F1_BASE + F1_H + 1.5), 0),
+      ]);
+      b.geometry.dispose();
+      b.geometry = new THREE.TubeGeometry(curve, 40, 1.3, 10, false);
     }
 
     /* ---- small tokens: a sphere or two with a name on a pill ---- */
@@ -431,7 +479,7 @@
       const g = buildNucleotide(3);
       root.add(g);
       atpChips.push({ obj:g, t:0, phase:Math.random() * 6.28, fade:1,
-                      x:(synthX || 0), y:-pumpDir() * (SYNTH.height + 20), legs:atpRoute(), leg:0 });
+                      x:(synthX || 0) - F1_R * 0.8, y:-pumpDir() * (F1_BASE + 4), legs:atpRoute(), leg:0 });
     }
     /* EXPORT IS PAID IN PROTONS, charged when the ATP is made rather than
        when a drawn one reaches the door, because ATP_MAX caps the drawn ones
@@ -1530,8 +1578,9 @@
         }
         SYNTH.group.visible = !!pr.synthase;
         synthX = pr.synthase ? pr.synthase.x : null;
-        if (pr.synthase) { SYNTH.group.position.x = synthX; SYNTH.setGates(1, 1);
-          holes.push([synthX, holeOf(SYN_R, SYN_LOBE)]); PORES.push({ x:synthX, R:SYN_R, lumen:8.2, kind:'H', door:'synthase' }); }
+        if (pr.synthase) { SYNTH.group.position.x = synthX;
+          /* the door is the a/c interface, beside the ring's axis */
+          holes.push([synthX + SYN_MID, holeOf(SYN_HALFW, SYN_LOBE)]); PORES.push({ x:synthX + LANE_DX, R:C_R + 2, lumen:4, kind:'H', door:'synthase' }); }
         LEAK.group.visible = !!pr.leak;
         if (pr.leak) { LEAK.group.position.x = pr.leak.x; LEAK.setGates(1, 1);
           holes.push([pr.leak.x, holeOf(LEAK_R, LEAK_LOBE)]); PORES.push({ x:pr.leak.x, R:LEAK_R, lumen:7.6, kind:'H', door:'leak', weight:LEAK_PREFERENCE }); }
@@ -1545,7 +1594,12 @@
          scale, which would turn the lighting inside out. */
       orient(d) {
         for (const child of ROTOR.children) child.position.y = -d * child.userData.baseY;
-        HEAD.position.y = -d * HEAD.userData.baseY; HEAD.rotation.x = d > 0 ? Math.PI : 0;
+        for (const child of HEAD.children) {
+          if (child.userData.stalk) continue;
+          child.position.y = -d * child.userData.baseY;
+          if (child.userData.dome) child.rotation.x = d > 0 ? Math.PI : 0;
+        }
+        bendStalk(d);
         ARM_I.position.y = -d * ARM_I.userData.baseY; ARM_I.rotation.z = 0.45 * d;
         for (const m of HEAD_II.children) m.position.y = -d * m.userData.baseY;
         CX.III.mesh.rotation.x = d > 0 ? 0 : Math.PI;   // the pear's belly on the loading side
@@ -1564,7 +1618,7 @@
          of the same pass(). A proton down the uncoupler's hole turns nothing. */
       onConduct(t, dir) {
         if (t.kind !== 'H' || dir !== -pumpDir()) return;
-        if (synthX != null && t.lane === synthX) { protonsThroughSynthase++; if (ROT.pass(1)) { releaseATP(); exportCost(); eng.emit('atp', ROT.atp); } }
+        if (synthX != null && t.lane === synthX + LANE_DX) { protonsThroughSynthase++; if (ROT.pass(1)) { releaseATP(); exportCost(); eng.emit('atp', ROT.atp); } }
         else protonsLeaked++;
       },
       withContents: withProtons,
@@ -1678,7 +1732,7 @@
         translocase: () => antX == null ? null : at(antX, ANT.height * 0.98),
         porin:    () => !outerOn() ? null : at(porinX, outerY() + pumpDir() * HALF * 0.9),
         cytosol:  () => !outerOn() ? null : at(eng.clearX(), outerY() + pumpDir() * 34),
-        synthase: () => synthX == null ? null : at(synthX, -pumpDir() * SYNTH.height * 1.15),
+        synthase: () => synthX == null ? null : at(synthX, -pumpDir() * (F1_BASE + F1_H * 0.5)),
         leak:     () => P.proteins.leak ? at(P.proteins.leak.x, LEAK.height * 0.98) : null,
         oxygen:   () => o2 ? o2.obj.position : psiiO2.length ? psiiO2[0].obj.position : null,
         H: () => eng.firstOf('H'),
