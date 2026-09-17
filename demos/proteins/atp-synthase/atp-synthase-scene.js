@@ -62,10 +62,13 @@ function siteOnly(site, keep){
 }
 
 /* ---- the turn ------------------------------------------------------------- */
-const DEG_PER_SEC = 30;
-/* The rotor does not glide: each proton through subunit a advances the ring
-   one c-subunit, 360/c degrees, then it dwells until the next. */
-const MOVE = 0.3;   // fraction of each step spent moving
+/* THE PROTONS DRIVE THE ROTOR. It does not glide: a proton landing on the
+   Glu58 at subunit a's entry half-channel advances the ring one c-subunit,
+   360/c degrees, and a proton that has ridden c−1 steps round leaves by the
+   exit half-channel. Protons arrive one every PERIOD. */
+const PERIOD = 1.5;    // s between protons, so between steps
+const MOVE_S = 0.45;   // s a step takes
+const FIRST = 0.8;     // s until the first proton lands
 
 /* ---- the flow ------------------------------------------------------------- *
  *  DRAWN, NOT DEPOSITED. No map shows a proton and no file catches a
@@ -80,10 +83,11 @@ const MOVE = 0.3;   // fraction of each step spent moving
  *  WHICH SITE OPENS NEXT is inference. The β this file holds empty is the one
  *  that just let go, and the sites open in the direction of rotation. */
 const GLU = 58, PLOOP = [160, 167];
-const BOARD = 20, ALIGHT = 340;     // degrees past subunit a: the two half-channels
+const BOARD = 20;                   // degrees past subunit a: the entry half-channel
 const FACE = 24;                    // Å either side of the ring's middle a proton is drawn from and to
 const HOP = 0.9;                    // s, out of a half-channel
 const APPROACH = 3.2;               // s, a proton's wander in from beside the ring
+const DROP = 45;                    // Å above the entry mouth a hurried proton starts
 const REACH = 130;                  // Å out from subunit a a proton starts
 const WOBBLE = 14;                  // Å of sideways drift on the way in
 const DRIFT = 150;                  // Å a nucleotide travels from its site: out toward the canvas edge
@@ -174,7 +178,7 @@ function membrane(t, context){
 
 function attach(box){
   let t = null, on = false, spinning = true, pivot = null;
-  let turned = 0, drive = 0, band = null, lastT = 0, raf = 0, pending = false;
+  let turned = 0, target = 0, moving = null, clock = 0, nextLand = FIRST, band = null, lastT = 0, raf = 0, pending = false;
   const AXIS = new THREE.Vector3();
   const _n = new THREE.Vector3(), _x = new THREE.Vector3(), _p = new THREE.Vector3();
 
@@ -290,18 +294,40 @@ function attach(box){
     }
     const withTag = kind => { const m = molecule(kind); const tag = tagFor(m, kind); tag.visible = false; return { m, tag }; };
 
-    function step(prev, now, dt){
+    const wrap = d => ((d % 360) + 540) % 360 - 180;
+    /* The Glu58 that will sit at the entry when this proton lands: the ring
+       will have moved one step for every proton still in flight ahead of it. */
+    function spawn(approach, target, stepDeg){
       if(!geo) geo = measure();
-      for(const g of geo.glu){
-        const crossed = d => Math.floor((g.az + prev - d) / 360) < Math.floor((g.az + now - d) / 360);
-        if(crossed(BOARD)){
-          const R = () => Math.random() * 2 - 1;
-          const start = geo.from.clone().addScaledVector(geo.u, REACH * (0.8 + 0.4 * Math.random()))
-            .addScaledVector(geo.w, 40 * R()).addScaledVector(geo.A, 20 * R());
-          const waves = [0, 1].map(() => ({ f: 0.8 + 0.8 * Math.random(), ph: Math.random() * 6.28 }));
-          live.push({ kind: 'H', m: proton(), g, phase: 'in', clock: 0, at: now, start, waves });
-        }
+      const ahead = live.filter(x => x.kind === 'H' && x.phase === 'in').length;
+      const at = target + stepDeg * ahead;
+      const g = geo.glu.reduce((b, g) => Math.abs(wrap(g.az + at - BOARD)) < Math.abs(wrap(b.az + at - BOARD)) ? g : b);
+      const R = () => Math.random() * 2 - 1;
+      /* A proton with a full approach wanders in from beside the ring; one
+         the rotor is already waiting on drops straight in from the proton
+         side (−A, away from F1). */
+      const start = approach >= APPROACH
+        ? geo.from.clone().addScaledVector(geo.u, REACH * (0.8 + 0.4 * Math.random()))
+            .addScaledVector(geo.w, 40 * R()).addScaledVector(geo.A, 20 * R())
+        : geo.from.clone().addScaledVector(geo.A, -DROP * (0.4 + 0.6 * approach / APPROACH))
+            .addScaledVector(geo.w, 10 * R());
+      const waves = [0, 1].map(() => ({ f: 0.8 + 0.8 * Math.random(), ph: Math.random() * 6.28 }));
+      live.push({ kind: 'H', m: proton(), g, phase: 'in', clock: 0, dur: approach, start, waves });
+    }
+    /* The ring finished a step: every rider moved one c-subunit. */
+    function stepped(c){
+      for(const x of live) if(x.kind === 'H' && x.phase === 'ride' && ++x.steps >= c - 1){
+        x.phase = 'out'; x.clock = 0; x.start = x.m.position.clone();
       }
+    }
+    /* Rotor angle that puts a Glu58 exactly at the entry. */
+    function rest(){
+      if(!geo) geo = measure();
+      return wrap(BOARD - geo.glu[0].az);
+    }
+
+    function step(prev, now, dt, onDock){
+      if(!geo) geo = measure();
       if(Math.floor(prev / 120) < Math.floor(now / 120)){
         const site = geo.betas[Math.floor(now / 120) % 3];
         const home = site.at.clone().add(geo.P);
@@ -323,16 +349,15 @@ function attach(box){
             /* A diffusing ion: one eased curve from its start, past the
                half-channel's mouth, onto Glu58, with a slow wobble that dies
                out on arrival. */
-            const k = Math.min(1, x.clock / APPROACH), e = ease(k), fade = Math.sin(Math.PI * e);
+            const k = Math.min(1, x.clock / x.dur), e = ease(k), fade = Math.sin(Math.PI * e);
             const [a, b] = x.waves, end = gluAt(x.g, now);
             x.m.position.copy(x.start).multiplyScalar((1 - e) * (1 - e))
               .addScaledVector(geo.from, 2 * e * (1 - e)).addScaledVector(end, e * e)
               .addScaledVector(geo.w, WOBBLE * fade * Math.sin(6.28 * a.f * e + a.ph))
               .addScaledVector(geo.A, WOBBLE * fade * Math.sin(6.28 * b.f * e + b.ph));
-            if(k >= 1){ x.phase = 'ride'; x.at = now; }
+            if(k >= 1){ x.phase = 'ride'; x.steps = 0; onDock(); }
           } else if(x.phase === 'ride'){
             x.m.position.copy(gluAt(x.g, now));
-            if(now - x.at >= ALIGHT - BOARD){ x.phase = 'out'; x.clock = 0; x.start = x.m.position.clone(); }
           } else {
             const k = Math.min(1, x.clock / HOP);
             x.m.position.copy(x.start).lerp(geo.to, ease(k));
@@ -370,25 +395,39 @@ function attach(box){
       for(const k of Object.keys(pools)) delete pools[k];
       geo = null;
     }
-    return { step, clear, reset, get live(){ return live.length; } };
+    return { step, spawn, stepped, rest, clear, reset, get live(){ return live.length; } };
   })();
 
   /* One clock for the rotor and everything it carries, so a test can drive it
-     where rAF does not run. `drive` is the steady clock; `turned` is where
-     the rotor is. */
+     where rAF does not run. `turned` is where the rotor is; `target` is
+     where the protons that have landed have sent it. */
   function advance(dt){
     if(pending) settle();
     if(!(on && spinning && pivot) || pending) return;
-    const prev = turned;
-    drive += DEG_PER_SEC * dt;
-    const stepDeg = 360 / count(t, 'c'), n = Math.floor(drive / stepDeg);
-    const k = Math.min(1, (drive / stepDeg - n) / MOVE);
-    turned = stepDeg * (n + ease(k));
+    const prev = turned, c = count(t, 'c'), stepDeg = 360 / c;
+    clock += dt;
+    while(nextLand - clock <= APPROACH){
+      flow.spawn(Math.max(0.3, nextLand - clock), target, stepDeg);
+      nextLand += PERIOD;
+    }
+    if(!moving && turned < target - 1e-6) moving = { from: turned, k: 0 };
+    if(moving){
+      moving.k = Math.min(1, moving.k + dt / MOVE_S);
+      turned = moving.from + stepDeg * ease(moving.k);
+      if(moving.k >= 1){ moving = null; flow.stepped(c); }
+    }
     const s = t.spin.axis;
     AXIS.set(s[0], s[1], s[2]);
     pivot.setRotationFromAxisAngle(AXIS, (turned % 360) * Math.PI / 180);
-    flow.step(prev, turned, dt);
+    flow.step(prev, turned, dt, () => { target += stepDeg; });
     box.draw();
+  }
+  /* Riders and the rotor's queue start over together, from rest with a Glu58
+     waiting at the entry. */
+  function restart(){
+    flow.clear();
+    turned = target = flow.rest();
+    moving = null; clock = 0; nextLand = FIRST;
   }
 
   function placeBand(){
@@ -438,12 +477,12 @@ function attach(box){
     if(box.building) return;
     pending = false;
     collect();
+    restart();
     box.draw();
   }
   function enter(trace, context = 'mitochondrion'){
     exit();
     t = trace; on = true;
-    turned = drive = 0;
     band = membrane(t, context);
     box.group.add(band);
     pending = true;
@@ -451,7 +490,7 @@ function attach(box){
   }
   return {
     enter, exit, advance, flow,
-    spin(v){ spinning = !!v; if(!spinning) flow.clear(); },
+    spin(v){ if(!!v !== spinning){ spinning = !!v; if(on && !pending) restart(); } },
     get spinning(){ return spinning; },
     destroy(){ exit(); clearInterval(timer); cancelAnimationFrame(raf); },
   };
