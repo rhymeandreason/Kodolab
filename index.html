@@ -113,7 +113,7 @@
   }
   .field.done .mast { display: flex; animation: mast .6s var(--soft) both; }
   @keyframes mast { from { opacity: 0; translate: 0 -10px; } to { opacity: 1; translate: 0 0; } }
-  /* The bar every other page has: wordmark, the four places, and a HAIR under
+  /* The bar every other page has: wordmark, the three places, and a HAIR under
      it running the full window rather than the column's width. The tagline the
      slot used to hold is the hero's own line, one screen up. */
   .mast .brand { position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; flex-wrap: wrap; padding-bottom: 1.4rem; }
@@ -334,14 +334,13 @@
   <nav class="links" aria-label="Account"></nav>
 </div>
     <div class="mast">
-      <!-- The site's four places, in this page's own ink: lib/site.js writes
+      <!-- The site's three places, in this page's own ink: lib/site.js writes
            this row on every document-shell page and cannot write it here. The
            words and the order are that list's. Lessons is where you are. -->
       <div class="brand"><a class="mk" href="#field"><img src="kodolab-wordmark.svg" alt="kodolab"></a>
         <nav class="links" aria-label="Site">
           <a class="lnk" href="/lessons" aria-current="page">Lessons</a>
           <a class="lnk" href="/library">Library</a>
-          <a class="lnk" href="/contribute">Contribute</a>
           <a class="lnk" href="/build">Build</a>
         </nav></div>
       <div class="sechead"><h2>Lessons</h2><span class="rule"></span><span class="count" id="count"></span></div>

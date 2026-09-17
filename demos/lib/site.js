@@ -62,7 +62,7 @@
   var SITE = '<span>open source <span class="sep">·</span> CC-BY-NC' +
              ' <span class="sep">·</span> <a href="/privacy">privacy</a></span>';
 
-  /* THE FOUR PLACES THIS SITE HAS, and the pattern that says you are in one.
+  /* THE THREE PLACES THIS SITE HAS, and the pattern that says you are in one.
      Here rather than in each page's own bar: a link typed into one bar is a
      link the other nine do not have, and which pages carry the nav then
      depends on when each was last edited. Lessons is /lessons, the course in
@@ -74,7 +74,6 @@
     // shelf are both "in the library", and a reader who got there from it
     // should still be able to see where they are.
     { text: 'Library',    href: '/library',    at: /^\/(library|molecules|proteins)(\/|$)/ },
-    { text: 'Contribute', href: '/contribute', at: /^\/contribute$/ },
     { text: 'Build',      href: '/build',      at: /^\/build(\/build)?$/ },
   ];
 

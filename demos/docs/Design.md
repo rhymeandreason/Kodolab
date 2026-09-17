@@ -104,8 +104,8 @@ heading already says where you are, so `/login`, `/teach` and the design page
 have none. Write one only when it names something the heading does not (the
 collection a molecule sits in, the subject a lesson belongs to).
 
-**The four links on the right of the bar are written by `lib/site.js`, not by
-the page** — Lessons, Library, Contribute, Build, with `aria-current="page"` on
+**The three links on the right of the bar are written by `lib/site.js`, not by
+the page** — Lessons, Library, Build, with `aria-current="page"` on
 the one you are in. A page types no part of that row: a link typed into one bar
 is a link the other nine do not have, and which pages carry the nav then depends
 on when each was last edited. `contribute.html` is the one exception, because
