@@ -59,6 +59,10 @@
     fuel: null,               // 'NADH' | 'FADH2' | 'light' | null — null lets the gradient run down
     fuelRate: 1,              // 0..1, a supply dial or a light dimmer
     oxygen: true,             // false: the respiratory chain has no final electron acceptor and stops
+    /* A STOCK OF O₂ that runs down: that many wait in the intermembrane space,
+       each one used is gone, and at zero the chain stops as with no oxygen.
+       6 is one glucose's worth. null draws one whenever it is needed. */
+    o2Stock: null,
     complexSeconds: 6.0,      // ONE FULL CYCLE, the empty half included
     chain: 'lumped',          // 'lumped' | 'split'
     showATP: true,            // the synthase releases a drawn ATP per third-turn
@@ -559,17 +563,25 @@
 
     /* ---- oxygen, where the electrons end ----
        COMPLEX IV AT ITS REAL RATIO: O₂ + 4e⁻ + 4H⁺ → 2H₂O. A turn brings two
-       electrons, so ONE O₂ WAITS THROUGH TWO TURNS, takes two matrix protons
-       on each `occlude`, and leaves as two waters.
+       electrons, so ONE O₂ STAYS BOUND THROUGH TWO TURNS.
+       EVERYTHING RESPECTS THE GATES. O₂ is nonpolar and reaches the heme a₃ /
+       Cu_B site through a hydrophobic channel from the bilayer, so it comes
+       down from the cytosol into the membrane beside IV and slides in sideways, never through a
+       proton door. The two substrate H⁺ of a turn enter from the matrix
+       while the matrix side is open (load-H), alongside the pumped ones.
+       Water forms in the site when the fourth electron lands and leaves to
+       the matrix only once that side reopens (open-in).
        THE PROTONS THAT JOIN IT ARE DRAWN, NOT DEBITED: the drawn pool is the
        gradient's whole budget, and emptying it here would stall the chain
        for a reason that is not biology. */
-    const O2_SPEED = 26, WATER_FADE = 1.2;
+    const O2_SPEED = 40, WATER_FADE = 1.2, WATER_MAX = 24, SNAP = 9;
     const E_PER_O2 = 4, E_PER_TURN = 2;
     let o2 = null;
     const o2Riders = [], waters = [];
     const o2X = () => split() ? xs.IV : complexX;
-    const o2Dock = () => ({ x: o2X() + 16, y: -pumpDir() * (H_() + 12) });
+    const ivH = () => split() ? CX.IV.height : H_();
+    const ivR = () => split() ? SPEC.IV.R : CPX_R;
+    const o2Site = () => ({ x: o2X() + 3, y: -pumpDir() * HALF * 0.35, z: 0 });
     /* The pill goes on an UNSCALED wrapper: smallMolecule scales its group by
        K_(), and a tag inside it came out several times the NADH's. */
     function tagged(mol, name) {
@@ -578,58 +590,164 @@
       g.add(mol, tag); g.userData.tag = tag;
       return g;
     }
-    function o2Arrive(fuel) {
-      if (!P.showFuel || o2 || P.oxygen === false) return;
+    const untag = obj => { const tag = obj.userData.tag; if (tag) { kit.forget(tag); obj.remove(tag); obj.userData.tag = null; } };
+    /* O₂ is always around, so it sets off when a carrier is sent, not when
+       IV is ready: by the time electrons reach IV it is in the membrane. */
+    const o2Waiting = [];
+    let o2Stocked = false;   // laid out on the first tick, once IV has a position
+    const stocked = () => P.o2Stock != null;
+    /* Electrons can reach IV: oxygen on, and, with a stock, one left to take them. */
+    const o2Ok = () => P.oxygen !== false && (!stocked() || !!o2 || o2Waiting.length > 0);
+    function o2Stockpile(n) {
+      o2Stocked = true;
+      for (const w of o2Waiting) dropToken(w.obj);
+      o2Waiting.length = 0;
+      if (n == null || !P.showFuel || P.context !== 'mitochondrion') return;
+      const d = pumpDir(), lo = ivH() + 10, hi = outerOn() ? OUTER_GAP - 10 : ivH() + 50;
+      for (let i = 0; i < n; i++) {
+        const w = { obj: eng.smallMolecule('o2'), x: o2X() + rnd(-90, 90), y: d * rnd(lo, hi), vx: rnd(-6, 6), vy: rnd(-4, 4), lo, hi };
+        root.add(w.obj); seat(w.obj, w.x, w.y, 0); o2Waiting.push(w);
+      }
+    }
+    /* WHILE A SUPPLY RUNS, BREATHING REFILLS IT: a used O₂ is replaced by one
+       drifting in from the cytosol. A one-shot feed() does not refill, so a
+       page counting a glucose's worth sees the stock run down. */
+    const O2_REFILL_S = 1.5;
+    let refillT = 0;
+    function tickO2Waiting(dt) {
+      const d = pumpDir(), x0 = o2X();
+      const supplied = stocked() && P.fuel && CHEM.SPENT[P.fuel] && P.fuelRate > 0 && P.oxygen !== false;
+      if (supplied && o2Waiting.length + (o2 ? 1 : 0) < P.o2Stock && P.showFuel && P.context === 'mitochondrion') {
+        refillT += dt;
+        if (refillT >= O2_REFILL_S) {
+          refillT = 0;
+          const lo = ivH() + 10, hi = outerOn() ? OUTER_GAP - 10 : ivH() + 50;
+          const w = { obj: eng.smallMolecule('o2'), x: x0 + rnd(-90, 90), y: d * (hi + 26), vx: rnd(-6, 6), vy: -d * 6, lo, hi, entering: true };
+          root.add(w.obj); seat(w.obj, w.x, w.y, 0); o2Waiting.push(w);
+        }
+      } else refillT = 0;
+      for (const w of o2Waiting) {
+        if (w.entering) {
+          w.y -= d * 14 * dt; seat(w.obj, w.x, w.y, 0);
+          if (d * w.y <= w.hi) w.entering = false;
+          continue;
+        }
+        w.vx = Math.max(-8, Math.min(8, w.vx + rnd(-20, 20) * dt + (x0 - w.x) * 0.02 * dt));
+        w.vy = Math.max(-6, Math.min(6, w.vy + rnd(-20, 20) * dt));
+        w.x += w.vx * dt; w.y += w.vy * dt;
+        const h = d * w.y;
+        if (h < w.lo) { w.y = d * w.lo; w.vy = d * Math.abs(w.vy); }
+        if (h > w.hi) { w.y = d * w.hi; w.vy = -d * Math.abs(w.vy); }
+        seat(w.obj, w.x, w.y, 0);
+      }
+    }
+    function o2Spawn(fuel) {
+      if (!P.showFuel || P.oxygen === false || o2) return;
       if (CHEM.ACCEPTOR[fuel] !== 'O2') return;
-      const to = o2Dock();
-      o2 = { obj: tagged(eng.smallMolecule('o2'), 'O₂'), x: to.x + 22, y: -pumpDir() * (H_() + 34), to, electrons: 0 };
+      const d = pumpDir(), side = o2X() + ivR() + 12;
+      if (stocked()) {
+        if (!o2Waiting.length) return;
+        o2Waiting.sort((a, b) => Math.abs(a.x - side) - Math.abs(b.x - side));
+        const w = o2Waiting.shift();
+        const obj = new THREE.Group(); w.obj.position.set(0, 0, 0); w.obj.rotation.set(0, 0, 0); obj.add(w.obj);   // seat() placed it in world units
+        root.add(obj); relabel(obj, 'O₂', 7.0);
+        o2 = { obj, x: w.x, y: w.y, path: [{ x: side, y: d * (ivH() + 8) }, { x: side, y: -d * (HALF * 0.35) }, o2Site()], electrons: 0, bound: false };
+        seat(obj, o2.x, o2.y, 0); eng.emit('o2Left', o2Waiting.length);
+        return;
+      }
+      /* From the cytosol, where it arrives from the blood: across the outer
+         membrane (lipid, freely) and the intermembrane space, into the
+         inner bilayer beside IV, then sideways into the site. */
+      const top = outerOn() ? OUTER_GAP + 16 : ivH() + 30;
+      const path = [{ x: side, y: d * (ivH() + 8) }, { x: side, y: -d * (HALF * 0.35) }, o2Site()];
+      o2 = { obj: tagged(eng.smallMolecule('o2'), 'O₂'), x: side + 10, y: d * top, path, electrons: 0, bound: false };
       root.add(o2.obj); seat(o2.obj, o2.x, o2.y, 0);
+    }
+    function o2Arrive(fuel) {
+      if (!P.showFuel || !o2Ok()) return;
+      if (CHEM.ACCEPTOR[fuel] !== 'O2') return;
+      o2Spawn(fuel);
+      const d = pumpDir(), x = o2X();
+      /* this turn's two substrate protons, at the open matrix mouth */
+      for (let i = 0; i < E_PER_TURN; i++) {
+        const r = { obj: eng.chargedIon('H'), x: x - 4 + i * 8, y: -d * (ivH() * 1.15 + 10), z: 0, i: o2Riders.length };
+        root.add(r.obj); seat(r.obj, r.x, r.y, 0); o2Riders.push(r);
+      }
     }
     function o2Reduce() {
       if (!o2 || o2.electrons >= E_PER_O2) return;
       o2.electrons += E_PER_TURN;
-      /* A HALF-REDUCED O₂ IS BOUND IN IV'S ACTIVE SITE, not loose in the
-         matrix: it moves into the protein and loses its pill, so a lone
-         NADH does not leave an O₂ parked beside the complex. */
-      if (o2.electrons < E_PER_O2) {
-        o2.to = { x: o2X(), y: -pumpDir() * HALF * 0.4, z: 0 };
-        const tag = o2.obj.userData.tag;
-        if (tag) { kit.forget(tag); o2.obj.remove(tag); o2.obj.userData.tag = null; }
-      }
-      for (let i = 0; i < E_PER_TURN; i++) {
-        const r = { obj: eng.chargedIon('H'), x: o2.to.x + (i ? 16 : -8), y: -pumpDir() * (H_() + 38),
-                    off: { x: (i ? 1 : -1) * 3.5, y: -pumpDir() * (o2.electrons === E_PER_O2 ? 4 : -1) } };
-        root.add(r.obj); seat(r.obj, r.x, r.y, 0); o2Riders.push(r);
-      }
     }
     function toWater() {
-      const at = o2.to;
+      const at = o2Site();
       dropToken(o2.obj); o2 = null;
       for (const r of o2Riders) dropToken(r.obj);
       o2Riders.length = 0;
       for (const s of [-1, 1]) {
-        const w = { obj: tagged(eng.smallMolecule('water'), 'H₂O'), x: at.x + s * 5, y: at.y,
-                    to: { x: at.x + s * 18, y: -pumpDir() * (H_() + 42) }, fade: 1 };
-        root.add(w.obj); seat(w.obj, w.x, w.y, 0); waters.push(w);
+        const w = { obj: tagged(eng.smallMolecule('water'), 'H₂O'), x: at.x + s * 4, y: at.y, held: true, fade: 1 };
+        untag(w.obj); root.add(w.obj); seat(w.obj, w.x, w.y, 0); waters.push(w);
       }
+    }
+    /* Called on IV's phase changes: waters wait in the site for the matrix side. */
+    function o2Phase(phase) {
+      if (phase !== 'open-in') return;
+      const d = pumpDir();
+      for (const w of waters) if (w.held) {
+        w.held = false;
+        relabel(w.obj, 'H₂O', 7.0);
+        w.path = [{ x: o2X() + (w.x - o2X()) * 0.5, y: -d * (ivH() * 1.15 + 4) }, { x: w.x + Math.sign(w.x - o2X()) * 14, y: -d * (ivH() + 40) }];
+      }
+    }
+    function follow(c, dt, speed) {
+      if (!c.path || !c.path.length) return true;
+      if (approach(c, c.path[0], dt, speed)) c.path.shift();
+      return !c.path.length;
     }
     function tickO2(dt) {
       /* Cut off before any electrons reached it, the O₂ was never there. One
          already holding electrons stays bound, as it does in complex IV. */
-      if (o2 && P.oxygen === false && !o2.electrons) { dropToken(o2.obj); o2 = null; }
+      if (!o2Stocked) { o2Stocked = true; o2Stockpile(P.o2Stock); }
+      tickO2Waiting(dt);
+      if (o2 && P.oxygen === false && !o2.electrons) { dropToken(o2.obj); o2 = null; for (const r of o2Riders) dropToken(r.obj); o2Riders.length = 0; }
+      const site = o2Site(), k = 1 - Math.exp(-dt * SNAP);
       if (o2) {
-        approach(o2, o2.to, dt, O2_SPEED);
-        let aboard = 0;
-        for (const r of o2Riders) if (approach(r, { x: o2.x + r.off.x, y: o2.y + r.off.y }, dt, O2_SPEED * 1.3)) aboard++;
-        if (o2.electrons >= E_PER_O2 && aboard === o2Riders.length) toWater();
+        if (follow(o2, dt, O2_SPEED) && !o2.bound) { o2.bound = true; untag(o2.obj); }
+        if (o2.bound) { o2.x = site.x; o2.y = site.y; seat(o2.obj, o2.x, o2.y, 0); }
       }
+      /* substrate H⁺ ease into the site like the pumped cargo does, so they
+         are inside before the matrix gate finishes closing */
+      for (const r of o2Riders) {
+        const tx = site.x + (r.i % 2 ? 5 : -5), ty = site.y + pumpDir() * (r.i < 2 ? 3 : -3);
+        r.x += (tx - r.x) * k; r.y += (ty - r.y) * k;
+        seat(r.obj, r.x, r.y, 0);
+      }
+      if (o2 && o2.bound && o2.electrons >= E_PER_O2) toWater();
       for (let i = waters.length - 1; i >= 0; i--) {
         const w = waters[i];
-        if (!approach(w, w.to, dt, O2_SPEED * 0.7)) continue;
-        w.fade -= dt / WATER_FADE;
-        fade(w.obj, w.fade);
-        if (w.fade <= 0) { dropToken(w.obj); waters.splice(i, 1); }
+        if (w.held) continue;
+        if (!follow(w, dt, O2_SPEED * 0.7)) continue;
+        /* THE WATER STAYS, as the result of the chain: it settles into the
+           matrix and wanders there, and only its label fades. Past
+           WATER_MAX the oldest one goes, so a long run does not flood. */
+        const tag = w.obj.userData.tag;
+        if (tag) {
+          w.fade -= dt / WATER_FADE;
+          tag.material.opacity = Math.max(0, w.fade);
+          if (w.fade <= 0) untag(w.obj);
+        }
+        if (!w.vx) { w.vx = rnd(-5, 5); w.vy = rnd(-3, 3); }
+        const dd = pumpDir(), floor = Math.min(P.bounds && P.bounds.down != null ? P.bounds.down : P.extent, P.extent) - 8;
+        w.vx = Math.max(-6, Math.min(6, w.vx + rnd(-16, 16) * dt));
+        w.vy = Math.max(-4, Math.min(4, w.vy + rnd(-16, 16) * dt));
+        w.x += w.vx * dt; w.y += w.vy * dt;
+        const depth = -dd * w.y, top = ivH() + 24;
+        if (depth < top) { w.y = -dd * top; w.vy = -dd * Math.abs(w.vy); }
+        if (depth > floor) { w.y = -dd * floor; w.vy = dd * Math.abs(w.vy); }
+        seat(w.obj, w.x, w.y, 0);
+        if (w.gone != null) { w.gone -= dt / WATER_FADE; fade(w.obj, w.gone); if (w.gone <= 0) { dropToken(w.obj); waters.splice(i, 1); } }
       }
+      const settled = waters.filter(w => !w.held && w.gone == null);
+      for (let i = 0; i < settled.length - WATER_MAX; i++) settled[i].gone = 1;
     }
     function clearO2() {
       if (o2) dropToken(o2.obj);
@@ -842,6 +960,7 @@
         }
         if (st.phase !== r.phase) {
           if (st.phase === 'occlude' && o.onOcclude) o.onOcclude();
+          if (o.onPhase) o.onPhase(st.phase);
           /* The proton is set down at the START of the empty half, so the two
              beats that follow are visibly carrying nothing. */
           if (st.phase === 'shut-out' && r.busy) {
@@ -883,7 +1002,7 @@
     const donorRate = (key, fuel, oxygenGate) => {
       const f = pulse[key] || (P.fuel === fuel ? fuel : null);
       if (!f) return 0;
-      return CHEM.complexRate(f, pulse[key] ? 1 : P.fuelRate, ROW(key).pumps ? pmfNow() : 0, oxygenGate ? P.oxygen : true);
+      return CHEM.complexRate(f, pulse[key] ? 1 : P.fuelRate, ROW(key).pumps ? pmfNow() : 0, oxygenGate ? o2Ok() : true);
     };
     const lightRate = () => P.fuel === 'light' ? CHEM.complexRate('light', P.fuelRate, 0) : 0;
 
@@ -1002,12 +1121,13 @@
     const lumped = runner({
       key: 'complex', part: COMPLEX, n: CHEM.Complex.PROTONS_PER_CYCLE, x: () => complexX,
       rate: () => {
-        const supply = CHEM.complexRate(P.fuel, P.fuelRate, pmfNow(), P.oxygen);
-        return supply > 0 ? supply : pulse.complex ? CHEM.complexRate(pulse.complex, 1, pmfNow(), P.oxygen) : 0;
+        const supply = CHEM.complexRate(P.fuel, P.fuelRate, pmfNow(), o2Ok());
+        return supply > 0 ? supply : pulse.complex ? CHEM.complexRate(pulse.complex, 1, pmfNow(), o2Ok()) : 0;
       },
       ready: () => true,
       onLoad: () => { const f = pulse.complex || P.fuel; fuelArrive('complex', f); o2Arrive(f); },
       onOcclude: () => { fuelSpend('complex'); o2Reduce(); },
+      onPhase: o2Phase,
       /* SPENT AFTER ONE CYCLE: feed() starts the clock at load-H, which is 0,
          so the wrap back past it is the turn ending. */
       onWrap: () => { pulse.complex = null; },
@@ -1059,15 +1179,15 @@
             ePill(false, c); c.state = 'returning'; c.to = cHome(c.i);
           }
         },
-        onLoad: more.onLoad, onOcclude: more.onOcclude, onWrap: more.onWrap,
+        onLoad: more.onLoad, onOcclude: more.onOcclude, onWrap: more.onWrap, onPhase: more.onPhase,
       });
     }
     const RUN = {
       I: donor('I', 'NADH'),
       II: donor('II', 'FADH2'),
       III: hub('III'),
-      IV: terminal('IV', { rate: backPressure, ready: () => P.oxygen !== false,
-        onLoad: () => o2Arrive('NADH'), onOcclude: () => o2Reduce() }),
+      IV: terminal('IV', { rate: backPressure, ready: () => o2Ok(),
+        onLoad: () => o2Arrive('NADH'), onOcclude: () => o2Reduce(), onPhase: o2Phase }),
       PSII: donor('PSII', 'light', { onLoad: () => { flash('PSII'); waterArrive(); }, onOcclude: () => { flash('PSII'); splitWater(); } }),
       b6f: hub('b6f'),
       PSI: terminal('PSI', {
@@ -1095,6 +1215,7 @@
       if (!hasChain(P.proteins)) return false;
       const f = fuel || P.fuel || (P.context === 'thylakoid' ? 'light' : 'NADH');
       if (!CHEM.FUELS[f]) { console.warn('Chemiosmosis: no fuel named ' + f + '; have ' + Object.keys(CHEM.FUELS).join(', ')); return false; }
+      o2Spawn(f);
       if (split()) {
         const donors = line().donors, key = Object.keys(donors).find(k => donors[k] === f);
         if (!key) { console.warn(`Chemiosmosis: a split chain in a ${P.context} takes ${Object.values(donors).join(' or ')}, not ${f}`); return false; }
@@ -1103,7 +1224,7 @@
         if (key === 'PSII') credit.PSI++;
         return true;
       }
-      if (!CHEM.complexRate(f, 1, 0, P.oxygen)) return false;   // no O₂: the NADH docks and nothing takes its electrons
+      if (!CHEM.complexRate(f, 1, 0, o2Ok())) return false;   // no O₂: the NADH docks and nothing takes its electrons
       if (P.showFuel && CHEM.SPENT[f]) return enqueue('complex', f);
       pulse.complex = f; clearFuel('complex'); lumped.kick();
       return true;
@@ -1249,6 +1370,7 @@
       },
       set(next) {
         let relay = false;
+        if ('o2Stock' in next) { P.o2Stock = next.o2Stock; o2Stockpile(P.o2Stock); }
         if (next.span != null && next.span !== P.span) {
           P.span = next.span;
           if (next.outerMembrane == null) next.outerMembrane = P.span !== 'inner';
@@ -1284,7 +1406,7 @@
           pH: proton.pH, dpH: proton.dpH, pmf: proton.pmf,
           atpMade: ROT.atp, rotorTurns: ROT.protons / CHEM.PROTONS_PER_TURN,
           protonsThroughSynthase, protonsLeaked, protonsForExport, complexTurns: pumpedTotal,
-          fuel: P.fuel, oxygen: P.oxygen !== false, fuelRate: CHEM.complexRate(P.fuel, P.fuelRate, proton.pmf, P.oxygen), pmfStall: CHEM.PMF_STALL,
+          fuel: P.fuel, oxygen: P.oxygen !== false, o2Left: stocked() ? o2Waiting.length + (o2 ? 1 : 0) : null, fuelRate: CHEM.complexRate(P.fuel, P.fuelRate, proton.pmf, P.oxygen), pmfStall: CHEM.PMF_STALL,
           complexPhase: st ? st.phase : null, complexLabel: st ? st.label : null,
           complexCaption: st ? st.caption : null, complexT: lead.t,
           complexStoichiometry: sp ? null : CHEM.Complex.PROTONS_PER_CYCLE,
@@ -1312,7 +1434,7 @@
       reset() {
         ROT.reset(); pumpedTotal = 0; protonsLeaked = 0; protonsThroughSynthase = 0; protonsForExport = 0;
         for (const k in lightLedger) lightLedger[k] = 0;
-        clearATP(); resetChain();
+        clearATP(); resetChain(); o2Stockpile(P.o2Stock);
       },
       clear() { lumped.cargo.length = 0; for (const k of ALL) RUN[k].cargo.length = 0; },
       lid: outerOn,

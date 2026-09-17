@@ -312,6 +312,7 @@ const m = Chemiosmosis.mount(el, {
   fuel: 'NADH',               // 'NADH' | 'FADH2' | 'light' | null (nothing driving it). Defaults to light in a thylakoid
   fuelRate: 1,                // 0..1: a light dimmer, or a supply dial
   oxygen: true,               // false stops an NADH or FADH2 chain: nothing takes the electrons. No effect on 'light'
+  o2Stock: null,              // a number: that many O₂ wait in the intermembrane space, each used one is gone, and at 0 the chain stops. 6 is one glucose's worth. While a `fuel` supply runs it refills from the cytosol; `feed()` alone never refills. Read state().o2Left, never a typed count
   chain: 'lumped',            // 'lumped': one complex stands for the chain · 'split': I–IV, ubiquinone, cytochrome c; in a thylakoid PSII, b6f, PSI, plastoquinone, plastocyanin
   span: 'inner',              // 'inner' · 'mitochondrion': + outer membrane, porin, translocase · 'cell': + cytosol and a plasma membrane whose pump spends the ATP
   proteins: { complex:{ x:-80 }, synthase:{ x:40 }, leak:null },   // omitted: a layout that fits the chain and span. `complex` is spread into I–IV when split
@@ -356,7 +357,7 @@ Every third of a turn a labelled ATP is released from the synthase head into the
 | `pH.inside / .outside`, `dpH`, `pmf` | the proton gradient: pH per side, the difference, and the proton-motive force in mV (positive means protons want to come back) |
 | `atpMade`, `rotorTurns`, `protonsThroughSynthase`, `protonsLeaked`, `complexTurns` | the proton circuit's ledger, counted rather than declared |
 | `stoichiometry.protonsPerTurn / .atpPerTurn / .protonsPerATP` | what the rotor is actually keeping to; do not type a ratio |
-| `fuel`, `oxygen`, `fuelRate`, `pmfStall` | the fuel, whether O₂ is there to take the electrons, the rate after back-pressure and oxygen have had their say, and the pmf at which the complexes stall |
+| `fuel`, `oxygen`, `o2Left`, `fuelRate`, `pmfStall` | the fuel, whether O₂ is there to take the electrons, O₂ left in the stock (null without one), the rate after back-pressure and oxygen have had their say, and the pmf at which the complexes stall |
 | `complexLabel`, `complexCaption`, `complexT` | the beat of the complex's six-phase cycle, and the words for it |
 | `complexStarved` | fuelled, but no protons on the side it loads from, so it cannot turn |
 | `chain`, `span`, `outerMembrane`, `sides.beyond`, `sides.pumpedInto` | the level of detail on stage, whether the lid is on, what to call the space above it, and where the protons collect |
@@ -366,7 +367,7 @@ Every third of a turn a labelled ATP is released from the synthase head into the
 | `light.photons / .waterSplit / .o2Released / .nadphMade / .protonsFromWater / .protonsToNADPH`, `light.photonsPerPair / .protonsPerO2` | split thylakoid only: the light reactions' ledger, counted, and their ratios |
 | `cell.atpSpent`, `cell.mV`, `spentOnPump` | span `'cell'` only: the plasma membrane's pump, and ATP it has spent |
 
-Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `spent` (n) · `oxygen` (n) and `nadph` (n), split thylakoid · `conduct` (traveller, dir).
+Events: `frame` · `pumped` (n) protons thrown out so far · `atp` (n) · `atpOut` (n) · `atpDelivered` (n) · `spent` (n) · `oxygen` (n) and `nadph` (n), split thylakoid · `o2Left` (n), when a stocked O₂ sets off · `conduct` (traveller, dir).
 
 `m.at(name)` is an anchor's world point, or null when that part is off stage, for pinning a page's own chrome (a `kit/badge.js` badge). Anchors for `note()`: `complex`, `synthase`, `leak`, `translocase`, `porin`, `cytosol` (each only when on stage), `complex.I`, `complex.II`, `complex.III`, `complex.IV`, `quinone`, `cytc` (split), `psii`, `b6f`, `psi`, `plastoquinone`, `plastocyanin`, `water.split`, `nadph` (split thylakoid; `complex` is b6f), `pump`, `pump.atp`, `cell.outside` (span `'cell'`), `oxygen` (while one is docked), `H`, `water`, `heads`, `tails`, `outside`, `inside`. The `outside`, `inside` and `complex` cards are rewritten by the context, so they name the matrix or the stroma on their own.
 

@@ -453,7 +453,7 @@
     },
     onHide: () => { if (mol) mol.destroy(); mol = null; } });
   const chemi = shell.scene('chemi', el => withBadge(el, Chemiosmosis.mount(el, {
-    context: 'mitochondrion', fuel: 'NADH', chain: 'split', span: 'cell', names: 'intro', viewOffset: centred,
+    context: 'mitochondrion', fuel: 'NADH', chain: 'split', span: 'cell', names: 'intro', o2Stock: 6, viewOffset: centred,
     /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
     cellContents: { inside: {}, outside: {} },
     /* Denser than the default 30 a side, so complex I loads from protons already in frame. Equal on both sides, so the gradient still starts at zero. */
