@@ -164,6 +164,33 @@ function watch(f) {
   });
 }
 
+/* CAN THE SNIPPET FIT ITS COLUMN ON ITS OWN? A teacher cannot know the width of
+   the column their host will give an embed, so the snippet has to scale itself
+   — with inline styles only, because Canvas's sanitizer strips <script> and
+   <style>. The one declaration that can do it reads the container's width as a
+   unit and divides it down to the unitless factor scale() wants:
+
+       transform: scale(calc(100cqw / 1200px))
+
+   Container query units are one feature and dividing a length inside calc() to
+   get a number is another, and CSS.supports() will claim both while still
+   dropping the pair. So this measures a real frame instead of asking: lay one
+   out at 1200 inside a 700px container and see what it paints. */
+function probeFit() {
+  const d = document.createElement('div');
+  d.setAttribute('style', 'container-type:inline-size;position:absolute;left:-9999px;top:0;width:700px');
+  d.innerHTML = '<div style="position:relative;overflow:hidden;aspect-ratio:1200/750">' +
+    '<iframe style="position:absolute;left:0;top:0;border:0;width:1200px;height:750px;' +
+    'transform-origin:0 0;transform:scale(0.8);transform:scale(calc(100cqw / 1200px))"></iframe></div>';
+  document.body.appendChild(d);
+  const w = Math.round(d.querySelector('iframe').getBoundingClientRect().width);
+  d.remove();
+  if (w === 700) say('SELF-FITTING SNIPPET WORKS HERE: a 1200 px layout painted at 700 in a 700 px column.');
+  else if (w === 960) say(`fell back to the baked scale: painted at ${w} in a 700 px column, so 260 px is cropped. This browser cannot divide a length in calc(); the snippet needs another approach.`, true);
+  else say(`no scaling at all: painted at ${w} in a 700 px column.`, true);
+}
+probeFit();
+
 /* A lesson that navigates the HOST page is the failure teachers notice. */
 addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });
 say('top-frame navigation guard armed: a “leave site?” prompt means the lesson tried to navigate this page');
