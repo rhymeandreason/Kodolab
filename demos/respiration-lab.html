@@ -102,6 +102,7 @@
   .step { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; align-items: center; transition: opacity .5s }
   .etc { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); text-align: center; }
   .etc[hidden] { display: none; }
+  .reset-chain { position: absolute; bottom: var(--space-5); z-index: 2; }
   .reset-view { position: absolute; right: var(--space-5); bottom: var(--space-5); z-index: 2; }
   .etc-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
   .tally { display: flex; gap: var(--space-5); font-family: var(--font-ui); color: var(--text-muted); }
@@ -464,6 +465,16 @@
     b.className = 'btn reset-view'; b.type = 'button'; b.textContent = 'Reset view';
     b.addEventListener('click', () => PHASES.etc(true));
     chemi.box.canvas.parentElement.appendChild(b);
+    const r = document.createElement('button');
+    r.className = 'btn reset-chain'; r.type = 'button'; r.textContent = 'Reset';
+    r.addEventListener('click', () => resetChain());
+    chemi.box.canvas.parentElement.appendChild(r);
+    /* Clear of the panel, wherever the shell has put the scene's box. */
+    const place = () => {
+      const host = r.parentElement.getBoundingClientRect(), panel = shell.el.querySelector('.lshell-panel').getBoundingClientRect();
+      r.style.left = Math.max(0, panel.right - host.left) + 20 + 'px';
+    };
+    place(); window.addEventListener('resize', place);
   }
   function withBadge(el, c) {
     const b = Badge.create({ host: el, camera: c.box.camera, canvas: c.box.canvas, at: () => c.at('synthase'),
@@ -714,6 +725,14 @@
       if (b.textContent !== text) b.textContent = text;
       if (b.disabled !== off) b.disabled = off;
     }
+  }
+  /* Back to one glucose's worth: an empty chain, no gradient, nothing sent. */
+  function resetChain() {
+    chemi.set({ fuel: null }); chemi.reset(); chemi.set({ contents: PROTONS });
+    for (const k in tally) tally[k] = 0;
+    for (const k in sent) sent[k] = 0;
+    seen = null;
+    count();
   }
   etc.addEventListener('click', ev => {
     const b = ev.target.closest('button[data-fuel]');
