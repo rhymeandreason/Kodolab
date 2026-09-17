@@ -571,8 +571,9 @@
        shuttle's own enzymes (cytosolic and mitochondrial glycerol-3-phosphate
        dehydrogenase) are not drawn, and the pair lands on Q as FADH₂'s does. */
     function shuttleDock() {
-      const d = pumpDir(), x = xs.II, y = HALF + 8;
-      return { from:{ x:x - 30, y:d * (y + 24) }, at:{ x:x - 12, y:d * y }, away:{ x:x - 40, y:d * (y + 28) } };
+      /* sits on the cap of II's anchor (HALF + 1.5), the token's half height (3.6) above it, less a little so it touches */
+      const d = pumpDir(), x = xs.II, y = HALF + 1.5 + 3.1;
+      return { from:{ x:x - 14, y:d * (y + 26) }, at:{ x, y:d * y }, away:{ x:x - 34, y:d * (y + 28) } };
     }
     function dockOf(key, shuttle) {
       if (shuttle) return shuttleDock();
