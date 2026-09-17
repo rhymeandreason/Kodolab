@@ -78,11 +78,6 @@
           </div>
           <p class="empty" id="noSessions" hidden>Nobody has opened the link yet.</p>
 
-          <section class="feed questions">
-            <h3 class="cap">Questions asked of the tutor, newest first</h3>
-            <ol id="questions"></ol>
-            <p class="empty" id="noQuestions" hidden>No questions yet.</p>
-          </section>
         </section>
 
         <section class="roster" id="roster" hidden>
@@ -304,15 +299,6 @@
       <td>${r.survey ? '<i class="ph-bold ph-check"></i>' : ''}</td>
       <td class="num">${r.questions || 0}</td></tr>`).join('');
 
-    const qs = c.questions || [];
-    $('noQuestions').hidden = !!qs.length;
-    $('questions').innerHTML = qs.map(q => `<li>
-      <div class="qrow">
-        <span class="who"><b>${esc(q.name || '')}</b> <code class="bid">${shortId(q.visitor_id)}</code>${q.lesson ? ` · ${esc(q.lesson)}` : ''}</span>
-        <span class="when">${esc(ago(q.created_at))}</span>
-        <span class="q">${esc(q.q)}</span>
-        ${q.answer ? `<span class="s">${esc(q.answer)}</span>` : ''}
-      </div></li>`).join('');
   }
 
   $('copyLink').addEventListener('click', async () => {

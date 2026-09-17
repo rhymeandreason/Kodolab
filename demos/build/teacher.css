@@ -70,8 +70,6 @@ tr.off code { text-decoration: line-through; color: var(--text-muted); }
 .sesshead .cap { margin: 0; }
 .sessions td i { color: var(--accent); }
 code.bid { font-size: .8rem; letter-spacing: .04em; color: var(--text-muted); font-weight: 400; }
-.questions { margin-top: 2rem; }
-.questions .qrow { display: grid; grid-template-columns: 1fr auto; gap: .15rem .8rem; padding: .7rem .2rem; border-bottom: 1px solid var(--border-hair); }
 .sessionbody { padding: 1.1rem; overflow-y: auto; }
 .sessionbody .kv { display: inline-flex; flex-direction: column; margin: 0 1.6rem .9rem 0; }
 .sessionbody .k { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); }
