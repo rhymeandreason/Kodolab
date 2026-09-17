@@ -100,6 +100,9 @@
      draw: under the heading first, then in the blank the stage will fill. */
   figure { position: relative }
   .step { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; align-items: center; transition: opacity .5s }
+  .etc-btns [hidden] { display: none }
+  .etc-done { margin: 0; padding: var(--space-3) var(--space-6); border-radius: 999px; background: var(--surface-card); font-family: var(--font-display); font-size: var(--text-lg); color: var(--text-strong); }
+  .etc-note { max-width: 46ch; margin: 0; font-size: var(--text-base); color: var(--text-muted); }
   .etc { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); text-align: center; }
   .etc[hidden] { display: none; }
   .reset-chain { position: absolute; bottom: var(--space-5); z-index: 2; }
@@ -247,7 +250,7 @@
       <text class="ttl" x="288" y="158" text-anchor="middle">GLYCOLYSIS</text>
       <line class="rule" x1="184" y1="169" x2="392" y2="169"></line>
       <text class="sub" x="288" y="186" text-anchor="middle">splits the sugar in half</text>
-      <text class="sub" x="288" y="204" text-anchor="middle">net <tspan class="atp-t">2 ATP</tspan> · <tspan class="n">2</tspan> NADH</text>
+      <text class="sub" x="288" y="204" text-anchor="middle">net <tspan class="atp-t">2 ATP</tspan> · <tspan class="n">2</tspan> NADH*</text>
 
       <!-- ===== the split ===== -->
       <g transform="translate(0,16)">
@@ -324,6 +327,7 @@
       <image href="media/molecules/nadhSkel.webp" x="96" y="580" width="180" height="126"></image>
       <image href="media/molecules/fadh2.webp" x="300" y="580" width="180" height="126"></image>
       <text class="ttl" x="186" y="720" text-anchor="middle">10 NADH</text>
+      <text class="tiny" x="186" y="738" text-anchor="middle">*2 enter as FADH₂</text>
       <text class="ttl" x="390" y="720" text-anchor="middle">2 FADH₂</text>
       <line class="flow" x1="288" y1="728" x2="288" y2="764" marker-end="url(#m)"></line>
 
@@ -687,18 +691,21 @@
   etc.className = 'etc';
   etc.hidden = true;
   etc.innerHTML = '<div class="tally"><span><b data-k="NADH">0</b> NADH used</span><span><b data-k="FADH2">0</b> FADH₂ used</span><span><b data-k="ATP">0</b> ATP made</span></div>'
-    + '<div class="etc-btns"><button class="cta" type="button" data-fuel="NADH"></button><button class="cta" type="button" data-fuel="FADH2"></button></div>';
+    + '<div class="etc-btns"><button class="cta" type="button" data-fuel="NADH"></button><button class="cta" type="button" data-fuel="FADH2"></button><p class="etc-done" hidden>Completed!</p></div>'
+    + '<p class="etc-note">* The last two NADH are from glycolysis, made in the cytosol.</p>';
   figure.after(etc);
 
-  /* One glucose's carriers into the chain: 2 NADH from glycolysis, 2 from the link step, 6 from Krebs; 2 FADH₂ from Krebs. The chart says the same. */
-  const GLUCOSE = { NADH: 10, FADH2: 2 };
+  /* One glucose's carriers into the chain, 2 from the link step and 6 from Krebs at complex I; then glycolysis's 2 NADH last, which reach ubiquinone by the glycerol-phosphate shuttle (feed's `shuttle`, a turn of II); 2 FADH₂ from Krebs. 8×10 + 4×6 = 104 H⁺, 26 ATP. The chart says the same. */
+  const GLUCOSE = { NADH: 10, FADH2: 2 }, SHUTTLED = 2;
   const NAME = { NADH: 'NADH', FADH2: 'FADH₂' };
-  const DOOR = { NADH: 'I', FADH2: 'II' };
+  const shuttleNext = () => sent.NADH >= GLUCOSE.NADH - SHUTTLED;
+  const doorOf = f => f === 'FADH2' || shuttleNext() ? 'II' : 'I';
 
   /* Counted from when the controls appear. A complex's turns reset whenever
      the chain is reset, so the tally adds deltas and
-     treats a drop as a fresh start. One turn of I is one NADH, of II one FADH₂. */
-  const tally = { NADH: 0, FADH2: 0, ATP: 0 };
+     treats a drop as a fresh start. One turn of I is one NADH; a turn of II is
+     a Krebs FADH₂ or a shuttled glycolysis NADH*, told apart only for display. */
+  const tally = { I: 0, II: 0, ATP: 0 };
   let seen = null;
   /* Carriers put on stage. Each click is one molecule the student sees rise
      out of the matrix; the component queues it at its complex, and refuses
@@ -706,24 +713,42 @@
   const sent = { NADH: 0, FADH2: 0 };
   function count() {
     const st = chemi.state();
-    const now = { NADH: st.complexes ? st.complexes.I.turns : null, FADH2: st.complexes ? st.complexes.II.turns : null, ATP: st.atpMade };
+    const now = { I: st.complexes ? st.complexes.I.turns : null, II: st.complexes ? st.complexes.II.turns : null, ATP: st.atpMade };
     if (seen) for (const k in tally) {
       if (now[k] == null) continue;
       const was = seen[k] == null || now[k] < seen[k] ? now[k] : seen[k];
       tally[k] += now[k] - was;
     }
     seen = now;
-    for (const b of etc.querySelectorAll('.tally b')) if (b.textContent !== String(tally[b.dataset.k])) b.textContent = tally[b.dataset.k];
-    buttons(st);
+    /* II's turns beyond the FADH₂ sent were shuttled NADH* */
+    const star = Math.min(Math.max(0, sent.NADH - (GLUCOSE.NADH - SHUTTLED)), Math.max(0, tally.II - sent.FADH2));
+    const shown = { NADH: tally.I + star, FADH2: tally.II - star, ATP: tally.ATP };
+    for (const b of etc.querySelectorAll('.tally b')) if (b.textContent !== String(shown[b.dataset.k])) b.textContent = shown[b.dataset.k];
+    buttons(st, shown);
   }
-  function buttons(st = chemi.state()) {
+  /* A glucose's ATP, read off the chain: protons from the carriers, over what one ATP costs to make and export. */
+  function glucoseATP(st) {
+    const pf = st.protonsPerFuel, so = st.stoichiometry;
+    if (!pf || !so) return null;
+    const protons = (GLUCOSE.NADH - SHUTTLED) * pf.NADH + (SHUTTLED + GLUCOSE.FADH2) * pf.FADH2;
+    return Math.floor(protons / (so.protonsPerATP + so.protonsPerExport));
+  }
+  function buttons(st = chemi.state(), shown) {
     const w = st.waiting || {};
+    const goal = glucoseATP(st);
+    const done = !!shown && goal != null && shown.ATP >= goal && sent.NADH >= GLUCOSE.NADH && sent.FADH2 >= GLUCOSE.FADH2;
+    const doneEl = etc.querySelector('.etc-done');
+    if (doneEl.hidden === done) doneEl.hidden = !done;
+    const note = etc.querySelector('.etc-note');
+    if (note.hidden !== done) note.hidden = done;
     for (const b of etc.querySelectorAll('button[data-fuel]')) {
       const f = b.dataset.fuel, left = GLUCOSE[f] - sent[f];
       /* Written only on change: Safari drops a click whose button was rewritten between press and release, and count() runs every 250 ms. */
-      const text = `Send ${NAME[f]} (${left} left)`, off = left <= 0 || (w[DOOR[f]] || 0) >= w.max;
+      const star = f === 'NADH' && shuttleNext() ? '*' : '';
+      const text = `Send ${NAME[f]}${star} (${left} left)`, off = left <= 0 || (w[doorOf(f)] || 0) >= w.max;
       if (b.textContent !== text) b.textContent = text;
       if (b.disabled !== off) b.disabled = off;
+      if (b.hidden !== done) b.hidden = done;
     }
   }
   /* Back to one glucose's worth: an empty chain, no gradient, nothing sent. */
@@ -739,7 +764,7 @@
     if (!b || b.disabled) return;
     const f = b.dataset.fuel;
     chemi.set({ chain: 'split', fuel: null });
-    if (!chemi.feed(f)) return;
+    if (!chemi.feed(f, { shuttle: f === 'NADH' && shuttleNext() })) return;
     sent[f]++;
     buttons();
   });

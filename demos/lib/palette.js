@@ -384,10 +384,11 @@
          and the aquaporin's teal. */
       carrier:0x2f7d8c,
       /* THE TWO SHUTTLES OF THE SPLIT CHAIN, and neither is a complex, so
-         neither is a blue. Ubiquinone is a quinone and quinones are yellow;
-         olive keeps it off the synthase's gold. Cytochrome c is red for its
-         heme, the colour the protein really is in a test tube. */
-      quinone:0x9d9a3a, cytc:0xb0483e,
+         neither is a blue. One purple for both, told apart by shape: ubiquinone
+         round, cytochrome c oblong. Not their real colours
+         (quinones are yellow, cytochrome c red with its heme): olive sat on
+         the lipid's gold tails, and red beside oxygen's red read as an O₂. */
+      quinone:0x8f4fa6, cytc:0x8f4fa6,
       porin:0x8e939b,
       /* THE FUEL AND ITS DOOR, for cell/animalcell.js's traffic. Glucose's
          halo is a bright yellow that stands off a red cytoplasm; the GLUT is

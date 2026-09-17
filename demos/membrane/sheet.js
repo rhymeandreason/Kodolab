@@ -33,7 +33,9 @@
  *  A POROUS LAYER IS A LIST OF PORES, and `weight` on one is how often a
  *  traveller of that kind picks it over another of the same kind. That is
  *  the whole of an uncoupler's advantage, and it is declared by the machine
- *  that owns the hole, not decided here.
+ *  that owns the hole, not decided here. `capture` (default CAPTURE_R) and
+ *  `pull` (default 1) widen a narrow door's mouth: how far off its line a
+ *  traveller is taken in, and how hard the funnel draws it there.
  *
  *  +y is outside and −y inside in every context; `context` renames the halves
  *  and tints the lipid (membrane/chemiosmosis.js owns the names), and a
@@ -369,6 +371,12 @@
        else: a traveller does not know what scene it is in. */
     let nextId = 1;
     const WALK_SPEED = [14, 24], ION_SPEED = [8, 16], DRIFT_SPEED = [12, 18];
+    /* PROTONS DIFFUSE FASTEST, hopping water to water (Grotthuss), and at the
+       ion pace a proton pumped out at one end of the chain needed minutes to
+       reach a synthase at the other, so each side's protons pooled by the
+       door they came out of. Faster and straighter: diffusion goes as
+       speed² × time between turns. */
+    const PROTON_SPEED = [24, 36], PROTON_FLIP = [1.2, 2.2], FLIP = [0.55, 1.15];
     const WATER_CORE = 1.0;
     const ION_GAP = 2 * global.Parts.ION.K.r * global.Parts.ION.exaggeration + 2.6;
     const CHANNEL_KEEPOUT = 26;
@@ -390,7 +398,8 @@
       const t = Object.assign({ kind, obj, id: nextId++ }, o);
       if (t.blocked) t.bounded = true;    // cannot cross, so must not leave and come back either
       t.spin = { x:rnd(-.9,.9), y:rnd(-.9,.9), z:rnd(-.9,.9) };
-      t.flipEvery = rnd(0.55, 1.15); t.since = Math.random() * t.flipEvery;
+      t.flip = kind === 'H' ? PROTON_FLIP : FLIP;
+      t.flipEvery = rnd(t.flip[0], t.flip[1]); t.since = Math.random() * t.flipEvery;
       if (t.walk) repick(t);
       if (t.born != null) { t.bornScale = obj.scale.x; obj.scale.setScalar(0.001); }
       travellers.push(t);
@@ -416,7 +425,7 @@
           x: opts.clear === false ? rnd(-SPREAD(), SPREAD()) : rndClear(SPREAD() * (opts.span || 1)),
           z: rnd(-11, 11), y: inCompartment(s),
           walk:true, bounded:true,
-          speed: ion ? ION_SPEED : WALK_SPEED,
+          speed: kind === 'H' ? PROTON_SPEED : ion ? ION_SPEED : WALK_SPEED,
           blocked: ion, coreSpeed: kind === 'water' ? WATER_CORE : undefined,
           keepout: kind === 'water' ? CHANNEL_KEEPOUT : undefined,
           /* The proton stays BARE. It is really H₃O⁺ and a shell would be
@@ -501,6 +510,8 @@
        by one. */
     const SEEK_PULL = 0.7, FUNNEL_R = 170, FUNNEL_PULL = 16, ESCAPE_R = 78, CAPTURE_R = 13;
     const _fv = new THREE.Vector3();
+    const poreAt = x => PORES.find(Q => Q.x === x);
+    const captureOf = x => { const Q = poreAt(x); return Q && Q.capture || CAPTURE_R; };
     const nearestChannel = t => {
       let best = null;
       for (const Q of PORES) if (Q.kind && (best == null || Math.abs(t.x - Q.x) < Math.abs(t.x - best))) best = Q.x;
@@ -522,7 +533,8 @@
           /* Water is drawn to its pore gently: an aquaporin's vestibule is
              not an electrostatic well, and pulled like an ion every water
              on stage queues at one door. */
-          const k = FUNNEL_PULL * (t.seeks ? SEEK_PULL : t.kind === 'water' ? 0.35 : 1) * (1 - d / FUNNEL_R) * dt;
+          const Q = poreAt(target);
+          const k = FUNNEL_PULL * (Q && Q.pull || 1) * (t.seeks ? SEEK_PULL : t.kind === 'water' ? 0.35 : 1) * (1 - d / FUNNEL_R) * dt;
           t.vx += _fv.x * k; t.vy += _fv.y * k; t.vz += _fv.z * k;
           const sp = (t.speed || WALK_SPEED)[1], v = Math.hypot(t.vx, t.vy, t.vz);
           if (v > sp) { const s = sp / v; t.vx *= s; t.vy *= s; t.vz *= s; }
@@ -563,14 +575,14 @@
         const lane = nearestChannel(t);
         if (lane == null) return false;
         const ay = Math.abs(t.y);
-        if (Math.abs(t.x - lane) > CAPTURE_R || Math.abs(t.z) > CAPTURE_R) return false;
+        if (Math.abs(t.x - lane) > captureOf(lane) || Math.abs(t.z) > captureOf(lane)) return false;
         if (ay > T.height * 0.99 || ay < T.height * 0.7) return false;
         refuseAt(t, lane);
         return false;
       }
       if (t.exitPt) return false;
       const lane = t.conducts;
-      if (Math.abs(t.x - lane) > CAPTURE_R || Math.abs(t.z) > CAPTURE_R) return false;
+      if (Math.abs(t.x - lane) > captureOf(lane) || Math.abs(t.z) > captureOf(lane)) return false;
       const ay = Math.abs(t.y);
       if (ay > T.height * 0.99 || ay < T.height * 0.7) return false;
       if (!mayEnter(t)) return false;
@@ -812,7 +824,7 @@
       }
       if (t.walk && !inCore) {
         t.since = (t.since || 0) + dt;
-        if (t.since > t.flipEvery) { t.since = 0; t.flipEvery = rnd(0.55, 1.15); repick(t); }
+        if (t.since > t.flipEvery) { t.since = 0; t.flipEvery = rnd(t.flip[0], t.flip[1]); repick(t); }
       }
       if (t.walk) lateral(t, dt);
       t.y += t.vy * dt * (inCore && !t.blocked ? t.coreSpeed || 1 : 1);

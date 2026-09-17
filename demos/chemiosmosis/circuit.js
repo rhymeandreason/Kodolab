@@ -224,7 +224,8 @@
     };
     for (const k in KNOBS) CX[k].group.add(...KNOBS[k]);
     /* where cytochrome c sits: on c₁ at III, on Cu_A at IV */
-    const cSeat = key => key === 'III' ? III_C1 + 6 + 5 : key === 'IV' ? CX.IV.height + 2 + 6.5 * 0.85 + 5 : H_() + 7;
+    const C_HALF = 3.4 * 0.8;   // the oblong cyt c token's half-height
+    const cSeat = key => key === 'III' ? III_C1 + 6 * 0.8 + C_HALF - 0.5 : key === 'IV' ? CX.IV.height + 2 + 6.5 * 0.85 + C_HALF - 0.5 : H_() + 7;
 
     /* ATP SYNTHASE HAS NO TUBE THROUGH IT (bovine, PDB 6ZPO). In the membrane
        is Fo: a ring of eight c subunits that turns, with lipid in its middle,
@@ -563,9 +564,24 @@
     /* A flash is one PSII turn, and PSI owes it one turn later, whenever its
        plastocyanins arrive: a count, so two quick flashes are two turns. */
     const credit = { PSI: 0 };
-    function dockOf(key) {
+    /* THE GLYCEROL-PHOSPHATE SHUTTLE: cytosolic NADH cannot enter the matrix,
+       so it comes down through the outer membrane into the intermembrane
+       space, and its electrons reach ubiquinone at the OUTER face, past
+       complex I. Drawn docking on the outer face at complex II's place: the
+       shuttle's own enzymes (cytosolic and mitochondrial glycerol-3-phosphate
+       dehydrogenase) are not drawn, and the pair lands on Q as FADH₂'s does. */
+    function shuttleDock() {
+      const d = pumpDir(), x = xs.II, y = HALF + 8;
+      return { from:{ x:x - 30, y:d * (y + 24) }, at:{ x:x - 12, y:d * y }, away:{ x:x - 40, y:d * (y + 28) } };
+    }
+    function dockOf(key, shuttle) {
+      if (shuttle) return shuttleDock();
       const d = pumpDir(), H = H_();
-      if (key === 'I') { const x = xs.I; return { from:{ x:x - 36, y:-d * (H + 50) }, at:{ x:x - 14, y:-d * (H + 30) }, away:{ x:x - 42, y:-d * (H + 54) } }; }
+      /* NADH binds at the tip of complex I's matrix arm: the arm (ARM_I) is a
+         2.1-stretched sphere of 6.5 centred H + 12 down and tilted 0.45 rad,
+         so its far end is about 1 right and H + 24 down; the token's half
+         height past that, less a little so it touches. */
+      if (key === 'I') { const x = xs.I; return { from:{ x:x - 20, y:-d * (H + 52) }, at:{ x:x + 1, y:-d * (H + 27) }, away:{ x:x - 30, y:-d * (H + 54) } }; }
       if (key === 'PSI') { const x = xs.PSI; return { from:{ x:x + 36, y:-d * (H + 46) }, at:{ x:x + 12, y:-d * (H + 20) }, away:{ x:x + 42, y:-d * (H + 50) } }; }
       /* II's substrate meets the FAD in SdhA, the far lobe of the head */
       if (key === 'II') { const x = xs.II, y = HALF + 22; return { from:{ x:x - 38, y:-d * (y + 20) }, at:{ x:x - 19, y:-d * y }, away:{ x:x - 42, y:-d * (y + 24) } }; }
@@ -578,17 +594,19 @@
       const nadp = key === 'PSI';
       if (!P.showFuel || chips[key]) return;
       if (!nadp && (!f || !CHEM.SPENT[f])) return;   // light: nothing arrives, and nothing should be drawn
-      const dock = dockOf(key);
-      const succ = key === 'II' && P.names !== 'intro';
       /* A carrier fed by hand is already on stage, waiting: it is the one that docks. */
       const w = waiting[key] && waiting[key][0] && waiting[key][0].boarding ? waiting[key].shift() : null;
+      const shuttle = !!(w && w.shuttle);
+      const dock = dockOf(key, shuttle);
+      const succ = key === 'II' && P.names !== 'intro' && !shuttle;
       const g = w ? w.obj : fuelToken(key, f);
       if (!w) root.add(g);
       const from = w || dock.from;
-      chips[key] = { obj:g, spentName: succ ? 'fumarate' : nadp ? 'NADPH' : CHEM.SPENT[f], x:from.x, y:from.y, z:from.z || 0, to:dock.at, fade:1, spent:false };
+      chips[key] = { obj:g, shuttle, spentName: succ ? 'fumarate' : nadp ? 'NADPH' : CHEM.SPENT[f], x:from.x, y:from.y, z:from.z || 0, to:dock.at, fade:1, spent:false };
       seat(g, chips[key].x, chips[key].y, chips[key].z);
     }
-    function fuelToken(key, f) {
+    function fuelToken(key, f, shuttle) {
+      if (shuttle) return buildToken(f, RESP.carrier, 2);
       if (key === 'II' && P.names !== 'intro') return buildToken('succinate', RESP.carrier, 1);
       if (key === 'PSI') return buildToken('NADP⁺', PHO.carrier, 2);
       return buildToken(f === 'FADH2' ? 'FADH₂' : f, RESP.carrier, 2);
@@ -602,17 +620,19 @@
        offers the button. Thylakoid light has no token and never waits. */
     const WAIT_MAX = 3, WAIT_SPEED = 45, WAIT_DEPTH = 90;
     const waiting = {};
-    function waitSpot(key, i) {
-      const d = pumpDir(), from = dockOf(key).from;
-      return { x: from.x - 6 + i * 14 * (i % 2 ? 1 : -1), y: from.y - d * (8 + i * 16), z: 0 };
+    function waitSpot(key, i, shuttle) {
+      const d = pumpDir(), from = dockOf(key, shuttle).from, s = shuttle ? -1 : 1;
+      return { x: from.x - 6 + i * 14 * (i % 2 ? 1 : -1), y: from.y - s * d * (8 + i * 16), z: 0 };
     }
-    function enqueue(key, f) {
+    function enqueue(key, f, shuttle) {
       const q = waiting[key] || (waiting[key] = []);
       if (q.length >= WAIT_MAX) return false;
-      const d = pumpDir(), spot = waitSpot(key, q.length);
-      const g = fuelToken(key, f);
+      const d = pumpDir(), spot = waitSpot(key, q.length, shuttle);
+      const g = fuelToken(key, f, shuttle);
       root.add(g);
-      const w = { obj:g, f, x: spot.x + rnd(-30, 30), y: -d * (H_() + WAIT_DEPTH), z: rnd(-10, 10), t: rnd(0, 6), boarding: false };
+      /* a shuttled NADH starts in the cytosol, above the outer membrane */
+      const y0 = shuttle ? d * (outerOn() ? OUTER_GAP + 30 : H_() + 50) : -d * (H_() + WAIT_DEPTH);
+      const w = { obj:g, f, shuttle: !!shuttle, x: spot.x + rnd(-30, 30), y: y0, z: rnd(-10, 10), t: rnd(0, 6), boarding: false };
       seat(g, w.x, w.y, w.z);
       q.push(w);
       return true;
@@ -622,7 +642,7 @@
         const q = waiting[key];
         q.forEach((w, i) => {
           w.t += dt;
-          const spot = waitSpot(key, i);
+          const spot = waitSpot(key, i, w.shuttle);
           approach(w, { x: spot.x + Math.sin(w.t * 0.9) * 3, y: spot.y + Math.cos(w.t * 1.3) * 2, z: 0 }, dt, WAIT_SPEED);
         });
         /* The next one boards when the machine is free and the last carrier has gone. */
@@ -641,7 +661,7 @@
       if (!c || c.spent) return;
       relabel(c.obj, c.spentName, 8.0);
       c.spent = true;
-      c.to = dockOf(key).away;
+      c.to = dockOf(key, c.shuttle).away;
     }
     function tickFuel(dt) {
       for (const key of Object.keys(chips)) {
@@ -661,9 +681,11 @@
         if (!c.vx) { c.vx = (c.x < 0 ? -1 : 1) * rnd(10, 16); c.vy = rnd(-6, 6); }
         c.vy = Math.max(-14, Math.min(14, c.vy + rnd(-40, 40) * dt));
         c.x += c.vx * dt; c.y += c.vy * dt;
-        const depth = -d * c.y;
-        if (depth < H + 14) { c.y = -d * (H + 14); c.vy = -d * Math.abs(c.vy); }
-        if (depth > floor) { c.y = -d * floor; c.vy = d * Math.abs(c.vy); }
+        /* a shuttled NAD⁺ stays on the outer side it came from */
+        const s = c.shuttle ? -1 : 1, depth = -s * d * c.y;
+        const lo = c.shuttle ? HALF + 12 : H + 14, hi = c.shuttle ? (outerOn() ? OUTER_GAP - 12 : H + 60) : floor;
+        if (depth < lo) { c.y = -s * d * lo; c.vy = -s * d * Math.abs(c.vy); }
+        if (depth > hi) { c.y = -s * d * hi; c.vy = s * d * Math.abs(c.vy); }
         seat(c.obj, c.x, c.y, 0);
         if (Math.abs(c.x) > LEAVE_X) { c.fade -= dt / FUEL_FADE; fade(c.obj, c.fade); }
         if (c.fade <= 0) { dropToken(c.obj); leaving.splice(i, 1); }
@@ -1050,6 +1072,7 @@
         Object.assign(q, qHome(i)); q.to = qHome(i);
         root.add(q.obj); seat(q.obj, q.x, q.y, q.z); qTokens.push(q);
         const c = { obj: buildToken(L.c, L.cColor, 1), i, state: 'home', e: null };
+        c.obj.children[0].scale.set(1.4, 0.8, 1);   // oblong, so it does not read as an O₂
         Object.assign(c, cHome(i)); c.to = cHome(i);
         root.add(c.obj); seat(c.obj, c.x, c.y, 0); cTokens.push(c);
       }
@@ -1373,7 +1396,8 @@
           if (q) {
             const chip = chips[key], d = pumpDir();
             const from = chip ? posOf(chip) : key === 'PSII' ? oecAt() : faceOf(key, -1);
-            const via = key === 'II' ? [{ x: xs.II - 1, y: -d * (HALF + 7) }, { x: xs.II, y: -d * HALF * 0.5 }]
+            const via = chip && chip.shuttle ? [{ x: xs.II - 6, y: d * HALF * 0.5 }]
+                      : key === 'II' ? [{ x: xs.II - 1, y: -d * (HALF + 7) }, { x: xs.II, y: -d * HALF * 0.5 }]
                       : key === 'I' ? [{ x: xs.I - 5, y: -d * (CX.I.height + 10) }, faceOf('I', -1), midOf('I')]
                       : [midOf(key)];
             sendE(E_PER_TURN, from, via, q, () => { q.charged = true; protonateQ(q); });
@@ -1469,16 +1493,19 @@
        independent of the supply switch: turn the supply off, send one, and
        watch it go through once. In a split chain the one NADH turns I, and
        the ubiquinol it makes turns III, and III's cytochromes turn IV. */
-    function feed(fuel) {
+    /* opts.shuttle: an NADH made in the cytosol, which enters at ubiquinone by
+       the glycerol-phosphate shuttle and so is worth what FADH₂ is. */
+    function feed(fuel, opts = {}) {
       if (!hasChain(P.proteins)) return false;
       const f = fuel || P.fuel || (P.context === 'thylakoid' ? 'light' : 'NADH');
       if (!CHEM.FUELS[f]) { console.warn('Chemiosmosis: no fuel named ' + f + '; have ' + Object.keys(CHEM.FUELS).join(', ')); return false; }
       o2Spawn(f);
       if (split()) {
-        const donors = line().donors, key = Object.keys(donors).find(k => donors[k] === f);
+        const shuttle = !!opts.shuttle && f === 'NADH' && P.context === 'mitochondrion';
+        const donors = line().donors, key = shuttle ? 'II' : Object.keys(donors).find(k => donors[k] === f);
         if (!key) { console.warn(`Chemiosmosis: a split chain in a ${P.context} takes ${Object.values(donors).join(' or ')}, not ${f}`); return false; }
-        if (P.showFuel && CHEM.SPENT[f]) return enqueue(key, f);
-        pulse[key] = f; clearFuel(key); RUN[key].kick();
+        if (P.showFuel && CHEM.SPENT[f]) return enqueue(key, f, shuttle);
+        pulse[key] = shuttle ? 'FADH2' : f; clearFuel(key); RUN[key].kick();
         if (key === 'PSII') credit.PSI++;
         return true;
       }
@@ -1580,7 +1607,7 @@
         synthX = pr.synthase ? pr.synthase.x : null;
         if (pr.synthase) { SYNTH.group.position.x = synthX;
           /* the door is the a/c interface, beside the ring's axis */
-          holes.push([synthX + SYN_MID, holeOf(SYN_HALFW, SYN_LOBE)]); PORES.push({ x:synthX + LANE_DX, R:C_R + 2, lumen:4, kind:'H', door:'synthase' }); }
+          holes.push([synthX + SYN_MID, holeOf(SYN_HALFW, SYN_LOBE)]); PORES.push({ x:synthX + LANE_DX, R:C_R + 2, lumen:4, kind:'H', door:'synthase', capture:22, pull:1.8 }); }
         LEAK.group.visible = !!pr.leak;
         if (pr.leak) { LEAK.group.position.x = pr.leak.x; LEAK.setGates(1, 1);
           holes.push([pr.leak.x, holeOf(LEAK_R, LEAK_LOBE)]); PORES.push({ x:pr.leak.x, R:LEAK_R, lumen:7.6, kind:'H', door:'leak', weight:LEAK_PREFERENCE }); }
@@ -2033,7 +2060,7 @@
         subs.push(s);
         return () => { if (s.off) s.off(); const i = subs.indexOf(s); if (i >= 0) subs.splice(i, 1); };
       },
-      feed: f => cur.feed(f), spend: () => cur.spend ? cur.spend() : false,
+      feed: (f, o) => cur.feed(f, o), spend: () => cur.spend ? cur.spend() : false,
       add: (k, o) => cur.add(k, o), scatter: (k, n, s, o) => cur.scatter(k, n, s, o), clear: () => cur.clear(), reset: () => cur.reset(),
       start: () => cur.start(), stop: () => cur.stop(), pump: dt => cur.pump(dt),
       destroy: () => { if (cur.clearNotes) cur.clearNotes(); cur.destroy(); },
