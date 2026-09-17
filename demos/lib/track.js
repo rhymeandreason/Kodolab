@@ -155,6 +155,10 @@
   }
 
   function gear() {
+    /* Framed (respiration opens glycolysis in a modal, the builder shows an
+       app), the frame's own page has the gear; a second one inside would
+       float over the card. Events still report from the frame. */
+    if (window.top !== window.self) return;
     var st = document.createElement('style'); st.textContent = STYLE; document.head.appendChild(st);
     var b = document.createElement('button');
     b.id = 'classgear'; b.type = 'button'; b.innerHTML = GEAR;
