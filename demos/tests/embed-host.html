@@ -1,0 +1,174 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Embed host — fake LMS</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- embed-host.html — somebody else's page, for testing a lesson inside an iframe.
+     Deliberately loads NONE of this repo's CSS or JS: the point is a host that
+     shares nothing with the lesson. It stands in for Canvas / Notion / Google
+     Sites when you have neither.
+
+     CROSS-ORIGIN IS THE TEST THAT MATTERS. A same-origin frame passes things a
+     real host would not: Safari partitions (and can block) localStorage in a
+     third-party frame, and lib/embed.js's framed check takes its other branch.
+     "Cross-origin" flips the frame's host between localhost and 127.0.0.1 —
+     different origin, same dev server, no second port needed. Open this page on
+     whichever of the two the frame is NOT on. -->
+<style>
+  :root { color-scheme: light }
+  * { box-sizing: border-box }
+  body { margin:0; font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#1f2328; background:#fff }
+  .bar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:14px; align-items:center;
+         padding:10px 16px; background:#2d3b45; color:#fff; font-size:13px }
+  .bar b { font-size:14px; font-weight:700; letter-spacing:.02em }
+  .bar label { display:flex; gap:5px; align-items:center; white-space:nowrap }
+  .bar select, .bar input[type=number], .bar input[type=text] { font:inherit; padding:3px 6px; border:0; border-radius:4px }
+  .bar input[type=number] { width:70px }
+  .page { max-width:var(--col,750px); margin:0 auto; padding:28px 16px 80px }
+  h1 { font-size:28px; margin:.2em 0 .1em }
+  .meta { color:#6b7280; font-size:14px; margin:0 0 24px }
+  .wrap { margin:26px 0 }
+  .log { max-width:1100px; margin:0 auto; padding:0 16px 60px; font:13px/1.5 ui-monospace,Menlo,monospace; color:#374151 }
+  .log h2 { font:600 14px/1.4 -apple-system,sans-serif; color:#111 }
+  .log li { margin:2px 0 }
+  .log .bad { color:#b91c1c; font-weight:700 }
+  textarea { width:100%; height:120px; font:12px/1.5 ui-monospace,Menlo,monospace; padding:8px }
+  .hint { font-size:13px; color:#6b7280 }
+</style>
+
+<div class="bar">
+  <b>FAKE LMS</b>
+  <label>Lesson <select id="lesson"></select></label>
+  <label>View <select id="view"><option value="">full</option><option value="?view=inset">simple</option></select></label>
+  <label>Host <select id="preset"></select></label>
+  <label>W <input type="number" id="w" value="960" step="10"></label>
+  <label>H <input type="number" id="h" value="600" step="10"></label>
+  <label><input type="checkbox" id="xo" checked> cross-origin</label>
+  <label><input type="checkbox" id="sbx"> sandbox</label>
+  <label><input type="checkbox" id="snip"> paste snippet</label>
+</div>
+
+<div class="page" id="page">
+  <h1>Module 4: Cellular Respiration</h1>
+  <p class="meta">Posted by Dr. Reyes · Due Friday</p>
+  <p>Read chapter 9, then work through the simulation below. You should be able to say
+     where each carbon in glucose ends up and why the cell bothers with NAD⁺ at all.</p>
+
+  <div class="wrap" id="wrap"></div>
+
+  <p>Answer in your notebook: at which step is the first ATP actually spent, and what
+     would happen to the ledger if the cell ran out of NAD⁺?</p>
+  <p class="hint">Scroll, click inside the frame, and watch the URL bar. If this page ever
+     navigates away, the lesson has broken out of its frame.</p>
+</div>
+
+<div class="log">
+  <h2>Checks</h2>
+  <ul id="out"></ul>
+  <p class="hint">Snippet from the embed sheet:</p>
+  <textarea id="paste" placeholder="Paste the code from Get an embed code, then tick “paste snippet”."></textarea>
+</div>
+
+<script>
+/* Lesson list mirrors lessons.html's table; only the embeddable ones. */
+const LESSONS = [
+  ['glycolysis',  '/demos/glycolysis-lab.html',   'Glycolysis'],
+  ['krebs',       '/demos/krebs-lab.html',        'Krebs cycle'],
+  ['etc',         '/demos/etc-lab.html',          'Electron transport'],
+  ['fermentation','/demos/fermentation-lab.html', 'Fermentation'],
+  ['respiration', '/demos/respiration-lab.html',  'Respiration (hub)'],
+  ['water',       '/demos/water-lab.html',        'Water'],
+  ['bonds',       '/demos/molecule-builder.html', 'Bonds'],
+  ['protein',     '/demos/hemoglobin-lab.html',   'Hemoglobin'],
+  ['membrane',    '/demos/membrane-lab.html',     'Membrane'],
+  ['dna',         '/demos/dna-structure.html',    'DNA'],
+  ['tree',        '/demos/tree/tree-lab.html',    'Tree'],
+];
+/* Column widths real hosts give an embed. Canvas's rich-content column is the
+   narrow one and the one that breaks layouts. */
+const PRESETS = [
+  ['Canvas page',    750,  960, 600],
+  ['Canvas full',    1100, 1000, 640],
+  ['Notion inline',  900,  900, 560],
+  ['Google Sites',   960,  960, 600],
+  ['Phone',          390,  360, 560],
+];
+const LAPTOP = 1200;   // same number the embed sheet lays out at
+const $ = id => document.getElementById(id);
+const out = $('out');
+function say(t, bad) { const li = document.createElement('li'); li.textContent = t; if (bad) li.className = 'bad'; out.appendChild(li); }
+
+$('lesson').innerHTML = LESSONS.map(l => `<option value="${l[1]}">${l[2]}</option>`).join('');
+$('preset').innerHTML = PRESETS.map((p, i) => `<option value="${i}">${p[0]}</option>`).join('');
+
+/* The other host name for the same dev server. localhost and 127.0.0.1 are
+   different origins to every browser, which is all a third-party frame is. */
+function frameOrigin() {
+  if (!$('xo').checked) return location.origin;
+  const other = location.hostname === 'localhost' ? '127.0.0.1' : 'localhost';
+  return location.protocol + '//' + other + (location.port ? ':' + location.port : '');
+}
+
+function build() {
+  const wrap = $('wrap');
+  wrap.innerHTML = '';
+  const p = PRESETS[$('preset').value];
+  $('page').style.setProperty('--col', p[1] + 'px');
+
+  if ($('snip').checked) {
+    const html = $('paste').value.trim();
+    if (!html) return say('paste snippet is on but the box is empty', true);
+    wrap.innerHTML = html;                      // exactly what a teacher pastes
+    wrap.querySelectorAll('iframe').forEach(watch);
+    say('rendered the pasted snippet verbatim — the src is whatever it carries');
+    return;
+  }
+
+  const w = Math.max(320, +$('w').value || 960), h = Math.max(200, +$('h').value || 600);
+  const scale = Math.min(1, w / LAPTOP), lw = Math.round(w / scale), lh = Math.round(h / scale);
+  const box = document.createElement('div');
+  box.style.cssText = `width:${w}px;max-width:100%`;
+  const clip = document.createElement('div');
+  clip.style.cssText = `position:relative;overflow:hidden;height:${h}px;border-radius:12px`;
+  const f = document.createElement('iframe');
+  f.src = frameOrigin() + $('lesson').value + $('view').value;
+  f.title = 'Kodolab lesson';
+  f.setAttribute('allow', 'fullscreen');
+  f.style.cssText = `position:absolute;left:0;top:0;border:0;` + (scale < 1
+    ? `width:${lw}px;height:${lh}px;transform:scale(${scale.toFixed(4)});transform-origin:0 0`
+    : 'width:100%;height:100%');
+  /* Canvas serves user content sandboxed. allow-same-origin is in the list on
+     purpose: without it the frame gets an opaque origin and localStorage throws
+     outright, which is a harsher test than any real host applies. */
+  if ($('sbx').checked) f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms');
+  clip.appendChild(f); box.appendChild(clip);
+  const credit = document.createElement('p');
+  credit.style.cssText = 'margin:6px 0 0;font:13px/1.4 -apple-system,sans-serif;color:#6b7280';
+  credit.innerHTML = `<a href="${frameOrigin()}${$('lesson').value}?from=embed" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Open this lesson on Kodolab →</a>`;
+  box.appendChild(credit);
+  wrap.appendChild(box);
+  watch(f);
+  say(`${scale < 1 ? `laid out at ${lw}×${lh}, shown at ${Math.round(scale * 100)}%` : `laid out at ${w}×${h}`} · ${f.src}`);
+}
+
+function watch(f) {
+  const t0 = performance.now();
+  f.addEventListener('load', () => {
+    say(`frame loaded in ${Math.round(performance.now() - t0)} ms`);
+    /* Reading the frame's document is the origin test. A cross-origin frame
+       either throws or hands back null, depending on the engine, and both
+       answers mean the same thing: this really is a third-party frame. */
+    let d = null;
+    try { d = f.contentDocument; } catch (e) {}
+    say(d ? `same-origin — <html class="${d.documentElement.className}"> (bare = the lesson dropped its own title bar)`
+          : 'cross-origin frame confirmed — this page cannot read it, and neither could Canvas');
+  });
+}
+
+/* A lesson that navigates the HOST page is the failure teachers notice. */
+addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });
+say('top-frame navigation guard armed: a “leave site?” prompt means the lesson tried to navigate this page');
+
+['lesson','view','w','h','xo','sbx','snip','paste'].forEach(id => $(id).addEventListener('change', build));
+$('preset').addEventListener('change', () => { const p = PRESETS[$('preset').value]; $('w').value = p[2]; $('h').value = p[3]; build(); });
+build();
+</script>
