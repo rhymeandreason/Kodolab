@@ -301,7 +301,7 @@
 
        I    NADH → Q        pumps 4
        II   FADH₂ → Q       pumps 0   succinate dehydrogenase; its FAD is bound
-       III  QH₂ → cyt c     pumps 4   net of the Q cycle, drawn as a plain pump
+       III  QH₂ → cyt c     pumps 4   net of the Q cycle: 2 ride in on QH₂, 2 from the matrix at Qi
        IV   cyt c → O₂      pumps 2   plus 2 matrix H⁺ per pair into water,
                                       which is chemistry and not pumping
 
@@ -326,7 +326,7 @@
        PSII  H₂O → PQ      pumps 0   one H₂O gives 2 e⁻ and 2 H⁺ INTO THE
                                      LUMEN, and ½ O₂. `fromWater` is those
                                      protons: released, not pumped
-       b6f   PQH₂ → PC     pumps 4   net of the Q cycle, drawn as a plain pump
+       b6f   PQH₂ → PC     pumps 4   net of the Q cycle: 2 ride in on PQH₂, 2 from the stroma
        PSI   PC → NADP⁺    pumps 0   ferredoxin and FNR drawn as PSI's stromal
                                      face: NADP⁺ + 2e⁻ + H⁺ → NADPH, the H⁺
                                      taken from the stroma

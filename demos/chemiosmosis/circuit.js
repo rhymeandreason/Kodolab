@@ -127,12 +127,12 @@
     /* THE SPLIT CHAIN. One blue for I, III and IV and a paler one for II,
        palette.js's rule. The shapes are a schematic whose one job is to be
        told apart: I is the biggest and has the long arm hanging into the
-       matrix where NADH docks; II is built apart, below; III and IV are dimers. */
+       matrix where NADH docks; II, III and IV are built from their structures, below. */
     const SPEC = {
       I:   { R: 16.5, lobes: 3, lobe: 0.12, color: RESP.complex },
       II:  { R: 9.0,  lobes: 2, lobe: 0.10, color: RESP.complexII },
-      III: { R: 15.5, lobes: 2, lobe: 0.16, color: RESP.complex },
-      IV:  { R: 13.5, lobes: 2, lobe: 0.10, color: RESP.complex },
+      III: { R: 11.5, lobes: 2, lobe: 0.05, color: RESP.complex },
+      IV:  { R: 16.0, lobes: 0, lobe: 0,    color: RESP.complex },
       /* PSII and b6f are dimers. PSII's oxygen-evolving complex hangs into
          the lumen, where the water is split; PSI's stromal ridge is where
          ferredoxin docks and NADP⁺ is reduced. */
@@ -149,26 +149,58 @@
        of six helices with the ubiquinone site near the matrix face and no
        path for a proton. Proportions follow the structure: the head stands
        about twice the membrane's thickness into the matrix. */
-    function succinateDH() {
-      const color = SPEC.II.color, h = HALF + 1.5, r = 6.8;
+    /* A solid rod through the bilayer: a lathe capsule with no lumen, widened
+       in x so one reads as two bundles side by side. */
+    function solidPart(color, r, h, sx) {
       const prof = [];
       for (let i = 0; i <= 8; i++) { const a = -Math.PI / 2 + (i / 8) * Math.PI / 2; prof.push(new THREE.Vector2(r * Math.cos(a) + 1e-3, -h + r + r * Math.sin(a))); }
       for (let i = 0; i <= 8; i++) { const a = (i / 8) * Math.PI / 2; prof.push(new THREE.Vector2(r * Math.cos(a) + 1e-3, h - r + r * Math.sin(a))); }
       const geo = new THREE.LatheGeometry(prof, 40);
       const mesh = new THREE.Mesh(geo, Parts.flat(color));
-      mesh.scale.set(1.35, 1, 1);      // SdhC beside SdhD
+      mesh.scale.set(sx, 1, 1);
       const group = new THREE.Group(); group.add(mesh);
       return { group, mesh, geometry: geo, height: h, setGates() {}, get gates() { return { top: 0, bottom: 0 }; },
                site: new THREE.Vector3(), dispose() { geo.dispose(); mesh.material.dispose(); } };
     }
-    for (const k of ALL) CX[k] = k === 'II' ? succinateDH() : Parts.transporter({ half:HALF, site:6.2, mouth:8.0, radius:SPEC[k].R, lobes:SPEC[k].lobes, lobeDepth:SPEC[k].lobe, color:SPEC[k].color });
+    const succinateDH = () => solidPart(SPEC.II.color, 6.8, HALF + 1.5, 1.35);   // SdhC beside SdhD
+    /* COMPLEX III (bc₁, PDB 1BGY) IS AN OBLIGATE DIMER with no proton channel:
+       it moves protons by the Q cycle, at quinone sites inside the membrane.
+       A pear: a dimer's width through the bilayer, swelling below into the
+       core proteins, most of its mass, hanging further into the matrix than
+       the membrane is thick. On the other face, cytochrome c₁ and the Rieske
+       iron-sulfur head make a low knob where cytochrome c docks.
+       COMPLEX IV (PDB 1OCC) WORKS AS A MONOMER and IS a pump, so it keeps the
+       lathe and its gates, but squat and wide: mostly buried, a small bump
+       into the matrix, and subunit II's Cu_A domain as a knob on the outer
+       face, cytochrome c's dock. */
+    const III_DROP = 34;   // how far the core hangs below the membrane's centre, past HALF
+    function bc1() {
+      const top = HALF + 2, bottom = -(HALF + III_DROP), rTop = 8.5, rMax = 17, N = 40;
+      const prof = [new THREE.Vector2(1e-3, bottom)];
+      for (let i = 1; i < N; i++) {
+        const y = bottom + (top - bottom) * i / N, u = i / N;
+        /* the belly peaks below the matrix face; both ends round off */
+        const belly = Math.exp(-(((y + HALF + 15) / 14) ** 2));
+        const r = (rTop + (rMax - rTop) * belly) * Math.pow(Math.sin(Math.PI * u), 0.35);
+        prof.push(new THREE.Vector2(Math.max(r, 1e-3), y));
+      }
+      prof.push(new THREE.Vector2(1e-3, top));
+      const geo = new THREE.LatheGeometry(prof, 40);
+      const mesh = new THREE.Mesh(geo, Parts.flat(SPEC.III.color));
+      mesh.scale.set(1.3, 1, 1);      // two monomers side by side
+      const group = new THREE.Group(); group.add(mesh);
+      return { group, mesh, geometry: geo, height: top, setGates() {}, get gates() { return { top: 0, bottom: 0 }; },
+               site: new THREE.Vector3(), dispose() { geo.dispose(); mesh.material.dispose(); } };
+    }
+    const OVER = { IV: 5 };
+    for (const k of ALL) CX[k] = k === 'II' ? succinateDH() : k === 'III' ? bc1() : Parts.transporter({ over: OVER[k] != null ? OVER[k] : 14, half:HALF, site:6.2, mouth:8.0, radius:SPEC[k].R, lobes:SPEC[k].lobes, lobeDepth:SPEC[k].lobe, color:SPEC[k].color });
     const OEC = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(PHO.psii));
     OEC.scale.set(1.3, 0.8, 1); OEC.userData.baseY = CX.PSII.height + 3;
     CX.PSII.group.add(OEC);
     const RIDGE_PSI = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(PHO.psi));
     RIDGE_PSI.scale.set(1.2, 0.8, 1); RIDGE_PSI.userData.baseY = CX.PSI.height + 3;
     CX.PSI.group.add(RIDGE_PSI);
-    CX.PSII.setGates(0, 0); CX.PSI.setGates(0, 0);
+    CX.PSII.setGates(0, 0); CX.PSI.setGates(0, 0); CX.b6f.setGates(0, 0);   // b6f runs the Q cycle: no channel opens
     const ARM_I = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(RESP.complex));
     ARM_I.scale.set(1, 2.1, 1); ARM_I.position.x = -5; ARM_I.userData.baseY = CX.I.height + 12;
     CX.I.group.add(ARM_I);
@@ -179,6 +211,20 @@
     SDHA.position.x = -2; SDHA.userData.baseY = HALF + 22;
     HEAD_II.add(SDHB, SDHA);
     CX.II.group.add(HEAD_II);
+    /* userData.side: +1 on the pumped-into face, −1 on the loading face */
+    const knob = (color, r, x, baseY, side, sy = 1) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12), Parts.flat(color));
+      m.scale.set(1, sy, 1); m.position.x = x; m.userData.baseY = baseY; m.userData.side = side;
+      return m;
+    };
+    const III_C1 = HALF + 3;
+    const KNOBS = {
+      III: [knob(RESP.complex, 6, -5, III_C1, 1, 0.8), knob(RESP.complex, 4.5, 7, III_C1 - 1, 1, 0.8)],
+      IV:  [knob(RESP.complex, 7, 2, CX.IV.height, -1, 0.55), knob(RESP.complex, 6.5, -4, CX.IV.height + 2, 1, 0.85)],
+    };
+    for (const k in KNOBS) CX[k].group.add(...KNOBS[k]);
+    /* where cytochrome c sits: on c₁ at III, on Cu_A at IV */
+    const cSeat = key => key === 'III' ? III_C1 + 6 + 5 : key === 'IV' ? CX.IV.height + 2 + 6.5 * 0.85 + 5 : H_() + 7;
 
     const SYN_R = 13.2, SYN_LOBE = 0.09;
     const SYNTH   = Parts.transporter({ half:HALF, site:6.0, mouth:8.2, radius:SYN_R, lobes:8, lobeDepth:SYN_LOBE, color:RESP.synthase });
@@ -831,9 +877,8 @@
       seat(q.obj, q.x, q.y, q.z);
       return Math.abs(to.x - q.x) < 0.5 && Math.abs(to.z - q.z) < 1.5;
     }
-    const cY = () => pumpDir() * (H_() + 7);
-    const cHome = i => ({ x: xs[line().hub] + 4 + (i ? 5 : -5), y: cY(), z: 0 });
-    const cDock = i => ({ x: xs[line().end] - 8 + (i ? 5 : -5), y: cY(), z: 0 });
+    const cHome = i => ({ x: xs[line().hub] - 4 + (i ? 5 : -5), y: pumpDir() * cSeat(line().hub), z: 0 });
+    const cDock = i => ({ x: xs[line().end] - 4 + (i ? 5 : -5), y: pumpDir() * cSeat(line().end), z: 0 });
     /* Electrons the hub's shuttle takes a trip: 2 per pair over this. */
     const cCarries = () => CHEM.CARRIES[ROW(line().hub).gives];
     function ePill(on, tok) {
@@ -922,6 +967,31 @@
     const faceOf = (key, s, dx = 0) => ({ x: xs[key] + dx, y: s * pumpDir() * CX[key].height * 0.75, z: 0 });
     const midOf = (key, dx = 0) => ({ x: xs[key] + dx, y: 0, z: 0 });
 
+    /* ---- the Q cycle's protons ----
+       A QUINONE TAKES TWO H⁺ WITH ITS TWO ELECTRONS: reduced at I, II or
+       PSII, it picks them up from the loading side and carries them as
+       ubiquinol (plastoquinol). At the hub they are let go on the far side,
+       with more the hub takes in at its Qi site, and no channel through it.
+       A real turn runs two quinols through Qo and one back through Qi; this
+       draws the net. The drawn totals match the table: I 4 + quinone 2 +
+       III 2 + IV 2 = 10 for NADH. */
+    const Q_H = 2;
+    function protonateQ(q) {
+      const from = -pumpDir();
+      const pool = travellers.filter(t => t.kind === 'H' && !t.aboard && t.lane == null && Math.sign(t.y) === from)
+        .sort((a, b) => ((a.x - q.x) ** 2 + a.y * a.y) - ((b.x - q.x) ** 2 + b.y * b.y)).slice(0, Q_H);
+      q.h = pool;
+      for (const t of pool) t.aboard = true;
+    }
+    function freeQH(q) { for (const t of q.h || []) t.aboard = false; q.h = []; }
+    function tickQH(q) {
+      const k = 0.15;
+      (q.h || []).forEach((t, i) => {
+        const tx = q.x + (i ? 3.2 : -3.2), ty = q.y + pumpDir() * 4.5, tz = (q.z || 0) + 2;
+        t.x += (tx - t.x) * k; t.y += (ty - t.y) * k; t.z += (tz - t.z) * k;
+        t.obj.position.set(t.x, t.y, t.z);
+      });
+    }
     function buildShuttles() {
       if (qTokens.length && shuttleCtx === P.context) return;
       dropShuttles();
@@ -937,10 +1007,12 @@
       }
     }
     function dropShuttles() {
+      for (const q of qTokens) freeQH(q);
       for (const t of qTokens.concat(cTokens)) { ePill(false, t); dropToken(t.obj); }
       qTokens.length = 0; cTokens.length = 0;
     }
     function homeShuttles() {
+      for (const q of qTokens) freeQH(q);
       for (const q of qTokens) { if (q.state !== 'free') relabel(q.obj, line().q[0], 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); }
       for (const c of cTokens) { ePill(false, c); c.state = 'home'; c.to = cHome(c.i); }
       clearE();
@@ -948,6 +1020,7 @@
     function tickShuttles(dt) {
       for (const q of qTokens) {
         const there = qMove(q, dt);
+        tickQH(q);
         if (q.state === 'toDonor' && there && q.charged) {
           relabel(q.obj, line().q[1], 8.0);
           q.state = 'toHub'; q.to = qDock(line().hub, q.x, q.i);
@@ -1082,9 +1155,11 @@
            bottom in a mitochondrion and the top in a thylakoid. A machine
            with no path through keeps both gates shut. */
         const d = pumpDir();
-        const top = n ? (d > 0 ? st.gates.top : st.gates.bottom) : 0, bottom = n ? (d > 0 ? st.gates.bottom : st.gates.top) : 0;
+        const gated = n && !o.place;
+        const top = gated ? (d > 0 ? st.gates.top : st.gates.bottom) : 0, bottom = gated ? (d > 0 ? st.gates.bottom : st.gates.top) : 0;
         if (top !== r.gates.top || bottom !== r.gates.bottom) { o.part.setGates(top, bottom); r.gates.top = top; r.gates.bottom = bottom; }
         const x = o.x(), gap = r.cargo.length > 2 ? 4.0 : 5.5;
+        if (o.place) { o.place(r.cargo, st, x); r.st = st; return st; }
         for (let i = 0; i < st.cargo.length; i++) {
           const t = r.cargo[i];
           if (!t) continue;
@@ -1253,7 +1328,7 @@
             const via = key === 'II' ? [{ x: xs.II - 1, y: -d * (HALF + 7) }, { x: xs.II, y: -d * HALF * 0.5 }]
                       : key === 'I' ? [{ x: xs.I - 5, y: -d * (CX.I.height + 10) }, faceOf('I', -1), midOf('I')]
                       : [midOf(key)];
-            sendE(E_PER_TURN, from, via, q, () => { q.charged = true; });
+            sendE(E_PER_TURN, from, via, q, () => { q.charged = true; protonateQ(q); });
           }
           fuelSpend(key); if (more.onOcclude) more.onOcclude();
         },
@@ -1264,12 +1339,27 @@
     /* THE HUB: III, or b6f. Takes a reduced quinone, pumps, and loads the
        one-electron shuttles, two per pair. */
     function hub(key) {
+      /* Qi takes protons from the loading side, Qo lets all of them go on the
+         far side, both inside the membrane; no gate opens. */
+      const H = () => CX[key].height, QI = { dx: 6, y: -0.45 }, QO = { dx: -6, y: 0.45 };
       const r = runner({
-        key, part: CX[key], n: ROW(key).pumps, x: () => xs[key],
+        key, part: CX[key], n: ROW(key).pumps - Q_H, x: () => xs[key],
+        place(cargo, st, x) {
+          const d = pumpDir(), k = 0.16, out = st.phase === 'release-H';
+          const toQo = st.phase === 'turn-out' || out;
+          cargo.forEach((t, i) => {
+            const qi = i < ROW(key).pumps - Q_H && !toQo;
+            const s = qi ? QI : QO, spread = (i - (cargo.length - 1) / 2) * 3.2;
+            const tx = x + s.dx + spread, ty = out ? d * (H() + 4) : d * s.y * HALF;
+            t.x += (tx - t.x) * k; t.y += (ty - t.y) * k; t.z += (0 - t.z) * k;
+            t.obj.position.set(t.x, t.y, t.z);
+          });
+        },
         rate: backPressure,
         ready: () => qTokens.some(q => q.state === 'atHub') && cTokens.filter(c => c.state === 'home').length >= E_PER_TURN / cCarries(),
         load: () => {
           const q = qTokens.find(q => q.state === 'atHub'); q.state = 'inHub'; r.q = q;
+          r.cargo.push(...(q.h || [])); q.h = [];
           r.c = cTokens.filter(c => c.state === 'home').slice(0, E_PER_TURN / cCarries());
           for (const c of r.c) c.state = 'held';
         },
@@ -1385,7 +1475,7 @@
     const INTRO_CARDS = {
       'complex.I': 'NADH drops off two electrons here. Passing them on pays for pumping protons out.',
       'complex.II': 'FADH₂ drops off its electrons here. This complex pumps no protons, so FADH₂ builds less gradient than NADH.',
-      'complex.III': 'Passes the electrons along and pumps more protons.',
+      'complex.III': 'Takes the electrons off ubiquinol and passes them to cytochrome c. The protons ubiquinol carried, and more from the matrix, are let out on the other side.',
       'complex.IV': 'Hands the electrons to oxygen, which becomes water. It pumps protons too. Block it and the whole chain stops.',
       quinone: 'A small carrier that moves electrons through the membrane.',
       cytc: 'A small carrier that moves electrons along the membrane surface to the last complex.',
@@ -1458,6 +1548,8 @@
         HEAD.position.y = -d * HEAD.userData.baseY; HEAD.rotation.x = d > 0 ? Math.PI : 0;
         ARM_I.position.y = -d * ARM_I.userData.baseY; ARM_I.rotation.z = 0.45 * d;
         for (const m of HEAD_II.children) m.position.y = -d * m.userData.baseY;
+        CX.III.mesh.rotation.x = d > 0 ? 0 : Math.PI;   // the pear's belly on the loading side
+        for (const k in KNOBS) for (const m of KNOBS[k]) m.position.y = m.userData.side * d * m.userData.baseY;
         OEC.position.y = d * OEC.userData.baseY;               // the lumen face
         RIDGE_PSI.position.y = -d * RIDGE_PSI.userData.baseY;  // the stroma face
       },
@@ -1599,7 +1691,7 @@
         'complex.II': { text: 'complex II (pumps nothing)', offset: [-40, 30],
           card: `It is also a Krebs cycle enzyme: succinate gives two electrons to the FAD bound inside it, and they go on to ubiquinone. It pumps ${C.II.pumps} protons, so electrons that enter here skip complex I's ${C.I.pumps}. That is why FADH₂ is worth ${CHEM.chainProtons('FADH2')} protons and NADH ${CHEM.chainProtons('NADH')}.` },
         'complex.III': { text: 'complex III', offset: [-10, -40],
-          card: `Takes the pair from ubiquinol and hands them to cytochrome c one at a time, so it loads two cytochromes a turn. ${C.III.pumps} protons end up outside per pair; most arrive riding on ubiquinol itself, in a loop called the Q cycle that is drawn here as a plain pump.` },
+          card: `Takes the pair from ubiquinol and hands them to cytochrome c one at a time, so it loads two cytochromes a turn. ${C.III.pumps} protons end up outside per pair with no channel through the protein: some ride in on ubiquinol with its electrons, the rest are taken from the matrix. The loop is called the Q cycle.` },
         'complex.IV': { text: 'complex IV', offset: [40, -34],
           card: `Collects electrons from cytochrome c and gives them to oxygen: four electrons and four matrix protons make one O₂ into two waters. It pumps ${C.IV.pumps} more per pair. Cyanide stops it here, and everything upstream backs up.` },
         quinone: { text: 'ubiquinone', offset: [-40, 26],
@@ -1609,7 +1701,7 @@
         psii: { text: 'photosystem II', offset: [-44, -30],
           card: `Light knocks an electron loose, and PSII refills the hole from water, on its lumen face. Each water gives ${CHEM.CARRIES.H2O} electrons and ${CHEM.PHOTO_CHAIN.PSII.fromWater} protons, which stay in the lumen, and every two waters leave one O₂. It pumps nothing: its protons come out of water, not across the membrane. The electrons go on to plastoquinone.` },
         b6f: { text: 'cytochrome b6f', offset: [-10, -40],
-          card: `The one pump in the chain, and a close relative of the mitochondrion's complex III. It takes the pair from plastoquinol and hands them to plastocyanin one at a time; ${CHEM.PHOTO_CHAIN.b6f.pumps} protons end up in the lumen per pair, in the same Q cycle, drawn here as a plain pump. As the lumen turns acidic it slows, so the chain cannot outrun the synthase.` },
+          card: `The one pump in the chain, and a close relative of the mitochondrion's complex III. It takes the pair from plastoquinol and hands them to plastocyanin one at a time; ${CHEM.PHOTO_CHAIN.b6f.pumps} protons end up in the lumen per pair, by the same Q cycle: some ride in on plastoquinol, the rest are taken from the stroma, and no channel opens. As the lumen turns acidic it slows, so the chain cannot outrun the synthase.` },
         psi: { text: 'photosystem I', offset: [40, -34],
           card: `A second photon lifts each electron again, higher than PSII could, high enough to reduce NADP⁺. On its stroma face, ferredoxin and the enzyme FNR (not drawn) make NADPH from NADP⁺, two electrons and one proton from the stroma. PSI pumps nothing either.` },
         plastoquinone: { text: 'plastoquinone', offset: [-40, 26],
