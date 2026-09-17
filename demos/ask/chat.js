@@ -91,9 +91,27 @@ const KEY = (() => {
   return k;
 })();
 
+/* A class code (lib/site.js keeps it from a teacher's `?class=` link) admits
+ * to the tutor as the class's cohort, the way a testing link does. Either or
+ * both ride as headers; a browser with neither sends none and is refused. */
+/* Read per request, and from the address first: site.js is deferred, so on the
+ * load that carries `?class=` it has not stored the code when the launcher's
+ * GET goes out, while this script (in the body) is already running. */
+function classCode() {
+  try {
+    const q = new URL(location.href).searchParams.get('class');
+    if (q) { const c = q.toLowerCase().replace(/[^a-z0-9]/g, ''); if (c.length === 8) return c.slice(0, 4) + '-' + c.slice(4); }
+  } catch { /* no URL API */ }
+  try { return localStorage.getItem('ss.class'); } catch { return null; }
+}
+
 /* Sent on every request, and simply absent without a key. */
 function keyed(headers) {
-  return KEY ? { ...headers, 'X-Tutor-Key': KEY } : headers;
+  const h = { ...headers };
+  const klass = classCode();
+  if (KEY) h['X-Tutor-Key'] = KEY;
+  if (klass) h['X-Class-Code'] = klass;
+  return h;
 }
 
   function chat(opts) {

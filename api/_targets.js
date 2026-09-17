@@ -160,6 +160,26 @@ const LESSONS = {
     ],
   },
 
+  'respiration-lab': {
+    title: 'Cellular Respiration',
+    page: 'demos/respiration-lab.html',
+    chapter: 'respiration',
+    param: 'step',
+    deepLink: false,          // one shell step; the scroll is the state, and the page reads no ?step=
+    // The page's phases in scroll order: `at` is the index the page sends as
+    // `step`, and its `act` scrolls the chart to that phase's mark.
+    targets: [
+      { id: 'phase-glycolysis', kind: 'step', at: 0, title: 'Glycolysis',
+        what: 'glycolysis in the cytoplasm, before anything reaches a mitochondrion: one glucose split to two pyruvate, two ATP net and two NADH' },
+      { id: 'phase-mito',       kind: 'step', at: 2, title: 'Link step',
+        what: 'pyruvate entering the mitochondrion, the link step and the Krebs cycle: every carbon of glucose leaves as CO2 and the electrons are loaded onto NADH and FADH2' },
+      { id: 'phase-carriers',   kind: 'step', at: 3, title: '10 NADH',
+        what: 'the carriers: where the ten NADH and two FADH2 came from, and that they carry the electrons the chain will use' },
+      { id: 'phase-etc',        kind: 'step', at: 4, title: 'Electron transport',
+        what: 'the electron transport chain and ATP synthase: electrons pass down the complexes to oxygen, protons are pumped out of the matrix, and their flow back through ATP synthase makes most of the ATP' },
+    ],
+  },
+
   'membrane-lab': {
     title: 'Membrane and Osmosis',
     page: 'demos/membrane-lab.html',

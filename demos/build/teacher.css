@@ -59,7 +59,26 @@ tr.off code { text-decoration: line-through; color: var(--text-muted); }
 .addseats { margin-top: 0; }
 .addseats textarea { width: 100%; resize: vertical; }
 .addseats .sub { margin: .4rem 0 .8rem; }
-.printline { margin: -1rem 0 2rem; }
+.printline { margin: 0 0 1.2rem; }
+
+/* ---- lessons ---- */
+.linkcard { margin-bottom: 1.6rem; }
+.linkcard input { flex: 1; min-width: 16rem; font-family: ui-monospace, Menlo, monospace; font-size: .9rem; }
+.linkcard .sub { margin: .6rem 0 0; }
+.linkcard code { color: var(--text-strong); }
+.sesshead { margin-bottom: .4rem; }
+.sesshead .cap { margin: 0; }
+.sessions td i { color: var(--accent); }
+.questions { margin-top: 2rem; }
+.questions .qrow { display: grid; grid-template-columns: 1fr auto; gap: .15rem .8rem; padding: .7rem .2rem; border-bottom: 1px solid var(--border-hair); }
+.sessionbody { padding: 1.1rem; overflow-y: auto; }
+.sessionbody .kv { display: inline-flex; flex-direction: column; margin: 0 1.6rem .9rem 0; }
+.sessionbody .k { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); }
+.sessionbody .v { font-weight: 600; color: var(--text-strong); }
+.sessionbody .cap { margin: 1rem 0 .5rem; }
+.sessionbody .qa { margin: 0 0 .6rem; line-height: 1.4; }
+.sessionbody .qa.ok i { color: var(--accent); }
+.sessionbody .qa.bad i { color: var(--hue-coral); }
 
 /* ---- feed ---- */
 .feed ol { list-style: none; margin: 0; padding: 0; max-height: 44rem; overflow-y: auto; border-top: 1px solid var(--border-hair); }

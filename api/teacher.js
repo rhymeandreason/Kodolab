@@ -5,13 +5,17 @@
  *  `X-Teacher-Code`. A seat code is never read here.
  *
  *  GET  /api/teacher                  → the teacher, their classes, their own apps
- *  GET  /api/teacher?class=ID         → the roster with counts, and the class's prompts, newest first
+ *  GET  /api/teacher?class=ID         → the roster with counts, the class's prompts, its lesson
+ *                                       code, and `sessions`: one row per browser that opened a
+ *                                       lesson on that code, with time, progress, quiz, survey,
+ *                                       and the tutor questions it asked (api/event.js, _classes.js)
  *  GET  /api/teacher?seat=ID          → one student's apps
  *  GET  /api/teacher?app=ID           → an app's every version, without pages
  *  GET  /api/teacher?app=ID&n=3       → one version's page
  *  POST {action, ...}
  *       class   {name}                → a new class
  *       rename  {class, name}
+ *       classcode {class}            → a new lesson code; the old link stops admitting, the rows stay
  *       seats   {class, labels[]}     → one seat per label, each with a fresh code
  *       label   {seat, label}
  *       reissue {seat}                → a new code; the old one stops admitting, the work stays
@@ -26,9 +30,10 @@
  * ========================================================================== */
 'use strict';
 
-const access = require('./_access.js');
-const apps   = require('./_apps.js');
-const log    = require('./_log.js');
+const access  = require('./_access.js');
+const apps    = require('./_apps.js');
+const log     = require('./_log.js');
+const codes   = require('./_classes.js');   // not `classes`: the GET below binds that name to the rows
 
 const MAX_SEATS = 80;
 const str = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
@@ -94,7 +99,9 @@ module.exports = async function handler(req, res) {
           JOIN seats s ON a.owner_id = 'seat:' || s.id
           WHERE s.class_id = ${klass.id} AND v.kind IN ('build', 'edit')
           ORDER BY v.created_at DESC LIMIT 150`;
-        return res.status(200).json({ class: klass, seats, feed });
+        klass.code = await codes.ensureCode(klass.id);
+        const [sessions, questions] = await Promise.all([sessionsOf(db, klass.id), questionsOf(db, klass.id)]);
+        return res.status(200).json({ class: klass, seats, feed, sessions, questions });
       }
 
       const classes = await db`
@@ -117,7 +124,7 @@ module.exports = async function handler(req, res) {
       if (!name) return res.status(400).json({ error: 'name the class' });
       const id = access.mintId();
       await db`INSERT INTO classes (id, teacher_id, name) VALUES (${id}, ${tid}, ${name})`;
-      return res.status(200).json({ id, name });
+      return res.status(200).json({ id, name, code: await codes.ensureCode(id) });
     }
 
     if (action === 'rename') {
@@ -127,6 +134,12 @@ module.exports = async function handler(req, res) {
       if (!name) return res.status(400).json({ error: 'name the class' });
       await db`UPDATE classes SET name = ${name} WHERE id = ${klass.id}`;
       return res.status(200).json({ id: klass.id, name });
+    }
+
+    if (action === 'classcode') {
+      const klass = await classOf(db, tid, String(body.class || ''));
+      if (!klass) return res.status(404).json({ error: 'no such class' });
+      return res.status(200).json({ id: klass.id, code: await codes.reissue(klass.id) });
     }
 
     if (action === 'seats') {
@@ -160,12 +173,57 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ id: seat.id, revoked: action === 'revoke' });
     }
 
-    return res.status(400).json({ error: 'action must be class, rename, seats, label, reissue, revoke or unrevoke' });
+    return res.status(400).json({ error: 'action must be class, rename, classcode, seats, label, reissue, revoke or unrevoke' });
   } catch (err) {
     console.error('[teacher] ' + ((err && err.message) || err));
     return res.status(500).json({ error: 'the dashboard failed: ' + ((err && err.message) || 'unknown error') });
   }
 };
+
+/* One row per browser that opened a lesson on the class code. Each column is
+ * the roll-up the dashboard shows, read from the events the browser sent:
+ * `active_s` sums the heartbeats, so it is time the tab was VISIBLE and not
+ * time it was open; `phase` is the furthest stage by its order `i`; quiz and
+ * survey are the latest submission. `questions` joins the tutor's threads on
+ * the same visitor id under this class's cohort, which is the join the two
+ * anonymous logs were built to allow only here, for the class's own teacher. */
+async function sessionsOf(db, cid) {
+  return db`
+    SELECT s.visitor_id, s.name, s.first_seen, s.last_seen,
+      coalesce((SELECT sum((e.payload->>'s')::int) FROM events e
+                WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'beat'), 0)::int AS active_s,
+      (SELECT e.payload->>'phase' FROM events e
+       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'phase'
+       ORDER BY (e.payload->>'i')::int DESC NULLS LAST, e.id DESC LIMIT 1) AS phase,
+      (SELECT max((e.payload->>'i')::int) FROM events e
+       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'phase') AS phase_i,
+      EXISTS (SELECT 1 FROM events e
+              WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'complete') AS complete,
+      (SELECT e.payload FROM events e
+       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'quiz' ORDER BY e.id DESC LIMIT 1) AS quiz,
+      (SELECT e.payload FROM events e
+       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'survey' ORDER BY e.id DESC LIMIT 1) AS survey,
+      (SELECT array_agg(DISTINCT e.page) FROM events e
+       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id) AS pages,
+      (SELECT count(*) FROM messages m JOIN threads t ON t.id = m.thread_id
+       WHERE t.cohort = 'class:' || s.class_id AND t.visitor_id = s.visitor_id AND m.role = 'user')::int AS questions
+    FROM class_sessions s
+    WHERE s.class_id = ${cid}
+    ORDER BY s.last_seen DESC`;
+}
+
+/* The class's tutor questions, newest first, each with the answer it got and
+ * the nickname of the browser that asked, if one was typed. */
+async function questionsOf(db, cid) {
+  return db`
+    SELECT m.id, m.text AS q, m.step, m.created_at, t.lesson, t.visitor_id, s.name,
+           (SELECT a.text FROM messages a WHERE a.reply_to = m.id LIMIT 1) AS answer
+    FROM messages m
+    JOIN threads t ON t.id = m.thread_id
+    LEFT JOIN class_sessions s ON s.class_id = ${cid} AND s.visitor_id = t.visitor_id
+    WHERE t.cohort = ${'class:' + cid} AND m.role = 'user'
+    ORDER BY m.created_at DESC LIMIT 200`;
+}
 
 async function classOf(db, tid, id) {
   const [row] = await db`SELECT id, name, created_at FROM classes WHERE id = ${id} AND teacher_id = ${tid}`;

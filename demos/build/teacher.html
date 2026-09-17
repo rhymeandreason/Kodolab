@@ -45,18 +45,51 @@
       <p class="empty" id="noClass" hidden>Make your first class above, then add students to it.</p>
 
       <div id="classView" hidden>
-        <div class="line printline">
-          <button class="btn" type="button" id="printCards"><i class="ph-bold ph-printer"></i>Print code cards</button>
-          <span class="sub">Students go to <b id="buildUrl"></b> and type their code.</span>
-        </div>
-
         <div class="viewtabs" id="viewTabs" role="tablist">
-          <button type="button" data-view="roster" aria-pressed="true">Students<span class="chip" id="classCount"></span></button>
-          <button type="button" data-view="feed" aria-pressed="false">Activity</button>
-          <button type="button" data-view="addSeats" aria-pressed="false">Add students</button>
+          <button type="button" data-view="lessons" aria-pressed="true">Lessons<span class="chip" id="sessionCount"></span></button>
+          <button type="button" data-view="roster" aria-pressed="false">Builder codes<span class="chip" id="classCount"></span></button>
+          <button type="button" data-view="feed" aria-pressed="false">Builder activity</button>
+          <button type="button" data-view="addSeats" aria-pressed="false">Add builder codes</button>
         </div>
 
-        <section class="roster" id="roster">
+        <!-- One link per class admits every student to a lesson and its tutor,
+             and each browser that opens it reports back: api/event.js. -->
+        <section class="lessons" id="lessonsView">
+          <div class="card linkcard">
+            <label for="classLink">Class link</label>
+            <div class="line">
+              <input id="classLink" readonly>
+              <button class="btn" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy</button>
+              <button class="btn" type="button" id="newCode" title="The old link stops working"><i class="ph-bold ph-arrows-clockwise"></i>New code</button>
+            </div>
+            <p class="sub">Put it on the board. Students open it on any laptop, no sign-in. The code is <code id="classCode"></code>; it works on any lesson URL as <code>?class=…</code>. Each browser shows up below once it opens the lesson.</p>
+          </div>
+
+          <div class="line sesshead">
+            <h3 class="cap">Sessions</h3>
+            <span class="spacer"></span>
+            <button class="btn" type="button" id="exportCsv"><i class="ph-bold ph-download-simple"></i>CSV</button>
+          </div>
+          <div class="tablewrap">
+            <table class="sessions">
+              <thead><tr><th>Name</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th>Done</th><th class="num">Quiz</th><th>Survey</th><th class="num">Asked</th></tr></thead>
+              <tbody id="sessions"></tbody>
+            </table>
+          </div>
+          <p class="empty" id="noSessions" hidden>Nobody has opened the link yet.</p>
+
+          <section class="feed questions">
+            <h3 class="cap">Questions asked of the tutor, newest first</h3>
+            <ol id="questions"></ol>
+            <p class="empty" id="noQuestions" hidden>No questions yet.</p>
+          </section>
+        </section>
+
+        <section class="roster" id="roster" hidden>
+          <div class="line printline">
+            <button class="btn" type="button" id="printCards"><i class="ph-bold ph-printer"></i>Print code cards</button>
+            <span class="sub">One code per student, for building apps. Students go to <b id="buildUrl"></b> and type their code.</span>
+          </div>
           <div class="tablewrap">
             <table>
               <thead><tr><th>Student</th><th>Code</th><th class="num">Apps</th><th class="num">Prompts</th><th>Last active</th><th></th></tr></thead>
@@ -97,6 +130,16 @@
     <button class="iconbtn" id="closeStudent" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
   </header>
   <ul class="appgrid" id="studentApps"></ul>
+</dialog>
+
+<!-- One session: its quiz, its survey, and the questions it asked. -->
+<dialog class="studentbox" id="session">
+  <header>
+    <div><span class="cap" id="sessionClass"></span><h2 id="sessionName"></h2></div>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="closeSession" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
+  </header>
+  <div class="sessionbody" id="sessionBody"></div>
 </dialog>
 
 <!-- One app, the way the student made it: every turn on the left, the page it
@@ -184,8 +227,7 @@
     $('newClassName').value = '';
     data.classes.push({ id: r.id, name: r.name, seats: 0 });
     await openClass(r.id);
-    showView('addSeats');
-    $('seatLabels').focus();
+    showView('lessons');
   });
 
   async function openClass(id) {
@@ -216,6 +258,8 @@
           <i class="ph-bold ${s.revoked_at ? 'ph-lock-open' : 'ph-prohibit'}"></i></button>
       </td></tr>`).join('');
 
+    paintSessions();
+
     $('noFeed').hidden = !!c.feed.length;
     $('feed').innerHTML = c.feed.map(f => `<li class="${f.error ? 'bad' : ''}">
       <button type="button" data-app="${esc(f.app_id)}" data-n="${f.n}">
@@ -225,6 +269,101 @@
         ${f.error ? `<span class="s">Failed: ${esc(f.error)}</span>` : f.summary ? `<span class="s">${esc(f.summary)}</span>` : ''}
       </button></li>`).join('');
   }
+
+  /* ---- lessons: the link, the sessions, the questions ------------------- */
+  // Respiration is the lesson under test; any lesson URL takes the same code.
+  const LESSON_PATH = fileForm ? '/demos/respiration-lab.html' : '/respiration';
+  const classLink = () => `${location.origin}${LESSON_PATH}?class=${current.class.code}`;
+  // The phases respiration-lab.html reports, in its scroll order, said for a teacher.
+  const PHASES = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
+  const N_PHASES = Object.keys(PHASES).length;
+  // The survey's ids, as respiration-lab.html's SURVEY names them.
+  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?' };
+  const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
+  // Deployed a lesson is its short URL; on the dev server it is the file. Same lesson.
+  const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p] || p);
+
+  function paintSessions() {
+    const c = current;
+    const rows = c.sessions || [];
+    $('classLink').value = c.class.code ? classLink() : '';
+    $('classCode').textContent = c.class.code || '';
+    $('sessionCount').textContent = rows.length || '';
+    $('noSessions').hidden = !!rows.length;
+    $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
+      <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || 'anonymous')}</button></td>
+      <td class="dim">${esc((r.pages || []).map(pageName).join(', '))}</td>
+      <td class="dim">${esc(ago(r.first_seen))}</td>
+      <td class="dim">${esc(ago(r.last_seen))}</td>
+      <td class="num">${mins(r.active_s || 0)}</td>
+      <td>${r.phase ? `${esc(PHASES[r.phase] || r.phase)} <span class="dim">${(r.phase_i || 0) + 1}/${N_PHASES}</span>` : '—'}</td>
+      <td>${r.complete ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td class="num">${r.quiz ? `${r.quiz.score}/${r.quiz.total}` : ''}</td>
+      <td>${r.survey ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td class="num">${r.questions || 0}</td></tr>`).join('');
+
+    const qs = c.questions || [];
+    $('noQuestions').hidden = !!qs.length;
+    $('questions').innerHTML = qs.map(q => `<li>
+      <div class="qrow">
+        <span class="who"><b>${esc(q.name || 'anonymous')}</b>${q.lesson ? ` · ${esc(q.lesson)}` : ''}</span>
+        <span class="when">${esc(ago(q.created_at))}</span>
+        <span class="q">${esc(q.q)}</span>
+        ${q.answer ? `<span class="s">${esc(q.answer)}</span>` : ''}
+      </div></li>`).join('');
+  }
+
+  $('copyLink').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('classLink').value); $('copyLink').textContent = 'Copied'; }
+    catch { $('classLink').select(); }
+    setTimeout(() => { $('copyLink').innerHTML = '<i class="ph-bold ph-copy"></i>Copy'; }, 1500);
+  });
+  $('newCode').addEventListener('click', async () => {
+    if (!confirm('Make a new class link? The old one stops admitting. Sessions already recorded stay.')) return;
+    const r = await t('', { action: 'classcode', class: classId });
+    current.class.code = r.code;
+    paintSessions();
+  });
+
+  $('sessions').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act="session"]'); if (!b) return;
+    openSession(current.sessions[Number(b.closest('tr').dataset.i)]);
+  });
+  const dl = (k, v) => `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`;
+  function openSession(r) {
+    $('sessionName').textContent = r.name || 'anonymous';
+    $('sessionClass').textContent = current.class.name;
+    const parts = [];
+    parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', r.phase ? esc(PHASES[r.phase] || r.phase) : '—')
+      + dl('Completed', r.complete ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
+    if (r.quiz) {
+      parts.push(`<h3 class="cap">Quiz · ${r.quiz.score}/${r.quiz.total}</h3>`
+        + (r.quiz.answers || []).map(a => `<p class="qa ${a.correct ? 'ok' : 'bad'}"><i class="ph-bold ${a.correct ? 'ph-check' : 'ph-x'}"></i> ${esc(a.q)}<br><span class="dim">${esc(a.answer)}</span></p>`).join(''));
+    }
+    if (r.survey) {
+      parts.push('<h3 class="cap">Survey</h3>'
+        + Object.entries(r.survey.answers || {}).map(([k, v]) => `<p class="qa">${esc(SURVEY_Q[k] || k)}<br><span class="dim">${esc(v == null || v === '' ? '—' : String(v))}</span></p>`).join(''));
+    }
+    const qs = (current.questions || []).filter(q => q.visitor_id === r.visitor_id);
+    if (qs.length) parts.push('<h3 class="cap">Asked the tutor</h3>' + qs.map(q => `<p class="qa">${esc(q.q)}${q.answer ? `<br><span class="dim">${esc(q.answer)}</span>` : ''}</p>`).join(''));
+    $('sessionBody').innerHTML = parts.join('');
+    if (!$('session').open) $('session').showModal();
+  }
+  $('closeSession').addEventListener('click', () => $('session').close());
+  $('session').addEventListener('click', e => { if (e.target === $('session')) $('session').close(); });
+
+  $('exportCsv').addEventListener('click', () => {
+    const rows = current.sessions || [];
+    const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const head = ['name', 'lessons', 'first_seen', 'last_seen', 'on_screen_s', 'phase', 'phase_i', 'complete', 'quiz_score', 'quiz_total', 'survey', 'questions'];
+    const lines = [head.join(',')].concat(rows.map(r => [r.name, (r.pages || []).join(' '), r.first_seen, r.last_seen, r.active_s, r.phase, r.phase_i,
+      r.complete, r.quiz && r.quiz.score, r.quiz && r.quiz.total, r.survey ? JSON.stringify(r.survey.answers) : '', r.questions].map(cell).join(',')));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+    a.download = `${current.class.name.replace(/[^\w-]+/g, '_')}-sessions.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
 
   $('classTabs').addEventListener('dblclick', async e => {
     if (!e.target.closest('button[data-id]')) return;
@@ -252,7 +391,7 @@
     await openClass(classId);
   });
 
-  const VIEWS = { roster: 'roster', feed: 'feedView', addSeats: 'addSeats' };
+  const VIEWS = { lessons: 'lessonsView', roster: 'roster', feed: 'feedView', addSeats: 'addSeats' };
   function showView(v) {
     for (const [k, id] of Object.entries(VIEWS)) $(id).hidden = k !== v;
     $('viewTabs').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));

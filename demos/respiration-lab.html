@@ -142,6 +142,35 @@
   :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
 </style>
 <link rel="stylesheet" href="kit/badge.css">
+<link rel="stylesheet" href="ask/chat.css">
+<style>
+  /* The tutor's way in, pinned to the panel's foot; the sheet it opens covers the panel (ask/chat.css). */
+  #askslot { position: absolute; left: 24px; bottom: 16px; z-index: 5; }
+  #askslot #askopen { margin: 0; }
+  /* The quiz door, opposite the tutor. Always there while the lesson is under test. */
+  .quiz-open { position: absolute; right: 24px; bottom: 16px; z-index: 5; }
+
+  /* The quiz: one question at a time, then the survey, then the score. */
+  .quiz { width: min(560px, 90vw); }
+  .quiz .mkick { margin: 0; }
+  .quiz h2 { margin: var(--space-2) 0 var(--space-5); font-size: 24px; line-height: 1.25; }
+  .quiz .choices { display: flex; flex-direction: column; gap: var(--space-2); margin: 0 0 var(--space-5); }
+  .quiz .choices button { text-align: left; padding: 10px 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-page); color: var(--text-strong); font: inherit; cursor: pointer; }
+  .quiz .choices button:hover:not([disabled]) { border-color: var(--accent); }
+  .quiz .choices button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+  .quiz .choices button.ok  { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .quiz .choices button.bad { border-color: var(--hue-coral); }
+  .quiz .why { min-height: 3.2em; margin: 0 0 var(--space-4); color: var(--text-muted); font-size: 15px; line-height: 1.45; }
+  .quiz .foot { display: flex; align-items: center; gap: var(--space-3); }
+  .quiz .foot .n { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .quiz .foot .spacer { flex: 1; }
+  .quiz textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-page); color: var(--text-strong); resize: vertical; }
+  .quiz .scale { display: flex; gap: var(--space-2); margin: 0 0 var(--space-4); }
+  .quiz .scale button { flex: 1; padding: 8px 0; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-page); color: var(--text-strong); font: inherit; cursor: pointer; }
+  .quiz .scale button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .quiz .q { font-weight: 600; color: var(--text-strong); margin: 0 0 var(--space-2); }
+  .quiz .score { font-family: var(--font-display); font-size: 44px; font-weight: 500; color: var(--text-strong); margin: 0; }
+</style>
 </head>
 <body>
 
@@ -180,6 +209,16 @@
         <p class="msrc" id="molsrc"></p>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="quizmodal" class="modal" hidden>
+  <div class="mback"></div>
+  <div class="mcard quiz" role="dialog" aria-modal="true" aria-labelledby="quiztitle">
+    <button class="mclose" aria-label="Close">&times;</button>
+    <p class="mkick" id="quizkick">Quick check</p>
+    <h2 id="quiztitle"></h2>
+    <div id="quizbody"></div>
   </div>
 </div>
 
@@ -380,6 +419,7 @@
 <script src="proteins/atp-synthase/atp-synthase-scene.js"></script>
 <script src="kit/modal.js"></script>
 <script src="kit/badge.js"></script>
+<script src="ask/chat.js"></script>          <!-- the tutor drawer; DOM only, never touches the scene -->
 <script>
 (function () {
   'use strict';
@@ -602,12 +642,18 @@
     },
   };
   const ZONE = { cell: '#z-cyto', fly: '#z-cyto', mito: '#z-mito', chemi: '#z-mito', etc: '#z-mito' };
+  /* The phases in scroll order. The index is what the class log and the tutor
+     get as the step (api/_targets.js's `at`), so progress compares across sessions. */
+  const ORDER = ['cell', 'fly', 'mito', 'chemi', 'etc'];
+  const SAID  = { cell: 'glycolysis in the cytoplasm', fly: 'pyruvate flying to a mitochondrion', mito: 'the link step and Krebs cycle inside the mitochondrion',
+                  chemi: 'the carriers arriving at the inner membrane', etc: 'the electron transport chain, driven by hand' };
   let phase = null;
   function go(p, snap) {
     if (p === phase) return;
     phase = p;
     PHASES[p](snap);
     for (const z of chart.querySelectorAll('.zone')) z.classList.toggle('is-here', z.matches(ZONE[p]));
+    if (window.Track) Track.event('phase', { phase: p, i: ORDER.indexOf(p) });
   }
 
   /* ---- three buttons, then the scroll ----
@@ -707,6 +753,7 @@
      a Krebs FADH₂ or a shuttled glycolysis NADH*, told apart only for display. */
   const tally = { I: 0, II: 0, ATP: 0 };
   let seen = null;
+  let completed = false;   // reported once: the chain reset does not un-complete a lesson
   /* Carriers put on stage. Each click is one molecule the student sees rise
      out of the matrix; the component queues it at its complex, and refuses
      one when the queue is full, which is when the button goes grey. */
@@ -739,6 +786,7 @@
     const done = !!shown && goal != null && shown.ATP >= goal && sent.NADH >= GLUCOSE.NADH && sent.FADH2 >= GLUCOSE.FADH2;
     const doneEl = etc.querySelector('.etc-done');
     if (doneEl.hidden === done) doneEl.hidden = !done;
+    if (done && !completed) { completed = true; if (window.Track) Track.event('complete'); }
     const note = etc.querySelector('.etc-note');
     if (note.hidden !== done) note.hidden = done;
     for (const b of etc.querySelectorAll('button[data-fuel]')) {
@@ -795,6 +843,143 @@
      on screen, so each swap is a fade and not a hitch. */
   shell.showScene('cell');
   setTimeout(() => { for (const n of ['mito', 'chemi']) if (n !== onStage) { SCENES[n].state(); SCENES[n].stop(); } }, 1500);
+
+  /* ---- the quiz ----
+     Five questions, one at a time, each answered before the next and told why;
+     then three survey questions; then the score. Reported to the class log as
+     `quiz` and `survey` when there is one (lib/track.js), else it is just a
+     quiz. Every answer here is a claim the chart makes; keep them in step. */
+  const QUIZ = [
+    { q: 'Where in the cell does glycolysis happen?',
+      choices: ['In the cytoplasm', 'In the mitochondrial matrix', 'Across the inner mitochondrial membrane', 'In the nucleus'], a: 0,
+      why: 'Glycolysis runs in the cytoplasm. Only its product, pyruvate, enters the mitochondrion.' },
+    { q: 'The CO₂ you breathe out comes mostly from which stages?',
+      choices: ['Glycolysis', 'The link step and the Krebs cycle', 'The electron transport chain', 'ATP synthase'], a: 1,
+      why: 'Each pyruvate loses one carbon at the link step and two more in the Krebs cycle. The chain moves electrons and protons, not carbon.' },
+    { q: 'What do NADH and FADH₂ carry to the electron transport chain?',
+      choices: ['ATP', 'Oxygen', 'High-energy electrons', 'Carbon dioxide'], a: 2,
+      why: 'They are electron carriers. Their electrons pass down the chain, and that flow is what pumps protons.' },
+    { q: 'Where is most of the ATP from one glucose made?',
+      choices: ['Glycolysis', 'The Krebs cycle', 'By ATP synthase, powered by the proton gradient', 'The link step'], a: 2,
+      why: 'Glycolysis and Krebs make four ATP between them. The rest comes from protons flowing back through ATP synthase.' },
+    { q: 'What is the final electron acceptor at the end of the chain?',
+      choices: ['NAD⁺', 'Oxygen', 'Glucose', 'ATP'], a: 1,
+      why: 'Oxygen takes the electrons and picks up protons to become water. Without it the chain backs up and stops.' },
+  ];
+  const SURVEY = [
+    { id: 'clear', q: 'How clear was this lesson?', kind: 'scale', labels: ['1 confusing', '2', '3', '4', '5 very clear'] },
+    { id: 'confusing', q: 'What was confusing, if anything?', kind: 'text' },
+    { id: 'again', q: 'Would you use a lesson like this to study?', kind: 'choice', choices: ['Yes', 'Maybe', 'No'] },
+  ];
+  const quizBody = document.getElementById('quizbody');
+  const quizTitle = document.getElementById('quiztitle');
+  const quizKick = document.getElementById('quizkick');
+  let quizModal = null;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function runQuiz() {
+    const answers = [];
+    const survey = {};
+    let i = 0;
+    const foot = (n, label, on) => `<div class="foot"><span class="n">${n}</span><span class="spacer"></span><button class="cta cta--sm" type="button" data-next ${on ? '' : 'disabled'}>${label}</button></div>`;
+    function ask() {
+      const item = QUIZ[i];
+      quizKick.textContent = 'Quick check';
+      quizTitle.textContent = item.q;
+      quizBody.innerHTML = `<div class="choices">${item.choices.map((c, k) => `<button type="button" data-k="${k}" aria-pressed="false">${esc(c)}</button>`).join('')}</div>`
+        + `<p class="why"></p>` + foot(`${i + 1} of ${QUIZ.length}`, i + 1 < QUIZ.length ? 'Next' : 'Continue', false);
+      quizBody.querySelector('.choices').addEventListener('click', ev => {
+        const b = ev.target.closest('button[data-k]'); if (!b || answers[i]) return;
+        const k = Number(b.dataset.k), correct = k === item.a;
+        answers[i] = { q: item.q, answer: item.choices[k], correct };
+        for (const c of quizBody.querySelectorAll('.choices button')) {
+          c.disabled = true;
+          c.classList.toggle('ok', Number(c.dataset.k) === item.a);
+          c.classList.toggle('bad', c === b && !correct);
+        }
+        quizBody.querySelector('.why').textContent = item.why;
+        quizBody.querySelector('[data-next]').disabled = false;
+      });
+      quizBody.querySelector('[data-next]').addEventListener('click', () => { i++; i < QUIZ.length ? ask() : askSurvey(0); });
+    }
+    function askSurvey(j) {
+      const item = SURVEY[j];
+      quizKick.textContent = 'Three quick questions';
+      quizTitle.textContent = item.q;
+      let inner = '';
+      if (item.kind === 'scale') inner = `<div class="scale">${item.labels.map((l, k) => `<button type="button" data-v="${k + 1}" aria-pressed="false">${esc(l)}</button>`).join('')}</div>`;
+      if (item.kind === 'choice') inner = `<div class="choices">${item.choices.map(c => `<button type="button" data-v="${esc(c)}" aria-pressed="false">${esc(c)}</button>`).join('')}</div>`;
+      if (item.kind === 'text') inner = `<textarea rows="3" maxlength="500" placeholder="Optional"></textarea><p class="why"></p>`;
+      /* Listener on this step's own wrapper, which innerHTML replaces: one on
+         quizBody would outlive the step and answer the next question too. */
+      quizBody.innerHTML = `<div class="sq">${inner}</div>` + foot(`${j + 1} of ${SURVEY.length}`, j + 1 < SURVEY.length ? 'Next' : 'Finish', item.kind === 'text');
+      quizBody.querySelector('.sq').addEventListener('click', ev => {
+        const b = ev.target.closest('button[data-v]'); if (!b) return;
+        for (const c of quizBody.querySelectorAll('button[data-v]')) c.setAttribute('aria-pressed', c === b);
+        survey[item.id] = item.kind === 'scale' ? Number(b.dataset.v) : b.dataset.v;
+        quizBody.querySelector('[data-next]').disabled = false;
+      });
+      quizBody.querySelector('[data-next]').addEventListener('click', () => {
+        if (item.kind === 'text') survey[item.id] = quizBody.querySelector('textarea').value.trim().slice(0, 500);
+        j + 1 < SURVEY.length ? askSurvey(j + 1) : finish();
+      });
+    }
+    function finish() {
+      const score = answers.filter(a => a && a.correct).length;
+      if (window.Track) {
+        Track.event('quiz', { score, total: QUIZ.length, answers });
+        Track.event('survey', { answers: survey });
+      }
+      quizKick.textContent = 'Done';
+      quizTitle.textContent = score === QUIZ.length ? 'All five.' : score >= 3 ? 'Most of it.' : 'Worth another pass.';
+      quizBody.innerHTML = `<p class="score">${score} / ${QUIZ.length}</p><p class="why">${score === QUIZ.length ? 'Thanks for the answers, too.' : 'Scroll back to the stage you missed, or ask the tutor. Thanks for the answers.'}</p>`
+        + `<div class="foot"><span class="spacer"></span><button class="cta cta--sm" type="button" data-close>Close</button></div>`;
+      quizBody.querySelector('[data-close]').addEventListener('click', () => quizModal.hide());
+    }
+    ask();
+  }
+  quizModal = Modal.create({ el: 'quizmodal', onShow: runQuiz });
+  const quizBtn = document.createElement('button');
+  quizBtn.type = 'button'; quizBtn.className = 'cta cta--ghost cta--sm quiz-open'; quizBtn.textContent = 'Quiz';
+  quizBtn.addEventListener('click', () => quizModal.show());
+  shell.panel.appendChild(quizBtn);
+
+  /* ---- the tutor ----
+     Mounted over the panel; the chart is what it covers, the scene stays. It
+     reads the phase as the step and the chain's tally as the screen. A step
+     target scrolls the chart to that phase's mark. */
+  const askslot = document.createElement('div');
+  askslot.id = 'askslot';
+  shell.panel.appendChild(askslot);
+  Ask.chat({
+    rail: shell.panel,
+    slot: askslot,
+    lesson: 'respiration-lab',
+    step: () => ORDER.indexOf(phase),
+    state: () => {
+      const st = { stage: SAID[phase] || phase };
+      if (!etc.hidden) {
+        st.nadhSent = `${sent.NADH} of ${GLUCOSE.NADH}`;
+        st.fadh2Sent = `${sent.FADH2} of ${GLUCOSE.FADH2}`;
+        st.atpMadeByChain = tally.ATP;
+        st.chainComplete = completed ? 'yes' : 'not yet';
+      }
+      return st;
+    },
+    examples: [
+      'Where does the CO₂ actually come from?',
+      'Why does the chain need oxygen?',
+      'Why is it about 30 ATP and not 38?',
+    ],
+    act: t => {
+      if (t.kind !== 'step') return false;
+      const p = ORDER[t.at];
+      if (!p) return false;
+      const mark = MARKS.find(m => m[0] === p);
+      const top = mark ? topOf(mark[1]) - scroller.clientHeight * 0.4 + 2 : 0;
+      scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      return true;
+    },
+  });
 })();
 </script>
 </body>

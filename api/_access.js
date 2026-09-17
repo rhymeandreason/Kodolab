@@ -102,7 +102,7 @@ async function resolve(req, { seatFirst = true } = {}) {
 
   let u = await require('./_accounts.js').userFrom(req, { disabled: true });
   if (u && u.disabled_at) { refused = refused || { kind: 'disabled' }; u = null; }
-  const label = await keys.cohort(req);
+  const label = await keys.linkCohort(req);   // a class code (keys.cohort) admits to a lesson, never here
   const teacherCode = header(req, TEACHER_HEADER);
   const byCode = async () => {
     const t = await teacherByCode(teacherCode);

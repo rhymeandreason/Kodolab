@@ -31,6 +31,34 @@
   s.src = '/_vercel/insights/script.js';
   document.head.appendChild(s);
 
+  /* THE CLASS. A teacher's lesson link carries `?class=abcd-efgh`; it is kept
+     here once, stripped from the address bar the way the tutor's `?k=` is, and
+     from then on this browser reports to the class (lib/track.js) and asks the
+     tutor as it (ask/chat.js). Not the seat code: that one owns apps and lives
+     in `ss.class.code`, and a lesson link must not hand out the right to build.
+     track.js is loaded only when there is a class, so every other visitor gets
+     the page untouched. */
+  var CLASS_KEY = 'ss.class';
+  (function () {
+    var klass = null;
+    try {
+      var url = new URL(location.href);
+      var q = url.searchParams.get('class');
+      if (q) {
+        klass = q.toLowerCase().replace(/[^a-z0-9]/g, '');
+        klass = klass.length === 8 ? klass.slice(0, 4) + '-' + klass.slice(4) : null;
+        if (klass) { try { localStorage.setItem(CLASS_KEY, klass); localStorage.removeItem('ss.class.seen'); } catch (e) {} }
+        url.searchParams.delete('class');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
+    } catch (e) {}
+    if (!klass) { try { klass = localStorage.getItem(CLASS_KEY); } catch (e) {} }
+    if (!klass) return;
+    var t = document.createElement('script');
+    t.src = '/demos/lib/track.js';
+    document.head.appendChild(t);
+  })();
+
   var SITE = '<span>open source <span class="sep">·</span> CC-BY-NC' +
              ' <span class="sep">·</span> <a href="/privacy">privacy</a></span>';
 
@@ -61,7 +89,8 @@
      shared Chromebook the next person must not inherit a class code, a testing
      link, or the edit tokens for the apps the last one opened. The visitor id
      stays; it admits nobody. */
-  var PERSON_KEYS = [ACCOUNT_KEY, 'ss.teacher.code', 'ss.class.code', 'ss.tutor.key', 'ss.apps'];
+  var PERSON_KEYS = [ACCOUNT_KEY, 'ss.teacher.code', 'ss.class.code', 'ss.tutor.key', 'ss.apps',
+                     CLASS_KEY, 'ss.class.name', 'ss.class.seen'];
 
   function stored() {
     var raw = null;

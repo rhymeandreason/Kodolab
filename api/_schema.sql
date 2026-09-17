@@ -291,6 +291,50 @@ CREATE TABLE IF NOT EXISTS seats (
 CREATE INDEX IF NOT EXISTS classes_teacher_idx ON classes (teacher_id, created_at);
 CREATE INDEX IF NOT EXISTS seats_class_idx ON seats (class_id, created_at);
 
+-- A CLASS CODE admits a browser to a LESSON and its tutor, never to the
+-- builder. Shared by the whole class on one link (`/respiration?class=abcd-efgh`),
+-- so the teacher manages one code, not forty. It is the cohort the tutor's
+-- threads carry ('class:<id>') and the key every event row is filed under.
+-- Same shape as a seat code and stored plain for the same reason: the teacher
+-- reads it back off the dashboard. Null on a class made before this column;
+-- api/teacher.js mints one the first time the class is opened.
+ALTER TABLE classes ADD COLUMN IF NOT EXISTS code text UNIQUE;
+
+-- =============================================================================
+--  events, class_sessions - what a class did in a lesson
+-- =============================================================================
+--  One row per thing a browser reported: a page view, a phase reached, a
+--  heartbeat of visible seconds, a completion, a quiz, a survey. Filed under the
+--  class and the browser's own visitor id (the tutor's, `ss.tutor.visitor`), so
+--  a session's questions and its progress join on one id. Same privacy rule as
+--  the tutor: no IP, no user agent. `name` on class_sessions is the ONE place a
+--  student may type something about themselves, it is optional, and the join
+--  chip says who reads it.
+--
+--  class_sessions is the roll-up the dashboard reads: one row per (class,
+--  browser), upserted on every batch, so the roster is a table scan and not a
+--  GROUP BY over every heartbeat a class ever sent.
+CREATE TABLE IF NOT EXISTS events (
+  id          bigserial PRIMARY KEY,
+  class_id    text NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  visitor_id  uuid NOT NULL,
+  page        text NOT NULL,                -- '/respiration', as lib/site.js spells a place
+  kind        text NOT NULL,                -- view · phase · beat · complete · quiz · survey · name
+  payload     jsonb,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS events_class_idx   ON events (class_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS events_visitor_idx ON events (visitor_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS class_sessions (
+  class_id    text NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  visitor_id  uuid NOT NULL,
+  name        text,                         -- typed by the student, optional
+  first_seen  timestamptz NOT NULL DEFAULT now(),
+  last_seen   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (class_id, visitor_id)
+);
+
 -- `apps.owner_id` is 'seat:<id>' or 'teacher:<id>', and `apps.cohort` is
 -- 'class:<id>' for a seat's app, so the rate limit counts a class.
 CREATE INDEX IF NOT EXISTS apps_owner_idx ON apps (owner_id, created_at DESC);

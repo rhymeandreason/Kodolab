@@ -38,6 +38,10 @@ Reordered again: **deploying water-lab alone is what produces the logged questio
 5. **Baked demo mode.** Gated on 1 and 2, *except* the examples bake, which is gated on nothing and is also a latency fix for the first turn a student ever takes.
 6. `?step=` on the four lessons that lack it, so away links land where they say.
 
+## Class codes
+
+A class in the teacher dashboard (`/teach`) has a lesson code, shown on its Lessons tab as a link: `/respiration?class=abcd-efgh`. One code per class, shared on the board. `lib/site.js` keeps it as `ss.class`, strips it from the address bar, and loads `lib/track.js`, which posts `view`, a `beat` of visible seconds every minute, and whatever the page reports (`phase`, `complete`, `quiz`, `survey`) to `api/event.js` by beacon. `ask/chat.js` sends it as `X-Class-Code`, and `_keys.cohort` turns it into the tutor's cohort `class:<id>`, so the class's threads and its events join on the visitor id. `_access.js` uses `_keys.linkCohort` instead: a class code admits to a lesson and its tutor, never to the builder. The roll-up the teacher reads is `sessionsOf` in `api/teacher.js`.
+
 ## Logging
 
 `api/_log.js`, `api/_schema.sql`, `demos/tools/db.js`. Neon Postgres over HTTP, one fetch per statement, because a function that may be frozen the moment it responds cannot hold a pool.

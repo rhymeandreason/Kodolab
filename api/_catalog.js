@@ -39,6 +39,14 @@ const CHAPTERS = [
     covers: 'glucose breakdown, ATP, NADH, pyruvate, investment and payoff phases, '
           + 'cellular respiration, phosphorylation, fermentation' },
 
+  { id: 'respiration',
+    chapter: 'Cellular Respiration',
+    page: 'demos/respiration-lab.html',
+    covers: 'the whole of aerobic respiration in one chart: glycolysis in the cytoplasm, '
+          + 'pyruvate into the mitochondrion, the link step and Krebs cycle giving off CO2 and loading NADH and FADH2, '
+          + 'the electron transport chain, the proton gradient, ATP synthase, oxygen as the final electron acceptor, '
+          + 'where the ~30 ATP per glucose come from' },
+
   { id: 'membrane',
     chapter: 'Membrane and Osmosis',
     page: 'demos/membrane-lab.html',

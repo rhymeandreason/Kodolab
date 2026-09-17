@@ -117,10 +117,19 @@ async function mint({ label, note = null, secret = null }) {
 const HEADER = 'x-tutor-key';
 
 /* The transport's half - the only part that touches a request object, for the
- * same reason `_local.js` is shaped this way: `handleAsk` receives a label. */
-function cohort(req) {
+ * same reason `_local.js` is shaped this way: `handleAsk` receives a label.
+ *
+ * TWO READINGS. `linkCohort` is the testing link alone, and it is what admits
+ * to the builder (_access.js). `cohort` is what the tutor, the map and the log
+ * use: the link if there is one, else the class code a lesson's class carries
+ * (_classes.js), as 'class:<id>'. A class code is a cohort for spend and for
+ * the log; it is not a right to build, so the builder never sees it. */
+function linkCohort(req) {
   const h = (req && req.headers && req.headers[HEADER]) || '';
   return labelFor(Array.isArray(h) ? h[0] : h);
 }
+async function cohort(req) {
+  return (await linkCohort(req)) || require('./_classes.js').cohort(req);
+}
 
-module.exports = { enabled, labelFor, cohort, mint, pairs, HEADER };
+module.exports = { enabled, labelFor, cohort, linkCohort, mint, pairs, HEADER };
