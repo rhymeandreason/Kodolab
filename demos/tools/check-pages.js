@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* =====================================================================
- *  check-pages.js — four audits of a page's own source.
+ *  check-pages.js — five audits of a page's own source.
  *
  *  Run:  node tools/check-pages.js       (exits non-zero on failure)
  *
@@ -8,6 +8,7 @@
  *    2. does every proton hop REMOVE THE ATOM IT MOVES?
  *    3. does every link on the ROOT index resolve to something served?
  *    4. does every publicly routed page load site.js, so it is counted?
+ *    5. is every page that calls a local-only endpoint kept out of the deploy?
  *
  *  This guards the failure mode that docs/molecule-pipeline.md item 3
  *  introduced. Before the split every page loaded every spec, so a page could
@@ -418,9 +419,58 @@ console.log('== 4. every publicly routed page loads site.js');
   }
 }
 
+/* -------------------------------------------------------------------------
+ *  5. is a page that calls a local-only endpoint kept out of the deploy?
+ * -------------------------------------------------------------------------
+ *  `api/log.js` is `.vercelignore`d and answers only from the machine it runs
+ *  on, so the pages that read it — /beta, the tutor log — are ignored too. Two
+ *  independent gates, which is the point: either one alone has failed before.
+ *
+ *  The pairing is what nothing checked. A route in vercel.json survives the
+ *  ignore line being dropped, and the page then serves to the world with the
+ *  endpoint's 403 as its only remaining gate. This asserts the pair instead:
+ *  ignore an endpoint and every page that fetches it comes under the check
+ *  without anyone remembering, which is also what makes it self-maintaining.
+ *
+ *  A fetch, not a mention: admin.html describes /api/log in a card and is
+ *  deployed on purpose. */
+console.log('');
+console.log('== 5. a page that calls a local-only endpoint is not deployed');
+{
+  const lines = fs.readFileSync(path.join(REPO, '.vercelignore'), 'utf8')
+    .split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
+  // Entries are repo-relative, so a page matches one exactly or sits under a folder one names.
+  const ignored = p => lines.some(l => l === p || (l.endsWith('/') && p.startsWith(l)));
+
+  // The endpoints the ignore file itself withholds, named as a page calls them.
+  const localOnly = lines.filter(l => /^api\/\w+\.js$/.test(l)).map(l => '/' + l.replace(/\.js$/, ''));
+
+  const walk = d => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })
+    .flatMap(e => e.name === 'node_modules' || e.name.startsWith('.') ? []
+      : e.isDirectory() ? walk(path.join(d, e.name))
+      : e.name.endsWith('.html') ? [path.join(d, e.name)] : []);
+
+  let paired = 0;
+  const before = fails;
+  for (const rel of walk('')) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    for (const ep of localOnly) {
+      // `fetch('../../api/log' + q)` counts; a sentence naming it does not.
+      if (!new RegExp('fetch\\(\\s*[\'"`][^\'"`]*' + ep.slice(1) + '\\b').test(src)) continue;
+      const file = 'demos/' + rel;
+      if (ignored(file)) { paired++; continue; }
+      fail(`${file} fetches ${ep}, which .vercelignore keeps out of the deploy, `
+        + `but the page itself is not ignored. Deployed, its only gate is that `
+        + `endpoint's 403. Add it to .vercelignore or stop calling ${ep}.`);
+    }
+  }
+  if (fails === before) console.log(`  ok    ${localOnly.length} local-only endpoint(s), ${paired} caller(s), every one withheld`);
+}
+
 console.log('');
 if (fails) { console.log(`FAIL: ${fails} page claim(s) no longer true`); process.exit(1); }
 console.log('PASS: every page loads every molecule it names, '
   + 'every proton hop removes its source, '
   + 'every link on the root index is served, '
-  + 'and every public page is counted');
+  + 'every public page is counted, '
+  + 'and every caller of a local-only endpoint is withheld');

@@ -159,7 +159,9 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  /* `'` too: every attribute here is double-quoted, but the next one written
+     may not be, and a sink is safe or it is not. */
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   /* A quiz payload is whatever a browser posted: api/event.js caps its size,
      not its shape. So a score is drawn only if it is a pair of numbers, and
      the answers only if they are a list. */
@@ -293,7 +295,7 @@
     $('sessionCount').textContent = rows.length || '';
     $('noSessions').hidden = !!rows.length;
     $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
-      <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${shortId(r.visitor_id)}</code></button></td>
+      <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${esc(shortId(r.visitor_id))}</code></button></td>
       <td class="dim">${esc((r.pages || []).map(pageName).join(', '))}</td>
       <td class="dim">${esc(ago(r.first_seen))}</td>
       <td class="dim">${esc(ago(r.last_seen))}</td>
