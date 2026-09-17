@@ -167,7 +167,8 @@
   .mapcard .dots { flex: none; width: 74px; height: 54px; position: relative; }
   .mapcard .dots i { position: absolute; width: 10px; height: 10px; border-radius: 50%; }
   .mapcard .dots svg { position: absolute; inset: 0; width: 100%; height: 100%; stroke: rgba(var(--ink-t), .25); stroke-width: 1.5; fill: none; }
-  .mapcard h3 { font-size: 1.15rem; }
+  .mapcard h3 { font-size: 1.15rem; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .mapcard .chip { font: 600 10.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); border: 1.5px solid rgba(var(--ink-t), .2); border-radius: 999px; padding: 5px 8px; }
   .mapcard p { margin: .2rem 0 0; font-family: var(--serif); font-style: italic; font-size: .9rem; color: var(--ink-2); }
   .mapcard .go { margin-left: auto; font: 600 11.5px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
   @media (max-width: 900px) { .mapcard { margin-left: 0; flex-wrap: wrap; } }
@@ -295,8 +296,8 @@
         <svg viewBox="0 0 74 54"><path d="M10 44 L30 12 L52 30 L66 8 M30 12 L52 30 L38 48"/></svg>
         <i style="left:5px;top:39px;background:var(--blue)"></i><i style="left:25px;top:7px;background:var(--coral)"></i><i style="left:47px;top:25px;background:var(--violet)"></i><i style="left:61px;top:3px;background:var(--green)"></i><i style="left:33px;top:43px;background:var(--amber)"></i>
       </span>
-      <span><h3>All of Bio 101 as one map</h3><p>An experiment: how the concepts might connect, from molecules to ecosystems. Unfinished, and changing.</p></span>
-      <span class="go">Try the experiment →</span>
+      <span><h3>All of Bio 101 as one map <span class="chip">Experiment</span></h3><p>How the concepts connect, from molecules to ecosystems, with every lesson placed on it.</p></span>
+      <span class="go">Open the map →</span>
     </a>
   </div>
 </main>
