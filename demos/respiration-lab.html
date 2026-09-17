@@ -143,7 +143,8 @@
 </style>
 <link rel="stylesheet" href="kit/badge.css">
 <style>
-  /* The quiz door, at the panel's foot. Always there while the lesson is under test. */
+  /* The quiz door, at the panel's foot, shown once the chain is done. */
+  .quiz-open[hidden] { display: none; }
   .panel-foot { position: absolute; right: 24px; bottom: 16px; z-index: 5; display: flex; align-items: center; gap: 10px; }
   #classslot:empty { display: none; }
 
@@ -782,7 +783,7 @@
     const done = !!shown && goal != null && shown.ATP >= goal && sent.NADH >= GLUCOSE.NADH && sent.FADH2 >= GLUCOSE.FADH2;
     const doneEl = etc.querySelector('.etc-done');
     if (doneEl.hidden === done) doneEl.hidden = !done;
-    if (done && !completed) { completed = true; if (window.Track) Track.event('complete'); }
+    if (done && !completed) { completed = true; quizBtn.hidden = false; if (window.Track) Track.event('complete'); }
     const note = etc.querySelector('.etc-note');
     if (note.hidden !== done) note.hidden = done;
     for (const b of etc.querySelectorAll('button[data-fuel]')) {
@@ -936,6 +937,7 @@
   quizModal = Modal.create({ el: 'quizmodal', onShow: runQuiz });
   const quizBtn = document.createElement('button');
   quizBtn.type = 'button'; quizBtn.className = 'cta cta--ghost cta--sm quiz-open'; quizBtn.textContent = 'Quiz';
+  quizBtn.hidden = true;   // until the chain has made a glucose's worth of ATP
   quizBtn.addEventListener('click', () => quizModal.show());
   /* Beside it, a slot lib/track.js fills with the class gear when this browser is in a class. */
   const foot = document.createElement('div');
