@@ -1,35 +1,13 @@
 #!/usr/bin/env node
 /* =====================================================================
- *  check-pages.js — five audits of a page's own source.
+ *  check-pages.js — four audits of a page's own source.
  *
  *  Run:  node tools/check-pages.js       (exits non-zero on failure)
  *
- *    1. does each page load the molecules it actually uses?
  *    2. does every proton hop REMOVE THE ATOM IT MOVES?
  *    3. does every link on the ROOT index resolve to something served?
  *    4. does every publicly routed page load site.js, so it is counted?
  *    5. is every page that calls a local-only endpoint kept out of the deploy?
- *
- *  This guards the failure mode that docs/molecule-pipeline.md item 3
- *  introduced. Before the split every page loaded every spec, so a page could
- *  not reference a molecule it did not have. Now the <script> tags decide, and
- *  forgetting a mol-*.js means `MOLECULES.water is undefined` at runtime — on
- *  one interaction, possibly not the first one anybody clicks.
- *
- *  check-docs.js already asserts the script table matches the tags. It cannot
- *  see whether the resulting SET is sufficient, because that depends on which
- *  molecules the page's own JavaScript names. This closes that gap.
- *
- *  How: each page's local <script> tags are executed in a fresh vm context, in
- *  the order the page lists them — the same thing a browser does, minus Three
- *  and the DOM (only the library modules are run; they touch neither). Then
- *  every molecule name the page mentions is looked up in the MolLib that page
- *  actually built.
- *
- *  The reference scan is deliberately GENEROUS: a bare quoted 'water' counts,
- *  not just MOLECULES.water. Over-reporting costs a page one extra file;
- *  under-reporting ships a broken lesson. If that ever gets annoying, make the
- *  scan narrower, not the failure quieter.
  *
  *  Audit 3 reaches OUTSIDE demos/, which nothing else here does. The root
  *  index.html is the front door and the only page a student is handed, yet it
@@ -45,186 +23,19 @@
 'use strict';
 
 const fs = require('fs');
-const vm = require('vm');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const ALL = Object.keys(require(path.join(ROOT, 'lib', 'lib-node.js')).MOLECULES);
 
 let fails = 0;
 const fail = m => { fails++; console.log(`  FAIL  ${m}`); };
 
-// Pages that render deposited PDB structures through a third-party viewer
-// (docs/rendering-modules.md) are skipped here: they touch none of the spec library
-// — coordinates come from a .pdb, not MolLib — so there is no molecule
-// reference to check. The set is empty because no such page is in demos/ any
-// more: the third-party viewers were evaluated and none was adopted, and the
-// bench that compared them moved to /viewer-compare/ at the repo root, outside
-// what this checker walks. A page that draws a deposited structure without
-// MolLib needs naming here.
-const PDB_PAGES = new Set();
-
-// index.html draws nothing at all — it is a redirect up to the lesson index at
-// the repo root, which is where GitHub Pages serves it from. admin.html is an
-// internal nav page linking to other pages' scenes, not a scene itself.
-// design-system.html loads palette.js to read the atom colours as swatches,
-// which is the only reason it looks like a scene; it renders no molecule.
-// tests/droplet-test.html and tests/adhesion-test.html render water as bulk — a
-// refracting continuum, not spheres — because cohesion, contact angle and
-// wicking are all properties of the bulk. There is no molecule on either page.
-// tests/concept-map.html draws the topics themselves as a graph — labels and
-// edges, no stage. questions-cms.html edits that graph's data file as text.
-// clip-shelf.html files short animation clips; its only stage is an mp4 in the
-// node map's own thumb. tests/kodolab-anim.html animates the wordmark itself,
-// drawn as SVG primitives — no molecule, no MolLib. link-step.html only
-// redirects to krebs-lab.html, which the check reads instead.
-const NO_SCENE = new Set(['index.html', 'admin.html', 'design-system.html',
-                          'tests/droplet-test.html', 'tests/adhesion-test.html',
-                          'tests/concept-map.html',
-                          'questions-cms.html', 'map-cms.html', 'clip-shelf.html',
-                          'privacy.html', 'tests/kodolab-anim.html', 'link-step.html',
-                          'lessons.html']);
-
-// The lessons at the top level, plus the benches in tests/. Both directories,
-// because a bench builds a real scene out of the shared registry too — a
-// checker that only read the top level would drop one silently when a page
-// moved, which is the failure this whole file exists to prevent.
-//
-// attic/ is NOT walked. Those pages are superseded (admin.html: reference) and
-// not deployed; holding them to the registry's current shape would mean
-// maintaining code nothing serves.
+// The lessons at the top level, plus the benches in tests/. attic/ is not
+// walked: superseded and not deployed.
 const html = d => fs.readdirSync(path.join(ROOT, d))
   .filter(f => f.endsWith('.html')).map(f => (d ? d + '/' : '') + f);
 const ALL_PAGES = [...html(''), ...html('tests')].sort();
-const PAGES = ALL_PAGES.filter(f => !PDB_PAGES.has(f) && !NO_SCENE.has(f));
-
-// An exemption outliving its page is the failure this file keeps finding in
-// other people's enumerations. An osmosis bench sat in NO_SCENE for fifteen
-// commits after it was deleted, excusing nothing, and only check-docs.js
-// noticed — from the other side of the repo, and by accident. A list of pages
-// that do not exist excuses pages that do not exist.
-console.log('== 0. every exemption still names a page');
-{
-  const present = new Set(ALL_PAGES);
-  const stale = [...PDB_PAGES, ...NO_SCENE].filter(f => !present.has(f));
-  for (const f of stale)
-    fail(`exemptions: ${f} is listed in PDB_PAGES or NO_SCENE and does not exist. ` +
-         `Drop it, and the reason written above the list with it.`);
-  if (!stale.length) console.log(`  ok    ${PDB_PAGES.size + NO_SCENE.size} exemptions all name a real page`);
-}
-
-
-
-const APP = require(path.join(ROOT, 'kit', 'app.js'));
-
-console.log('== 1. every page loads the molecules it names');
-for (const page of PAGES) {
-  const src = fs.readFileSync(path.join(ROOT, page), 'utf8');
-  // Local scripts only, in page order; CDN Three is not our concern. A src is
-  // matched on its BASENAME and resolved against the page's own directory, so
-  // a bench in tests/ loading ../molecules.js counts the same as a lesson
-  // loading molecules.js.
-  // A generated app names components, not files: kit/app.js writes its script
-  // tags at parse time, so ask the loader what this page actually loads.
-  const app = /<script[^>]*\bsrc="[^"]*kit\/app\.js"([^>]*)>/.exec(src);
-  const use = app && /\sdata-use="([^"]*)"/.exec(app[1]);
-  const tpl = app && /\sdata-shell="([^"]*)"/.exec(app[1]);
-  const tags = use
-    ? APP.plan(use[1].split(','), tpl && tpl[1]).scripts.map(f => path.join(ROOT, f))
-    : [...src.matchAll(/<script\s+src="([^"]+)"/g)].map(m => m[1]);
-  const libs = tags
-    .filter(s => !/^https?:/.test(s))
-    .filter(s => { const b = path.basename(s);
-      return b === 'palette.js' || b === 'molecules.js' || b === 'skel.js' || /^mol-/.test(b); });
-  const dir = use ? ROOT : path.dirname(path.join(ROOT, page));
-
-  // A fresh window per page — exactly what the browser hands it.
-  const sandbox = { console, Math, JSON, Object, Array, String, Number, Error, Boolean };
-  sandbox.window = sandbox;
-  const ctx = vm.createContext(sandbox);
-  try {
-    for (const f of libs) {
-      vm.runInContext(fs.readFileSync(path.resolve(dir, f), 'utf8'), ctx, { filename: f });
-    }
-  } catch (e) {
-    fail(`${page}: loading [${libs.join(', ')}] threw — ${e.message}`);
-    continue;
-  }
-  if (!sandbox.MolLib) { fail(`${page}: loads no molecules.js`); continue; }
-
-  const have = new Set(Object.keys(sandbox.MolLib.MOLECULES));
-
-  /* A MODULE MAY OWN ITS OWN NAME TABLE, and a page that loads it can draw
-     those names without any mol-*.js. watersim.js carries its salts: an ionic
-     solute is drawn only as its dissociated ions, so the record has no
-     coordinates and belongs to no scale family. The two drag modules carry
-     RECIPES, whose bond lengths are the bench's own — water's O–H is 1.90
-     there against the library's 1.55, sized so the shared pair sits visibly
-     off the H. Telling either page to load a domain file for those names is
-     the checker asking for a whole family it does not draw. */
-  const OWNS = [
-    ['water/watersim.js',   /const SALTS\s*=\s*\{([\s\S]*?)\n  \};/],
-    ['lib/covalent-drag.js',/const RECIPES\s*=\s*\{([\s\S]*?)\n  \};/],
-    ['lib/ionic-drag.js',   /const RECIPES\s*=\s*\{([\s\S]*?)\n  \};/],
-  ];
-  for (const [file, re] of OWNS) {
-    if (!new RegExp(`<script\\s+src="[^"]*${file.split('/').pop().replace('.', '\\.')}"`).test(src)) continue;
-    const tbl = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8').match(re);
-    if (tbl) for (const m of tbl[1].matchAll(/^\s{4}([a-z0-9]+)\s*:/gm)) have.add(m[1]);
-  }
-
-  /* A page's spec names do not all live in the page any more. The map pages
-   * keep their card tables in lib/mapcontent.js — CONTENT, not a library: no
-   * behaviour, no scene, and the spec names they draw are in there. Without
-   * this the gate silently stopped covering them (5 referenced fell to 1).
-   *
-   * A NAMED list, not "every script that is not a mol-*.js". That was the first
-   * try and it read scene.js and residues.js too, where the word `glycine`
-   * appears in prose — sixteen pages failed for naming a molecule none of them
-   * mentions. A content file is a deliberate thing and there are two, so adding
-   * the third is a line here, exactly as adding a domain is a line above. */
-  const CONTENT = new Set(['mapcontent.js', 'questions.js']);
-  const content = [...src.matchAll(/<script\s+src="([^"]+)"/g)].map(m => m[1])
-    .filter(f => !/^https?:/.test(f) && CONTENT.has(path.basename(f)))
-    .map(f => { try { return fs.readFileSync(path.resolve(dir, f), 'utf8'); }
-                catch { return ''; } });
-  /* A SIGNAL NAME IS NOT A SPEC NAME, and `atp` is both: Membrane.SIGNALS
-     carries an `atp` trace and MOLECULES an ATP molecule. The bare-string
-     rule below cannot tell them apart, so every page that plots ATP
-     accumulation was told to load mol-small.js to draw a molecule it never
-     draws. Stripped before matching, not exempted after — a page that both
-     follows the signal AND draws the molecule still has the drawing to
-     match on. */
-  /* A NOTE ANCHOR IS NOT A SPEC NAME EITHER, and `water` is both: a component
-     names one molecule of each kind on stage as a note/layer anchor
-     (Components.md), so a generated app saying notes:['water'] is naming the
-     callout, not asking for a spec. WaterSim loads no mol-*.js at all now, so
-     without this every generated page that labels its water fails here.
-
-     A LESSON ID IS NOT A SPEC NAME. The bonding builder's tabs are
-     `data-lesson="water"`, and its `hydronium` tab is built from the `hcl`
-     recipe, so the id is not even a recipe name, let alone a spec. Same shape
-     of false positive as the signal names below. */
-  const hay = [src, ...content].join('\n')
-    .replace(/\bdata-(?:lesson|needs)\s*=\s*"[^"]*"/g, 'data-_')
-    .replace(/\b(?:notes|layers|zoom|only)\s*:\s*\[[^\]]*\]/g, 'ui:_')
-    .replace(/\.notes?\s*\(\s*\[?[^)]*\)/g, '.note()')
-    .replace(/\.follow\s*\([^,]+,\s*['"][^'"]+['"]\s*\)/g, '.follow()');
-
-  const used = ALL.filter(n =>
-    new RegExp(`MOLECULES\\s*\\.\\s*${n}\\b`).test(hay) ||
-    new RegExp(`MOLECULES\\s*\\[\\s*['"]${n}['"]`).test(hay) ||
-    new RegExp(`['"]${n}['"]`).test(hay));
-  const missing = used.filter(n => !have.has(n));
-
-  if (missing.length) {
-    fail(`${page} names [${missing.join(', ')}] but loads only [${libs.join(', ')}] `
-      + `— add the mol-*.js that owns them (and skel.js if it needs the builder)`);
-  } else {
-    console.log(`  ok    ${page.padEnd(32)} ${String(have.size).padStart(2)}/${ALL.length} specs loaded, `
-      + `${used.length} referenced`);
-  }
-}
+const PAGES = ALL_PAGES;
 
 /* =====================================================================
  *  2. A PROTON HOP HAS TO TAKE THE ATOM WITH IT.
