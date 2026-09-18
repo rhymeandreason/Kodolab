@@ -114,15 +114,22 @@
     grid-template-rows:1fr;gap:10px 22px;padding:14px 6% 0}
   #tally #ledger{position:static;margin:0 auto;height:auto;width:auto;
     max-width:100%;overflow:hidden;padding:16px 18px}
+  /* The rail bar is z 9 and paints nothing; the header rides over it. */
+  .sitenav.floating{z-index:10}
+  #railbar{padding-top:16px}
 </style>
 </head>
 <!-- The class has to land before the first paint, or a framed lesson flashes
      its own title on the way into someone else's frame. -->
 <script src="lib/embed.js"></script>
 <body>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  <span class="crumb">Electron transport chain</span>
+</nav>
 <div id="app-sidebar">
   <div id="railbar">
-    <h1 id="pagetitle" class="chrome-title">Electron transport chain</h1>
+    <h1 id="pagetitle" class="framed-only">Electron transport chain</h1>
     <div id="rail"></div>
     <div id="branchtabs"></div>
   </div>
@@ -457,7 +464,9 @@ const focusStep=()=>reviewing?done()-1:done();
 /* WHAT STANDS ON STAGE. Armed, it is the step's own pair; on the review beat
  * it is what the step just made; past the end it is what the last step made. */
 function laneKeys(){
-  if(intro || done()===0 && !reviewing) return stepAt(0).pair;
+  // The intro is the carrier alone, centred: the chain is what it enters.
+  if(intro) return [stepAt(0).pair[0]];
+  if(done()===0 && !reviewing) return stepAt(0).pair;
   if(reviewing) return stepAt(done()-1).to;
   return done()<nSteps() ? stepAt(done()).pair : stepAt(nSteps()-1).to;
 }
@@ -710,7 +719,8 @@ function computeFit(){
    * The camera opens near-unswung (OPEN_THETA), so world +X is screen right to
    * within a degree or two; this is a pan, not a placement, and nothing is
    * measured off it. */
-  fitX=(sideReservePx()/2)*(2*fitR*FIT.HALF_FOV/(canvas.clientHeight||1));
+  // The intro's lone carrier has no column beside it to dodge.
+  fitX=intro ? 0 : (sideReservePx()/2)*(2*fitR*FIT.HALF_FOV/(canvas.clientHeight||1));
 }
 
 function renderLanes(){
@@ -1179,7 +1189,7 @@ function press(fn){
 }
 function begin(){
   if(!intro) return;
-  press(()=>{ intro=false; refresh(); computeFit(); });
+  press(()=>{ intro=false; renderLanes(); refresh(); });
 }
 function drawAct(){
   const hi=focusStep();

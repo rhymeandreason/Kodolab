@@ -588,6 +588,9 @@ font-size: 20px;
   #pagetitle{position:absolute;left:22px;top:50%;transform:translateY(-50%);
     margin:0;font-family:var(--font-marker);font-weight:700;font-size:24px;
     letter-spacing:.2px;color:var(--ink)}
+  /* shown only in a frame, where lib/embed.js has put `bare` on <html> */
+  .framed-only{display:none}
+  html.bare .framed-only{display:block}
   #rail{display:flex;align-items:center;gap:10px}
   .rnum{width:30px;height:30px;padding:0;border-radius:50%;
     border:2px solid var(--hair);background:var(--panel);color:var(--muted);
