@@ -173,6 +173,10 @@ async function upsertUser(claims) {
 async function emailUser(email) {
   const db = log.sql();
   const e = normEmail(email);
+  // NO CONFLICT TARGET, AND THAT IS THE LINK. A Google account already on this
+  // address trips `users_email_key`; an untargeted DO NOTHING swallows it and
+  // the read below finds her row. Narrowed to `ON CONFLICT (id)`, the email
+  // index would throw instead, and Google-then-code becomes a failed sign-in.
   const [made] = await db`
     INSERT INTO users (id, email) VALUES (${mintId()}, ${e})
     ON CONFLICT DO NOTHING RETURNING id`;

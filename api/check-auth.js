@@ -32,6 +32,7 @@ const mail     = require(path.join(ROOT, 'api/_mail.js'));
 const log      = require(path.join(ROOT, 'api/_log.js'));
 
 const E = 'check-auth@example.invalid';
+const G = 'check-auth-google@example.invalid';   // the other order needs an address of its own
 
 let fail = 0;
 const bad = m => { console.log(`  FAIL  ${m}`); fail++; };
@@ -180,15 +181,27 @@ async function linking() {
   // for. It refuses, and the refusal is the assertion.
   const other = await accounts.upsertUser({ sub: 'check-auth-sub-2', email: E, name: 'Other', email_verified: true });
   is(!!other.error && !other.user, 'a second Google account on a linked address is refused, not merged');
+
+  // THE OTHER ORDER: Google first, then a code to the same address. The code
+  // proves the mailbox, which is the proof Google's `email_verified` gave, so
+  // it opens her account rather than a new one - apps, invite and all.
+  const fromGoogle = await accounts.upsertUser({ sub: 'check-auth-sub-3', email: 'Check-Auth-Google@example.invalid',
+                                                 name: 'Google first', email_verified: true });
+  const thenCode = await accounts.emailUser(G);
+  is(thenCode && fromGoogle.user && thenCode.id === fromGoogle.user.id,
+     'a code to an address Google already holds opens that account, not a new one');
+  is(thenCode && thenCode.google_sub === 'check-auth-sub-3', 'and the Google link on it survives');
+  const [{ rows }] = await db`SELECT count(*)::int AS rows FROM users WHERE lower(email) = ${G}`;
+  is(rows === 1, 'still one row for that address');
 }
 
 /* ---- rows ---------------------------------------------------------------- */
 async function wipe(label) {
   const db = log.sql();
-  await db`DELETE FROM login_codes WHERE email = ${E}`;
-  await db`DELETE FROM users WHERE lower(email) = ${E}`;
+  await db`DELETE FROM login_codes WHERE email = ${E} OR email = ${G}`;
+  await db`DELETE FROM users WHERE lower(email) = ${E} OR lower(email) = ${G}`;
   if (label) {
-    const [{ n }] = await db`SELECT count(*)::int AS n FROM users WHERE lower(email) = ${E}`;
+    const [{ n }] = await db`SELECT count(*)::int AS n FROM users WHERE lower(email) = ${E} OR lower(email) = ${G}`;
     is(n === 0, 'the checker left nothing behind');
   }
 }
