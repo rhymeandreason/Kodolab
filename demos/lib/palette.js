@@ -435,10 +435,12 @@
     plastocyanin: 0x4aa3d8,
     carrier: PALETTE.respiration.carrier,   // NADP⁺/NADPH, NAD⁺'s colour: the same statement
     /* THE ANTENNA is chlorophyll, so it is the one green in the chain: each
-       photosystem keeps its own hue and the light-harvesting belt beside it
+       photosystem keeps its own hue and the light-harvesting lobes flanking it
        is the pigment's, so a photon visibly lands on green and the excitation
        moves onto the machine. Lighter than the thylakoid's lipid heads. */
     antenna: 0x5fb35a,
+    photosystemCap: 0x3f8a3c,   // the OEC and PSI's stromal ridge: the photosystem's own green, a shade down
+    chlorophyll: 0x2f7d32,   // the pigment discs on the antenna: darker than the lobe they stud
     /* ON THE STROMA SIDE, where NADPH is made. Ferredoxin is a small
        iron-sulfur protein, an iron rust that is neither oxygen's red nor the
        carrier's teal; FNR is the enzyme with the flavin, an ochre kept clear

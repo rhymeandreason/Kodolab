@@ -31,8 +31,8 @@
  *  PSII splits water into lumen protons and O₂, FNR makes NADPH, both fire
  *  on light.
  *
- *  WHAT A PHOTON DOES, drawn: it lands on the antenna (the light-harvesting
- *  belt behind each photosystem), the excitation hops to the reaction
+ *  WHAT A PHOTON DOES, drawn: it lands on the antenna (the green
+ *  light-harvesting lobes flanking each photosystem's core), the excitation hops to the reaction
  *  centre, an electron is ejected, and something refills the hole: water at
  *  PSII, plastocyanin at PSI. That is the light reactions in one sentence,
  *  and every other beat follows from it.
@@ -146,21 +146,30 @@
        protons by the Q cycle at sites inside the membrane, but its bulk is
        on the LUMEN side, cytochrome f's large domain and the Rieske head,
        drawn as the knobs where plastocyanin docks. `R` is each one's reach
-       along the membrane, and `lobe` widens the hole in the lipid to clear
-       the antenna belt behind the two photosystems. */
+       along the membrane, antenna lobes included, and `lobe` widens the hole
+       in the lipid to clear them. */
     const SPEC = {
-      PSII: { R: 15.5, lobes: 0, lobe: 0.6, color: PHO.psii },
+      PSII: { R: 15.5, sx: 1.4, lobes: 2, lobe: 0.25, color: PHO.antenna },
       b6f:  { R: 14.0, lobes: 0, lobe: 0.12, color: PHO.b6f },
-      PSI:  { R: 15.0, lobes: 0, lobe: 0.6, color: PHO.psi },
+      PSI:  { R: 15.0, sx: 1.3, lobes: 3, lobe: 0.25, color: PHO.antenna },
     };
     const { THREE, P, HALF, rnd, seat, root } = eng;
     const pumpDir = eng.pumpDir;
     const Parts = global.Parts;
+    function photosystem(key) {
+      const part = Parts.transporter({ half: HALF, over: 3, site: 5.0, mouth: 5.0, radius: SPEC[key].R / SPEC[key].sx,
+        taper: -pumpDir() * 0.35, lobes: SPEC[key].lobes, lobeDepth: SPEC[key].lobe, color: PHO.antenna });
+      part.setGates(0, 0); part.setGates = () => {};
+      part.mesh.scale.x = SPEC[key].sx;
+      return part;
+    }
     const K = global.Circuit.kit(eng, {
       name: 'LightReactions', context: 'thylakoid', ring: RING, line: Object.assign({ qColor: PHO.plastoquinone, cColor: PHO.plastocyanin }, LINE),
       table: CHAIN, carries: CARRIES, shapes: SPEC, offsets: OFFSETS, fuels: FUELS,
-      build: (key, H) => key === 'PSII' ? H.solidPart(PHO.psii, 9.2, HALF + 3, 1.7)          // two monomers side by side
-        : key === 'PSI' ? H.solidPart(PHO.psi, 10.5, HALF + 4, 1.45)
+      /* THE PHOTOSYSTEMS ARE THE CHANNEL'S LATHE, SHUT: antenna and core in
+         one green body, flared toward the stroma as in the textbook drawing,
+         with no lumen through it. */
+      build: (key, H) => key !== 'b6f' ? photosystem(key)
         : H.lathePart(PHO.b6f, { top: HALF + 3, bottom: -(HALF + 9), rTop: 9.5, rMax: 13, sx: 1.3,
             /* the dimer swells toward the lumen face, where cytochrome f stands */
             belly: y => Math.exp(-(((y + HALF) / 9) ** 2)) }),
@@ -178,18 +187,26 @@
        ridge, b6f's two lumen knobs, and FNR, an enzyme standing on the
        stroma face beside PSI, where NADP⁺ docks: all placed by sign in
        orient(), never by a negative scale. */
-    function antenna(part, R) {
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 2 * HALF + 1, 20), Parts.flat(PHO.antenna));
-      m.scale.set((R + 2) / 5, 1, 1); m.position.z = -(R + 4);
-      part.group.add(m);
-      return m;
+    /* THE PIGMENTS: chlorophyll dots on the photosystem's flanks, a few
+       dozen standing in for hundreds, seated on the lathe's own outer radius
+       so they sit on the surface at every height. The caps stay clear. */
+    const chlGeo = new THREE.SphereGeometry(0.7, 10, 8);
+    function pigments(key) {
+      const part = CX[key], chl = Parts.flat(PHO.chlorophyll), N = 70;
+      for (let i = 0; i < N; i++) {
+        const y = (1 - 2 * (i + 0.5) / N) * (HALF + 2), t = i * 2.39996;
+        const r = part.outerR(y) * (1 + SPEC[key].lobe * Math.cos(SPEC[key].lobes * t)) * 0.98;
+        const d = new THREE.Mesh(chlGeo, chl);
+        d.position.set(r * Math.cos(t) * SPEC[key].sx, y, r * Math.sin(t));
+        part.group.add(d);
+      }
     }
-    antenna(CX.PSII, SPEC.PSII.R); antenna(CX.PSI, SPEC.PSI.R);
+    pigments('PSII'); pigments('PSI');
     const OEC_G = new THREE.Group();
-    const OEC = new THREE.Mesh(new THREE.SphereGeometry(5.5, 18, 12), Parts.flat(PHO.psii));
+    const OEC = new THREE.Mesh(new THREE.SphereGeometry(5.5, 18, 12), Parts.flat(PHO.photosystemCap));
     OEC.scale.set(1.3, 0.8, 1); OEC_G.add(OEC); OEC_G.userData.baseY = CX.PSII.height + 3;
     CX.PSII.group.add(OEC_G);
-    const RIDGE_PSI = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(PHO.psi));
+    const RIDGE_PSI = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 12), Parts.flat(PHO.photosystemCap));
     RIDGE_PSI.scale.set(1.2, 0.8, 1); RIDGE_PSI.userData.baseY = CX.PSI.height + 3;
     CX.PSI.group.add(RIDGE_PSI);
     const B6F_F = HALF + 5;
@@ -215,9 +232,8 @@
     K.hooks.token = () => null;
 
     /* ---- light ----
-       A PHOTON LANDS ON THE ANTENNA: a streak down onto the belt behind the
-       photosystem, then the excitation as a glow hopping from the belt into
-       the core and bursting at the reaction centre, which is when `then`
+       A PHOTON LANDS ON THE ANTENNA: a streak down onto an antenna lobe, then
+       the excitation as a glow hopping from the lobe into the core and bursting at the reaction centre, which is when `then`
        fires and the electron is ejected. One photon per electron, so a turn
        fires two: at load, and at occlude. Drawn over the protein, because the
        reaction centre is inside it and a hidden burst is a missing step. */
@@ -233,7 +249,7 @@
       const glow = new THREE.Mesh(new THREE.SphereGeometry(4.5, 16, 12), glowMat());
       glow.renderOrder = 32; glow.visible = false;
       g.add(ray, glow); root.add(g);
-      photons.push({ obj: g, ray, glow, t: 0, key, x: xs[key] + rnd(-R * 0.6, R * 0.6), z: -(R + 4), then, fired: false });
+      photons.push({ obj: g, ray, glow, t: 0, key, x: xs[key] + rnd(-R * 0.6, R * 0.6), z: R * 0.6, then, fired: false });
     }
     function tickPhotons(dt) {
       const s = -pumpDir();
@@ -551,7 +567,7 @@
         psii:     () => P.proteins.PSII ? K.at(xs.PSII, H_() * 0.98) : null,
         b6f:      () => P.proteins.b6f ? K.at(xs.b6f, H_() * 0.98) : null,
         psi:      () => P.proteins.PSI ? K.at(xs.PSI, H_() * 0.98) : null,
-        antenna:  () => P.proteins.PSII ? K.at(xs.PSII - 4, -pumpDir() * (HALF + 8)) : null,
+        antenna:  () => P.proteins.PSII ? K.at(xs.PSII - 6, -pumpDir() * (HALF + 8)) : null,
         plastoquinone: () => K.shuttles.qTokens.length ? K.shuttles.qTokens[0].obj.position : null,
         plastocyanin:  () => K.shuttles.cTokens.length ? K.shuttles.cTokens[0].obj.position : null,
         ferredoxin: () => fdTokens.length ? fdTokens[0].obj.position : null,
@@ -585,9 +601,9 @@
           card: 'Waste. What is left of two waters once PSII has had their four electrons is one O₂, and being nonpolar it slips across the membrane and out of the chloroplast. Every breath you take was split out of water this way, four photons at a time.' },
       },
       proteinKey: {
-        PSII:     { name: 'photosystem II', color: hex(PHO.psii) },
+        PSII:     { name: 'photosystem II', color: hex(PHO.antenna) },
         b6f:      { name: 'cytochrome b6f (pumps H⁺)', color: hex(PHO.b6f) },
-        PSI:      { name: 'photosystem I', color: hex(PHO.psi) },
+        PSI:      { name: 'photosystem I', color: hex(PHO.antenna) },
       },
       carries: { PSII:[], b6f:['H'], PSI:[] },
     });

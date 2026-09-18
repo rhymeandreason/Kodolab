@@ -136,6 +136,7 @@
                    protein develops a hole in its flank.
        rings/segs  tessellation
        lobes       cosmetic symmetry-breaking, 0 = a clean solid of revolution
+       taper       fractional widening toward +y (negative: toward −y); 0 = symmetric
 
      Returns { group, mesh, setGates, gates, dispose }.
      ===================================================================== */
@@ -149,7 +150,7 @@
          it. 5.0 clears the widest drawn species, Cl⁻ at 4.71 — which the
          first fix forgot, and the constructor's warning caught. */
       half: 15.3, over: 14, radius: 14.5, site: 5.0, mouth: 7.6, wall: 3.0,
-      rings: 96, segs: 56, lobes: 0, lobeDepth: .06,
+      rings: 96, segs: 56, lobes: 0, lobeDepth: .06, taper: 0,
       /* Cool against the membrane's warm, which is the first illustration's
          scheme and the reason it reads at a glance: a protein the colour of
          its lipids is a protein you have to hunt for. */
@@ -231,7 +232,7 @@
          narrowest where the lipid is thinnest, and it reads as "gripped
          by the membrane" rather than "pushed through a hole". */
       const waist = 1 - 0.07 * Math.exp(-((y / (o.half * .8)) ** 2));
-      return o.radius * s * waist;
+      return o.radius * s * waist * (1 + o.taper * y / H);
     }
 
     const Ri = y => throat(y);
@@ -316,7 +317,7 @@
     setGates(gTop, gBot);
 
     return {
-      group, mesh, setGates, geometry: geo,
+      group, mesh, setGates, geometry: geo, outerR: Ro,
       /* Half-height, so a caller working in pump.js's normalised u (-1 at
          the inner mouth, +1 at the outer) can place an ion without knowing
          how this shape was built or hard-coding an angstrom. */
