@@ -74,7 +74,9 @@ module.exports = async function handler(req, res) {
         console.error('[auth] mail: ' + sent.error);
         return res.status(502).json({ error: 'Could not send the email. Try again in a moment.' });
       }
-      return res.status(200).json({ sent: true, console: !!sent.console });
+      // `minutes` travels so the page can say how long the code lasts without
+      // keeping its own copy of the number.
+      return res.status(200).json({ sent: true, minutes: got.minutes, console: !!sent.console });
     }
 
     if (action === 'verify') {

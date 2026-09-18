@@ -42,3 +42,19 @@
 .sub { font-size: .85rem; color: var(--text-muted); }
 .sub a { color: inherit; }
 .err { font-size: .9rem; color: var(--hue-coral); }
+
+/* Two latches on one door, so the rule says they are alternatives rather than
+   steps. The word sits on the line, which is why the rule is drawn either side
+   of it instead of behind it. */
+.or {
+  display: flex; align-items: center; gap: .75rem;
+  font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted);
+}
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border-hair); }
+
+/* An address is read left to right; the code input's centring and tracking are
+   for six digits and make an email look like a serial number. */
+.code input[type=email] {
+  text-align: left; letter-spacing: normal;
+  font-family: var(--font-editorial); font-size: 1rem;
+}

@@ -10,8 +10,13 @@
 <link rel="stylesheet" href="../css/kodo.css">
 <link rel="stylesheet" href="login.css">
 <!-- =========================================================================
-     THE ONE WAY IN. Two doors: a class code (a student, no account) and
-     Google (everyone else, admitted by an invite the first time).
+     THE ONE WAY IN. Two doors: a class code (a student, no account) and an
+     account (everyone else, admitted by an invite the first time).
+
+     THE ACCOUNT DOOR HAS TWO LATCHES, Google and a code mailed to an address,
+     and they open the same account: the server matches on the address. The
+     email form is a real <form> with autocomplete named, which is what lets a
+     keychain fill the address and Safari offer the code straight from Mail.
 
      Pages that refuse someone send them here with ?next=<where they were>,
      and this page sends them back only when they now qualify for it: a
@@ -49,9 +54,23 @@
     <section class="door">
       <h2 class="cap">Teachers and builders</h2>
       <div class="stack" id="out">
-        <p class="say">Sign in with Google. The first time, you enter the invite code you were given.</p>
+        <p class="say">The first time, you enter the invite code you were given.</p>
         <div class="gbtn" id="gbtn"></div>
         <p class="sub" id="noGoogle" hidden>Google sign-in is not set up on this server.</p>
+        <p class="or"><span>or</span></p>
+        <form class="code" id="emailForm">
+          <input id="email" type="email" name="email" inputmode="email" autocomplete="username"
+                 aria-label="Email address" placeholder="you@school.edu"
+                 autocapitalize="off" spellcheck="false" maxlength="254">
+          <button class="cta" type="submit">Email a code</button>
+        </form>
+        <form class="code" id="otpForm" hidden>
+          <input id="otp" name="otp" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+                 aria-label="Sign-in code" placeholder="123456"
+                 autocapitalize="off" spellcheck="false" maxlength="6">
+          <button class="cta" type="submit">Sign in</button>
+        </form>
+        <p class="sub" id="otpSaid" hidden></p>
       </div>
       <div class="stack" id="in" hidden>
         <p class="say" id="inLine"></p>
@@ -173,6 +192,54 @@
     await Apps.account.claimLocal();
     leave(home(user));
   }
+
+  /* ---- the email door --------------------------------------------------- *
+   * Two steps in one door, and the address is kept in a variable rather than
+   * re-read from the field: it is what the code was sent to, and a person who
+   * edits the box after asking would otherwise verify against the new text. */
+  let sentTo = null;
+
+  function otpStep(said) {
+    $('emailForm').hidden = !!said;
+    $('otpForm').hidden = !said;
+    show('otpSaid', said || '');
+    if (said) { $('otp').value = ''; $('otp').focus(); } else { sentTo = null; $('email').focus(); }
+  }
+
+  async function sendCode(email) {
+    show('acctErr', '');
+    const btn = $('emailForm').querySelector('button');
+    btn.disabled = true;
+    try {
+      const r = await Apps.account.codeSend(email);
+      sentTo = email;
+      otpStep(r.console
+        ? `No mail provider here, so the code was printed in the dev server console. It lasts ${r.minutes} minutes.`
+        : `Code sent to ${email}. It lasts ${r.minutes} minutes.`);
+      $('otpSaid').insertAdjacentHTML('beforeend',
+        ' <button class="textbtn" id="againBtn" type="button">Send again</button>'
+        + ' · <button class="textbtn" id="otherBtn" type="button">Use a different address</button>');
+      $('againBtn').addEventListener('click', () => sendCode(sentTo));
+      $('otherBtn').addEventListener('click', () => otpStep(null));
+    } catch (err) { show('acctErr', err.message); }
+    finally { btn.disabled = false; }
+  }
+
+  $('emailForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const email = $('email').value.trim();
+    if (email) sendCode(email);
+  });
+
+  $('otpForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const code = $('otp').value.replace(/\D/g, '');
+    if (!code || !sentTo) return;
+    show('acctErr', '');
+    busy('Signing in…');
+    try { signedIn((await Apps.account.codeVerify(sentTo, code)).user); }
+    catch (err) { busy(''); show('acctErr', err.message); $('otp').select(); }
+  });
 
   $('inviteForm').addEventListener('submit', async e => {
     e.preventDefault();

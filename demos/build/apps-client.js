@@ -117,7 +117,7 @@ const Apps = (() => {
   }
 
   /* ---- the account ------------------------------------------------------ *
-   * Google sign-in sets an HttpOnly cookie, so this page never holds the
+   * Either way in sets an HttpOnly cookie, so this page never holds the
    * session; it only asks /api/auth what the cookie says. */
   function loadScript(src) {
     return new Promise((ok, fail) => {
@@ -146,6 +146,12 @@ const Apps = (() => {
       window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' });
       return s;
     },
+    /* The email door. `codeSend` answers {sent, minutes, console}; `minutes` is
+       the server's own TTL, so the page says how long a code lasts without
+       holding a second copy of the number. `console: true` means no mail
+       provider is configured and the dev server printed it. */
+    codeSend: email => api('../../api/auth', { method: 'POST', body: { action: 'code', email } }),
+    codeVerify: (email, code) => api('../../api/auth', { method: 'POST', body: { action: 'verify', email, code } }),
     redeem: code => api('../../api/auth', { method: 'POST', body: { action: 'redeem', code } }),
     note: user => (user ? set(ACCOUNT_KEY, JSON.stringify(user)) : del(ACCOUNT_KEY)),
     /* The apps this browser made on a testing link become the account's. Only
