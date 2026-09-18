@@ -279,6 +279,8 @@
     classId = (data.classes.find(c => c.id === want) || data.classes[0] || {}).id || null;
     paintClasses();
     if (classId) await openClass(classId);
+    // The other classes, one at a time behind the first, so switching to one is instant.
+    for (const c of data.classes) if (!cache.has(c.id)) await fetchClass(c.id).catch(() => {});
     return true;
   }
   /* ---- classes ---------------------------------------------------------- */
@@ -320,9 +322,14 @@
     paintClasses();
     if ($('student').open) $('student').close();
     if (id !== (current && current.class.id)) seatForm(false);
-    current = await t('?class=' + encodeURIComponent(id));
-    paintClass();
+    // A class seen before paints at once from what it last said, then repaints
+    // when the server answers. An answer for a class no longer open is kept, not painted.
+    if (cache.has(id)) { current = cache.get(id); paintClass(); }
+    const fresh = await fetchClass(id);
+    if (classId === id) { current = fresh; paintClass(); }
   }
+  const cache = new Map();
+  const fetchClass = id => t('?class=' + encodeURIComponent(id)).then(r => { cache.set(id, r); return r; });
 
   function paintClass() {
     const c = current;
