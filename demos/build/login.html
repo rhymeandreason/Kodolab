@@ -59,15 +59,14 @@
     <section class="door">
       <h2 class="cap">Teachers and builders</h2>
       <div class="stack" id="out">
-        <p class="say">Sign in with Google, or have a code emailed to you.</p>
         <div class="gbtn" id="gbtn"></div>
         <p class="sub" id="noGoogle" hidden>Google sign-in is not set up on this server.</p>
-        <p class="or"><span>or</span></p>
+        <p class="or"><span>or sign in with email</span></p>
         <form class="code" id="emailForm">
           <input id="email" type="email" name="email" inputmode="email" autocomplete="username"
                  aria-label="Email address" placeholder="you@school.edu"
                  autocapitalize="off" spellcheck="false" maxlength="254">
-          <button class="cta" type="submit">Email a code</button>
+          <button class="cta" type="submit">Continue</button>
         </form>
         <form class="code" id="otpForm" hidden>
           <input id="otp" name="otp" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
@@ -78,7 +77,7 @@
         <p class="sub" id="otpSaid" hidden></p>
         <!-- Inside #out, so it goes when they sign in: past that point the
              invite is the next page's business, not a warning. -->
-        <p class="sub">New here? You enter an invite code after signing in, or
+        <p class="sub" id="inviteNote">New here? You enter an invite code after signing in, or
           <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">join the waitlist</a>.</p>
       </div>
       <div class="stack" id="in" hidden>
@@ -203,6 +202,9 @@
   function otpStep(said) {
     $('emailForm').hidden = !!said;
     $('otpForm').hidden = !said;
+    // Two codes on screen at once is the one confusion this door has to avoid:
+    // while a sign-in code is being typed, the invite is not the subject.
+    $('inviteNote').hidden = !!said;
     show('otpSaid', said || '');
     if (said) { $('otp').value = ''; $('otp').focus(); } else { sentTo = null; $('email').focus(); }
   }
