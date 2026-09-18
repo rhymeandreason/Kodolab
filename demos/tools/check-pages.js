@@ -35,7 +35,6 @@ const fail = m => { fails++; console.log(`  FAIL  ${m}`); };
 const html = d => fs.readdirSync(path.join(ROOT, d))
   .filter(f => f.endsWith('.html')).map(f => (d ? d + '/' : '') + f);
 const ALL_PAGES = [...html(''), ...html('tests')].sort();
-const PAGES = ALL_PAGES;
 
 /* =====================================================================
  *  2. A PROTON HOP HAS TO TAKE THE ATOM WITH IT.
@@ -97,7 +96,6 @@ const BEFORE = 14, AFTER = 3;      // lines of context; widen only with a reason
  * exact code the audit above was written about. Widen this list alongside any
  * module that gains a hop.
  */
-const HOP_SOURCES = [...PAGES, 'reaction/reaction.js'];
 
 /* THE CALL SITES, and `protonAway` is one. A departure to solution is written
  * as a wrapper now (same colour, same `away` profile, same '+'), and a wrapper
@@ -105,6 +103,11 @@ const HOP_SOURCES = [...PAGES, 'reaction/reaction.js'];
  * is how the four call sites in the audit above would look today. Add a name
  * here whenever a page or module wraps protonHop. */
 const HOP_CALL = /(?:\bprotonHop|\bprotonAway|\bhop)\s*\(/;
+
+// Only files that name protonHop or protonAway; a page that never flies a
+// proton has no hop to check.
+const HOP_SOURCES = [...ALL_PAGES, 'reaction/reaction.js'].filter(f =>
+  /\bproton(?:Hop|Away)\b/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
 
 console.log('\n== 2. every proton hop removes the atom it moves');
 let hops = 0;
