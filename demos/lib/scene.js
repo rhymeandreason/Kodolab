@@ -416,6 +416,7 @@
   //   still only sets standing distance (harmless for an ortho camera, never
   //   drives apparent size).
   function create(canvas, opts={}){
+    opts=Object.assign({}, global.Stage.defaults, opts);
     const o=Object.assign({ phiMin:0.25, phiMax:2.85, rMin:5, rMax:60, wheel:0.08,
       onZoom:null, onDrag:null }, opts);
     const camInit=Object.assign({theta:0.5,phi:1.15,r:9}, opts.cam||{});
@@ -425,9 +426,11 @@
     // it on a live context — so a page that wants to measure what MSAA costs
     // on a weak GPU has no way to ask for it after the fact.
     // `opts.antialias:false` is that ask; see hemoglobin/crowd-test.html.
+    // Stage.defaults sets both for every box on a page, which is how a page
+    // of thumbnails (the homepage) spends less GPU than a lesson.
     const renderer=new THREE.WebGLRenderer(
       {canvas,antialias:o.antialias!==false,alpha:true});
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setPixelRatio(Math.min(devicePixelRatio,o.pixelRatio||2));
     const scene=new THREE.Scene();
     // An ortho camera's standing distance is not its framing, and frame()
     // writes cam.r as the frustum HALF-HEIGHT — so the camera ends up parked
@@ -660,7 +663,7 @@
       if(bm.userData.pair.some(p=>set.has(p))) bm.visible=show; });
   }
 
-  global.Stage={ create, setToon, atomMat, bondMat, glowMat, atom, bond,
+  global.Stage={ defaults:{}, create, setToon, atomMat, bondMat, glowMat, atom, bond,
     bondSplit, STICK_RATIO,
     buildMolecule, removeAtoms, setOptionalH, placeBond, doublePerp, flattenBonds,
     measure, frame, centerOf,

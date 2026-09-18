@@ -56,6 +56,7 @@
       mount: el,
       cam: params.cam || { theta:0.5, phi:1.15, r:26 },
       viewOffset: params.viewOffset,
+      stage: params.stage,
       afterFrame: () => { if (nb) nb.step(); },
       step: () => {
         if (!sim) return;               // CardStage may tick before create returns

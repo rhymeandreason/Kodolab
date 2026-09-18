@@ -476,33 +476,6 @@
   </div>
 </footer>
 
-<!-- the library, in load order (kit/app.js's ORDER is the one copy of it) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<!-- The momentum, and ONLY the momentum: Lenis, 5 kB gzipped, one file, MIT.
-     Same version dna-structure.html pins. It drives the WINDOW scroll, so the
-     scroll listener below, the keyboard and the scrollbar all keep working. -->
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
-<script src="demos/lib/palette.js"></script>
-<script src="demos/lib/tokens-from-palette.js"></script>
-<script src="demos/lib/molecules.js"></script>
-<script src="demos/lib/mol-small.js"></script>
-<script src="demos/lib/skel.js"></script>
-<script src="demos/lib/mol-sugars.js"></script>
-<script src="demos/lib/scene.js"></script>
-<script src="demos/lib/geo.js"></script>
-<script src="demos/lib/atomkit.js"></script>
-<script src="demos/kit/card-stage.js"></script>
-<script src="demos/kit/molbox.js"></script>
-<script src="demos/water/watersim.js"></script>
-<script src="demos/water/watersim-mount.js"></script>
-<script src="demos/proteins/proteins.js"></script>
-<script src="demos/membrane/parts.js"></script>
-<script src="demos/membrane/pump.js"></script>
-<script src="demos/membrane/chemiosmosis.js"></script>
-<script src="demos/membrane/sheet.js"></script>
-<script src="demos/chemiosmosis/circuit.js"></script>
-<script src="demos/membrane/membrane.js"></script>
-
 <script>
 /* ---- 1. the word: the nucleation from tests/kodolab-anim.html ------------ */
 (() => {
@@ -608,6 +581,37 @@
   spots.forEach(([x, y, r], i) => { const m = document.createElement("i"); m.style.cssText = `left:${x}vw;top:${y}vh;width:${r}px;height:${r}px;background:${COLORS[i % 5]};animation-delay:${-i * 2.3}s;animation-duration:${11 + i * 1.7}s;transition:opacity 1.2s ${0.1 * i}s`; motes.appendChild(m); });
 })();
 
+</script>
+<!-- the library, in load order (kit/app.js's ORDER is the one copy of it) -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- The momentum, and ONLY the momentum: Lenis, 5 kB gzipped, one file, MIT.
+     Same version dna-structure.html pins. It drives the WINDOW scroll, so the
+     scroll listener below, the keyboard and the scrollbar all keep working. -->
+<script defer src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script defer src="demos/lib/palette.js"></script>
+<script defer src="demos/lib/tokens-from-palette.js"></script>
+<script defer src="demos/lib/molecules.js"></script>
+<script defer src="demos/lib/mol-small.js"></script>
+<script defer src="demos/lib/skel.js"></script>
+<script defer src="demos/lib/mol-sugars.js"></script>
+<script defer src="demos/lib/scene.js"></script>
+<script defer src="demos/lib/geo.js"></script>
+<script defer src="demos/lib/atomkit.js"></script>
+<script defer src="demos/kit/card-stage.js"></script>
+<script defer src="demos/kit/molbox.js"></script>
+<script defer src="demos/water/watersim.js"></script>
+<script defer src="demos/water/watersim-mount.js"></script>
+<script defer src="demos/proteins/proteins.js"></script>
+<script defer src="demos/membrane/parts.js"></script>
+<script defer src="demos/membrane/pump.js"></script>
+<script defer src="demos/membrane/chemiosmosis.js"></script>
+<script defer src="demos/membrane/sheet.js"></script>
+<script defer src="demos/chemiosmosis/circuit.js"></script>
+<script defer src="demos/membrane/membrane.js"></script>
+
+<script>
+addEventListener("DOMContentLoaded", () => {
+Stage.defaults = { antialias: false, pixelRatio: 1.5 };   // thumbnails: half the GPU of a lesson box
 /* ---- 1b. momentum ---------------------------------------------------------
    The wheel is discrete ticks, so the scrubbed animation below advances in
    visible steps; Lenis interpolates them into a ramp. Everything under it reads
@@ -751,6 +755,7 @@ const lenis = new Lenis({ autoRaf: true, duration: 1.1 });
   }).join("");
   m.innerHTML = html + html;   // doubled, so the slide loops without a seam
 })();
+});
 </script>
 </body>
 </html>
