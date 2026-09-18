@@ -611,7 +611,7 @@
 
 <script>
 addEventListener("DOMContentLoaded", () => {
-Stage.defaults = { antialias: false, pixelRatio: 1.5 };   // thumbnails: half the GPU of a lesson box
+Stage.defaults = { pixelRatio: 1.5 };   // thumbnails: less GPU than a lesson box
 /* ---- 1b. momentum ---------------------------------------------------------
    The wheel is discrete ticks, so the scrubbed animation below advances in
    visible steps; Lenis interpolates them into a ramp. Everything under it reads
