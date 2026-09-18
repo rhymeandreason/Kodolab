@@ -41,6 +41,13 @@ const Apps = (() => {
   const SEAT_KEY    = 'ss.class.code';
   const ACCOUNT_KEY = 'ss.account';         // the signed-in user as /api/auth described it, for lib/site.js's bar; the cookie is the truth
   const TEACHER_KEY = 'ss.teacher.code';
+  /* Which way in this browser last used: 'google' or 'email', so /login can
+     mark it. THE METHOD AND NEVER THE ADDRESS. The method admits nobody, which
+     is why it is deliberately left out of lib/site.js's PERSON_KEYS and outlives
+     a sign-out: the hint is for the person who comes back after one. An address
+     would do the opposite on a shared machine, naming who was here last, and the
+     keychain already fills it. */
+  const LAST_KEY    = 'ss.lastSignIn';
 
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -139,8 +146,11 @@ const Apps = (() => {
         client_id: s.clientId,
         callback: async r => {
           if (start) start();
-          try { done((await api('../../api/auth', { method: 'POST', body: { action: 'google', credential: r.credential } })).user); }
-          catch (err) { done(null, err); }
+          let user;
+          try { user = (await api('../../api/auth', { method: 'POST', body: { action: 'google', credential: r.credential } })).user; }
+          catch (err) { return done(null, err); }
+          set(LAST_KEY, 'google');   // only once the cookie is set: a refused attempt is not a way in
+          done(user);
         },
       });
       window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' });
@@ -151,7 +161,12 @@ const Apps = (() => {
        holding a second copy of the number. `console: true` means no mail
        provider is configured and the dev server printed it. */
     codeSend: email => api('../../api/auth', { method: 'POST', body: { action: 'code', email } }),
-    codeVerify: (email, code) => api('../../api/auth', { method: 'POST', body: { action: 'verify', email, code } }),
+    async codeVerify(email, code) {
+      const r = await api('../../api/auth', { method: 'POST', body: { action: 'verify', email, code } });
+      set(LAST_KEY, 'email');
+      return r;
+    },
+    lastMethod() { const m = get(LAST_KEY); return m === 'google' || m === 'email' ? m : null; },
     redeem: code => api('../../api/auth', { method: 'POST', body: { action: 'redeem', code } }),
     note: user => (user ? set(ACCOUNT_KEY, JSON.stringify(user)) : del(ACCOUNT_KEY)),
     /* The apps this browser made on a testing link become the account's. Only
