@@ -126,7 +126,7 @@ body.teach {
    read as a card, close enough to the band not to glare. */
 .share {
   --card: color-mix(in srgb, var(--text-inverse) 9%, var(--text-strong));
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: .6rem; padding: .95rem 1.1rem; border-radius: var(--r-card);
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; padding: 1.35rem 1.4rem 1.4rem; border-radius: var(--r-card);
   background: var(--card); border: 1px solid var(--on-line);
 }
 .share-text { display: flex; align-items: baseline; gap: .5rem; margin: 0; color: var(--on-dim); font-size: .9rem; }
@@ -134,7 +134,11 @@ body.teach {
 .share-text .textbtn { margin-left: auto; color: var(--on-dim); }
 .share-text .textbtn:hover:not([disabled]) { color: var(--on); }
 .share-link { display: flex; gap: .5rem; }
-.dashhead .share-link input { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: .88rem; padding: .55rem .8rem; background: var(--text-strong); }
+/* One height for the pair, stated rather than left to each box's padding: the
+   mono input and the ui-font button otherwise come out a pixel or two apart. */
+.share-link > * { height: 2.9rem; box-sizing: border-box; }
+.share-link .btn { padding-block: 0; }
+.dashhead .share-link input { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: .88rem; padding: 0 .9rem; background: var(--text-strong); border-color: color-mix(in srgb, var(--text-inverse) 38%, transparent); }
 .share-foot { margin: 0; color: var(--on-dim); font-size: .86rem; }
 .share-foot code { font-family: var(--font-mono); color: var(--on); }
 .share-foot .bigcode { font-size: .98rem; font-weight: 600; letter-spacing: .08em; padding: .1rem .45rem; margin: 0 .2rem; border-radius: 6px; background: color-mix(in srgb, var(--text-inverse) 14%, transparent); }
