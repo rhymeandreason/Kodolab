@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The light reactions — Kodolab</title>
+<meta name="description" content="Photosynthesis's light reactions in 3D: a photon lands on the antenna, water is split four electrons at a time, protons fill the thylakoid lumen, and ATP and NADPH come out in the stroma. Flash a dark thylakoid by hand and pay for one Calvin cycle.">
+<meta name="robots" content="noindex">
+<script defer src="lib/site.js"></script>
+<style>
+  /* the tally on the last step: read off state(), never typed */
+  .tally { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0 0 12px; }
+  .tally .stat-sub { color: var(--ink-3); }
+  .tally .is-met .stat-value { color: var(--accent); }
+  .goal { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
+  .verdict { font-size: 13px; color: var(--ink-2); margin: 10px 0 0; min-height: 3em; }
+  .done { margin: 12px 0 0; padding: 10px 14px; border-radius: 999px; background: var(--panel); font-family: var(--display); font-size: 15px; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="kit/app.js" data-shell="steps" data-use="Chloroplast,LightReactions,ElectronTransport"></script>
+<script>
+/* photosynthesis-lab.html — the light reactions, prototype.
+   The respiration lab's counterpart: where in the organelle, then the
+   thylakoid membrane at two levels of detail, ending on a tally that pays
+   for one turn of the Calvin cycle by flashing a dark thylakoid by hand.
+   Every number a step prints is read from a component's state() or its
+   arithmetic (LightReactions.CALVIN, ElectronTransport.RING); nothing here
+   is typed. ElectronTransport is loaded for one thing, its ring, so the
+   comparison on the synthase step cannot drift from what that component draws. */
+'use strict';
+let unsubs = [];
+const clear = () => { unsubs.forEach(f => f()); unsubs = []; };
+const stat = (label, id, sub = '') => `<div class="stat"><div class="stat-label">${label}</div><div class="stat-value" id="${id}">–</div>${sub ? `<div class="stat-sub">${sub}</div>` : ''}</div>`;
+const LIGHT = { chain: 'lumped', fuel: 'light', fuelRate: 1 };
+
+const shell = LessonShell.create({
+  brand: 'The light reactions',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [
+    {
+      eyebrow: 'Where', title: 'Inside a chloroplast', scene: 'chloroplast',
+      body: '<p><b>The light reactions run on one membrane.</b> Every thylakoid disc in every stack is a fold of a single membrane around a single space, the lumen, and the stroma is the fluid around it all.</p><p>Light is absorbed on the membrane. Protons are driven into the lumen. ATP and NADPH come out on the stroma side, where the Calvin cycle spends them.</p>',
+      nextLabel: 'Zoom in on the membrane',
+      onEnter(ctx) { clear(); chloro.set({ light: 0.8 }); chloro.notes(['granum', 'lumen', 'stroma']); },
+      onExit() { chloro.notes(false); },
+    },
+    {
+      eyebrow: 'The idea', title: 'Light pumps protons', scene: 'membrane',
+      body: '<p><b>One machine, drawn as one thing: light in, protons into the lumen.</b> The lumen turns acidic, and ATP synthase lets the protons back out into the stroma, turning as they pass.</p><p>Dim the light and the gradient drains. This is the same picture as a mitochondrion, mirrored: there the pumped side is on top.</p>',
+      nextLabel: 'Open the machine',
+      onEnter(ctx) {
+        clear();
+        lr.set(Object.assign({}, LIGHT, { proteins: { complex: { x: -80 }, synthase: { x: 40 } } }));
+        lr.notes(['complex', 'synthase', 'inside']);
+        ctx.ui.controls(`<div class="slider"><div class="slider-head"><span class="label">light</span><span class="value" id="lv"></span></div><input id="light" type="range" min="0" max="1" step="0.05" value="1"></div>
+          <div class="stats">${stat('proton-motive force', 's-pmf', 'mV across the membrane')}${stat('ATP made', 's-atp', 'in the stroma')}</div>`);
+        ctx.ui.range(ctx.ui.q('#light'), v => { lr.set({ fuelRate: v }, { snap: true }); ctx.ui.q('#lv').textContent = Math.round(v * 100) + '%'; });
+        unsubs.push(lr.on('frame', s => { ctx.ui.q('#s-pmf').textContent = Math.round(s.pmf); ctx.ui.q('#s-atp').textContent = s.atpMade; }));
+      },
+      onExit() { lr.notes(false); },
+    },
+    {
+      eyebrow: 'Photosystem II', title: 'The electrons come from water', scene: 'membrane',
+      body: '<p><b>A photon lands on the green antenna, its energy hops into the reaction centre, and an electron is thrown out.</b> Something has to refill the hole, and at photosystem II that something is water.</p><p>Watch the pill on the lumen face count: the oxygen-evolving complex takes one electron per photon and, on the fourth, tears all four out of two waters at once. That is where the O₂ comes from, and the four protons stay in the lumen.</p>',
+      nextLabel: 'Follow the electrons',
+      onEnter(ctx) {
+        clear();
+        lr.set(Object.assign({}, LIGHT, { chain: 'split', proteins: { complex: { x: -60 }, synthase: { x: 80 } } }));
+        lr.notes(['antenna', 'water.split', 'oxygen']);
+        ctx.ui.controls(`<div class="stats">${stat('photons', 's-ph', 'absorbed so far')}${stat('O₂ released', 's-o2', 'per O₂: <span id="s-pero2">–</span> photons')}</div>`);
+        unsubs.push(lr.on('frame', s => { if (!s.light) return; ctx.ui.q('#s-ph').textContent = s.light.photons; ctx.ui.q('#s-o2').textContent = s.light.o2Released; ctx.ui.q('#s-pero2').textContent = s.light.photonsPerO2; }));
+      },
+      onExit() { lr.notes(false); },
+    },
+    {
+      eyebrow: 'Cytochrome b6f', title: 'One pump, two shuttles', scene: 'membrane',
+      body: '<p><b>Plastoquinone carries each pair of electrons through the membrane to cytochrome b6f, the only pump in the chain.</b> It lets protons into the lumen with no channel through it, some carried in on the plastoquinol, the rest taken from the stroma.</p><p>Plastocyanin takes the electrons on one at a time, through the lumen, to photosystem I. Neither shuttle is used up.</p>',
+      nextLabel: 'The second photosystem',
+      onEnter(ctx) {
+        clear();
+        lr.notes(['plastoquinone', 'b6f', 'plastocyanin']);
+        ctx.ui.controls(`<div class="stats">${stat('H⁺ into the lumen', 's-pair', 'per pair of electrons')}${stat('proton-motive force', 's-pmf', 'mV')}</div>`);
+        unsubs.push(lr.on('frame', s => { if (s.protonsPerFuel) ctx.ui.q('#s-pair').textContent = s.protonsPerFuel.light; ctx.ui.q('#s-pmf').textContent = Math.round(s.pmf); }));
+      },
+      onExit() { lr.notes(false); },
+    },
+    {
+      eyebrow: 'Photosystem I', title: 'NADPH is made in the stroma', scene: 'membrane',
+      body: '<p><b>A second photon lifts each electron again, out to the ridge on the stroma side, where ferredoxin takes it.</b> Two ferredoxin trips to the enzyme FNR, and NADP⁺ leaves as NADPH, with a proton from the stroma.</p><p>Now the chloroplast has both things the Calvin cycle spends: a gradient worth ATP, and NADPH.</p>',
+      nextLabel: 'What an ATP costs here',
+      onEnter(ctx) {
+        clear();
+        lr.notes(['psi', 'ferredoxin', 'fnr', 'nadph']);
+        ctx.ui.controls(`<div class="stats">${stat('NADPH made', 's-nadph', 'at FNR')}${stat('ATP made', 's-atp', 'at the synthase')}</div>`);
+        unsubs.push(lr.on('frame', s => { if (s.light) ctx.ui.q('#s-nadph').textContent = s.light.nadphMade; ctx.ui.q('#s-atp').textContent = s.atpMade; }));
+      },
+      onExit() { lr.notes(false); },
+    },
+    {
+      eyebrow: 'ATP synthase', title: 'A bigger ring, a dearer ATP', scene: 'membrane',
+      body: ctx => `<p><b>Count the rods.</b> A chloroplast's synthase turns on a ring of ${LightReactions.RING.c} c subunits where a mitochondrion's has ${ElectronTransport.RING.c}, so a full turn takes more protons for the same three ATP.</p><p>Every ATP made here costs about ${(LightReactions.RING.protonsPerTurn / LightReactions.RING.atpPerTurn).toFixed(1)} protons against ${(ElectronTransport.RING.protonsPerTurn / ElectronTransport.RING.atpPerTurn).toFixed(1)} in a mitochondrion. Keep that in mind for the last step.</p>`,
+      nextLabel: 'Pay for one Calvin cycle',
+      onEnter(ctx) {
+        clear();
+        lr.notes(['synthase']);
+        ctx.ui.controls(`<div class="stats">${stat('H⁺ per ATP', 's-per', 'this synthase')}${stat('c subunits', 's-ring', 'in the ring')}</div>`);
+        unsubs.push(lr.on('frame', s => { ctx.ui.q('#s-per').textContent = s.stoichiometry.protonsPerATP.toFixed(1); ctx.ui.q('#s-ring').textContent = s.stoichiometry.ringSubunits; }));
+      },
+      onExit() { lr.notes(false); },
+    },
+    {
+      eyebrow: 'The bill', title: "One Calvin cycle's worth", scene: 'membrane',
+      body: ctx => `<p><b>Fixing one CO₂ costs ${LightReactions.CALVIN.atp} ATP and ${LightReactions.CALVIN.nadph} NADPH.</b> The thylakoid is dark. Flash it by hand and watch the tally.</p><p>Each flash sends one pair of electrons from water to NADPH. See whether two of them pay the whole bill, and what it takes if they do not.</p>`,
+      onEnter: tally,
+      onExit() { clear(); lr.notes(false); lr.set({ fuel: 'light' }); },
+    },
+  ],
+});
+
+const chloro = shell.scene('chloroplast', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.8 }));
+const lr = shell.scene('membrane', el => LightReactions.mount(el, Object.assign({ viewOffset: shell.viewOffset }, LIGHT)));
+
+/* ---- the tally ----
+   A dark split thylakoid, reset to an even gradient, and two buttons: a
+   flash, and a flash whose pair goes round photosystem I once before it
+   reaches NADP⁺. The goal is LightReactions.CALVIN, read at render time; the
+   counts are state()'s. Linear flashes alone come up short on ATP, because
+   this ring charges more per ATP than the pair's protons buy, which is the
+   claim the step exists to make. */
+function tally(ctx) {
+  clear();
+  lr.set({ chain: 'split', fuel: null, cyclic: 0, proteins: { complex: { x: -60 }, synthase: { x: 80 } } });
+  lr.reset();
+  lr.set({ contents: { inside: { water: 30, H: 30 }, outside: { water: 30, H: 30 } } });
+  lr.notes(['water.split', 'fnr', 'synthase']);
+  const G = LightReactions.CALVIN;
+  ctx.ui.controls(`
+    <p class="goal">Goal: ${G.atp} ATP and ${G.nadph} NADPH, one CO₂'s worth.</p>
+    <div class="stats tally">
+      ${stat('ATP', 't-atp', `of ${G.atp}`)}${stat('NADPH', 't-nadph', `of ${G.nadph}`)}
+      ${stat('photons', 't-ph', 'spent')}${stat('O₂', 't-o2', 'released')}
+    </div>
+    <div class="row">
+      <button class="btn primary" type="button" id="flash">Flash</button>
+      <button class="btn secondary" type="button" id="flashcyc">Flash, and send it round again</button>
+    </div>
+    <p class="verdict" id="verdict"></p>
+    <p class="done" id="done" hidden></p>
+    <div class="row"><button class="btn ghost" type="button" id="again">Start over</button></div>`);
+  let flashes = 0, cyc = 0;
+  ctx.ui.q('#flash').onclick = () => { if (lr.feed('light')) flashes++; };
+  ctx.ui.q('#flashcyc').onclick = () => { if (lr.feed('light', { cyclic: true })) { flashes++; cyc++; } };
+  ctx.ui.q('#again').onclick = () => { tally(ctx); };
+  const per = lr.state().stoichiometry.protonsPerATP;
+  unsubs.push(lr.on('frame', s => {
+    const L = s.light; if (!L) return;
+    const atp = s.atpMade, nadph = L.nadphMade;
+    const set = (id, v, met) => { const el = ctx.ui.q('#' + id); el.textContent = v; el.parentElement.classList.toggle('is-met', !!met); };
+    set('t-atp', atp, atp >= G.atp); set('t-nadph', nadph, nadph >= G.nadph);
+    set('t-ph', L.photons); set('t-o2', L.o2Released);
+    const done = atp >= G.atp && nadph >= G.nadph;
+    const v = ctx.ui.q('#verdict'), d = ctx.ui.q('#done');
+    d.hidden = !done;
+    if (done) { d.textContent = `Paid: ${G.atp} ATP and ${G.nadph} NADPH for ${L.photons} photons${cyc ? `, ${cyc} pair sent round again` : ''}.`; v.textContent = cyc ? 'That extra loop is cyclic electron flow. It made no NADPH and split no water, and b6f pumped for the same electrons twice: the chloroplast\'s way of topping up the ATP.' : 'Enough came back through the synthase this time. Try again from the start and watch how close it runs.'; return; }
+    if (flashes === 0) v.textContent = 'Nothing is moving. Flash once.';
+    else if (nadph < G.nadph) v.textContent = `${flashes} flash${flashes > 1 ? 'es' : ''}: each pair of electrons ends as one NADPH and puts ${s.protonsPerFuel.light} protons in the lumen.`;
+    else v.textContent = `${G.nadph} NADPH, but ${atp} ATP. ${G.nadph} pairs left ${G.nadph * s.protonsPerFuel.light} protons in the lumen, and at ${per.toFixed(1)} per ATP that is short of ${G.atp}. Send a pair round again: photosystem I can hand its electrons back to plastoquinone instead of to NADP⁺.`;
+  }));
+}
+
+shell.goTo(0);
+</script>
+</body>
+</html>
