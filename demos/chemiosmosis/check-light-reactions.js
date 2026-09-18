@@ -51,8 +51,15 @@ console.log('\n== 3. the light reactions, split: the ledger');
   is(LR.protonsPerPair() === 6, `${LR.protonsPerPair()} H⁺ into the lumen per pair: b6f's ${LR.CHAIN.b6f.pumps} plus ${LR.CHAIN.PSII.fromWater} from water`);
   is(LR.protonsPerO2() === 12, `${LR.protonsPerO2()} H⁺ per O₂`);
   is(LR.photonsPerPair() === 4, `${LR.photonsPerPair()} photons per pair: one per electron at each photosystem`);
-  is(LR.photonsPerPair() * C.E_PER_O2 / LR.CARRIES.H2O === 8, '8 photons per O₂');
   is(LR.CARRIES.PC === 1 && LR.CARRIES.PQ === 2, 'plastoquinone carries a pair, plastocyanin one electron');
+  is(LR.CARRIES.Fd === 1 && 2 / LR.CARRIES.Fd === 2, 'ferredoxin carries one, so two trips to FNR make one NADPH');
+  /* THE OXYGEN-EVOLVING COMPLEX stores one equivalent per photon at PSII and
+     releases at four: the four photons per O₂ are the four electrons an O₂ is
+     made of, and the burst is every two turns. */
+  const psiiPerO2 = LR.CHAIN.PSII.photons * C.E_PER_O2 / LR.CARRIES.H2O;
+  is(psiiPerO2 === C.E_PER_O2, `${psiiPerO2} photons at PSII per O₂: one per oxidizing equivalent the OEC stores`);
+  is(LR.photonsPerO2() === 8, `${LR.photonsPerO2()} photons per O₂ across both photosystems`);
+  is(C.E_PER_O2 / LR.CARRIES.H2O === 2, 'two waters bound per O₂, released together');
   for (const k of Object.keys(LR.CHAIN)) {
     const g = LR.CHAIN[k].gives;
     if (g !== 'NADP+' && 2 % LR.CARRIES[g] !== 0) fail(`${g} carries ${LR.CARRIES[g]} electrons, which does not divide a pair`);

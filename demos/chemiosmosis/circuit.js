@@ -911,7 +911,10 @@
       onWrap: () => { pulse.complex = null; },
     });
     /* A DONOR takes a fuel and loads a quinone. `more.eFrom(chip)` and
-       `more.eVia(chip)` are where its electrons start and the way through it. */
+       `more.eVia(chip)` are where its electrons start and the way through
+       it; a donor that ejects its electrons one photon at a time gives
+       `more.eject(q, charge)` instead and calls `charge` once both ride
+       the quinone. `more.onLoad(q)` sees the quinone the turn claimed. */
     function donor(key, fuel, more = {}) {
       const r = runner({
         key, part: CX[key], n: ROW(key).pumps, x: () => xs[key],
@@ -921,14 +924,18 @@
           const q = freeQ(key).sort((a, b) => Math.abs(a.x - xs[key]) - Math.abs(b.x - xs[key]))[0];
           q.reservedFor = null; q.state = 'toDonor'; q.charged = false; q.to = qDock(key, q.x, q.i); r.q = q;
         },
-        onLoad: () => { carrierArrive(key, hooks.token && hooks.token(key, pulse[key] || fuel)); if (more.onLoad) more.onLoad(); },
+        onLoad: () => { carrierArrive(key, hooks.token && hooks.token(key, pulse[key] || fuel)); if (more.onLoad) more.onLoad(r.q); },
         onOcclude: () => {
           const q = r.q; r.q = null;
           if (q) {
-            const chip = chips[key];
-            const from = more.eFrom ? more.eFrom(chip) : chip ? posOf(chip) : faceOf(key, -1);
-            const via = more.eVia ? more.eVia(chip) : [midOf(key)];
-            sendE(E_PER_TURN, from, via, q, () => { q.charged = true; protonateQ(q); });
+            const charge = () => { q.charged = true; protonateQ(q); };
+            if (more.eject) more.eject(q, charge);
+            else {
+              const chip = chips[key];
+              const from = more.eFrom ? more.eFrom(chip) : chip ? posOf(chip) : faceOf(key, -1);
+              const via = more.eVia ? more.eVia(chip) : [midOf(key)];
+              sendE(E_PER_TURN, from, via, q, charge);
+            }
           }
           fuelSpend(key); if (more.onOcclude) more.onOcclude();
         },

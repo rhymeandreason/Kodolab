@@ -434,6 +434,17 @@
     plastoquinone: PALETTE.respiration.quinone,
     plastocyanin: 0x4aa3d8,
     carrier: PALETTE.respiration.carrier,   // NADP⁺/NADPH, NAD⁺'s colour: the same statement
+    /* THE ANTENNA is chlorophyll, so it is the one green in the chain: each
+       photosystem keeps its own hue and the light-harvesting belt beside it
+       is the pigment's, so a photon visibly lands on green and the excitation
+       moves onto the machine. Lighter than the thylakoid's lipid heads. */
+    antenna: 0x5fb35a,
+    /* ON THE STROMA SIDE, where NADPH is made. Ferredoxin is a small
+       iron-sulfur protein, an iron rust that is neither oxygen's red nor the
+       carrier's teal; FNR is the enzyme with the flavin, an ochre kept clear
+       of the synthase's gold so the two stroma-side machines read apart. */
+    ferredoxin: 0xb4652f,
+    fnr: 0x9c8a3c,
   };
 
   global.MolPalette = PALETTE;

@@ -85,7 +85,7 @@ function bench(ctx) {
       <div>${seg('fuel', [['light', 'light'], ['', 'dark']])}</div>
       <div class="slider"><div class="slider-head"><span class="label">brightness</span><span class="value" id="rv"></span></div>
         <input id="rate" type="range" min="0" max="1" step="0.01" value="1"></div>
-      <div class="row"><button class="btn secondary" type="button" id="flash">One flash</button></div>
+      <div class="row"><button class="btn secondary" type="button" id="flash">One flash</button><button class="btn secondary" type="button" id="flashcyc">One flash, round twice</button></div>
       <p class="foot" id="feedfoot"></p>
     </div>
 
@@ -138,6 +138,7 @@ function bench(ctx) {
   for (const b of ui.qa('#cyclic > button')) b.onclick = () => { if (S.cyclic === b.dataset.v) return; S.cyclic = b.dataset.v; apply(); };
   for (const b of ui.qa('#fuel > button')) b.onclick = () => { S.fuel = b.dataset.v || null; m.set({ fuel: S.fuel }); sync(); };
   $('#flash').onclick = () => m.feed('light');
+  $('#flashcyc').onclick = () => m.feed('light', { cyclic: true });
   $('#leak').onchange = apply;
   ui.range($('#rate'), v => { m.set({ fuelRate: v }); $('#rv').textContent = Math.round(v * 100) + '%'; });
 
@@ -176,14 +177,15 @@ function bench(ctx) {
     if (s.complexes) {
       for (const k of Object.keys(s.complexes)) rows += row(`${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
       const L = s.light;
+      rows += row(`oxygen-evolving complex: equivalents stored · waters bound`, `${L.oec.stored} of ${L.oec.of} · ${L.oec.watersBound}`);
       rows += row('H⁺ from water', L.protonsFromWater);
       rows += row('H⁺ into the lumen per pair · per O₂', `${s.protonsPerFuel.light} · ${L.protonsPerO2}`);
-      rows += row(`photons (${L.photonsPerPair} a pair)`, L.photons);
+      rows += row(`photons (${L.photonsPerPair} a pair, ${L.photonsPerO2} an O₂)`, L.photons);
       rows += row('waters split · O₂ released', `${L.waterSplit} · ${L.o2Released}`);
       rows += row('NADPH made', L.nadphMade);
       rows += row(`cyclic turns (${Math.round(L.cyclic * 100)}% of PSI's; ${Math.round(L.cyclicToBalance * 100)}% balances)`, L.cyclicTurns);
       rows += row('ATP per NADPH: linear · at this share · measured', `${L.atpPerNADPH.linear.toFixed(2)} · ${L.atpPerNADPH.expected.toFixed(2)} · ${L.atpPerNADPH.measured == null ? '–' : L.atpPerNADPH.measured.toFixed(2)}`);
-      rows += row('plastoquinol · loaded plastocyanin', `${s.shuttles.plastoquinol} · ${s.shuttles.plastocyaninLoaded}`);
+      rows += row('plastoquinol · loaded plastocyanin · loaded ferredoxin', `${s.shuttles.plastoquinol} · ${s.shuttles.plastocyaninLoaded} · ${s.shuttles.ferredoxinLoaded}`);
     } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
     if (s.protonsLeaked || $('#leak').checked) rows += row('protons down the uncoupler', s.protonsLeaked);
     rows += row(`ATP (${s.stoichiometry.protonsPerTurn} H⁺ per ${s.stoichiometry.atpPerTurn}, c${s.stoichiometry.ringSubunits} ring)`, s.atpMade);
