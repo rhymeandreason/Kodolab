@@ -118,10 +118,12 @@ Generated apps run in a sandboxed frame from the database and are disallowed in 
 2. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
 3. `sitenav`: every page's top bar from one template. The priority, for search and for a consistent layout.
 4. `shelf` on `/lessons`, coming-soon cards included. `gallery` on the homepage, and `proteins.js` leaves it.
-5. Bundling, behind the smoke run, then `immutable` on `_b/`.
-6. `steps`, tree first, then glycolysis.
-7. Generated-app bundles.
-8. Three.js r128 to current, behind the screenshot diff (section 8).
+5. The protein story template (section 9): myoglobin extracted first, then prion and ATP synthase, each checked against its own screenshot.
+6. The protein and molecule sheets as partials (section 9).
+7. Bundling, behind the smoke run, then `immutable` on `_b/`.
+8. `steps`, tree first, then glycolysis.
+9. Generated-app bundles.
+10. Three.js r128 to current, behind the screenshot diff (section 8).
 
 ## 8. Upgrading Three.js
 
@@ -136,3 +138,28 @@ r128 was never forced by the absence of a build: the library is plain scripts on
 **Gained:** prototypes and generated code written against current Three run without being ported down, current add-ons, and the renderer's newer features.
 
 **Order:** load current Three with the r128 colour and light behaviour switched on; diff every featured page's smoke-run screenshot against r128; fix the five shader files; then move pages to the current defaults one at a time, each judged in Safari. The version is pinned in `package.json`, and `kit/app.js`'s `ORDER` and `Components.md`'s tag change with it.
+
+## 9. Templates and partials
+
+A page is one of two things: **a hand-written HTML file with bake markers**, or **a template and a list**, one page per entry. The build writes each generated page to the path its route names; the dev server renders the template on request for that route, so neither needs a file per entry in the source.
+
+### The protein story
+
+`myoglobin-story.html` is the current design (`css/story.css`, `lib/story.js`), and prion and ATP synthase follow it. The three pages are the same page around different content:
+
+- **Shared, and written three times today:** the shell (stage, top bar, `#read` column), the one `Proteinbox` re-fed as the reader scrolls, the `Annot` callouts, `fileStats`, the column builders (`claim`, `tiles`, `terms`), loading each part's trace, and `Story.scroll`.
+- **The protein's own:** `PARTS` (each part's deposition, title, text as a function of the trace, stat tiles, callouts), `SAYS` (one line per deposition), the geometry its callouts anchor to (myoglobin's `worldAt`/`atomIn`, prion's `runs`/`rungs`), and what the stage does on a part (myoglobin leans in on the iron; prion stacks; ATP synthase toggles context).
+
+So:
+- `lib/story-protein.js` is the shared runtime: `StoryProtein.mount({ key, parts, says, onShow })`.
+- `proteins/<key>/<key>-story.js` holds only the protein's own, and loads in Node as well as the browser (`module.exports`) with its helpers (`heme-metrics.js` the same).
+- One template writes `/proteins/<key>` for every protein that has a story file.
+
+**The column is baked with real numbers.** The build reads each part's trace JSON from disk and calls the part's `note(t)` and `stats(t)`, the same functions the page calls, so the text search reads carries the file's own numbers, and CLAUDE.md's rule (a number in user-facing text is read from the data) holds in the HTML too. Callouts (`notes(t)`) need THREE and stay runtime-only. At runtime the page attaches to the baked sections instead of building them.
+
+**Order:** myoglobin first, extracted until its screenshot matches the page it replaces, then prion and ATP synthase. The 19 proteins still on `-test.html` benches move to a story when someone writes their `PARTS`: that is content work, and the template makes it a data file plus, at most, an `onShow`.
+
+### The sheets
+
+`kit/modal.js` owns open, close, focus and the stack, and deliberately leaves the markup to the page. Without includes, that meant copies: `molecules.html`'s sheet is labelled a copy of `proteins/index.html`'s, and `respiration-lab.html` has its own `#molmodal`; `nodegraph/nodegraph.html` and `sickle-lab.html` mount `Proteinbox` their own way. Each sheet becomes a partial (`<!-- bake:molsheet -->`, `<!-- bake:protsheet -->`) with one stylesheet and one script that fills it. The markup is still HTML in the page, as `modal.js` asks; it is written once.
+
