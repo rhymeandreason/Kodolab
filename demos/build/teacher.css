@@ -13,7 +13,7 @@ main { padding-bottom: 4rem; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .card {
-  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 14px;
+  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: var(--r-card);
   padding: 1.1rem 1.25rem;
 }
 .line { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
@@ -23,7 +23,7 @@ main { padding-bottom: 4rem; }
 label { display: block; font-weight: 600; color: var(--text-strong); margin-bottom: .5rem; }
 input, textarea {
   font: inherit; font-size: 1rem; color: var(--text-strong); background: var(--surface-card);
-  border: 1px solid color-mix(in srgb, var(--text-strong) 28%, transparent); border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text-strong) 28%, transparent); border-radius: var(--r-control);
   padding: .6rem .85rem; box-sizing: border-box;
 }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
@@ -33,12 +33,12 @@ input:focus-visible, textarea:focus-visible { outline: 0; border-color: var(--ac
 .page .btn, dialog .btn {
   font-size: .92rem; letter-spacing: 0; padding: 8px 16px; line-height: 20px;
   color: var(--text-body); border-color: color-mix(in srgb, var(--text-strong) 22%, transparent);
-  text-decoration: none; white-space: nowrap;
+  text-decoration: none; white-space: nowrap; border-radius: var(--r-control);
 }
 .page .btn i, dialog .btn i { font-size: 1.05em; }
 .btn--solid { background: var(--accent); border-color: var(--accent) !important; color: var(--text-inverse) !important; }
 .btn--solid:hover:not([disabled]) { background: var(--text-strong); border-color: var(--text-strong) !important; }
-.page .btn--lg { padding: 12px 22px; font-size: 1rem; border-radius: 12px; }
+.page .btn--lg { padding: 12px 22px; font-size: 1rem; }
 .page .btn--quiet { border-color: transparent; }
 .page .textbtn { font-size: .9rem; color: var(--text-dim); }
 
@@ -51,7 +51,10 @@ main h4 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem
    the window's edges while the content keeps .page's column; body.kodo's
    overflow-x: clip stops it adding a scrollbar. The selected view tab takes
    the paper's colour, so it reads as the page below opening out of the band. */
+/* One radius scale for the page: a control, a card, a big panel. kodo.css's
+   .btn is 4px, drawn for a lesson's dock; beside a 10px input it read square. */
 body.teach {
+  --r-control: 10px; --r-card: 14px; --r-panel: 18px;
   --on: var(--text-inverse);
   --on-dim: color-mix(in srgb, var(--text-inverse) 74%, transparent);
   --on-line: color-mix(in srgb, var(--text-inverse) 22%, transparent);
@@ -123,7 +126,7 @@ body.teach {
    read as a card, close enough to the band not to glare. */
 .share {
   --card: color-mix(in srgb, var(--text-inverse) 9%, var(--text-strong));
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: .6rem; padding: .95rem 1.1rem; border-radius: 14px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: .6rem; padding: .95rem 1.1rem; border-radius: var(--r-card);
   background: var(--card); border: 1px solid var(--on-line);
 }
 .share-text { display: flex; align-items: baseline; gap: .5rem; margin: 0; color: var(--on-dim); font-size: .9rem; }
@@ -140,7 +143,7 @@ body.teach {
 .viewtabs { display: flex; gap: .3rem; flex-wrap: wrap; }
 .viewtabs button {
   all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: .45rem;
-  padding: .75rem 1.2rem; border-radius: 12px 12px 0 0;
+  padding: .75rem 1.2rem; border-radius: var(--r-control) var(--r-control) 0 0;
   font-family: var(--font-ui); font-size: 1rem; font-weight: 600; color: var(--on-dim);
   transition: color var(--dur-fast), background var(--dur-fast);
 }
@@ -154,7 +157,7 @@ body.teach {
 /* ---- first run ---- */
 .welcome {
   display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem);
-  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 18px;
+  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: var(--r-panel);
   padding: clamp(1.5rem, 4vw, 3rem); margin-top: 2.4rem;
 }
 .welcome h1 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.8rem, 3.2vw, 2.4rem); letter-spacing: -.025em; line-height: 1.1; margin: 0 0 .8rem; color: var(--text-strong); }
@@ -181,7 +184,7 @@ body.teach {
 /* ---- empty states ---- */
 .emptystate {
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: .5rem;
-  padding: clamp(2rem, 5vw, 3.5rem) 1.5rem; border: 1.5px dashed var(--border-hair); border-radius: 16px;
+  padding: clamp(2rem, 5vw, 3.5rem) 1.5rem; border: 1.5px dashed var(--border-hair); border-radius: var(--r-card);
 }
 .emptystate > i {
   font-size: 1.6rem; width: 3.4rem; height: 3.4rem; border-radius: 50%; display: grid; place-items: center; margin-bottom: .4rem;
@@ -220,7 +223,7 @@ dialog.seatbox { width: min(92vw, 34rem); }
 /* ---- lessons ---- */
 /* ---- the class at a glance ---- */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .8rem; margin: 0 0 2.4rem; }
-.stats > div { background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 14px; padding: .95rem 1.1rem 1rem; }
+.stats > div { background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: var(--r-card); padding: .95rem 1.1rem 1rem; }
 .stats dt { font-size: .88rem; color: var(--text-dim); margin: 0 0 .35rem; }
 .stats dd { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 2rem; line-height: 1; letter-spacing: -.02em; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .stats dd span { font-family: var(--font-ui); font-size: .88rem; font-weight: 400; letter-spacing: 0; color: var(--text-dim); margin-left: .4rem; }
@@ -262,7 +265,7 @@ li.bad .s { color: var(--danger); }
 .appgrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .8rem; }
 .appgrid li > button, .appgrid li > a {
   display: flex; flex-direction: column; gap: .25rem; width: 100%; height: 100%; box-sizing: border-box; text-align: left;
-  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 12px; padding: .9rem 1rem;
+  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: var(--r-card); padding: .9rem 1rem;
   cursor: pointer; color: inherit; font: inherit; text-decoration: none;
 }
 .appgrid li > button:hover, .appgrid li > a:hover { border-color: var(--accent); }
@@ -271,7 +274,7 @@ li.bad .s { color: var(--danger); }
 
 /* ---- one student ---- */
 dialog.studentbox {
-  width: min(92vw, 860px); max-height: 80vh; padding: 0; border: 1px solid var(--border-hair); border-radius: 14px;
+  width: min(92vw, 860px); max-height: 80vh; padding: 0; border: 1px solid var(--border-hair); border-radius: var(--r-card);
   background: var(--surface-page); color: var(--text-body);
 }
 dialog.studentbox::backdrop { background: color-mix(in srgb, var(--brand-ink) 45%, transparent); }
@@ -282,7 +285,7 @@ dialog.studentbox .appgrid { padding: 1.1rem; }
 
 /* ---- viewer ---- */
 dialog.viewer {
-  width: min(96vw, 1400px); height: min(92vh, 900px); padding: 0; border: 1px solid var(--border-hair); border-radius: 14px;
+  width: min(96vw, 1400px); height: min(92vh, 900px); padding: 0; border: 1px solid var(--border-hair); border-radius: var(--r-card);
   background: var(--surface-card); color: var(--text-body); overflow: hidden;
 }
 dialog.viewer[open] { display: flex; flex-direction: column; }
