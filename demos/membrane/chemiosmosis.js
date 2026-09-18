@@ -24,11 +24,14 @@
  *  loads at — is read off it, so the two organelles are one physics reflected
  *  rather than one physics renamed.
  *
- *  STOICHIOMETRY. A c-ring turn is one full rotation of the rotor and makes
- *  ATP_PER_TURN ATP for PROTONS_PER_TURN protons. Mammalian F1Fo has a c8
- *  ring: 8 H⁺ per 3 ATP, so ~2.7 H⁺ per ATP. Drawn as 9 per 3, because a
- *  third of a turn has to be a whole number of protons for a student to see
- *  the ratio at all. Declared, not hidden — a page may print it.
+ *  STOICHIOMETRY IS THE COMPONENT'S. A c-ring turn is one full rotation of
+ *  the rotor and makes `atpPerTurn` ATP for `protonsPerTurn` protons, and a
+ *  mitochondrion's ring is not a chloroplast's, so rotor() takes the ring
+ *  from whoever builds it: chemiosmosis/electron-transport.js declares the
+ *  c8, chemiosmosis/light-reactions.js the c14. The chain tables, the fuels
+ *  and what the electrons end on live in those two files too; what is here
+ *  is only what both run on. PROTONS_PER_TURN and ATP_PER_TURN below are the
+ *  mitochondrion's, kept for the organelle boxes until they read their own.
  *
  *  pH IS EXAGGERATED and in one number. A drawn proton stands for a great
  *  many, so PROTONS_PER_PH says how many drawn ones make a pH unit. Without
@@ -40,11 +43,6 @@
   const PROTONS_PER_TURN = 9;
   const ATP_PER_TURN = 3;
   const PROTONS_PER_ATP = PROTONS_PER_TURN / ATP_PER_TURN;
-  /* GETTING THE ATP OUT COSTS ONE MORE. The translocase's ATP⁴⁻-for-ADP³⁻
-     swap spends the membrane voltage, and phosphate comes back in with a
-     proton: about one proton per ATP exported. With it, NADH's 10 buy about
-     2.5 ATP and FADH₂'s 6 about 1.5; without it, 3.3 and 2. */
-  const PROTONS_PER_EXPORT = 1;
   const PROTONS_PER_PH = 24;      // drawn protons per pH unit (exaggeration)
   const PH_REF = 7.0;             // both sides start here, before any pumping
   const MV_PER_PH = 61;           // Nernst at 37 C, the same 61 membrane.js uses
@@ -124,13 +122,14 @@
 
   /* The rotor: protons in, angle and ATP out. One place, so the animation and
      the count cannot disagree. */
-  function rotor() {
+  function rotor(ring) {
+    const PPT = ring ? ring.protonsPerTurn : PROTONS_PER_TURN, APT = ring ? ring.atpPerTurn : ATP_PER_TURN;
     let protons = 0, atp = 0, angle = 0;
     return {
       pass(n = 1) {
         protons += n;
-        angle = (protons / PROTONS_PER_TURN) * Math.PI * 2;
-        const made = Math.floor(protons * ATP_PER_TURN / PROTONS_PER_TURN) - atp;
+        angle = (protons / PPT) * Math.PI * 2;
+        const made = Math.floor(protons * APT / PPT) - atp;
         atp += made;
         return made;
       },
@@ -141,28 +140,15 @@
     };
   }
 
-  /* The complex pumps only while it is fed. `fuel` is 'NADH' (respiration),
-     'light' (photosynthesis) or null; `fuelRate` 0..1 is the page's slider —
-     a supply dial or a light dimmer — and it scales the turn rate, never
-     the stoichiometry. */
-  const FUELS = { NADH: 1, light: 1, FADH2: 0.6 };
-  /* WHAT THE FUEL BECOMES once the chain has taken its electrons. A carrier
-     is not consumed: it hands over and goes back for more, and the returning
-     NAD⁺ is what lets the Krebs cycle keep turning. Light has no spent form —
-     nothing arrives and nothing leaves — so a page drawing the fuel draws
-     nothing in a thylakoid, which is correct rather than missing. */
-  const SPENT = { NADH: 'NAD⁺', FADH2: 'FAD', light: null };
-  /* WHERE THE ELECTRONS END UP. A respiratory chain hands them to O₂, which
-     takes protons from the matrix and becomes water; with no O₂ the last
-     complex cannot unload, every carrier upstream stays full, and the chain
-     stops however much NADH is waiting. A thylakoid's electrons end on
-     NADP⁺, so `oxygen` does not reach it. */
-  const ACCEPTOR = { NADH: 'O2', FADH2: 'O2', light: 'NADP+' };
-  function complexRate(fuel, fuelRate, pmf, oxygen) {
-    if (!fuel || !FUELS[fuel]) return 0;
-    if (oxygen === false && ACCEPTOR[fuel] === 'O2') return 0;
+  /* The complex pumps only while it is fed. `weight` is what the component
+     says its fuel is worth as a rate (NADH 1, FADH₂ 0.6, light 1), `fuelRate`
+     0..1 is the page's slider, a supply dial or a light dimmer, and it scales
+     the turn rate, never the stoichiometry. `pmf` is respiratory control:
+     the back-pressure of the gradient already built. */
+  function rate(weight, fuelRate, pmf) {
+    if (!weight) return 0;
     const back = pmf == null ? 1 : Math.max(0, 1 - pmf / PMF_STALL);
-    return FUELS[fuel] * Math.max(0, Math.min(1, fuelRate == null ? 1 : fuelRate)) * back;
+    return weight * Math.max(0, Math.min(1, fuelRate == null ? 1 : fuelRate)) * back;
   }
 
   /* =====================================================================
@@ -292,60 +278,14 @@
   }
   const Complex = { at: complexAt, selfTest: complexSelfTest, PHASES: CPX_PHASES, startOf: cpxStartOf, PROTONS_PER_CYCLE: CPX_PROTONS };
 
-  /* =====================================================================
-     THE CHAIN, SPLIT: four complexes and the two shuttles between them.
-     ---------------------------------------------------------------------
-     `pumps` is protons moved matrix → intermembrane space per PAIR of
-     electrons through that complex, the textbook's 4 / 0 / 4 / 2. Each
-     complex turns once per pair, so a turn pumps exactly `pumps`.
-
-       I    NADH → Q        pumps 4
-       II   FADH₂ → Q       pumps 0   succinate dehydrogenase; its FAD is bound
-       III  QH₂ → cyt c     pumps 4   net of the Q cycle: 2 ride in on QH₂, 2 from the matrix at Qi
-       IV   cyt c → O₂      pumps 2   plus 2 matrix H⁺ per pair into water,
-                                      which is chemistry and not pumping
-
-     A fuel's worth is the sum along its path, and that sum is the whole of
-     why FADH₂ buys less ATP than NADH: it enters past complex I. Walked off
-     this table rather than typed, and check-chemiosmosis.js asserts 10 and 6.
-
-     `carries` is electrons per shuttle trip: Q takes the pair, cytochrome c
-     takes one, so complex III sends two cytochromes for every ubiquinol.
-     ===================================================================== */
-  const CHAIN = {
-    I:   { takes: 'NADH',  gives: 'Q',    pumps: 4 },
-    II:  { takes: 'FADH2', gives: 'Q',    pumps: 0 },
-    III: { takes: 'Q',     gives: 'cytc', pumps: 4 },
-    IV:  { takes: 'cytc',  gives: 'O2',   pumps: 2 },
-  };
-  /* =====================================================================
-     THE LIGHT REACTIONS, SPLIT: the same shape, with water at the start.
-     ---------------------------------------------------------------------
-     Per PAIR of electrons, linear flow:
-
-       PSII  H₂O → PQ      pumps 0   one H₂O gives 2 e⁻ and 2 H⁺ INTO THE
-                                     LUMEN, and ½ O₂. `fromWater` is those
-                                     protons: released, not pumped
-       b6f   PQH₂ → PC     pumps 4   net of the Q cycle: 2 ride in on PQH₂, 2 from the stroma
-       PSI   PC → NADP⁺    pumps 0   ferredoxin and FNR drawn as PSI's stromal
-                                     face: NADP⁺ + 2e⁻ + H⁺ → NADPH, the H⁺
-                                     taken from the stroma
-
-     `photons` is one per electron at each photosystem. 6 H⁺ into the lumen a
-     pair, so 12 per O₂; check-chemiosmosis.js asserts both off this table.
-     Cyclic flow around PSI is not drawn.
-     ===================================================================== */
-  const PHOTO_CHAIN = {
-    PSII: { takes: 'H2O', gives: 'PQ',    pumps: 0, fromWater: 2, photons: 2 },
-    b6f:  { takes: 'PQ',  gives: 'PC',    pumps: 4 },
-    PSI:  { takes: 'PC',  gives: 'NADP+', pumps: 0, photons: 2, fromStroma: 1 },
-  };
-  const CARRIES = { NADH: 2, FADH2: 2, Q: 2, cytc: 1, H2O: 2, PQ: 2, PC: 1 };
-  const START = { NADH: 'NADH', FADH2: 'FADH2', light: 'H2O' };
-  const tableOf = fuel => fuel === 'light' ? PHOTO_CHAIN : CHAIN;
-  function chainPath(fuel) {
-    const T = tableOf(fuel), end = ACCEPTOR[fuel], path = [];
-    let want = START[fuel];
+  /* THE CHAIN, WALKED. A component's table is { key: { takes, gives, ... } },
+     one row per machine; the path a fuel takes is followed from the row that
+     takes `start` until one gives `end`, so what a fuel is worth is summed
+     off the table by whoever owns it rather than typed. Empty if the chain
+     does not close. */
+  function chainPath(T, start, end) {
+    const path = [];
+    let want = start;
     for (let guard = 0; want && guard < 8; guard++) {
       const k = Object.keys(T).find(c => T[c].takes === want);
       if (!k) break;
@@ -355,14 +295,11 @@
     }
     return [];
   }
-  /* Protons that END UP on the pumped-into side per pair: pumped, plus any
-     released there by chemistry (water, in a thylakoid). */
-  const chainProtons = fuel => chainPath(fuel).reduce((s, k) => { const r = tableOf(fuel)[k]; return s + r.pumps + (r.fromWater || 0); }, 0);
-  const chainPhotons = fuel => chainPath(fuel).reduce((s, k) => s + (tableOf(fuel)[k].photons || 0), 0);
 
-  const API = { PROTONS_PER_TURN, ATP_PER_TURN, PROTONS_PER_ATP, PROTONS_PER_EXPORT, PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
-                CONTEXTS, sideName, pumpDir, protonState, synthaseDirection, rotor, FUELS, SPENT, ACCEPTOR, complexRate, Complex,
-                CHAIN, PHOTO_CHAIN, CARRIES, chainPath, chainProtons, chainPhotons, E_PER_O2: 4 };
+  /* O₂ + 4e⁻: the chemistry both chains meet, made at one end and consumed at the other. */
+  const E_PER_O2 = 4;
+  const API = { PROTONS_PER_TURN, ATP_PER_TURN, PROTONS_PER_ATP, PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
+                CONTEXTS, sideName, pumpDir, protonState, synthaseDirection, rotor, rate, Complex, chainPath, E_PER_O2 };
   global.Chemiosmosis = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : globalThis);

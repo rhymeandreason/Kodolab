@@ -6,7 +6,9 @@
  *  making more ATP than its protons paid for, a gradient that climbs with
  *  the fuel off, a turbine running uphill, and a thylakoid that is not the
  *  same sim as a mitochondrion. chemiosmosis.js is free of THREE so all
- *  four are checkable here rather than by watching a screen.
+ *  four are checkable here rather than by watching a screen. What each
+ *  chain is worth is its component's claim: chemiosmosis/check-electron-
+ *  transport.js and check-light-reactions.js.
  *
  *  Run:  node membrane/check-chemiosmosis.js
  * ===================================================================== */
@@ -34,6 +36,12 @@ console.log('== 1. stoichiometry, counted rather than declared');
      `${r.atp} ATP for 5000 protons, the declared ${C.ATP_PER_TURN} per ${C.PROTONS_PER_TURN}`);
   const one = C.rotor(); one.pass(C.PROTONS_PER_TURN);
   is(Math.abs(one.angle - Math.PI * 2) < 1e-9, 'a full turn is a full turn: PROTONS_PER_TURN protons, 2 pi');
+  /* THE RING IS A PARAMETER: a c14 turns on 14 and pays out only when the
+     protons have, so a rotor handed a ring cannot be the mitochondrion's. */
+  const c14 = C.rotor({ protonsPerTurn: 14, atpPerTurn: 3 });
+  let w14 = 0;
+  for (let i = 1; i <= 140; i++) { c14.pass(1); w14 = Math.max(w14, c14.atp * 14 / 3 - c14.protons); }
+  is(w14 <= 0 && c14.atp === 30, `a c14 ring: ${c14.atp} ATP for 140 protons, never ahead of what was paid`);
 }
 
 /* ---- 2. the complex turns, and comes back empty ---- */
@@ -73,20 +81,14 @@ console.log('\n== 2. the complex is a machine, not a hole');
 /* ---- 3. with no fuel the gradient only falls ---- */
 console.log('\n== 3. fuel off: the gradient runs down and never back up');
 {
-  is(C.complexRate(null, 1) === 0, 'no fuel, no pumping');
-  is(C.complexRate('NADH', 0) === 0, 'fuelRate 0 is the same as no fuel');
+  is(C.rate(0, 1) === 0, 'no fuel, no pumping');
+  is(C.rate(1, 0) === 0, 'fuelRate 0 is the same as no fuel');
   /* RESPIRATORY CONTROL: the pumping stops when the force it is pumping
      against gets big enough, which is why a resting cell stops burning. */
-  is(C.complexRate('NADH', 1, 0) > C.complexRate('NADH', 1, C.PMF_STALL / 2), 'a rising pmf slows the complex');
-  is(C.complexRate('NADH', 1, C.PMF_STALL) === 0, `the complex stalls at ${C.PMF_STALL} mV`);
-  is(C.complexRate('NADH', 1, C.PMF_STALL * 2) === 0, 'and never goes negative, which would be the complex running backwards');
-  /* NO OXYGEN STOPS THE CHAIN AT THE FAR END, whatever the fuel supply. A
-     chain that kept pumping with O₂ gone would make ATP in a suffocating cell. */
-  is(C.complexRate('NADH', 1, 0, false) === 0 && C.complexRate('FADH2', 1, 0, false) === 0,
-     'no O₂: NADH and FADH₂ both stall, because the electrons have nowhere to go');
-  is(C.complexRate('NADH', 1, 0, true) === C.complexRate('NADH', 1, 0), 'O₂ present is the default');
-  is(C.complexRate('light', 1, 0, false) > 0, 'a thylakoid ignores oxygen: its electrons end on NADP⁺');
-  for (const f of Object.keys(C.FUELS)) if (!(f in C.ACCEPTOR)) fail(`fuel ${f} has no final electron acceptor`);
+  is(C.rate(1, 1, 0) > C.rate(1, 1, C.PMF_STALL / 2), 'a rising pmf slows the complex');
+  is(C.rate(1, 1, C.PMF_STALL) === 0, `the complex stalls at ${C.PMF_STALL} mV`);
+  is(C.rate(1, 1, C.PMF_STALL * 2) === 0, 'and never goes negative, which would be the complex running backwards');
+  is(C.rate(1, 1, null) === C.rate(1, 1), 'no pmf given is no back-pressure');
   let counts = { inside: 10, outside: 50 }, mV = -60, last = Infinity, rose = 0;
   for (let i = 0; i < 200; i++) {
     const dir = C.synthaseDirection(counts, mV);
@@ -150,53 +152,15 @@ console.log('\n== 5. context: the names, and which way the pumping runs');
   const names = Object.values(C.CONTEXTS).flatMap(c => [c.top, c.bottom]);
   is(new Set(names).size === names.length, `${Object.keys(C.CONTEXTS).length} contexts, every half named, no name reused`);
 
-  /* EVERY FUEL SAYS WHAT IT BECOMES, because a page draws the spent form as a
-     label on the carrier that arrived. A fuel added to FUELS and forgotten
-     here renders a token that never changes its name — the token would still
-     arrive and leave, and the one thing it exists to show, that the carrier
-     comes back reusable, would silently be missing. */
-  for (const f of Object.keys(C.FUELS))
-    if (!(f in C.SPENT)) fail(`fuel ${f} has no spent form in SPENT`);
-  is(C.SPENT.NADH === 'NAD⁺' && C.SPENT.FADH2 === 'FAD',
-     'a carrier is not consumed: NADH hands over and leaves as NAD⁺, FADH₂ as FAD');
-  is(C.SPENT.light === null, 'light has no spent form, so a thylakoid draws no carrier arriving');
 }
 
-/* ---- 6. the split chain adds up ---- */
-console.log('\n== 6. the chain, split: what each fuel is worth');
+/* ---- 6. a chain is walked, not typed ---- */
+console.log('\n== 6. chainPath follows a table');
 {
-  is(C.chainPath('NADH').join() === 'I,III,IV', 'NADH enters at complex I and goes I → III → IV');
-  is(C.chainPath('FADH2').join() === 'II,III,IV', 'FADH₂ enters at complex II, past complex I');
-  is(C.CHAIN.II.pumps === 0, 'complex II pumps nothing');
-  is(C.chainProtons('NADH') === 10, `${C.chainProtons('NADH')} protons per NADH, summed off the table`);
-  is(C.chainProtons('FADH2') === 6, `${C.chainProtons('FADH2')} protons per FADH₂: the difference is complex I's ${C.CHAIN.I.pumps}`);
-  {
-    const per = C.PROTONS_PER_ATP + C.PROTONS_PER_EXPORT, n = C.chainProtons('NADH') / per, f = C.chainProtons('FADH2') / per;
-    is(Math.abs(n - 2.5) < 0.01 && Math.abs(f - 1.5) < 0.01, `${n} ATP per NADH, ${f} per FADH₂, with export's ${C.PROTONS_PER_EXPORT} H⁺ charged per ATP`);
-  }
-  is(C.chainPath('light').join() === 'PSII,b6f,PSI', 'light: water at PSII, then b6f, then PSI to NADP⁺');
-  is(C.PHOTO_CHAIN.PSII.pumps === 0 && C.PHOTO_CHAIN.PSI.pumps === 0, 'neither photosystem pumps: b6f is the only pump');
-  is(C.chainProtons('light') === 6, `${C.chainProtons('light')} H⁺ into the lumen per pair: b6f's ${C.PHOTO_CHAIN.b6f.pumps} plus ${C.PHOTO_CHAIN.PSII.fromWater} from water`);
-  is(C.chainProtons('light') * C.E_PER_O2 / 2 === 12, '12 H⁺ per O₂');
-  is(C.chainPhotons('light') === 4, `${C.chainPhotons('light')} photons per pair: one per electron at each photosystem`);
-  is(C.CARRIES.PC === 1 && C.CARRIES.PQ === 2, 'plastoquinone carries a pair, plastocyanin one electron');
-  /* THE SHUTTLES BALANCE: every complex turns once per pair, so whatever a
-     complex gives, the next must take in whole trips. */
-  for (const k of Object.keys(C.CHAIN)) {
-    const g = C.CHAIN[k].gives;
-    if (g !== 'O2' && 2 % C.CARRIES[g] !== 0) fail(`${g} carries ${C.CARRIES[g]} electrons, which does not divide a pair`);
-  }
-  is(2 / C.CARRIES.cytc === 2, 'one ubiquinol loads two cytochrome c: it carries a pair, they carry one each');
-  /* Every pumping complex is still a pump at its own seat count. */
-  for (const k of Object.keys(C.CHAIN)) {
-    const n = C.CHAIN[k].pumps;
-    if (!n) continue;
-    const r = C.Complex.selfTest(2000, n);
-    if (!r.ok) { r.failures.slice(0, 3).forEach(fail); continue; }
-    let seats = 0;
-    for (let i = 0; i < 2000; i++) seats = Math.max(seats, C.Complex.at(i / 2000, n).cargo.filter(c => c.alpha > .5).length);
-    is(seats === n, `complex ${k}: ${seats} seats, never open both ends`);
-  }
+  const T = { a: { takes: 'x', gives: 'y' }, b: { takes: 'y', gives: 'z' }, c: { takes: 'q', gives: 'z' } };
+  is(C.chainPath(T, 'x', 'z').join() === 'a,b', 'x reaches z through a then b');
+  is(C.chainPath(T, 'q', 'z').join() === 'c', 'q enters at c, past a and b');
+  is(C.chainPath(T, 'x', 'w').length === 0, 'a chain that does not close is empty, not partial');
 }
 
 console.log(bad ? `\n${bad} FAILED` : '\nall good');

@@ -89,6 +89,8 @@
     'membrane/chemiosmosis.js',
     'membrane/sheet.js',
     'chemiosmosis/circuit.js',  // before membrane.js, which still carries its machine for old pages
+    'chemiosmosis/electron-transport.js',
+    'chemiosmosis/light-reactions.js',
     'membrane/membrane.js',
     'leaf/leaf.js',
     'tree/tree.js',
@@ -153,11 +155,13 @@
        circuit through it are regenerated against Chemiosmosis. */
     Membrane:   ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
                  'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
+                 'chemiosmosis/electron-transport.js', 'chemiosmosis/light-reactions.js',
                  'membrane/membrane.js'],
     /* pump.js and membrane.js are for span:'cell', where the ATP is spent by
        a Na⁺/K⁺ pump in a plasma membrane stacked above the mitochondrion. */
     Chemiosmosis: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
                  'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
+                 'chemiosmosis/electron-transport.js', 'chemiosmosis/light-reactions.js',
                  'membrane/membrane.js'],
     Proteinbox: ['folding/folding.js', 'kit/ribbon.js', 'kit/nucleic.js', 'kit/surface.js',
                  'kit/proteinbox.js', 'proteins/proteins.js'],
