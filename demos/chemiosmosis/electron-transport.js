@@ -686,12 +686,11 @@
      machine carries, is to scale with itself. */
   const STACK = { INNER_Y: -85, PLASMA_Y: 150, OUTER_GAP: 115 };
   const CELL_CONTENTS = { inside: { water: 18, NA: 9, K: 12, A: 5 }, outside: { water: 16, NA: 14, K: 4, CL: 8 } };
-  let bandCss = false;
   function stackMount(el, params) {
     if (!global.Membrane) throw new Error("ElectronTransport: span:'cell' needs membrane/pump.js and membrane/membrane.js");
     const { INNER_Y, PLASMA_Y, OUTER_GAP } = STACK;
     const OUTER_Y = INNER_Y + OUTER_GAP, CYTOSOL = PLASMA_Y - OUTER_Y;
-    let mito = null, cell = null, nb = null, last = null;
+    let mito = null, cell = null, nb = null, last = null, vw = null;
     const listeners = {};
     const emit = (ev, ...a) => CardStage.fire(listeners[ev], a, 'ElectronTransport ' + ev);
     /* CardStage draws ONE FRAME AT CREATE, so afterFrame runs before either
@@ -701,27 +700,9 @@
       cam: params.cam || { theta: 0, phi: Math.PI / 2 - 0.09, r: 500 },
       stage: Object.assign({ orbit: 'pan', rMin: 120, rMax: 900 }, params.stage || {}),
       step: dt => { if (!mito) return; const k = dt * (mito.params().timeScale || 1); last = mito.step(k); cell.step(k); },
-      afterFrame: () => { fillWidth(); if (nb) { nb.step(); placeLabels(); } },
+      afterFrame: () => { if (vw) vw.frame(); if (nb) nb.step(); },
       viewOffset: params.viewOffset,
     });
-    /* THE SHEETS NEVER END ON SCREEN: a membrane stopping short of the frame
-       reads as a raft, not a cell. Zoom out stops where the narrower sheet's
-       ends reach the canvas edges, and a pan stops at them too. A bowed
-       sheet's ends are BOW·sin(reach/BOW) across, not its arc length. */
-    function sheetHalfWidth(sim) {
-      const q = sim.params(), span = 150, bow = q.curve > 0 ? (span * span + q.curve * q.curve) / (2 * q.curve) : 0;
-      return bow ? bow * Math.sin(Math.min(Math.PI / 2, q.reach / bow)) : q.reach;
-    }
-    function fillWidth() {
-      if (!mito || !cell || params.fillWidth === false) return;
-      const W = box.canvas.clientWidth, H = box.canvas.clientHeight;
-      if (!W || !H) return;
-      const edge = Math.min(sheetHalfWidth(mito), sheetHalfWidth(cell)) - 4;
-      const perR = Math.tan(box.camera.fov * Math.PI / 360) * W / H;   // visible half-width per unit of distance
-      box.stage.setZoomLimits(NaN, edge / perR);
-      const room = Math.max(0, edge - box.cam.r * perR), t = box.cam.target;
-      if (Math.abs(t.x) > room) { t.x = Math.sign(t.x) * room; box.applyCam(); }
-    }
     box.renderer.localClippingEnabled = true;
     const gMito = new THREE.Group(); gMito.position.y = INNER_Y; box.root.add(gMito);
     const gCell = new THREE.Group(); gCell.position.y = PLASMA_Y; box.root.add(gCell);
@@ -747,76 +728,27 @@
     cell.on('turn', n => emit('turn', n));
     cell.on('turned', n => emit('turned', n));
 
-    /* THE BANDS ARE NAMED DOWN THE RIGHT AND THE SHEETS DOWN THE LEFT, so a
-       compartment's name never sits next to a membrane's and is read as one
-       label. Placed by projecting their own world y. */
-    if (!bandCss) {
-      bandCss = true;
-      const st = document.createElement('style');
-      st.textContent = `
-.chem-band { position:absolute; z-index:3; pointer-events:none;
-  font-family:var(--font-display, inherit); font-size:var(--cap-sm, 11px);
-  font-weight:var(--cap-weight, 600); letter-spacing:var(--cap-track, .12em);
-  text-transform:uppercase; white-space:nowrap;
-  text-shadow:0 1px 10px rgba(255,255,255,.85); transform:translateY(-50%); }
-.chem-band  { right:18px; opacity:.55; }
-.chem-tip { position:absolute; z-index:4; pointer-events:none; padding:4px 9px; border-radius:6px;
-  background:rgba(255,255,255,.94); box-shadow:0 2px 10px rgba(0,0,0,.12); color:#1f2430;
-  font:600 12px/1.3 var(--font-ui, system-ui, sans-serif); white-space:nowrap; transform:translate(12px, -130%); }`;
-      document.head.appendChild(st);
-    }
-    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
-    const LABELS = params.sideLabels === false ? [] : [
-      { cls:'chem-band', y: () => PLASMA_Y + 46, text: () => cell.state().sides.outside },
-      { cls:'chem-band', y: () => (PLASMA_Y + OUTER_Y) / 2, text: () => cell.state().sides.inside },
-      { cls:'chem-band', y: () => (OUTER_Y + INNER_Y) / 2, text: () => mito.state().sides.outside },
-      { cls:'chem-band', y: () => INNER_Y - 78, text: () => mito.state().sides.inside },
-    ];
-    for (const L of LABELS) { L.el = document.createElement('div'); L.el.className = L.cls; el.appendChild(L.el); }
-    /* THE SHEETS AND PROTEINS ARE NAMED ON HOVER, not down the edge: names on
-       the left crowd the chain. The first thing under the pointer decides, so
-       a protein standing in a sheet is not called the membrane. */
-    const tip = document.createElement('div');
-    tip.className = 'chem-tip'; tip.hidden = true; el.appendChild(tip);
-    const ray = new THREE.Raycaster(), _p = new THREE.Vector2();
+    /* One view over both sheets (Sheet.view): drag pans, hover names, the
+       four bands down the right, and neither sheet ever ends on screen. */
     const PROTEIN_NAME = { complex: 'Electron transport chain', I: 'Complex I', II: 'Complex II', III: 'Complex III', IV: 'Complex IV',
       synthase: 'ATP synthase', leak: 'Uncoupler',
       translocase: 'ADP/ATP translocase', porin: 'Porin', pump: 'Na⁺/K⁺ pump', K: 'K⁺ channel', CL: 'Cl⁻ channel' };
-    const sheets = () => [
-      ...Object.entries(Object.assign({}, cell.proteins, mito.proteins, mito.doors))
-        .filter(([k, part]) => PROTEIN_NAME[k] && part && part.group).map(([k, part]) => [part.group, PROTEIN_NAME[k]]),
-      [cell.membrane && cell.membrane.group, 'Plasma membrane'],
-      [mito.outer && mito.outer.group, 'Outer membrane'],
-      [mito.membrane && mito.membrane.group, 'Inner membrane'],
-    ].filter(s => s[0] && s[0].visible);
-    const within = (o, g) => { for (; o; o = o.parent) if (o === g) return true; return false; };
-    function hover(ev) {
-      const r = box.canvas.getBoundingClientRect();
-      _p.set((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-      ray.setFromCamera(_p, box.camera);
-      const hit = ray.intersectObject(box.root, true).find(h => h.object.visible);
-      const s = hit && sheets().find(([g]) => within(hit.object, g));
-      tip.hidden = !s;
-      if (!s) return;
-      tip.textContent = s[1];
-      tip.style.left = (ev.clientX - el.getBoundingClientRect().left) + 'px';
-      tip.style.top = (ev.clientY - el.getBoundingClientRect().top) + 'px';
-    }
-    box.canvas.addEventListener('pointermove', hover);
-    box.canvas.addEventListener('pointerleave', () => { tip.hidden = true; });
-    const _l = new THREE.Vector3();
-    function placeLabels() {
-      const h = box.canvas.clientHeight;
-      /* Sized to the box, not the page: 11px down the edge of a card-sized box is a headline. */
-      const fs = Math.max(7, Math.min(11, box.canvas.clientWidth / 45)) + 'px';
-      for (const L of LABELS) {
-        if (L.el.style.fontSize !== fs) L.el.style.fontSize = fs;
-        _l.set(0, L.y(), 0).project(box.camera);
-        L.el.style.top = ((-_l.y * .5 + .5) * h) + 'px';
-        const t = L.text();
-        if (L.el.textContent !== t) L.el.textContent = t;
-      }
-    }
+    vw = global.Sheet.view(el, box, {
+      sheets: () => [
+        ...Object.entries(Object.assign({}, cell.proteins, mito.proteins, mito.doors))
+          .filter(([k, part]) => PROTEIN_NAME[k] && part && part.group).map(([k, part]) => [part.group, PROTEIN_NAME[k]]),
+        [cell.membrane && cell.membrane.group, 'Plasma membrane'],
+        [mito.outer && mito.outer.group, 'Outer membrane'],
+        [mito.membrane && mito.membrane.group, 'Inner membrane'],
+      ],
+      bands: params.sideLabels === false ? [] : [
+        { y: () => PLASMA_Y + 46, text: () => cell.state().sides.outside },
+        { y: () => (PLASMA_Y + OUTER_Y) / 2, text: () => cell.state().sides.inside },
+        { y: () => (OUTER_Y + INNER_Y) / 2, text: () => mito.state().sides.outside },
+        { y: () => INNER_Y - 78, text: () => mito.state().sides.inside },
+      ],
+      halfWidth: () => params.fillWidth === false ? Infinity : Math.min(global.Sheet.halfWidth(mito.params()), global.Sheet.halfWidth(cell.params())),
+    });
 
     /* ONE NOTEBOOK FOR BOTH, every anchor lifted into world space. The bands
        are already named, so the cell's `inside` is not offered twice: the
@@ -827,7 +759,7 @@
     for (const k of ['pump', 'pump.atp', 'pump.head', 'channel.K', 'NA', 'K']) { anchors[k] = worldOf(cell, gCell, k); library[k] = cell.library[k]; }
     anchors['cell.outside'] = worldOf(cell, gCell, 'outside'); library['cell.outside'] = cell.library.outside;
     nb = global.Notebook ? global.Notebook.create({ box, anchors, library }) : null;
-    placeLabels();
+    vw.frame();
 
     const SHARED = ['water', 'ions', 'badges', 'cut', 'membrane'];
     const handle = {
@@ -854,7 +786,7 @@
       add: mito.add, scatter: mito.scatter, clear: mito.clear,
       reset() { spent = 0; mito.reset(); cell.reset(); cell.set({ contents: params.cellContents || CELL_CONTENTS }); },
       start: box.start, stop: box.stop, pump: box.pump,
-      destroy() { if (nb) nb.clear(); for (const L of LABELS) L.el.remove(); tip.remove(); box.destroy(); },
+      destroy() { if (nb) nb.clear(); vw.destroy(); box.destroy(); },
     };
     return handle;
   }

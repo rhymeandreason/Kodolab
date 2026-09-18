@@ -7,7 +7,8 @@
  *  LightReactions (a thylakoid), and this file is what they share:
  *
  *      Circuit.kit(eng, spec)            the plumbing, built inside a component's machine
- *      Circuit.mount(el, params, spec)   one box, one handle, over Sheet.mount
+ *      Circuit.mount(el, params, spec)   one box, one handle, over Sheet.mount;
+ *                                        spec.names opts into Sheet.view
  *      Circuit.DEFAULTS · Circuit.SIGNALS
  *
  *  SHARED HERE: the synthase (a c ring of `ring.c` rods, the stalk and the F1
@@ -1182,7 +1183,7 @@
     const camFor = p => p.cam || { theta: 0, phi: Math.PI / 2 - 0.10, r: 380 };
     function build() {
       cur = (spec.build && spec.build(el, P0)) ||
-        global.Sheet.mount(el, Object.assign({}, P0, { cam: camFor(P0) }), { name: spec.name, create: spec.create, signals: spec.signals, api: spec.api || ['feed'] });
+        global.Sheet.mount(el, Object.assign({}, P0, { cam: camFor(P0) }), { name: spec.name, create: spec.create, signals: spec.signals, api: spec.api || ['feed'], names: spec.names });
       for (const s of subs) s.off = cur.on(s.ev, s.fn);
     }
     const dropContext = next => {

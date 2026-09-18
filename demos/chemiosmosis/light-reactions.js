@@ -625,7 +625,8 @@
   }
   const SIGNALS = Object.assign({}, global.Circuit ? global.Circuit.SIGNALS : {});
   function mount(el, params = {}) {
-    return global.Circuit.mount(el, params, { name: 'LightReactions', context: 'thylakoid', other: 'ElectronTransport', create, signals: SIGNALS, api: ['feed'] });
+    return global.Circuit.mount(el, params, { name: 'LightReactions', context: 'thylakoid', other: 'ElectronTransport', create, signals: SIGNALS, api: ['feed'],
+      names: { PSII: 'Photosystem II', b6f: 'Cytochrome b6f', PSI: 'Photosystem I', synthase: 'ATP synthase', leak: 'Uncoupler', membrane: 'Thylakoid membrane' } });
   }
 
   global.LightReactions = { create, mount, machine, DEFAULTS, SIGNALS,

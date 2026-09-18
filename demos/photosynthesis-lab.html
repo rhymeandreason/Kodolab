@@ -15,6 +15,7 @@
   .goal { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
   .verdict { font-size: 13px; color: var(--ink-2); margin: 10px 0 0; min-height: 3em; }
   .done { margin: 12px 0 0; padding: 10px 14px; border-radius: 999px; background: var(--panel); font-family: var(--display); font-size: 15px; color: var(--accent); }
+  .reset-view { position: absolute; right: var(--space-5); bottom: calc(var(--space-5) + 32px); z-index: 2; }
 </style>
 </head>
 <body>
@@ -39,6 +40,8 @@ const LIGHT = { fuel: 'light', fuelRate: 1 };
 const shell = LessonShell.create({
   brand: 'The light reactions',
   hint: 'Drag to orbit · Scroll to zoom',
+  /* the chloroplast orbits and the membrane pans */
+  onStep: step => { shell.el.querySelector('.lshell-hint').textContent = step.scene === 'membrane' ? 'Drag to pan · Scroll to zoom' : 'Drag to orbit · Scroll to zoom'; },
   steps: [
     {
       eyebrow: 'Where', title: 'Inside a chloroplast', scene: 'chloroplast',
@@ -122,6 +125,23 @@ const shell = LessonShell.create({
 
 const chloro = shell.scene('chloroplast', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.8 }));
 const lr = shell.scene('membrane', el => LightReactions.mount(el, Object.assign({ viewOffset: shell.viewOffset }, LIGHT)));
+
+/* ---- reset view: back to where the membrane opened ---- */
+{
+  const c = lr.box.cam, home = { theta: c.theta, phi: c.phi, r: c.r }, t0 = c.target.clone();
+  const b = document.createElement('button');
+  b.className = 'btn reset-view'; b.type = 'button'; b.textContent = 'Reset view';
+  b.addEventListener('click', () => {
+    lr.box.flyTo(home);
+    const from = c.target.clone(), start = performance.now();
+    (function tick(now) {
+      const k = Math.min(1, (now - start) / 1100), e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      c.target.lerpVectors(from, t0, e); lr.box.applyCam();
+      if (k < 1) requestAnimationFrame(tick);
+    })(start);
+  });
+  lr.box.canvas.parentElement.appendChild(b);
+}
 
 /* ---- the tally ----
    A dark split thylakoid, reset to an even gradient, and two buttons: a

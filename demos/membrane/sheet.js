@@ -1054,7 +1054,7 @@
 
     const out = { step, state, reset, set, on, anchors, library, layers, show, palette,
       add, scatter, remove, clear, travellers,
-      params: () => P, pores: () => PORES.slice(),
+      params: () => P, pores: () => PORES.slice(), farY,
       get height() { return T.height; },
       half: HALF, SPEED: { WALK:WALK_SPEED, ION:ION_SPEED }, KEEPOUT: CHANNEL_KEEPOUT,
       proteins: Object.assign({}, ...machines.map(m => m.handles || {})),
@@ -1104,19 +1104,108 @@
     return { paint, destroy() { ro.disconnect(); out.remove(); inn.remove(); bey.remove(); } };
   }
 
+  /* ---- a pannable view of one or more sheets ----
+     view(el, box, o) · o = { sheets() → [[group, name]], bands: [{ y(), text() }], halfWidth() }
+     Drag pans (the box's stage takes orbit:'pan'). THE SHEETS AND PROTEINS
+     ARE NAMED ON HOVER, not down the edge: names on the left crowd the
+     chain. The first thing under the pointer decides, so a protein standing
+     in a sheet is not called the membrane; list proteins before sheets.
+     THE BANDS ARE NAMED DOWN THE RIGHT, placed by projecting their own world
+     y, so a name stays on its compartment through a pan. THE SHEETS NEVER END
+     ON SCREEN: a membrane stopping short of the frame reads as a raft. Zoom
+     out stops where the sheet's ends reach the canvas edges, and a pan stops
+     at them too. Call frame() after every draw. */
+  const halfWidth = q => {
+    const span = 150, bow = q.curve > 0 ? (span * span + q.curve * q.curve) / (2 * q.curve) : 0;
+    return bow ? bow * Math.sin(Math.min(Math.PI / 2, q.reach / bow)) : q.reach;   // a bowed sheet's ends are BOW·sin(reach/BOW) across
+  };
+  let viewCss = false;
+  function view(el, box, o) {
+    const THREE = global.THREE;
+    if (!viewCss) {
+      viewCss = true;
+      const st = document.createElement('style');
+      st.textContent = `
+.chem-band { position:absolute; z-index:3; pointer-events:none; right:18px; opacity:.55;
+  font-family:var(--font-display, inherit); font-size:var(--cap-sm, 11px);
+  font-weight:var(--cap-weight, 600); letter-spacing:var(--cap-track, .12em);
+  text-transform:uppercase; white-space:nowrap;
+  text-shadow:0 1px 10px rgba(255,255,255,.85); transform:translateY(-50%); }
+.chem-tip { position:absolute; z-index:4; pointer-events:none; padding:4px 9px; border-radius:6px;
+  background:rgba(255,255,255,.94); box-shadow:0 2px 10px rgba(0,0,0,.12); color:#1f2430;
+  font:600 12px/1.3 var(--font-ui, system-ui, sans-serif); white-space:nowrap; transform:translate(12px, -130%); }`;
+      document.head.appendChild(st);
+    }
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    const bands = (o.bands || []).map(b => Object.assign({ el: Object.assign(document.createElement('div'), { className: 'chem-band' }) }, b));
+    for (const b of bands) el.appendChild(b.el);
+    const tip = Object.assign(document.createElement('div'), { className: 'chem-tip', hidden: true });
+    el.appendChild(tip);
+    const ray = new THREE.Raycaster(), _p = new THREE.Vector2(), _l = new THREE.Vector3();
+    const within = (obj, g) => { for (; obj; obj = obj.parent) if (obj === g) return true; return false; };
+    function hover(ev) {
+      const r = box.canvas.getBoundingClientRect();
+      _p.set((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(_p, box.camera);
+      const hit = ray.intersectObject(box.root, true).find(h => h.object.visible);
+      const s = hit && o.sheets().filter(([g]) => g && g.visible).find(([g]) => within(hit.object, g));
+      tip.hidden = !s;
+      if (!s) return;
+      tip.textContent = s[1];
+      const e = el.getBoundingClientRect();
+      tip.style.left = (ev.clientX - e.left) + 'px';
+      tip.style.top = (ev.clientY - e.top) + 'px';
+    }
+    const leave = () => { tip.hidden = true; };
+    box.canvas.addEventListener('pointermove', hover);
+    box.canvas.addEventListener('pointerleave', leave);
+    function fillWidth() {
+      if (!o.halfWidth) return;
+      const W = box.canvas.clientWidth, H = box.canvas.clientHeight;
+      if (!W || !H) return;
+      const edge = o.halfWidth() - 4;
+      if (!isFinite(edge)) return;
+      const perR = Math.tan(box.camera.fov * Math.PI / 360) * W / H;   // visible half-width per unit of distance
+      box.stage.setZoomLimits(NaN, edge / perR);
+      const room = Math.max(0, edge - box.cam.r * perR), t = box.cam.target;
+      if (Math.abs(t.x) > room) { t.x = Math.sign(t.x) * room; box.applyCam(); }
+    }
+    function frame() {
+      fillWidth();
+      const h = box.canvas.clientHeight;
+      /* Sized to the box, not the page: 11px down the edge of a card-sized box is a headline. */
+      const fs = Math.max(7, Math.min(11, box.canvas.clientWidth / 45)) + 'px';
+      for (const b of bands) {
+        if (b.el.style.fontSize !== fs) b.el.style.fontSize = fs;
+        _l.set(0, b.y(), 0).project(box.camera);
+        b.el.style.top = ((-_l.y * .5 + .5) * h) + 'px';
+        const t = b.text();
+        if (b.el.textContent !== t) b.el.textContent = t;
+      }
+    }
+    return { frame, destroy() {
+      box.canvas.removeEventListener('pointermove', hover);
+      box.canvas.removeEventListener('pointerleave', leave);
+      for (const b of bands) b.el.remove(); tip.remove();
+    } };
+  }
+
   /* ---- one box ----
      The compartments' extent is solved off the camera, so a molecule never
      blinks into existence in view. Adds no physics: `m.sim` and `m.box` are
      the layers under it. `spec` is { name, create, signals }. */
   function mount(el, params, spec) {
     if (!global.CardStage) throw new Error(spec.name + ': load kit/card-stage.js first');
-    let sim = null, nb = null, last = null;
+    let sim = null, nb = null, last = null, vw = null;
+    /* `spec.names` (part key → name, and `membrane`) opts into view(): drag
+       pans, hover names, bands that follow the camera. */
+    const named = !!spec.names;
     const box = global.CardStage.create({
       mount: el,
       cam: params.cam || { theta:0, phi:Math.PI / 2 - 0.10, r:300 },
-      stage: Object.assign({ orbit:false, rMin:50, rMax:600 }, params.stage || {}),
+      stage: Object.assign({ orbit: named ? 'pan' : false, rMin:50, rMax:600 }, params.stage || {}),
       step: dt => { if (sim) last = sim.step(dt * (sim.params().timeScale || 1)); },
-      afterFrame: () => { if (nb) nb.step(); },
+      afterFrame: () => { if (vw) vw.frame(); if (nb) nb.step(); },
       viewOffset: params.viewOffset,
       onResize: () => { if (sim) sim.set({ extent: extentOf() }); },
     });
@@ -1133,7 +1222,21 @@
       return halfH + slide + 26;
     };
     sim = spec.create(THREE, box.root, box.camera, Object.assign({ extent: extentOf() }, params));
-    const sides = params.sideLabels === false ? null : sideLabels(el, sim);
+    const sides = params.sideLabels === false || named ? null : sideLabels(el, sim);
+    if (named) {
+      const N = spec.names;
+      /* mid-compartment, between the heads and the band's far edge: the
+         callout anchor sits a third of the way out, among the machines' heads */
+      const band = side => ({ y: () => { const s = side === 'outside' ? 1 : -1; return s * (sim.half + sim.farY(s)) / 2; },
+                              text: () => sim.state().sides[side] });
+      vw = view(el, box, {
+        sheets: () => Object.entries(sim.proteins).filter(([k]) => N[k]).map(([k, part]) => [part && part.group, N[k]])
+          .concat([[sim.membrane && sim.membrane.group, N.membrane]]),
+        bands: params.sideLabels === false ? [] : [band('outside'), band('inside')],
+        halfWidth: () => halfWidth(sim.params()),
+      });
+      vw.frame();
+    }
     if (params.cut != null) sim.set({ cut: params.cut }); else sim.set({ cut: true });
     nb = global.Notebook ? global.Notebook.create({ box, anchors: sim.anchors, library: sim.library }) : null;
     const handle = {
@@ -1142,13 +1245,13 @@
       anchors: () => nb ? nb.list() : [],
       at: n => sim.anchors[n] ? sim.anchors[n]() : null,
       layers: sim.layers, show: (n, on) => { sim.show(n, on); if (!box.running) box.draw(); return handle; }, palette: sim.palette,
-      set(next) { sim.set(next); if (sides) sides.paint(); return handle; },
+      set(next) { sim.set(next); if (sides) sides.paint(); if (vw) vw.frame(); return handle; },
       state: () => last || sim.state(),
       /* graph.js resolves a signal by name off the thing it is following. */
       signals: () => spec.signals,
       on: sim.on, add: sim.add, scatter: sim.scatter, clear: sim.clear, reset: sim.reset,
       start: box.start, stop: box.stop, pump: box.pump,
-      destroy() { if (sides) sides.destroy(); box.destroy(); },
+      destroy() { if (sides) sides.destroy(); if (vw) vw.destroy(); box.destroy(); },
     };
     for (const k of spec.api || []) if (sim[k]) handle[k] = sim[k];
     return handle;
@@ -1157,5 +1260,5 @@
   const total = c => c ? (c.inside || 0) + (c.outside || 0) : 0;
   const sides = c => ({ inside: (c && c.inside) || 0, outside: (c && c.outside) || 0 });
 
-  global.Sheet = { create, mount, DEFAULTS, total, sides };
+  global.Sheet = { create, mount, view, halfWidth, DEFAULTS, total, sides };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
