@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Invite code — Kodolab</title>
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at /beta-invite by a vercel.json rewrite. -->
+<base href="/demos/build/">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="login.css">
+<!-- =========================================================================
+     THE STEP AFTER SIGNING IN, while the beta is invite-only. Signing in says
+     who you are; this says whether you may build, and they are separate
+     because one is Google's or a mailbox's word and the other is ours.
+
+     NO STUDENTS DOOR. A class code admits a browser with no account at all, so
+     offering it to someone who has just signed in is offering to sign them out
+     again. /login keeps that door.
+
+     THE NAV SAYS WHO IS SIGNED IN without this page asking: lib/site.js paints
+     the account into any body.kodo page's .sitenav. Nothing here draws it.
+
+     Reached with ?next=, which only `Apps.safeNext` may approve.
+     ========================================================================= -->
+</head>
+<body class="kodo">
+<div class="page">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  </nav>
+
+  <header class="pagehead">
+    <h1>invite code</h1>
+    <p class="deck">Building is open to invited testers while the beta runs.</p>
+  </header>
+
+  <p class="busy" id="busy" hidden></p>
+
+  <main class="doors doors--one" id="doors">
+    <section class="door">
+      <h2 class="cap">Your invite</h2>
+      <p class="say" id="say">Enter the code you were given.</p>
+      <form class="code" id="inviteForm">
+        <input id="inviteCode" aria-label="Invite code" placeholder="invite code"
+               autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64">
+        <button class="cta" type="submit">Redeem</button>
+      </form>
+      <p class="err" id="err" hidden></p>
+      <p class="sub">No invite? <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>.</p>
+    </section>
+  </main>
+</div>
+
+<script src="apps-client.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const show = (id, text) => { $(id).textContent = text || ''; $(id).hidden = !text; };
+
+  const params = new URLSearchParams(location.search);
+  const next = Apps.safeNext(params.get('next'));
+  const wantsTeach = Apps.wantsTeach(next);
+  const home = user => next || Apps.page(user && user.teacher ? 'teach' : 'build');
+
+  function busy(text) {
+    $('doors').hidden = !!text;
+    $('busy').hidden = !text;
+    $('busy').textContent = text || '';
+  }
+  function leave(url) {
+    busy(/teach/.test(url) ? 'Opening your dashboard…' : 'Opening the builder…');
+    location.replace(url);
+  }
+
+  /* Whether this page has anything to ask. Someone who is already through goes
+     on rather than being asked for a code they do not need, and someone with no
+     account is sent to sign in first: this page cannot redeem without one. */
+  function gate(user) {
+    if (!user) { location.replace(Apps.login()); return false; }
+    const needTeacher = wantsTeach && !user.teacher;
+    if (user.admitted && !needTeacher) { leave(home(user)); return false; }
+    $('say').innerHTML = needTeacher
+      ? `Signed in as <b>${esc(user.name)}</b>. The dashboard is for teachers, so this one has to be a teacher invite, or a pilot teacher code.`
+      : `Signed in as <b>${esc(user.name)}</b>. Enter the code you were given.`;
+    $('inviteCode').focus();
+    return true;
+  }
+
+  $('inviteForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const code = $('inviteCode').value.trim();
+    if (!code) return;
+    show('err', '');
+    busy('Checking your invite…');
+    try {
+      const r = await Apps.account.redeem(code);
+      // The apps this browser made on a testing link move into the account before it leaves.
+      await Apps.account.claimLocal();
+      if (wantsTeach && !r.teacher) { busy(''); gate(r.user); return show('err', 'That invite lets you build, but it is not a teacher invite.'); }
+      leave(home(r.user));
+    } catch (err) { busy(''); show('err', err.message); }
+  });
+
+  Apps.account.state().then(s => { Apps.account.note(s.user); gate(s.user); });
+})();
+</script>
+</body>
+</html>

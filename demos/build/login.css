@@ -58,3 +58,7 @@
   text-align: left; letter-spacing: normal;
   font-family: var(--font-editorial); font-size: 1rem;
 }
+
+/* One door has no pair to line up with, so the grid stops stretching it to the
+   two-column width and it sets to a column of text instead. */
+.doors--one { max-width: 32rem; }

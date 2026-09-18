@@ -180,9 +180,22 @@ const Apps = (() => {
 
   /* The site's own pages, in whichever spelling this world uses. */
   function page(name) {
-    const file = { build: 'build/build.html', apps: 'build/apps.html', teach: 'build/teacher.html', login: 'build/login.html' }[name];
+    const file = { build: 'build/build.html', apps: 'build/apps.html', teach: 'build/teacher.html',
+                   login: 'build/login.html', 'beta-invite': 'build/beta-invite.html' }[name];
     return fileForm ? `/demos/${file}` : `/${name}`;
   }
+
+  /* WHERE ?next= MAY SEND SOMEONE, and the only place that decides it. Two
+     pages hand people on after signing in, and an absolute or unlisted `next`
+     is an open redirect: a link that signs a teacher in and drops her on
+     somebody else's page. Kept here rather than in each page because a guard
+     written twice is a guard that drifts. Only a builder page is somewhere to
+     come back to; anything else, /login itself included, answers null and the
+     caller sends them to their own home. */
+  const NEXT_OK = /^\/(build|apps|teach|app)([?#\/]|$)|^\/demos\/build\/(build|apps|teacher|app)\.html([?#]|$)/;
+  const safeNext = raw => (NEXT_OK.test(String(raw || '')) ? String(raw) : null);
+  /* Sent to the dashboard, so an account that is not a teacher's is not done. */
+  const wantsTeach = next => !!next && /^\/(teach|demos\/build\/teacher\.html)([?#\/]|$)/.test(next);
   /* The sign-in page, told to come back here. `why` names a refused class code. */
   function login(why) {
     return page('login') + '?next=' + encodeURIComponent(location.pathname + location.search + location.hash)
@@ -362,5 +375,5 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
     d.showModal();
   }
 
-  return { KEY, VISITOR, ID, codes, account, api, link, page, login, mount, preview, editMode, outline, exportFile, remember, forget, tokenFor, mine, beta };
+  return { KEY, VISITOR, ID, codes, account, api, link, page, login, safeNext, wantsTeach, mount, preview, editMode, outline, exportFile, remember, forget, tokenFor, mine, beta };
 })();

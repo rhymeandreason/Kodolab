@@ -11,7 +11,12 @@
 <link rel="stylesheet" href="login.css">
 <!-- =========================================================================
      THE ONE WAY IN. Two doors: a class code (a student, no account) and an
-     account (everyone else, admitted by an invite the first time).
+     account (everyone else).
+
+     SIGNING IN IS NOT BEING ADMITTED, and this page only does the first. An
+     account that still needs an invite is handed to /beta-invite, carrying its
+     `next`: one page asks who you are, the other whether you may build, and a
+     person who lands here already through goes straight on.
 
      THE ACCOUNT DOOR HAS TWO LATCHES, Google and a code mailed to an address,
      and they open the same account: the server matches on the address. The
@@ -54,7 +59,7 @@
     <section class="door">
       <h2 class="cap">Teachers and builders</h2>
       <div class="stack" id="out">
-        <p class="say">The first time, you enter the invite code you were given.</p>
+        <p class="say">Sign in with Google, or have a code emailed to you.</p>
         <div class="gbtn" id="gbtn"></div>
         <p class="sub" id="noGoogle" hidden>Google sign-in is not set up on this server.</p>
         <p class="or"><span>or</span></p>
@@ -74,14 +79,9 @@
       </div>
       <div class="stack" id="in" hidden>
         <p class="say" id="inLine"></p>
-        <form class="code" id="inviteForm" hidden>
-          <input id="inviteCode" aria-label="Invite code" placeholder="invite code" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64">
-          <button class="cta" type="submit">Redeem</button>
-        </form>
-        <div class="line" id="go" hidden></div>
+        <div class="line" id="go"></div>
       </div>
       <p class="err" id="acctErr" hidden></p>
-      <p class="sub">No invite? <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>.</p>
     </section>
   </main>
 </div>
@@ -95,12 +95,12 @@
   const show = (id, text) => { $(id).textContent = text || ''; $(id).hidden = !text; };
 
   const params = new URLSearchParams(location.search);
-  // Only a builder page is somewhere to come back to. Anything else, /login itself
-  // included, lands on /teach or /build; and an absolute `next` would be an open redirect.
-  const raw = params.get('next') || '';
-  const next = /^\/(build|apps|teach|app)([?#\/]|$)|^\/demos\/build\/(build|apps|teacher|app)\.html([?#]|$)/.test(raw) ? raw : null;
-  const wantsTeach = !!next && /^\/(teach|demos\/build\/teacher\.html)([?#\/]|$)/.test(next);
+  const next = Apps.safeNext(params.get('next'));
+  const wantsTeach = Apps.wantsTeach(next);
   const home = user => next || Apps.page(user && user.teacher ? 'teach' : 'build');
+  /* The invite page, told where this person was going, so redeeming lands them
+     there and not on a generic home. */
+  const invitePage = () => Apps.page('beta-invite') + (next ? '?next=' + encodeURIComponent(next) : '');
 
   const WHY = {
     invalid: 'That class code is not right. Check it against your card.',
@@ -168,19 +168,16 @@
         .catch(err => show('acctErr', err.message));
       return false;
     }
+    // Not admitted yet, or not the teacher the dashboard needs: that is the
+    // invite page's question, and asking it here would be asking it twice.
+    if (!user.admitted || (wantsTeach && !user.teacher)) { location.replace(invitePage()); return false; }
+
     $('out').hidden = true; $('in').hidden = false;
-    const needTeacher = wantsTeach && !user.teacher;
-    const needInvite = !user.admitted || needTeacher;
-    $('inLine').innerHTML = `Signed in as <b>${esc(user.name)}</b>.`
-      + (needTeacher ? ' The dashboard is for teachers. Enter your teacher invite code, or a pilot teacher code.'
-        : !user.admitted ? ' Enter the invite code you were given.' : '');
-    $('inviteForm').hidden = !needInvite;
-    $('go').hidden = needInvite;
+    $('inLine').innerHTML = `Signed in as <b>${esc(user.name)}</b>.`;
     $('go').innerHTML = user.teacher
       ? `<a class="cta" href="${esc(Apps.page('teach'))}">Dashboard</a><a class="cta cta--ghost" href="${esc(Apps.page('build'))}">Build</a>`
       : `<a class="cta" href="${esc(Apps.page('build'))}">Build</a>`;
-    if (needInvite) $('inviteCode').focus();
-    return !needInvite;
+    return true;
   }
 
   // The apps this browser made on a testing link move into the account before it leaves.
@@ -239,19 +236,6 @@
     busy('Signing in…');
     try { signedIn((await Apps.account.codeVerify(sentTo, code)).user); }
     catch (err) { busy(''); show('acctErr', err.message); $('otp').select(); }
-  });
-
-  $('inviteForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const code = $('inviteCode').value.trim(); if (!code) return;
-    show('acctErr', '');
-    busy('Checking your invite…');
-    try {
-      const r = await Apps.account.redeem(code);
-      await Apps.account.claimLocal();
-      if (wantsTeach && !r.teacher) { busy(''); paint(r.user); return show('acctErr', 'That invite lets you build, but it is not a teacher invite.'); }
-      leave(home(r.user));
-    } catch (err) { busy(''); show('acctErr', err.message); }
   });
 
   Apps.account.state().then(s => {
