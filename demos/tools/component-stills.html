@@ -86,11 +86,11 @@ const SHOTS = [
       cam: { theta: 0.35, phi: Math.PI / 2 - 0.22, r: 250 } }) },
 
   { key: 'electrontransport', use: 'ElectronTransport', warm: 14,
-    mount: el => ElectronTransport.mount(el, { chain: 'split', span: 'mitochondrion', fuel: 'NADH',
+    mount: el => ElectronTransport.mount(el, { span: 'mitochondrion', fuel: 'NADH',
       proteins: { complex: { x: -95 }, synthase: { x: 45 }, translocase: { x: 105 } } }) },
 
   { key: 'lightreactions', use: 'LightReactions', warm: 14,
-    mount: el => LightReactions.mount(el, { chain: 'split', fuel: 'light',
+    mount: el => LightReactions.mount(el, { fuel: 'light',
       proteins: { complex: { x: -70 }, synthase: { x: 70 } } }) },
 
   /* The trajectory is fetched here rather than by the box: `protein:` starts

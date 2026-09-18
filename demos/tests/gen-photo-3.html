@@ -39,7 +39,7 @@ const shell = LessonShell.create({
       body: '<p class="lead"><strong>Light energy extracts high-energy electrons by splitting water.</strong></p><p>Photons strike Photosystem II (PSII), which pulls electrons from water molecules on the lumen side. Oxygen gas is released as a byproduct, and the freed protons accumulate directly in the lumen.</p>',
       nextLabel: 'See the gradient build',
       onEnter(ctx) {
-        lr.set({ chain: 'split', fuel: 'light', fuelRate: 1 });
+        lr.set({ fuel: 'light', fuelRate: 1 });
         lr.notes(['psii', 'water.split', 'oxygen']);
         ctx.ui.controls('<div class="stats"><div class="stat"><span class="stat-label">Oxygen released</span><span class="stat-value" id="o2-val" data-live>0</span><span class="stat-sub">molecules</span></div></div>');
         this._unsub = lr.on('frame', s => {
@@ -59,7 +59,7 @@ const shell = LessonShell.create({
       body: '<p class="lead"><strong>Electrons travel through cytochrome b6f to power a proton pump.</strong></p><p>Plastoquinone ferries electron pairs from PSII to the cytochrome b6f complex, which pumps protons across the membrane into the lumen, generating a strong proton-motive force.</p>',
       nextLabel: 'Make ATP & NADPH',
       onEnter(ctx) {
-        lr.set({ chain: 'split', fuel: 'light', fuelRate: 1 });
+        lr.set({ fuel: 'light', fuelRate: 1 });
         lr.notes(['b6f', 'plastoquinone']);
         ctx.ui.controls('<div class="stats"><div class="stat"><span class="stat-label">Proton-motive force</span><span class="stat-value" id="pmf-val" data-live>0 mV</span><span class="stat-sub">stored gradient</span></div></div>');
         this._unsub = lr.on('frame', s => {
@@ -78,7 +78,7 @@ const shell = LessonShell.create({
       title: 'Powering the synthesis of sugar',
       body: '<p class="lead"><strong>The gradient drives ATP synthase while PSI produces NADPH.</strong></p><p>Protons flowing back out into the stroma turn ATP synthase to generate ATP. Meanwhile, Photosystem I transfers electrons to NADP⁺, forming NADPH. Both energy-rich carriers drift into the stroma to fuel the Calvin cycle.</p>',
       onEnter(ctx) {
-        lr.set({ chain: 'split', fuel: 'light', fuelRate: 1 });
+        lr.set({ fuel: 'light', fuelRate: 1 });
         lr.notes(['synthase', 'psi', 'nadph']);
         ctx.ui.controls('<div class="stats"><div class="stat"><span class="stat-label">ATP synthesized</span><span class="stat-value" id="atp-val" data-live>0</span><span class="stat-sub">in stroma</span></div><div class="stat"><span class="stat-label">NADPH produced</span><span class="stat-value" id="nadph-val" data-live>0</span><span class="stat-sub">in stroma</span></div></div><div class="slider"><div class="slider-head"><span class="label">Light rate</span></div><input type="range" id="lr-dim" min="0" max="1" step="0.05" value="1"></div>');
         ctx.ui.range(ctx.ui.q('#lr-dim'), v => lr.set({ fuelRate: v, fuel: v > 0 ? 'light' : null }, { snap: true }));
@@ -98,7 +98,7 @@ const shell = LessonShell.create({
 });
 
 const chloro = shell.scene('chloroplast', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.6 }));
-const lr = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset, chain: 'split', fuel: 'light', fuelRate: 1 }));
+const lr = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset, fuel: 'light', fuelRate: 1 }));
 
 shell.goTo(0);
 </script>

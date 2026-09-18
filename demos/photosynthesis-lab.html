@@ -34,7 +34,7 @@
 let unsubs = [];
 const clear = () => { unsubs.forEach(f => f()); unsubs = []; };
 const stat = (label, id, sub = '') => `<div class="stat"><div class="stat-label">${label}</div><div class="stat-value" id="${id}">–</div>${sub ? `<div class="stat-sub">${sub}</div>` : ''}</div>`;
-const LIGHT = { chain: 'lumped', fuel: 'light', fuelRate: 1 };
+const LIGHT = { fuel: 'light', fuelRate: 1 };
 
 const shell = LessonShell.create({
   brand: 'The light reactions',
@@ -49,12 +49,12 @@ const shell = LessonShell.create({
     },
     {
       eyebrow: 'The idea', title: 'Light pumps protons', scene: 'membrane',
-      body: '<p><b>One machine, drawn as one thing: light in, protons into the lumen.</b> The lumen turns acidic, and ATP synthase lets the protons back out into the stroma, turning as they pass.</p><p>Dim the light and the gradient drains. This is the same picture as a mitochondrion, mirrored: there the pumped side is on top.</p>',
-      nextLabel: 'Open the machine',
+      body: '<p><b>Light in, protons into the lumen.</b> Three machines stand in the membrane; for now watch only the protons. The lumen turns acidic, and ATP synthase lets the protons back out into the stroma, turning as they pass.</p><p>Dim the light and the gradient drains. This is the same picture as a mitochondrion, mirrored: there the pumped side is on top.</p>',
+      nextLabel: 'Open the machines',
       onEnter(ctx) {
         clear();
-        lr.set(Object.assign({}, LIGHT, { proteins: { complex: { x: -80 }, synthase: { x: 40 } } }));
-        lr.notes(['complex', 'synthase', 'inside']);
+        lr.set(Object.assign({}, LIGHT, { proteins: { complex: { x: -60 }, synthase: { x: 80 } } }));
+        lr.notes(['synthase', 'inside']);
         ctx.ui.controls(`<div class="slider"><div class="slider-head"><span class="label">light</span><span class="value" id="lv"></span></div><input id="light" type="range" min="0" max="1" step="0.05" value="1"></div>
           <div class="stats">${stat('proton-motive force', 's-pmf', 'mV across the membrane')}${stat('ATP made', 's-atp', 'in the stroma')}</div>`);
         ctx.ui.range(ctx.ui.q('#light'), v => { lr.set({ fuelRate: v }, { snap: true }); ctx.ui.q('#lv').textContent = Math.round(v * 100) + '%'; });
@@ -68,7 +68,7 @@ const shell = LessonShell.create({
       nextLabel: 'Follow the electrons',
       onEnter(ctx) {
         clear();
-        lr.set(Object.assign({}, LIGHT, { chain: 'split', proteins: { complex: { x: -60 }, synthase: { x: 80 } } }));
+        lr.set(LIGHT);
         lr.notes(['antenna', 'water.split', 'oxygen']);
         ctx.ui.controls(`<div class="stats">${stat('photons', 's-ph', 'absorbed so far')}${stat('O₂ released', 's-o2', 'per O₂: <span id="s-pero2">–</span> photons')}</div>`);
         unsubs.push(lr.on('frame', s => { if (!s.light) return; ctx.ui.q('#s-ph').textContent = s.light.photons; ctx.ui.q('#s-o2').textContent = s.light.o2Released; ctx.ui.q('#s-pero2').textContent = s.light.photonsPerO2; }));
@@ -132,7 +132,7 @@ const lr = shell.scene('membrane', el => LightReactions.mount(el, Object.assign(
    claim the step exists to make. */
 function tally(ctx) {
   clear();
-  lr.set({ chain: 'split', fuel: null, cyclic: 0, proteins: { complex: { x: -60 }, synthase: { x: 80 } } });
+  lr.set({ fuel: null, cyclic: 0, proteins: { complex: { x: -60 }, synthase: { x: 80 } } });
   lr.reset();
   lr.set({ contents: { inside: { water: 30, H: 30 }, outside: { water: 30, H: 30 } } });
   lr.notes(['water.split', 'fnr', 'synthase']);

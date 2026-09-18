@@ -7,13 +7,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>electron-transport-test — pump protons out, let them back through the turbine</title>
 <!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
-<meta name="description" content="Respiration's chain pumping protons out, and the turbine they turn coming back: complexes I–IV, or one, NADH and FADH₂, no oxygen, uncouplers, the ATP getting out.">
+<meta name="description" content="Respiration's chain pumping protons out, and the turbine they turn coming back: complexes I–IV, NADH and FADH₂, no oxygen, uncouplers, the ATP getting out.">
 <link rel="canonical" href="https://www.kodolab.org/library/electrontransport">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kodolab">
 <meta property="og:url" content="https://www.kodolab.org/library/electrontransport">
 <meta property="og:title" content="electron-transport-test — pump protons out, let them back through the turbine">
-<meta property="og:description" content="Respiration's chain pumping protons out, and the turbine they turn coming back: complexes I–IV, or one, NADH and FADH₂, no oxygen, uncouplers, the ATP getting out.">
+<meta property="og:description" content="Respiration's chain pumping protons out, and the turbine they turn coming back: complexes I–IV, NADH and FADH₂, no oxygen, uncouplers, the ATP getting out.">
 <meta name="robots" content="noindex">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
@@ -81,10 +81,7 @@ function bench(ctx) {
     opts.map(([v, t]) => `<button type="button" data-v="${v}">${t}</button>`).join('')}</div>`;
   ui.controls(`
     <div class="bench-group">
-      <div class="bench-hd">how much detail</div>
-      <div class="bench-sub">the chain</div>
-      <div>${seg('chain', [['lumped', 'one complex'], ['split', 'I · II · III · IV']])}</div>
-      <div class="bench-sub">how far out</div>
+      <div class="bench-hd">how far out</div>
       <div>${seg('span', [['inner', 'inner membrane'], ['mitochondrion', '+ outer'], ['cell', '+ cell']])}</div>
     </div>
 
@@ -123,20 +120,19 @@ function bench(ctx) {
       </div>
     </div>`);
 
-  const S = { chain: 'lumped', span: 'inner', fuel: 'NADH' };
+  const S = { span: 'inner', fuel: 'NADH' };
   const $ = s => ui.q(s);
   const mark = (id, v) => { for (const b of ui.qa(`#${id} > button`)) b.setAttribute('aria-pressed', String(b.dataset.v === v)); };
 
-  /* A layout that fits the level: the component spreads `complex` into I–IV
+  /* A layout that fits the span: the component spreads `complex` into I–IV
      and makes room itself, so only the uncoupler needs placing here. */
   function layout() {
-    const split = S.chain === 'split', wide = S.span !== 'inner';
-    const p = split ? (wide ? { complex:{ x:-95 }, synthase:{ x:45 }, translocase:{ x:105 } } : { complex:{ x:-70 }, synthase:{ x:70 } })
-                    : (wide ? { complex:{ x:-72 }, synthase:{ x:0 }, translocase:{ x:72 } } : { complex:{ x:-80 }, synthase:{ x:40 } });
+    const wide = S.span !== 'inner';
+    const p = wide ? { complex:{ x:-95 }, synthase:{ x:45 }, translocase:{ x:105 } } : { complex:{ x:-70 }, synthase:{ x:70 } };
     if ($('#leak').checked) p.leak = { x: wide ? 150 : 125 };
     return p;
   }
-  const apply = () => { m.set({ chain: S.chain, span: S.span, fuel: S.fuel,
+  const apply = () => { m.set({ span: S.span, fuel: S.fuel,
     oxygen: $('#o2').checked, proteins: layout() }); if (labelsOn) showLabels(); sync(); };
 
   $('#fuel-seg').innerHTML = seg('fuel', FUELS.map(f => [f, fuelName(f)]).concat([['', 'none']]));
@@ -145,16 +141,14 @@ function bench(ctx) {
   for (const b of ui.qa('[data-feed]')) b.onclick = () => m.feed(b.dataset.feed);
 
   function sync() {
-    mark('chain', S.chain); mark('span', S.span); mark('fuel', S.fuel || '');
+    mark('span', S.span); mark('fuel', S.fuel || '');
     $('#rate').disabled = !S.fuel;
-    const blocked = S.chain === 'lumped' && !$('#o2').checked;
-    for (const b of ui.qa('[data-feed]')) b.disabled = blocked;
-    $('#feedfoot').textContent = blocked ? 'No oxygen at the end of the chain, so a carrier has nowhere to send its electrons.'
+    $('#feedfoot').textContent = !$('#o2').checked ? 'No oxygen at the end of the chain: the carrier docks, and the chain backs up behind complex IV.'
       : S.fuel ? 'One carrier, one trip, on top of the supply. Clearer with the supply set to none.'
       : 'Supply off: each press goes round the chain once and stops.';
   }
 
-  for (const id of ['chain', 'span']) for (const b of ui.qa(`#${id} > button`)) b.onclick = () => {
+  for (const id of ['span']) for (const b of ui.qa(`#${id} > button`)) b.onclick = () => {
     if (S[id] === b.dataset.v) return;
     S[id] = b.dataset.v;
     apply();
@@ -166,8 +160,7 @@ function bench(ctx) {
   let labelsOn = false;
   function showLabels() {
     const s = m.state();
-    const names = (s.chain !== 'split' ? ['complex', 'inside', 'outside']
-      : ['complex.I', 'complex.II', 'complex.III', 'complex.IV', 'quinone', 'cytc'])
+    const names = ['complex.I', 'complex.II', 'complex.III', 'complex.IV', 'quinone', 'cytc']
       .concat(['synthase'], $('#leak').checked ? ['leak'] : [], s.span !== 'inner' ? ['translocase', 'porin'] : [], s.span === 'cell' ? ['pump.atp'] : []);
     m.clearNotes(); m.notes(names);
   }
@@ -179,8 +172,7 @@ function bench(ctx) {
   };
   $('#reset').onclick = () => {
     m.reset();
-    const H = m.state().chain === 'split' ? 30 : 22;
-    m.set({ contents: { inside:{ water:30, H }, outside:{ water:30, H } } });
+    m.set({ contents: { inside:{ water:30, H:30 }, outside:{ water:30, H:30 } } });
     if (labelsOn) showLabels();
   };
 
@@ -195,11 +187,9 @@ function bench(ctx) {
       row(`H⁺ in ${s.sides.inside}`, (s.counts.H || {}).inside | 0) +
       row('proton-motive force', s.pmf.toFixed(0) + ' mV') +
       row('protons pumped out', s.complexTurns);
-    if (s.complexes) {
-      for (const k of Object.keys(s.complexes)) rows += row(`complex ${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
-      rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
-      rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
-    } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
+    for (const k of Object.keys(s.complexes)) rows += row(`complex ${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
+    rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
+    rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
     if (s.o2Left != null) rows += row('O₂ left', s.o2Left);
     if (s.protonsLeaked || $('#leak').checked) rows += row('protons down the uncoupler', s.protonsLeaked);
     if (s.stoichiometry.protonsPerExport) rows += row('protons spent on export', s.protonsForExport);
@@ -207,7 +197,7 @@ function bench(ctx) {
     if (s.cell) rows += row('pump turns bought', s.cell.atpSpent) + row('cell membrane voltage', s.cell.mV.toFixed(0) + ' mV');
     $('#rd').innerHTML = rows;
     $('#verdict').textContent =
-      !s.oxygen && s.shuttles && s.shuttles.cytcLoaded ? 'No oxygen: the cytochromes are waiting loaded at complex IV, so III has nowhere to send electrons, and I stops behind it.'
+      !s.oxygen && s.shuttles.cytcLoaded ? 'No oxygen: the cytochromes are waiting loaded at complex IV, so III has nowhere to send electrons, and I stops behind it.'
       : s.pmf <= 2 ? 'No gradient, so the rotor is stopped. The synthase is a turbine and there is nothing to turn it.'
       : s.protonsLeaked > 0 ? `${s.protonsLeaked} of the ${s.protonsLeaked + s.protonsThroughSynthase} protons home came down the hole and made nothing. That fuel still burned, and all of it came out as heat.`
       : `The gradient is holding at ${s.pmf.toFixed(0)} mV, and every ${s.stoichiometry.protonsPerATP.toFixed(1)} protons back through the synthase is one ATP.`;

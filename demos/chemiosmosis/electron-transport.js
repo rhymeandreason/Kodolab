@@ -20,15 +20,14 @@
  *      PROTONS_PER_EXPORT   the translocase's charge on every ATP
  *      protonsPer(fuel) · atpPer(fuel)   walked off the table, never typed
  *
- *      proteins: { complex | I | II | III | IV | synthase | leak | translocase: {x} | null }
+ *      proteins: { I | II | III | IV | synthase | leak | translocase: {x} | null }
+ *                 or complex: {x}, the chain's centre, spread into I–IV
  *
- *  TWO LEVELS OF DETAIL, on two independent params:
+ *  THE WHOLE CHAIN, ALWAYS: complexes I, II, III and IV, ubiquinone moving
+ *  in the membrane from I or II to III, cytochrome c on the outer face from
+ *  III to IV. NADH docks at I and FADH₂'s electrons enter at II, which
+ *  pumps nothing. How far out is the one dial:
  *
- *      chain  'lumped'  one complex stands for the chain, 2 H⁺ a turn
- *             'split'   complexes I, II, III and IV, ubiquinone moving in the
- *                       membrane from I or II to III, cytochrome c on the
- *                       outer face from III to IV. NADH docks at I and FADH₂'s
- *                       electrons enter at II, which pumps nothing.
  *      span   'inner'          the inner membrane alone
  *             'mitochondrion'  plus the outer membrane with a porin, and a
  *                              translocase, so the ATP visibly gets out
@@ -37,9 +36,7 @@
  *                              only; it builds two sims in one box, and changing
  *                              to or from it rebuilds the box
  *
- *  A layout written for one chain works for the other: `complex:{x}` is
- *  spread into I–IV about that x, and I–IV collapse to one complex at their
- *  mean. `chain` and `span` changes snap; nothing tweens across a relayout.
+ *  A `span` change snaps; nothing tweens across a relayout.
  *
  *  Events: `pumped` (protons thrown out so far), `atp` (made, in the matrix),
  *  `atpOut` (cleared the last door on stage), `atpDelivered` (reached atpTo),
@@ -117,7 +114,7 @@
   };
   const LINE = { keys: ['I', 'II', 'III', 'IV'], donors: { I: 'NADH', II: 'FADH2' }, rest: 'II', hub: 'III', end: 'IV', stands: 'I',
                  q: ['Q', 'QH₂'], c: 'cyt c' };
-  /* Where each complex stands about a lumped complex's x. Tuned against the default camera. */
+  /* Where each complex stands about the chain's centre. Tuned against the default camera. */
   const OFFSETS = [-75, -25, 25, 75];
   /* One blue for I, III and IV and a paler one for II, palette.js's rule.
      The shapes are a schematic whose one job is to be told apart: I is the
@@ -162,7 +159,6 @@
     const { knob, tagged, untag, dropToken, relabel, fade, approach, follow, posOf, faceOf, midOf, hex, buildToken } = K.shapes;
     const xs = K.geom.xs, H_ = K.geom.H_;
     const { chips, pulse, waiting } = K;
-    const split = K.split;
 
     /* ---- what hangs off the complexes ----
        Complex I's arm in the matrix, where NADH docks; one head for SdhA and
@@ -279,8 +275,7 @@
     /* ---- the carriers ----
        AT COMPLEX II THE TOKEN IS SUCCINATE. The FAD there is bound inside the
        enzyme and never leaves it: what arrives from the Krebs cycle is
-       succinate, and what leaves is fumarate. The lumped complex keeps the
-       FADH₂ token, because there is no complex II on stage to hold its FAD.
+       succinate, and what leaves is fumarate.
        THE GLYCEROL-PHOSPHATE SHUTTLE: cytosolic NADH cannot enter the matrix,
        so it comes down through the outer membrane into the intermembrane
        space, and its electrons reach ubiquinone at the OUTER face, past
@@ -300,8 +295,8 @@
          height past that, less a little so it touches. */
       if (key === 'I') { const x = xs.I; return { from:{ x:x - 20, y:-d * (H + 52) }, at:{ x:x + 1, y:-d * (H + 27) }, away:{ x:x - 30, y:-d * (H + 54) } }; }
       /* II's substrate meets the FAD in the head: the token (half width 6.7) against its side */
-      if (key === 'II') { const x = xs.II, y = II_HEAD_Y, ax = II_HEAD_R + 6.7 - 1; return { from:{ x:x - ax - 10, y:-d * (y + 24) }, at:{ x:x - ax, y:-d * y }, away:{ x:x - ax - 24, y:-d * (y + 26) } }; }
-      return K.lumpedDock();
+      const x = xs.II, y = II_HEAD_Y, ax = II_HEAD_R + 6.7 - 1;
+      return { from:{ x:x - ax - 10, y:-d * (y + 24) }, at:{ x:x - ax, y:-d * y }, away:{ x:x - ax - 24, y:-d * (y + 26) } };
     }
     function tokenFor(key, f, opts = {}) {
       if (!f || !FUELS[f]) return null;
@@ -334,9 +329,9 @@
     const E_PER_O2 = CHEM.E_PER_O2, E_PER_TURN = K.electrons.E_PER_TURN;
     let o2 = null;
     const o2Riders = [], waters = [];
-    const o2X = () => split() ? xs.IV : K.geom.complexX();
-    const ivH = () => split() ? CX.IV.height : H_();
-    const ivR = () => split() ? SPEC.IV.R : K.geom.CPX_R;
+    const o2X = () => xs.IV;
+    const ivH = () => CX.IV.height;
+    const ivR = () => SPEC.IV.R;
     const o2Site = () => ({ x: o2X() + 3, y: -pumpDir() * HALF * 0.35, z: 0 });
     /* O₂ is always around, so it sets off when a carrier is sent, not when
        IV is ready: by the time electrons reach IV it is in the membrane. */
@@ -345,7 +340,6 @@
     const stocked = () => P.o2Stock != null;
     /* Electrons can reach IV: oxygen on, and, with a stock, one left to take them. */
     const o2Ok = () => P.oxygen !== false && (!stocked() || !!o2 || o2Waiting.length > 0);
-    K.hooks.gate = () => o2Ok();
     function o2Stockpile(n) {
       o2Stocked = true;
       for (const w of o2Waiting) dropToken(w.obj);
@@ -497,7 +491,6 @@
       o2Riders.length = 0; waters.length = 0;
     }
     K.hooks.resetChain = clearO2;
-    K.hooks.lumped = { onLoad: () => o2Arrive(), onOcclude: () => o2Reduce(), onPhase: o2Phase };
 
     /* ---- the four machines ---- */
     const d_ = pumpDir;
@@ -515,23 +508,18 @@
     };
 
     /* ONE CARRIER, ONE TURN, independent of the supply switch: turn the
-       supply off, send one, and watch it go through once. In a split chain
-       the one NADH turns I, and the ubiquinol it makes turns III, and III's
-       cytochromes turn IV. opts.shuttle: an NADH made in the cytosol, which
-       enters at ubiquinone by the glycerol-phosphate shuttle and so is worth
-       what FADH₂ is. */
+       supply off, send one, and watch it go through once: the one NADH turns
+       I, the ubiquinol it makes turns III, and III's cytochromes turn IV.
+       opts.shuttle: an NADH made in the cytosol, which enters at ubiquinone
+       by the glycerol-phosphate shuttle and so is worth what FADH₂ is. */
     function feed(fuel, opts = {}) {
       if (!K.hasChain(P.proteins)) return false;
       const f = fuel || P.fuel || 'NADH';
       if (!FUELS[f]) { console.warn('ElectronTransport: no fuel named ' + f + '; have ' + Object.keys(FUELS).join(', ')); return false; }
       o2Spawn();
-      if (split()) {
-        const shuttle = !!opts.shuttle && f === 'NADH';
-        const key = shuttle ? 'II' : Object.keys(LINE.donors).find(k => LINE.donors[k] === f);
-        return K.feedSplit(key, shuttle ? 'FADH2' : f, tokenFor(key, f, { shuttle }));
-      }
-      if (!o2Ok()) return false;   // no O₂: the NADH docks and nothing takes its electrons
-      return K.feedLumped(f, tokenFor('complex', f));
+      const shuttle = !!opts.shuttle && f === 'NADH';
+      const key = shuttle ? 'II' : Object.keys(LINE.donors).find(k => LINE.donors[k] === f);
+      return K.feedAt(key, shuttle ? 'FADH2' : f, tokenFor(key, f, { shuttle }));
     }
 
     /* ---- the words ---- */
@@ -539,13 +527,7 @@
     function cards(library) {
       library.outside.card = 'The intermembrane space. Every proton the complexes throw out lands here, so this side goes acidic and positive: that is where the energy from NADH now sits. This space and a chloroplast\'s thylakoid lumen are the same place by descent, both of them the OUTSIDE of the bacterium each organelle came from. That is why a photosynthesis diagram looks flipped against this one.';
       library.inside.card  = 'The matrix. The Krebs cycle runs here and hands its NADH to the complexes in this membrane. Protons leave from this side and come back through the synthase.';
-      library.complex.text = split() ? 'complex I' : 'electron transport chain';
-      library.complex.card = split() ? library['complex.I'].card
-        : 'The whole chain drawn as one machine. NADH hands it electrons, they pass down to oxygen, which becomes water, and each drop pays for protons thrown out. It spends FUEL rather than ATP: turn the fuel off and it stops, which is the whole reason the gradient is a store and not a fixture.';
-      if (P.names === 'intro') {
-        for (const k in INTRO_CARDS) library[k].card = INTRO_CARDS[k];
-        if (split()) library.complex.card = INTRO_CARDS['complex.I'];
-      }
+      if (P.names === 'intro') for (const k in INTRO_CARDS) library[k].card = INTRO_CARDS[k];
     }
     const INTRO_CARDS = {
       'complex.I': 'NADH drops off two electrons here. Passing them on pays for pumping protons out.',
@@ -610,8 +592,8 @@
           protonsForExport,
           fuelRate: o2Ok() ? s.fuelRate : 0,
           oxygen: P.oxygen !== false, o2Left: stocked() ? o2Waiting.length + (o2 ? 1 : 0) : null,
-          protonsPerFuel: s.chain === 'split' ? { NADH: protonsPer('NADH'), FADH2: protonsPer('FADH2') } : null,
-          shuttles: s.chain === 'split' ? { ubiquinol: sh.reduced, cytcLoaded: sh.loaded } : null,
+          protonsPerFuel: { NADH: protonsPer('NADH'), FADH2: protonsPer('FADH2') },
+          shuttles: { ubiquinol: sh.reduced, cytcLoaded: sh.loaded },
           stoichiometry: Object.assign(s.stoichiometry, { protonsPerExport: antX == null ? 0 : PROTONS_PER_EXPORT }),
         };
       },
@@ -626,10 +608,10 @@
         outer: { label: 'the outer membrane', get: () => outerOn(), set: v => eng.set({ outerMembrane: !!v }) },
       },
       anchors: {
-        'complex.I':   () => split() && P.proteins.I ? K.at(xs.I, H_() * 0.98) : null,
-        'complex.II':  () => split() && P.proteins.II ? K.at(xs.II, -pumpDir() * II_HEAD_Y) : null,
-        'complex.III': () => split() && P.proteins.III ? K.at(xs.III, H_() * 0.98) : null,
-        'complex.IV':  () => split() && P.proteins.IV ? K.at(xs.IV, H_() * 0.98) : null,
+        'complex.I':   () => P.proteins.I ? K.at(xs.I, H_() * 0.98) : null,
+        'complex.II':  () => P.proteins.II ? K.at(xs.II, -pumpDir() * II_HEAD_Y) : null,
+        'complex.III': () => P.proteins.III ? K.at(xs.III, H_() * 0.98) : null,
+        'complex.IV':  () => P.proteins.IV ? K.at(xs.IV, H_() * 0.98) : null,
         quinone:  () => K.shuttles.qTokens.length ? K.shuttles.qTokens[0].obj.position : null,
         cytc:     () => K.shuttles.cTokens.length ? K.shuttles.cTokens[0].obj.position : null,
         translocase: () => antX == null ? null : K.at(antX, ANT.height * 0.98),
@@ -671,14 +653,13 @@
   }
 
   /* ---- the sim ----
-     A create with no params is an inner mitochondrial membrane that runs: a
-     complex, a synthase, NADH, and a gradient's worth of protons. A span past
+     A create with no params is an inner mitochondrial membrane that runs: the
+     chain, a synthase, NADH, and a gradient's worth of protons. A span past
      the inner membrane brings the outer one and a translocase, or the ATP
      has no visible way out. */
-  function defaultProteins(chain, span) {
+  function defaultProteins(span) {
     const wide = span && span !== 'inner';
-    if (chain === 'split') return wide ? { complex:{ x:-85 }, synthase:{ x:55 }, translocase:{ x:115 } } : { complex:{ x:-60 }, synthase:{ x:80 } };
-    return wide ? { complex:{ x:-72 }, synthase:{ x:0 }, translocase:{ x:72 } } : { complex:{ x:-80 }, synthase:{ x:40 } };
+    return wide ? { complex:{ x:-85 }, synthase:{ x:55 }, translocase:{ x:115 } } : { complex:{ x:-60 }, synthase:{ x:80 } };
   }
   function create(THREE, root, camera, opts = {}) {
     if (!global.Sheet || !global.Circuit) throw new Error('ElectronTransport: load membrane/parts.js, membrane/sheet.js and chemiosmosis/circuit.js first');
@@ -687,7 +668,8 @@
       { potential: 'nernst', fuel: 'NADH', outerMembrane: span !== 'inner' },
       opts, { context: 'mitochondrion', span });
     P.E = Object.assign({}, global.Sheet.DEFAULTS.E, opts.E || {});
-    P.proteins = Object.assign({}, opts.proteins || defaultProteins(P.chain, span));
+    delete P.chain;
+    P.proteins = Object.assign({}, opts.proteins || defaultProteins(span));
     return global.Sheet.create(THREE, root, camera, P, [machine]);
   }
 
@@ -716,7 +698,7 @@
        sim exists: checked rather than assumed. */
     const box = global.CardStage.create({
       mount: el,
-      cam: params.cam || { theta: 0, phi: Math.PI / 2 - 0.09, r: params.chain === 'split' ? 500 : 412 },
+      cam: params.cam || { theta: 0, phi: Math.PI / 2 - 0.09, r: 500 },
       stage: Object.assign({ orbit: 'pan', rMin: 120, rMax: 900 }, params.stage || {}),
       step: dt => { if (!mito) return; const k = dt * (mito.params().timeScale || 1); last = mito.step(k); cell.step(k); },
       afterFrame: () => { fillWidth(); if (nb) { nb.step(); placeLabels(); } },
@@ -887,7 +869,6 @@
       name: 'ElectronTransport', context: 'mitochondrion', other: 'LightReactions', create, signals: SIGNALS, api: ['feed'],
       build: (el, P0) => P0.span === 'cell' ? stackMount(el, P0) : null,
       rebuilds: (P0, next) => next.span != null && (P0.span === 'cell') !== (next.span === 'cell'),
-      zoom: P0 => P0.span === 'cell' ? (P0.chain === 'split' ? 500 : 412) : null,
     });
   }
 

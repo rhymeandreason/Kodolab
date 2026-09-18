@@ -12,8 +12,8 @@
  *
  *  SHARED HERE: the synthase (a c ring of `ring.c` rods, the stalk and the F1
  *  head, mirrored by the context), the rotor's ledger, the uncoupler's hole,
- *  the lumped complex, every machine's six-phase cycle (`runner`), the split
- *  chain's shape (a `donor`, a `hub` that runs the Q cycle, a `terminal`),
+ *  every machine's six-phase cycle (`runner`), the chain's shape (a `donor`,
+ *  a `hub` that runs the Q cycle, a `terminal`),
  *  the two shuttles and the electrons drawn walking between them, the
  *  carriers that dock and leave spent and the queue of ones fed by hand, the
  *  ATP that leaves the head and the route it takes, the proton doors and the
@@ -33,14 +33,12 @@
  *      carries    { shuttle: electrons per trip }
  *      shapes     { key: { R, lobes, lobe, color, over } }   a lathe per key, unless
  *      build      (key, H) => part | null      the component builds that one itself
- *      offsets    [x, ...]   where each split key stands about a lumped complex's x
+ *      offsets    [x, ...]   where each key stands about `proteins.complex.x`, the chain's centre
  *      fuels      { name: { weight } }         what may drive the chain, and how hard
  *
  *  K.hooks, filled by the component once its own parts exist:
  *      token(key, fuel)   the carrier that docks: { label, spent, color, lobes, fuel,
  *                         shuttle, dock: () => {from, at, away}, y0, band }
- *      gate(fuel)         false when nothing can take the electrons (no O₂)
- *      lumped             { onLoad(f), onOcclude(f), onPhase(p) } for the one-complex chain
  *      atpLegs()          legs the ATP walks before it leaves; a leg's `on` fires on arrival
  *      onATP()            after each ATP is made (an export cost)
  *      cSeat(key)         where the one-electron shuttle sits on a knob
@@ -58,8 +56,7 @@
   const DEFAULTS = {
     fuel: null,               // what drives the chain; the component says which names it takes
     fuelRate: 1,              // 0..1, a supply dial or a light dimmer
-    complexSeconds: 6.0,      // ONE FULL CYCLE, the empty half included
-    chain: 'lumped',          // 'lumped' | 'split'
+    complexSeconds: 4.2,      // ONE FULL CYCLE of a machine, the empty half included
     showATP: true,            // the synthase releases a drawn ATP per third-turn
     showFuel: true,           // a carrier arrives at the complex and leaves spent
     atpExit: null,            // 'left' | 'right': it leaves that way, toward the box that spends it
@@ -68,8 +65,8 @@
        'atpDelivered' fires on arrival, the moment something may spend it. */
     atpTo: null,
   };
-  /* How close a split chain may pack. Tuned against the default camera, which a split chain pulls back. */
-  const SPLIT_GAP = 50;
+  /* How close the chain may pack. Tuned against the default camera. */
+  const CHAIN_GAP = 50;
 
   function kit(eng, spec) {
     const { THREE, P, HALF, BOW, rnd, travellers, kit, seat, root } = eng;
@@ -80,23 +77,16 @@
     const ROW = k => spec.table[k];
     const hooks = {};
     let RUN = {};
-    let warnedSplit = false;
-    const split = () => {
-      if (P.chain !== 'split') return false;
-      if (P.context === spec.context) return true;
-      if (!warnedSplit) { warnedSplit = true; console.warn(`${spec.name}: chain:'split' is drawn in a ${spec.context}; ${P.context} stays lumped`); }
-      return false;
-    };
 
     /* ---- the machines ----
-       A COMPLEX: the electron-transport chain, or the cytochrome b6f of a
-       thylakoid, drawn as ONE when the lesson's claim is "something with
-       energy to spend pumps protons". INDIGO: a mitochondrion's lipid is
-       orange, and a warm machine disappears into it. A carrier, so a snug
-       site. */
+       Each key of the line is a machine the component builds (`spec.build`)
+       or a lathe from `spec.shapes`. INDIGO for a pump: a mitochondrion's
+       lipid is orange, and a warm machine disappears into it. */
     const holeOf = (R, lobe) => R * (1 + lobe) + 0.5;
-    const CPX_R = 16.0, CPX_LOBE = 0.14;
-    const COMPLEX = Parts.transporter({ half:HALF, site:6.2, mouth:8.0, radius:CPX_R, lobes:3, lobeDepth:CPX_LOBE, color:RESP.complex });
+    /* THE REFERENCE HEIGHT: a transporter's reach past the bilayer, the
+       height every dock, wait spot and float band is measured from, so a
+       carrier sits the same distance off any machine. */
+    const H_ = () => HALF + 14;
     const SPEC = spec.shapes;
     /* A solid rod through the bilayer: a lathe capsule with no lumen, widened
        in x so one reads as two bundles side by side. For a machine that is
@@ -176,10 +166,9 @@
     const LEAK_PREFERENCE = 3;
     const ROTOR = buildRotor(), HEAD = buildHead();
     SYNTH.group.add(ROTOR, HEAD);
-    root.add(COMPLEX.group, SYNTH.group, LEAK.group, ...ALL.map(k => CX[k].group));
-    const H_ = () => COMPLEX.height;
+    root.add(SYNTH.group, LEAK.group, ...ALL.map(k => CX[k].group));
     const xs = Object.fromEntries(ALL.map(k => [k, 0]));
-    let complexX = 0, synthX = null;
+    let synthX = null;
 
     /* The ROTOR turns: the c ring in the membrane and the central stalk
        above it, with an off-axis foot so the turning reads. The STATOR does
@@ -422,11 +411,6 @@
     const chips = {};
     const pulse = {};
     const makeCarrier = tok => buildToken(tok.label, tok.color, tok.lobes == null ? 2 : tok.lobes);
-    /* The lumped complex's dock: on its loading face, off to one side. */
-    function lumpedDock() {
-      const d = pumpDir(), H = H_(), x = complexX;
-      return { from:{ x:x - 34, y:-d * (H + 30) }, at:{ x:x - 15, y:-d * (H + 13) }, away:{ x:x - 40, y:-d * (H + 34) } };
-    }
     function carrierArrive(key, token) {
       if (!P.showFuel || chips[key]) return;
       /* A carrier fed by hand is already on stage, waiting: it is the one that docks. */
@@ -474,7 +458,7 @@
           approach(w, { x: spot.x + Math.sin(w.t * 0.9) * 3, y: spot.y + Math.cos(w.t * 1.3) * 2, z: 0 }, dt, WAIT_SPEED);
         });
         /* The next one boards when the machine is free and the last carrier has gone. */
-        const r = key === 'complex' ? lumped : RUN[key];
+        const r = RUN[key];
         if (r && q.length && !q[0].boarding && !pulse[key] && !r.busy && !chips[key]) {
           q[0].boarding = true;
           pulse[key] = q[0].f; r.kick();
@@ -757,16 +741,14 @@
     const backPressure = () => Math.max(0, 1 - pmfNow() / CHEM.PMF_STALL);
     const reMV = () => { eng.mV = eng.clampMV(P.mvPerIon * eng.chargeOut); };
     /* A PUMPING MEMBRANE WITH NO PROTONS IS A FROZEN ONE. Generated apps
-       mounted it that way, so a chain gets a gradient's worth by default; a
-       split chain pumps ten a NADH and gets more. Any `H` key, 0 included, is
-       the page choosing. */
-    const DEFAULT_PROTONS = 22, SPLIT_PROTONS = 30, DEFAULT_WATER = 30;
+       mounted it that way, so a chain gets a gradient's worth by default.
+       Any `H` key, 0 included, is the page choosing. */
+    const DEFAULT_PROTONS = 30, DEFAULT_WATER = 30;
     const hasChain = pr => pr && (pr.complex || ALL.some(k => pr[k]));
     function withProtons(c) {
-      if (P.context === 'plasma' || !CHEM.CONTEXTS[P.context] || !hasChain(P.proteins)) return c;
+      if (!CHEM.CONTEXTS[P.context] || !hasChain(P.proteins)) return c;
       if (c && ((c.inside && 'H' in c.inside) || (c.outside && 'H' in c.outside))) return c;
-      const n = P.chain === 'split' ? SPLIT_PROTONS : DEFAULT_PROTONS;
-      const side = s => Object.assign({ water: DEFAULT_WATER }, (c && c[s]) || {}, { H: n });
+      const side = s => Object.assign({ water: DEFAULT_WATER }, (c && c[s]) || {}, { H: DEFAULT_PROTONS });
       return { inside: side('inside'), outside: side('outside') };
     }
     /* What a fuel pays at a rate, against the force already built. */
@@ -782,7 +764,7 @@
     /* A turn already begun finishes: the energy was spent at the occlusion,
        and a machine frozen mid-carry strands a proton inside the protein. */
     const CPX_COAST = 0.35;
-    const period = () => Math.max(0.1, P.complexSeconds) * (split() ? 0.7 : 1);
+    const period = () => Math.max(0.1, P.complexSeconds);
     function runner(o) {
       const r = { key: o.key, t: 0, phase: '', cargo: [], busy: false, starved: false, warned: false, st: null, turns: 0,
                   gates: { top: NaN, bottom: NaN } };
@@ -895,21 +877,6 @@
       if (!f) return 0;
       return fuelRate(f, pulse[key] ? 1 : P.fuelRate, ROW(key).pumps ? pmfNow() : null);
     };
-    const lumped = runner({
-      key: 'complex', part: COMPLEX, n: CHEM.Complex.PROTONS_PER_CYCLE, x: () => complexX,
-      rate: () => {
-        const gate = f => !hooks.gate || hooks.gate(f);
-        const supply = gate(P.fuel) ? fuelRate(P.fuel, P.fuelRate, pmfNow()) : 0;
-        return supply > 0 ? supply : pulse.complex && gate(pulse.complex) ? fuelRate(pulse.complex, 1, pmfNow()) : 0;
-      },
-      ready: () => true,
-      onLoad: () => { const f = pulse.complex || P.fuel; carrierArrive('complex', hooks.token && hooks.token('complex', f)); if (hooks.lumped && hooks.lumped.onLoad) hooks.lumped.onLoad(f); },
-      onOcclude: () => { fuelSpend('complex'); if (hooks.lumped && hooks.lumped.onOcclude) hooks.lumped.onOcclude(pulse.complex || P.fuel); },
-      onPhase: p => { if (hooks.lumped && hooks.lumped.onPhase) hooks.lumped.onPhase(p); },
-      /* SPENT AFTER ONE CYCLE: feed() starts the clock at load-H, which is 0,
-         so the wrap back past it is the turn ending. */
-      onWrap: () => { pulse.complex = null; },
-    });
     /* A DONOR takes a fuel and loads a quinone. `more.eFrom(chip)` and
        `more.eVia(chip)` are where its electrons start and the way through
        it; a donor that ejects its electrons one photon at a time gives
@@ -1002,32 +969,26 @@
         onLoad: more.onLoad, onOcclude: more.onOcclude, onWrap: more.onWrap, onPhase: more.onPhase,
       });
     }
-    const runners = () => split() ? ALL.map(k => RUN[k]) : [lumped];
+    const runners = () => ALL.map(k => RUN[k]);
     /* The runner a page's caption follows: the donor a one-shot is on, else the supply's, else the first. */
     const leadRunner = () => {
-      if (!split()) return lumped;
       const dk = Object.keys(line.donors);
       const k = dk.find(k => pulse[k]) || dk.find(k => line.donors[k] === P.fuel) || dk[0];
       return RUN[k];
     };
     function resetChain() {
-      lumped.reset(); for (const k of ALL) RUN[k].reset();
+      for (const k of ALL) RUN[k].reset();
       for (const k of Object.keys(pulse)) pulse[k] = null;
       clearFuel(); clearWaiting(); clearE();
       if (hooks.resetChain) hooks.resetChain();
       if (qTokens.length) homeShuttles();
     }
-    /* ONE CARRIER, ONE TURN, the chain's answer to the pump's spend(): a
-       donor of the split chain, or the lumped complex. A token queues a
-       drawn carrier; none is a bare pulse (light). */
-    function feedSplit(key, f, token) {
+    /* ONE CARRIER, ONE TURN, the chain's answer to the pump's spend(), at
+       the donor named. A token queues a drawn carrier; none is a bare pulse
+       (light). */
+    function feedAt(key, f, token) {
       if (token && P.showFuel) return enqueue(key, token);
       pulse[key] = f; clearFuel(key); RUN[key].kick();
-      return true;
-    }
-    function feedLumped(f, token) {
-      if (token && P.showFuel) return enqueue('complex', token);
-      pulse.complex = f; clearFuel('complex'); lumped.kick();
       return true;
     }
 
@@ -1047,24 +1008,21 @@
       const h = base.counts.H || { inside:0, outside:0 };
       const proton = CHEM.protonState(h, eng.mV, protonRef, pumpDir());
       const lead = leadRunner(), st = lead.st;
-      const sp = split();
       return {
-        chain: sp ? 'split' : 'lumped',
         pH: proton.pH, dpH: proton.dpH, pmf: proton.pmf,
         atpMade: ROT.atp, rotorTurns: ROT.protons / ring.protonsPerTurn,
         protonsThroughSynthase, protonsLeaked, complexTurns: pumpedTotal,
         fuel: P.fuel, fuelRate: fuelRate(P.fuel, P.fuelRate, proton.pmf), pmfStall: CHEM.PMF_STALL,
         complexPhase: st ? st.phase : null, complexLabel: st ? st.label : null,
         complexCaption: st ? st.caption : null, complexT: lead.t,
-        complexStoichiometry: sp ? null : CHEM.Complex.PROTONS_PER_CYCLE,
         complexStarved: runners().some(r => r.starved),
         /* Carriers fed and not yet docked, per complex, and how many may wait. */
         waiting: Object.assign({ max: WAIT_MAX }, Object.fromEntries(Object.keys(waiting).map(k => [k, waiting[k].length]))),
-        /* THE SPLIT CHAIN'S LEDGER, per complex, walked off the table rather than typed. */
-        complexes: sp ? Object.fromEntries(ALL.map(k => [k, {
+        /* THE CHAIN'S LEDGER, per machine, walked off the table rather than typed. */
+        complexes: Object.fromEntries(ALL.map(k => [k, {
           turns: RUN[k].turns, pumpsPerTurn: ROW(k).pumps, pumped: RUN[k].turns * ROW(k).pumps,
           label: RUN[k].st ? RUN[k].st.label : null, phase: RUN[k].st ? RUN[k].st.phase : null,
-        }])) : null,
+        }])),
         stoichiometry: { protonsPerTurn: ring.protonsPerTurn, atpPerTurn: ring.atpPerTurn, protonsPerATP: ring.protonsPerTurn / ring.atpPerTurn,
                          ringSubunits: ring.c, protonsPerExport: 0 },
       };
@@ -1074,9 +1032,10 @@
     function plugin(e) {
       ext = e;
       RUN = e.runners;
-      const keys = Object.assign({ complex:null, synthase:null, leak:null }, Object.fromEntries(ALL.map(k => [k, null])), e.keys || {});
+      const keys = Object.assign({ synthase:null, leak:null }, Object.fromEntries(ALL.map(k => [k, null])), e.keys || {});
       const anchorsOf = () => {
-        const stands = () => { const k = !split() ? 'complex' : line.stands, x = k === 'complex' ? complexX : xs[k]; return P.proteins[k] ? at(x, H_() * 0.98) : null; };
+        /* `complex` stands on the machine the line names, so a page written for "the complex" still points at one. */
+        const stands = () => P.proteins[line.stands] ? at(xs[line.stands], H_() * 0.98) : null;
         return Object.assign({
           complex: stands,
           synthase: () => synthX == null ? null : at(synthX, -pumpDir() * (F1_BASE + F1_H * 0.5)),
@@ -1086,33 +1045,23 @@
       };
       return {
         keys,
-        parts: [COMPLEX, ...ALL.map(k => CX[k]), SYNTH, LEAK, ...(e.parts || [])],
+        parts: [...ALL.map(k => CX[k]), SYNTH, LEAK, ...(e.parts || [])],
         cutParts: e.cutParts || [],
-        tOrder: [['complex', COMPLEX], ...(e.tOrder || ALL).map(k => [k, CX[k]]), ['synthase', SYNTH], ['leak', LEAK]],
-        tFallback: COMPLEX,
+        tOrder: [...(e.tOrder || ALL).map(k => [k, CX[k]]), ['synthase', SYNTH], ['leak', LEAK]],
+        tFallback: CX[line.stands],
         rules: ['H'],
-        handles: Object.assign({ complex:COMPLEX, synthase:SYNTH, leak:LEAK }, CX, e.handles || {}),
-        poreGap: () => split() ? SPLIT_GAP : Infinity,
-        /* One complex into a row and back, so a layout written for either chain runs on the other. */
+        handles: Object.assign({ synthase:SYNTH, leak:LEAK }, CX, e.handles || {}),
+        poreGap: () => CHAIN_GAP,
+        /* `complex:{x}` is the chain's centre: the machines are spread about
+           it by spec.offsets, so a page places the chain with one number. */
         expand(given) {
-          const on = ALL.filter(k => given[k]);
-          const mean = on.length ? Math.round(on.reduce((s, k) => s + (given[k].x || 0), 0) / on.length) : null;
-          if (split()) {
-            if (!on.length) {
-              const x = given.complex ? given.complex.x || 0 : mean;
-              if (x != null) ALL.forEach((k, i) => { given[k] = { x: x + spec.offsets[i] }; });
-            }
-            given.complex = null;
-          } else {
-            if (mean != null && !given.complex) given.complex = { x: mean };
-            for (const k of ALL) given[k] = null;
+          if (!ALL.some(k => given[k]) && given.complex) {
+            const x = given.complex.x || 0;
+            ALL.forEach((k, i) => { given[k] = { x: x + spec.offsets[i] }; });
           }
+          delete given.complex;
         },
         layout(pr, holes, PORES) {
-          COMPLEX.group.visible = !!pr.complex;
-          if (pr.complex) { complexX = pr.complex.x; COMPLEX.group.position.x = complexX;
-            /* A carrier, like the pump: no kind, so nothing queues in it. */
-            holes.push([complexX, holeOf(CPX_R, CPX_LOBE)]); PORES.push({ x:complexX, R:CPX_R, lumen:8.0, kind:null }); }
           for (const k of ALL) {
             const M = CX[k];
             M.group.visible = !!pr[k];
@@ -1144,8 +1093,8 @@
         },
         afterSheet(tint) {
           if (e.afterSheet) e.afterSheet(tint);
-          if (split()) { buildShuttles(); homeShuttles(); for (const t of qTokens.concat(cTokens)) { Object.assign(t, t.to); seat(t.obj, t.x, t.y, t.z || 0); } }
-          else dropShuttles();
+          buildShuttles(); homeShuttles();
+          for (const t of qTokens.concat(cTokens)) { Object.assign(t, t.to); seat(t.obj, t.x, t.y, t.z || 0); }
         },
         setCut(on) { if (e.setCut) e.setCut(on); },
         admits(t) { if (t.kind === 'H') return protonDir() === -pumpDir() && Math.sign(t.y) === pumpDir(); },
@@ -1172,14 +1121,7 @@
           tickE(dt);
         },
         set(next) {
-          let relay = e.set ? !!e.set(next) : false;
-          if (next.chain != null && next.chain !== P.chain) {
-            resetChain();
-            P.chain = next.chain;
-            if (LIB) applyContext(LIB);
-            relay = true;
-          }
-          if (relay) eng.relayout();
+          if (e.set && e.set(next)) eng.relayout();
         },
         state(base) { const s = baseState(base); return e.state ? Object.assign(s, e.state(base, s)) : s; },
         reset() {
@@ -1187,7 +1129,7 @@
           clearATP(); resetChain();
           if (e.reset) e.reset();
         },
-        clear() { lumped.cargo.length = 0; for (const k of ALL) RUN[k].cargo.length = 0; },
+        clear() { for (const k of ALL) RUN[k].cargo.length = 0; },
         lid: e.lid || (() => false),
         bandCap: e.bandCap || (() => Infinity),
         clearXs: e.clearXs || (() => []),
@@ -1195,8 +1137,6 @@
         layers: e.layers || {},
         anchors: anchorsOf(),
         library: Object.assign({
-          complex: { text: 'a proton-pumping complex', offset: [-44, -30],
-            card: 'It carries protons one way only, and it pays with the fuel rather than with ATP. Turn the fuel off and it stops, which is the whole reason the gradient is a store and not a fixture.' },
           synthase: { text: 'ATP synthase', offset: [42, 30],
             card: 'A turbine, not a pump. Protons come back down the gradient through it and the rotor turns; every third of a turn makes one ATP. It cannot run uphill, so with no gradient it simply stops.' },
           leak: { text: 'an uncoupler', offset: [42, -30],
@@ -1205,42 +1145,41 @@
         }, e.library || {}),
         applyContext,
         proteinKey: Object.assign({
-          complex:  { name: 'the complex that pumps H⁺', color: hex(RESP.complex) },
           synthase: { name: 'ATP synthase', color: hex(RESP.synthase) },
           leak:     { name: 'uncoupler (a hole for H⁺)', color: hex(RESP.leak) },
         }, e.proteinKey || {}),
-        carries: Object.assign({ complex:['H'], synthase:['H'], leak:['H'] }, e.carries || {}),
+        carries: Object.assign({ synthase:['H'], leak:['H'] }, e.carries || {}),
       };
     }
 
     return {
-      hooks, P, CHEM, RESP, HALF, line, ALL, ROW, split, hasChain, plugin,
+      hooks, P, CHEM, RESP, HALF, line, ALL, ROW, hasChain, plugin,
       shapes: { solidPart, lathePart, knob, tagged, untag, buildToken, relabel, dropToken, fade, approach, follow, posOf, faceOf, midOf, hex },
-      parts: { COMPLEX, SYNTH, LEAK, CX, ROTOR, HEAD },
-      geom: { CPX_R, F1_BASE, F1_H, F1_R, RING_R, LANE_DX, H_, xs, complexX: () => complexX, synthX: () => synthX },
-      chips, pulse, waiting, leaving, carrierArrive, fuelSpend, clearFuel, lumpedDock,
+      parts: { SYNTH, LEAK, CX, ROTOR, HEAD },
+      geom: { F1_BASE, F1_H, F1_R, RING_R, LANE_DX, H_, xs, synthX: () => synthX },
+      chips, pulse, waiting, leaving, carrierArrive, fuelSpend, clearFuel,
       atp: { ROT, launchNucleotide, chips: atpChips },
       electrons: { sendE, handOff, clearE, E_PER_TURN },
       shuttles: { qTokens, cTokens, qDock, qHome, cHome, cDock, protonateQ, ePill, counts: shuttleCounts, freeQ, reserveQ, releaseQ },
       doors: { pmfNow, backPressure, reMV, protonPool, get protonRef() { return protonRef; }, set protonRef(v) { protonRef = v; } },
-      runner, donor, hub, terminal, lumped, runners, leadRunner, resetChain, feedSplit, feedLumped, fuelRate,
+      runner, donor, hub, terminal, runners, leadRunner, resetChain, feedAt, fuelRate,
       at, emit: eng.emit,
     };
   }
 
   /* ---- one box ----
-     spec is { name, create, signals, api, build(P0), rebuilds(P0, next), zoom(P0) }.
+     spec is { name, create, signals, api, build(P0), rebuilds(P0, next) }.
      `build` returns a handle for a layout Sheet.mount cannot draw (a stack
      of sims) or null; `rebuilds` says when a set() has to tear the box down
-     for one, carrying listeners and the running state across. A chain
-     change flies the camera to `zoom`, or the default for that chain. The
-     context is the component's, not a parameter: one that arrives is dropped
-     with a warning naming the component that draws it. */
+     for one, carrying listeners and the running state across. The context
+     is the component's, not a parameter: one that arrives is dropped with a
+     warning naming the component that draws it; so is `chain`, which the
+     old component had and no page needs. */
   function mount(el, params, spec) {
     const P0 = Object.assign({}, params);
     const subs = [];
     let cur = null;
-    const camFor = p => p.cam || { theta: 0, phi: Math.PI / 2 - 0.10, r: p.chain === 'split' ? 380 : 300 };
+    const camFor = p => p.cam || { theta: 0, phi: Math.PI / 2 - 0.10, r: 380 };
     function build() {
       cur = (spec.build && spec.build(el, P0)) ||
         global.Sheet.mount(el, Object.assign({}, P0, { cam: camFor(P0) }), { name: spec.name, create: spec.create, signals: spec.signals, api: spec.api || ['feed'] });
@@ -1249,6 +1188,7 @@
     const dropContext = next => {
       if (next.context != null && next.context !== spec.context) console.warn(`${spec.name}: draws a ${spec.context}; context:'${next.context}' is ${spec.other || 'another component'}`);
       delete next.context;
+      delete next.chain;   // the whole chain is always drawn
     };
     dropContext(P0);
     build();
@@ -1260,20 +1200,13 @@
       set(next) {
         next = Object.assign({}, next);
         dropContext(next);
-        const chainWas = P0.chain;
         const rebuild = spec.rebuilds ? spec.rebuilds(P0, next) : false;
         Object.assign(P0, next);
         if (rebuild) {
           const running = cur.box.running;
           cur.destroy(); build();
           if (running) cur.start();
-        } else {
-          cur.set(next);
-          if (next.chain != null && next.chain !== chainWas && !params.cam) {
-            const r = spec.zoom ? spec.zoom(P0) : null;
-            cur.box.flyTo({ r: r != null ? r : camFor(P0).r });
-          }
-        }
+        } else cur.set(next);
         return handle;
       },
       state: () => cur.state(), signals: () => spec.signals,

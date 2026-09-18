@@ -37,7 +37,7 @@ const shell = LessonShell.create({
       scene: 'membrane',
       body: '<p class="lead"><strong>Photosystem II absorbs light to extract high-energy electrons from water.</strong></p><p>Water molecules split on the lumen side, releasing oxygen gas as a byproduct and feeding electrons down the chain to Photosystem I to form NADPH.</p>',
       onEnter(ctx) {
-        membrane.set({ chain: 'split', fuel: 'light', fuelRate: 1 });
+        membrane.set({ fuel: 'light', fuelRate: 1 });
         membrane.notes(['psii', 'psi', 'water.split']);
       },
       onExit(ctx) {
@@ -106,7 +106,7 @@ const shell = LessonShell.create({
 });
 
 const organelle = shell.scene('organelle', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset }));
-const membrane = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset, chain: 'split' }));
+const membrane = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset }));
 
 shell.goTo(0);
 </script>

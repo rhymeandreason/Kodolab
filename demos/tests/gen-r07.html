@@ -25,7 +25,6 @@ const shell = LessonShell.create({
       nextLabel: 'Start pumping',
       onEnter(ctx) {
         ET.set({
-          chain: 'lumped',
           span: 'inner',
           fuel: null,
           oxygen: true,
@@ -47,7 +46,6 @@ const shell = LessonShell.create({
       nextLabel: 'See the gradient',
       onEnter(ctx) {
         ET.set({
-          chain: 'split',
           span: 'inner',
           fuel: 'NADH',
           fuelRate: 1,
@@ -75,7 +73,6 @@ const shell = LessonShell.create({
       nextLabel: 'Turn the turbine',
       onEnter(ctx) {
         ET.set({
-          chain: 'lumped',
           span: 'inner',
           fuel: 'NADH',
           fuelRate: 1,
@@ -102,7 +99,6 @@ const shell = LessonShell.create({
       nextLabel: 'Deliver to cell',
       onEnter(ctx) {
         ET.set({
-          chain: 'lumped',
           span: 'inner',
           fuel: 'NADH',
           fuelRate: 1,
@@ -128,7 +124,6 @@ const shell = LessonShell.create({
       body: '<p class="lead"><strong>ATP exits through specialized transporters to power cellular work.</strong></p><p>ADP/ATP translocases and outer membrane porins shuttle newly minted ATP into the cytosol, where it fuels vital processes like ion pumps.</p>',
       onEnter(ctx) {
         ET.set({
-          chain: 'split',
           span: 'cell',
           fuel: 'NADH',
           fuelRate: 1,

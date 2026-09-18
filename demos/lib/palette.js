@@ -358,10 +358,10 @@
        Complex II is the paler one on purpose: it is the member that does
        NOT pump, and the eye should be able to find it. */
     respiration: {
-      /* ONE BLUE FOR THE CHAIN. membrane/membrane.js draws a single generic
-         complex and cell/organelles.js draws complexes I, III and IV
-         separately; they are the same machines at two levels of detail, so
-         they are one colour and the label does the telling apart. Complex II
+      /* ONE BLUE FOR THE CHAIN. chemiosmosis/electron-transport.js and
+         cell/organelles.js both draw complexes I, III and IV, at two rungs;
+         they are the same machines, so they are one colour and the label
+         does the telling apart. Complex II
          is the exception, and the only one: it is the member that does NOT
          pump, which is why FADH2 is worth less ATP than NADH, and a reader
          should be able to find it without reading. */
@@ -411,14 +411,14 @@
   PALETTE.respiration.proton = PALETTE.atoms.H;
   PALETTE.organelles.chloroplast.dna = PALETTE.organelles.mitochondrion.dna;
 
-  /* THE LIGHT REACTIONS, at cell/chloroplast.js's rung. Three machines where
-     respiration draws one family: the two photosystems are the parts a
-     photosynthesis lesson names, so each gets a hue of its own. THE PUMP IS
-     MEMBRANE'S COMPLEX: cytochrome b6f is the thing membrane/membrane.js draws
-     as its one indigo machine in a thylakoid, so it is read from
+  /* THE LIGHT REACTIONS, at cell/chloroplast.js's rung and
+     chemiosmosis/light-reactions.js's. Three machines where respiration
+     draws one family: the two photosystems are the parts a photosynthesis
+     lesson names, so each gets a hue of its own. THE PUMP IS THE CHAIN'S
+     INDIGO: cytochrome b6f does complex III's job, so it is read from
      `respiration.complex` rather than typed, and the synthase is the same
-     gold in all three boxes. Set after the literal for the same reason the
-     proton is. */
+     gold in every box. Set after the literal for the same reason the proton
+     is. */
   PALETTE.photosynthesis = {
     psii: 0x2b7f9c,      // splits water: teal, on the blue side of the chain
     psi:  0x7a5aa6,      // lifts the electron again for NADPH: violet

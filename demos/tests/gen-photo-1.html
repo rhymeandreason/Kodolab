@@ -40,7 +40,7 @@ const shell = LessonShell.create({
       scene: 'membrane',
       body: '<p class="lead"><strong>Sunlight drives the extraction of electrons by splitting water.</strong></p><p>Photons strike Photosystem II (PSII), exciting electrons that are passed down the transport chain. To replace them, PSII splits H₂O in the lumen, releasing O₂ as a byproduct and releasing protons.</p>',
       onEnter(ctx) {
-        lightMem.set({ chain: 'split', fuel: 'light', fuelRate: 1 });
+        lightMem.set({ fuel: 'light', fuelRate: 1 });
         lightMem.notes(['psii', 'water.split', 'oxygen']);
         ctx.ui.controls('<div class="callout">Water splitting directly enriches the thylakoid lumen with protons.</div>');
       },
@@ -115,7 +115,7 @@ const shell = LessonShell.create({
 });
 
 const chloro = shell.scene('organelle', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.8 }));
-const lightMem = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset, chain: 'split', fuel: 'light', fuelRate: 1 }));
+const lightMem = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset, fuel: 'light', fuelRate: 1 }));
 
 shell.goTo(0);
 </script>

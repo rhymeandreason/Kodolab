@@ -47,7 +47,7 @@ const shell = LessonShell.create({
       body: '<p class="lead"><strong>Light strips electrons from water at Photosystem II.</strong> This reaction releases molecular oxygen as a byproduct.</p><p>Every water molecule split contributes protons directly into the inner thylakoid lumen, beginning the proton gradient.</p>',
       nextLabel: 'Follow the gradient',
       onEnter(ctx) {
-        lr.set({ fuel: 'light', fuelRate: 1, chain: 'split' });
+        lr.set({ fuel: 'light', fuelRate: 1 });
         lr.notes(['psii', 'water.split', 'oxygen']);
         ctx.ui.controls('<div class="stats stat-grid"><div class="stat"><div class="stat-label">Waters Split</div><div class="stat-value" id="h2o-count" data-live>0</div></div><div class="stat"><div class="stat-label">O₂ Released</div><div class="stat-value" id="o2-count" data-live>0</div></div></div>');
         const u = lr.on('frame', s => {
@@ -67,7 +67,7 @@ const shell = LessonShell.create({
       body: '<p class="lead"><strong>Cytochrome b6f pumps protons into the lumen to drive ATP synthesis.</strong> Protons flow back down their gradient through ATP synthase into the stroma.</p><p>The catalytic head in the stroma uses this rotational energy to synthesize ATP from ADP and inorganic phosphate.</p>',
       nextLabel: 'Generate NADPH',
       onEnter(ctx) {
-        lr.set({ fuel: 'light', fuelRate: 1, chain: 'split' });
+        lr.set({ fuel: 'light', fuelRate: 1 });
         lr.notes(['b6f', 'synthase']);
         ctx.ui.controls('<div class="stats stat-grid"><div class="stat"><div class="stat-label">Proton Force (pmf)</div><div class="stat-value" id="pmf-val" data-live>0 mV</div></div><div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="atp-val" data-live>0</div></div></div>');
         const u = lr.on('frame', s => {
@@ -87,7 +87,7 @@ const shell = LessonShell.create({
       body: '<p class="lead"><strong>Photosystem I re-energizes electrons to form NADPH.</strong> Both ATP and NADPH are released into the stroma.</p><p>These two products enter the Calvin cycle in the stroma to fix CO₂ into glucose. Try adjusting the light level to see how photon supply governs both fuel carriers.</p>',
       nextLabel: 'Finish',
       onEnter(ctx) {
-        lr.set({ fuel: 'light', fuelRate: 1, chain: 'split' });
+        lr.set({ fuel: 'light', fuelRate: 1 });
         lr.notes(['psi', 'nadph']);
         ctx.ui.controls('<div class="slider"><div class="slider-head"><span class="label">Light Intensity</span><span class="value" id="light-val" data-live>100%</span></div><input type="range" id="light-slider" min="0" max="1" step="0.05" value="1"></div><div class="stats stat-grid"><div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="final-atp" data-live>0</div></div><div class="stat"><div class="stat-label">NADPH Made</div><div class="stat-value" id="final-nadph" data-live>0</div></div></div>');
         const slider = ctx.ui.q('#light-slider');
@@ -112,7 +112,6 @@ const shell = LessonShell.create({
 const cp = shell.scene('chloroplast', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.8 }));
 const lr = shell.scene('reactions', el => LightReactions.mount(el, {
   viewOffset: shell.viewOffset,
-  chain: 'split',
   fuel: 'light',
   fuelRate: 1,
   showATP: true,

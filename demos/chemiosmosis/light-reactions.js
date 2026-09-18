@@ -23,13 +23,13 @@
  *      protonsPerNADPH(f) · atpPerNADPH(f) · photonsPerNADPH(f) · cyclicToBalance()
  *                       walked off the table, never typed
  *
- *      proteins: { complex | PSII | b6f | PSI | synthase | leak: {x} | null }
+ *      proteins: { PSII | b6f | PSI | synthase | leak: {x} | null }
+ *                 or complex: {x}, the chain's centre, spread into the three
  *
- *      chain  'lumped'  one complex stands for the chain, 2 H⁺ a turn
- *             'split'   PSII, b6f and PSI, plastoquinone in the membrane,
- *                       plastocyanin in the lumen, ferredoxin and FNR in the
- *                       stroma; PSII splits water into lumen protons and O₂,
- *                       FNR makes NADPH, both fire on light
+ *  THE WHOLE CHAIN, ALWAYS: PSII, b6f and PSI, plastoquinone in the
+ *  membrane, plastocyanin in the lumen, ferredoxin and FNR in the stroma;
+ *  PSII splits water into lumen protons and O₂, FNR makes NADPH, both fire
+ *  on light.
  *
  *  WHAT A PHOTON DOES, drawn: it lands on the antenna (the light-harvesting
  *  belt behind each photosystem), the excitation hops to the reaction
@@ -169,7 +169,6 @@
     const { knob, tagged, dropToken, relabel, fade, approach, follow, posOf, midOf, hex, buildToken } = K.shapes;
     const xs = K.geom.xs, H_ = K.geom.H_;
     const { chips } = K;
-    const split = K.split;
 
     /* ---- what hangs off the machines ----
        THE ANTENNA BELT sits behind the core in this view: the membrane is
@@ -498,22 +497,16 @@
       if (!K.hasChain(P.proteins)) return false;
       const f = fuel || P.fuel || 'light';
       if (!FUELS[f]) { console.warn('LightReactions: no fuel named ' + f + '; have ' + Object.keys(FUELS).join(', ')); return false; }
-      if (split()) {
-        const ok = K.feedSplit('PSII', f, null);
-        if (ok) { credit.PSI++; if (opts.cyclic) { credit.PSI++; cyclicDue = 1; } }
-        return ok;
-      }
-      return K.feedLumped(f, null);
+      const ok = K.feedAt('PSII', f, null);
+      if (ok) { credit.PSI++; if (opts.cyclic) { credit.PSI++; cyclicDue = 1; } }
+      return ok;
     }
 
     /* ---- the words ---- */
     function cards(library) {
       library.outside.card = 'The stroma, around the outside of the thylakoid disc. ATP and NADPH are made here, and the Calvin cycle spends both to fix carbon. Protons leave from this side and come back through the synthase.';
-      library.complex.text = split() ? 'cytochrome b6f' : 'the light-driven chain';
-      library.complex.card = split() ? library.b6f.card
-        : 'Photosystem II splits water and starts the electrons moving, cytochrome b6f is the one that pumps, and photosystem I lifts them again for NADPH. Drawn as one machine. Light is the fuel, so the dimmer is a rate knob and darkness stops it.';
       library.inside.card  = 'The lumen, the space enclosed by the disc. Light drives protons in here, so this is the acidic side: the energy from the photons is now a gradient across this membrane.'
-        + (split() ? ` ${protonsPerPair()} arrive per pair of electrons: ${CHAIN.PSII.fromWater} from water at PSII, ${CHAIN.b6f.pumps} pumped by b6f.` : '')
+        + ` ${protonsPerPair()} arrive per pair of electrons: ${CHAIN.PSII.fromWater} from water at PSII, ${CHAIN.b6f.pumps} pumped by b6f.`
         + ' It is the same space as a mitochondrion\'s intermembrane space, both of them the OUTSIDE of the bacterium each organelle came from, which is why the two diagrams are mirrored.';
     }
 
@@ -529,42 +522,42 @@
         oecLabel();
       },
       afterSheet() {
-        if (split()) { buildFd(); homeFd(); for (const f of fdTokens) { Object.assign(f, f.to); seat(f.obj, f.x, f.y, 0); } }
-        else dropFd();
+        buildFd(); homeFd();
+        for (const f of fdTokens) { Object.assign(f, f.to); seat(f.obj, f.x, f.y, 0); }
       },
       post(dt) { tickPhotons(dt); tickWater(dt); if (fdTokens.length) tickFd(dt); },
       state(base, s) {
-        const sh = K.shuttles.counts(), sp = s.chain === 'split';
+        const sh = K.shuttles.counts();
         return {
-          protonsPerFuel: sp ? { light: protonsPerPair() } : null,
-          shuttles: sp ? { plastoquinol: sh.reduced, plastocyaninLoaded: sh.loaded,
-                           ferredoxinLoaded: fdTokens.filter(f => f.state === 'toFNR' || f.state === 'toQ').length } : null,
-          /* The light reactions' own ledger, split only: every count is an
-             event that happened, and the ratios are the table's. `measured`
-             ATP per NADPH is this run's, off the rotor against the ledger;
-             it settles toward `expected` over a long run and is null before
-             the first NADPH. */
-          light: sp ? Object.assign({}, lightLedger, {
+          protonsPerFuel: { light: protonsPerPair() },
+          shuttles: { plastoquinol: sh.reduced, plastocyaninLoaded: sh.loaded,
+                      ferredoxinLoaded: fdTokens.filter(f => f.state === 'toFNR' || f.state === 'toQ').length },
+          /* The light reactions' own ledger: every count is an event that
+             happened, and the ratios are the table's. `measured` ATP per
+             NADPH is this run's, off the rotor against the ledger; it
+             settles toward `expected` over a long run and is null before the
+             first NADPH. */
+          light: Object.assign({}, lightLedger, {
             photonsPerPair: photonsPerPair(), protonsPerO2: protonsPerO2(), photonsPerO2: photonsPerO2(),
             oec: { stored: oecS, of: OEC_STATES, watersBound: psiiWater.length },
             cyclic: P.cyclic || 0, cyclicToBalance: cyclicToBalance(),
             atpPerNADPH: { linear: atpPerNADPH(0), expected: atpPerNADPH(P.cyclic || 0), calvin: CALVIN.atp / CALVIN.nadph,
                            measured: lightLedger.nadphMade ? +(s.atpMade / lightLedger.nadphMade).toFixed(2) : null },
-          }) : null,
+          }),
         };
       },
       reset() { for (const k in lightLedger) lightLedger[k] = 0; },
       anchors: {
-        psii:     () => split() && P.proteins.PSII ? K.at(xs.PSII, H_() * 0.98) : null,
-        b6f:      () => split() && P.proteins.b6f ? K.at(xs.b6f, H_() * 0.98) : null,
-        psi:      () => split() && P.proteins.PSI ? K.at(xs.PSI, H_() * 0.98) : null,
-        antenna:  () => split() && P.proteins.PSII ? K.at(xs.PSII - 4, -pumpDir() * (HALF + 8)) : null,
+        psii:     () => P.proteins.PSII ? K.at(xs.PSII, H_() * 0.98) : null,
+        b6f:      () => P.proteins.b6f ? K.at(xs.b6f, H_() * 0.98) : null,
+        psi:      () => P.proteins.PSI ? K.at(xs.PSI, H_() * 0.98) : null,
+        antenna:  () => P.proteins.PSII ? K.at(xs.PSII - 4, -pumpDir() * (HALF + 8)) : null,
         plastoquinone: () => K.shuttles.qTokens.length ? K.shuttles.qTokens[0].obj.position : null,
         plastocyanin:  () => K.shuttles.cTokens.length ? K.shuttles.cTokens[0].obj.position : null,
         ferredoxin: () => fdTokens.length ? fdTokens[0].obj.position : null,
-        fnr:      () => split() && P.proteins.PSI ? K.at(xs.PSI + FNR_DX, -pumpDir() * (FNR.userData.baseY + 3)) : null,
+        fnr:      () => P.proteins.PSI ? K.at(xs.PSI + FNR_DX, -pumpDir() * (FNR.userData.baseY + 3)) : null,
         nadph:    () => chips.PSI ? chips.PSI.obj.position : null,
-        'water.split': () => split() && P.proteins.PSII ? K.at(oecAt().x, oecAt().y) : null,
+        'water.split': () => P.proteins.PSII ? K.at(oecAt().x, oecAt().y) : null,
         oxygen:   () => psiiO2.length ? psiiO2[0].obj.position : null,
       },
       library: {
@@ -601,18 +594,17 @@
   }
 
   /* ---- the sim ----
-     A create with no params is a thylakoid in the light: a complex, a
+     A create with no params is a thylakoid in the light: the chain, a
      synthase, and a gradient's worth of protons. Light is the fuel, because
      NADH in a chloroplast is a page that will not turn. */
-  function defaultProteins(chain) {
-    return chain === 'split' ? { complex:{ x:-60 }, synthase:{ x:80 } } : { complex:{ x:-80 }, synthase:{ x:40 } };
-  }
+  const defaultProteins = () => ({ complex:{ x:-60 }, synthase:{ x:80 } });
   function create(THREE, root, camera, opts = {}) {
     if (!global.Sheet || !global.Circuit) throw new Error('LightReactions: load membrane/parts.js, membrane/sheet.js and chemiosmosis/circuit.js first');
     const P = Object.assign({ componentName: 'LightReactions' }, global.Sheet.DEFAULTS, global.Circuit.DEFAULTS, DEFAULTS,
       { potential: 'nernst', fuel: 'light' }, opts, { context: 'thylakoid' });
     P.E = Object.assign({}, global.Sheet.DEFAULTS.E, opts.E || {});
-    P.proteins = Object.assign({}, opts.proteins || defaultProteins(P.chain));
+    delete P.chain;
+    P.proteins = Object.assign({}, opts.proteins || defaultProteins());
     return global.Sheet.create(THREE, root, camera, P, [machine]);
   }
   const SIGNALS = Object.assign({}, global.Circuit ? global.Circuit.SIGNALS : {});
