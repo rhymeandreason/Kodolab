@@ -1719,29 +1719,40 @@
         body(sites.b6f, gB6f, PHO.b6f, 0.15, 0.36, null);
         body(sites.psi, gPsi, PHO.psi, 0.19, 0.32, { r: 0.10, at: 0.22 });
         g.userData.psiiMaterial = psiiMat;
-        /* ATP synthase: CFo in the membrane, a stalk, a CF1 head of three
-           lobes — one ATP per third of a turn, so the beats can be counted.
-           The head turns; the component drives it through spinRotors. */
+        /* ATP synthase: a CFo c-ring in the membrane, a central stalk, and a
+           CF1 head drawn as one mushroom cap. The ROTOR turns (c-ring and
+           stalk); the head is held still by the peripheral stalk. Fourteen c
+           subunits, a spinach chloroplast's, where the mitochondrion draws
+           eight. The component drives the ring through spinRotors. */
         const ns = sites.synthase.length;
         if (ns) {
+          const C_RING = 14;
           const gold = mat({ color: PHO.synthase, roughness: 0.38, clearcoat: 0.45 });
           const stalkMat = mat({ color: PHO.stalk, roughness: 0.45, clearcoat: 0.3 });
-          const fo = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.17, 0.17, 0.26, 10), gold, ns);
+          const hub = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.14, 0.14, 0.26, 12), stalkMat, ns);
+          const ring = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.042, 0.042, 0.26, 8), gold, ns * C_RING);
           const stalk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 0.30, 6), stalkMat, ns);
-          const f1 = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 10, 8), gold, ns * 3);
+          // A lathe dome: flat underneath, rounding over the top along the axis.
+          const capPts = [new THREE.Vector2(0, 0), new THREE.Vector2(0.14, 0), new THREE.Vector2(0.245, 0.023)];
+          for (let k = 1; k <= 8; k++) {
+            const t = (k / 8) * PI / 2;
+            capPts.push(new THREE.Vector2(0.245 * Math.cos(t), 0.023 + 0.175 * Math.sin(t)));
+          }
+          const f1 = new THREE.InstancedMesh(new THREE.LatheGeometry(capPts, 20), gold, ns);
           const rotors = [];
           sites.synthase.forEach((s, i) => {
-            place(fo, i, s.p.clone(), s.out);
+            place(hub, i, s.p.clone(), s.out);
             place(stalk, i, s.p.clone().addScaledVector(s.out, 0.27), s.out);
             const u = new V3(0, 1, 0).cross(s.out);
             if (u.lengthSq() < 1e-6) u.set(1, 0, 0);
             u.normalize();
             const v = s.out.clone().cross(u).normalize();
-            rotors.push({ i, centre: s.p.clone().addScaledVector(s.out, 0.50), u, v, lobeR: 0.15 });
+            place(f1, i, s.p.clone().addScaledVector(s.out, 0.40), s.out);
+            rotors.push({ i, n: C_RING, centre: s.p.clone(), u, v, lobeR: 0.19, q: new THREE.Quaternion().setFromUnitVectors(Y, s.out) });
           });
-          gSynthase.add(fo, stalk, f1);
-          spinRotors(f1, rotors, 0);
-          g.userData.rotors = { mesh: f1, list: rotors };
+          gSynthase.add(hub, ring, stalk, f1);
+          spinRotors(ring, rotors, 0);
+          g.userData.rotors = { mesh: ring, list: rotors };
         }
       }
 
