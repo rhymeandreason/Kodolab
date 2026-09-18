@@ -6,137 +6,154 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mitochondrial Chemiosmosis</title>
-<style>
-.stat-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
-.graph-slot { width: 100%; height: 130px; margin-top: 10px; }
-</style>
+<title>At the Inner Mitochondrial Membrane</title>
 </head>
 <body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="../kit/app.js" data-shell="steps" data-use="Membrane,Graph"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="ElectronTransport"></script>
 <script>
-let g = null;
 const shell = LessonShell.create({
   brand: 'Cellular Respiration',
   hint: 'Drag to orbit · Scroll to zoom',
-  ctx: { unsubs: [] },
+  ctx: { state: {} },
   steps: [
     {
-      eyebrow: 'Step 1 of 4 · Oxidation',
-      title: 'Glucose breakdown delivers fuel as NADH',
-      body: '<p><b>Digested sugars feed the Krebs cycle, loading electrons onto NADH.</b></p><p>At the inner mitochondrial membrane, electron transport complexes oxidize NADH and use the released energy to pump protons (H⁺) out of the matrix into the intermembrane space.</p>',
-      nextLabel: 'Check the gradient',
+      eyebrow: 'Harvested Fuel',
+      title: 'Sugar arrives as electron carriers',
+      body: '<p class="lead"><strong>Breaking down glucose fills the mitochondrial matrix with NADH.</strong></p><p>Glycolysis and the citric acid cycle strip high-energy electrons from digested sugars and load them onto electron carriers. In the matrix, NADH docks at the inner membrane machines to deliver its electron cargo.</p>',
+      nextLabel: 'Start pumping',
       onEnter(ctx) {
-        m.set({ fuel: 'NADH', fuelRate: 1, proteins: { complex: { x: -60 }, synthase: { x: 50 }, leak: null } });
-        m.notes(['complex', 'H']);
-        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Complex state</div><div class="stat-value" id="c-state">Active</div></div><div class="stat"><div class="stat-label">Protons pumped</div><div class="stat-value" id="p-pumped">0</div></div></div>');
-        const unsub = m.on('frame', s => {
-          const cs = ctx.ui.q('#c-state');
-          const pp = ctx.ui.q('#p-pumped');
-          if (cs && s.complexLabel) cs.textContent = s.complexLabel;
-          if (pp && s.counts && s.counts.H) pp.textContent = s.counts.H.outside;
+        ET.set({
+          chain: 'lumped',
+          span: 'inner',
+          fuel: null,
+          oxygen: true,
+          showATP: false,
+          showFuel: true
         });
-        ctx.unsubs.push(unsub);
+        ET.notes(['complex', 'matrix']);
+        ctx.ui.controls('<div class="callout">Matrix fuel supply waiting. Click <strong>Feed NADH</strong> to watch one carrier drop off its electrons.</div><button class="btn primary" id="feed-btn">Feed NADH</button>');
+        ctx.ui.q('#feed-btn').onclick = () => ET.feed('NADH');
       },
-      onExit(ctx) {
-        ctx.unsubs.forEach(u => u());
-        ctx.unsubs = [];
+      onExit() {
+        ET.notes(false);
       }
     },
     {
-      eyebrow: 'Step 2 of 4 · The Gradient',
-      title: 'Protons accumulate outside the matrix',
-      body: '<p><b>Continuous pumping builds a steep electrochemical gradient.</b></p><p>Because the lipid bilayer is impermeable to charged protons, H⁺ accumulates in the intermembrane space, producing both a pH difference (ΔpH) and a membrane voltage that form the proton-motive force (pmf).</p>',
-      nextLabel: 'Power the turbine',
+      eyebrow: 'Electron Transport',
+      title: 'Electron transfer drives proton pumping',
+      body: '<p class="lead"><strong>Complexes use electron energy to pump protons across the inner membrane.</strong></p><p>As electrons pass through the respiratory complexes to oxygen, protons (H⁺) are pumped out of the matrix into the intermembrane space.</p>',
+      nextLabel: 'See the gradient',
       onEnter(ctx) {
-        m.notes(['outside', 'inside']);
-        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton-motive force</div><div class="stat-value" id="pmf-val">0 mV</div></div><div class="stat"><div class="stat-label">ΔpH (matrix vs IMS)</div><div class="stat-value" id="dp-val">0.0</div></div></div>');
-        const unsub = m.on('frame', s => {
-          const pv = ctx.ui.q('#pmf-val');
-          const dv = ctx.ui.q('#dp-val');
-          if (pv && s.pmf !== undefined) pv.textContent = Math.round(s.pmf) + ' mV';
-          if (dv && s.dpH !== undefined) dv.textContent = s.dpH.toFixed(2);
+        ET.set({
+          chain: 'split',
+          span: 'inner',
+          fuel: 'NADH',
+          fuelRate: 1,
+          oxygen: true,
+          showATP: false,
+          showFuel: true
         });
-        ctx.unsubs.push(unsub);
+        ET.notes(['complex.I', 'complex.III', 'complex.IV']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton-motive force</div><div class="stat-value" id="pmf-val" data-live>0 mV</div><div class="stat-sub">stored electrical & chemical potential</div></div></div>');
+        const unbind = ET.on('frame', s => {
+          const el = ctx.ui.q('#pmf-val');
+          if (el) el.textContent = Math.round(s.pmf) + ' mV';
+        });
+        ctx.state.unbind = unbind;
       },
       onExit(ctx) {
-        ctx.unsubs.forEach(u => u());
-        ctx.unsubs = [];
+        if (ctx.state.unbind) ctx.state.unbind();
+        ET.notes(false);
       }
     },
     {
-      eyebrow: 'Step 3 of 4 · ATP Synthesis',
-      title: 'ATP synthase harnesses the proton motive force',
-      body: '<p><b>Protons rush back into the matrix through ATP synthase.</b></p><p>The flow rotates the turbine, catalyzing the phosphorylation of ADP into ATP. This coupling of electron transport to ATP production is chemiosmosis.</p>',
-      nextLabel: 'Test metabolic changes',
+      eyebrow: 'Chemiosmosis',
+      title: 'The electrochemical gradient',
+      body: '<p class="lead"><strong>Protons cannot cross the lipid bilayer on their own.</strong></p><p>Because the inner membrane is impermeable to ions, pumped protons become trapped in the intermembrane space. This creates a steep concentration and electrical gradient known as the proton-motive force.</p>',
+      nextLabel: 'Turn the turbine',
       onEnter(ctx) {
-        m.notes(['synthase']);
-        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">ATP synthesized</div><div class="stat-value" id="atp-val">0</div></div><div class="stat"><div class="stat-label">Synthase transits</div><div class="stat-value" id="flow-val">0</div></div></div><div class="graph-slot" id="chart"></div>');
-        const chartEl = ctx.ui.q('#chart');
-        if (chartEl) {
-          g = Graph.mount(chartEl, { live: { span: 60 }, height: 120 }).follow(m, 'atp');
-        }
-        const unsub = m.on('frame', s => {
-          const av = ctx.ui.q('#atp-val');
-          const fv = ctx.ui.q('#flow-val');
-          if (av && s.atpMade !== undefined) av.textContent = s.atpMade;
-          if (fv && s.protonsThroughSynthase !== undefined) fv.textContent = s.protonsThroughSynthase;
+        ET.set({
+          chain: 'lumped',
+          span: 'inner',
+          fuel: 'NADH',
+          fuelRate: 1,
+          oxygen: true,
+          showATP: false
         });
-        ctx.unsubs.push(unsub);
+        ET.notes(['synthase', 'H']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Intermembrane pH vs Matrix pH</div><div class="stat-value" id="dp-val" data-live>ΔpH 0.0</div><div class="stat-sub">concentration difference</div></div></div>');
+        const unbind = ET.on('frame', s => {
+          const el = ctx.ui.q('#dp-val');
+          if (el) el.textContent = 'ΔpH ' + s.dpH.toFixed(2);
+        });
+        ctx.state.unbind = unbind;
       },
       onExit(ctx) {
-        if (g) { g.destroy(); g = null; }
-        ctx.unsubs.forEach(u => u());
-        ctx.unsubs = [];
+        if (ctx.state.unbind) ctx.state.unbind();
+        ET.notes(false);
       }
     },
     {
-      eyebrow: 'Step 4 of 4 · Metabolic Control',
-      title: 'Vary fuel supply or induce a proton leak',
-      body: '<p><b>ATP yield depends on fuel supply and membrane integrity.</b></p><p>Lower fuel delivery to simulate fasting after sugar clearance, or open a proton leak (uncoupler) to watch energy dissipate as heat instead of forming ATP.</p>',
+      eyebrow: 'ATP Synthesis',
+      title: 'The turbine makes cellular energy',
+      body: '<p class="lead"><strong>ATP synthase taps the gradient to synthesize ATP.</strong></p><p>Protons rush back down their gradient through ATP synthase, turning its central rotor like a turbine to join ADP and inorganic phosphate into ATP.</p>',
+      nextLabel: 'Deliver to cell',
       onEnter(ctx) {
-        m.notes(false);
-        ctx.ui.controls('<div class="slider"><div class="slider-head"><span class="label">NADH Fuel Supply</span><span class="value" id="fuel-disp">100%</span></div><input type="range" id="fuel-slider" min="0" max="1" step="0.05" value="1"></div><div class="switch" style="margin-top:12px;"><label><input type="checkbox" id="leak-toggle"> <span class="track"></span> Enable uncoupling proton leak</label></div><div class="stats" style="margin-top:12px;"><div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="tot-atp">0</div></div><div class="stat"><div class="stat-label">Protons Leaked</div><div class="stat-value" id="tot-leak">0</div></div></div>');
-        ctx.ui.range(ctx.ui.q('#fuel-slider'), v => {
-          m.set({ fuelRate: v }, { snap: true });
-          const fd = ctx.ui.q('#fuel-disp');
-          if (fd) fd.textContent = Math.round(v * 100) + '%';
+        ET.set({
+          chain: 'lumped',
+          span: 'inner',
+          fuel: 'NADH',
+          fuelRate: 1,
+          oxygen: true,
+          showATP: true
         });
-        const leakBox = ctx.ui.q('#leak-toggle');
-        if (leakBox) {
-          leakBox.addEventListener('change', e => {
-            m.set({ proteins: { complex: { x: -60 }, synthase: { x: 50 }, leak: e.target.checked ? { x: -5 } : null } });
-          });
-        }
-        const unsub = m.on('frame', s => {
-          const ta = ctx.ui.q('#tot-atp');
-          const tl = ctx.ui.q('#tot-leak');
-          if (ta && s.atpMade !== undefined) ta.textContent = s.atpMade;
-          if (tl && s.protonsLeaked !== undefined) tl.textContent = s.protonsLeaked;
+        ET.notes(['synthase']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">ATP Synthesized</div><div class="stat-value" id="atp-val" data-live>0</div><div class="stat-sub">molecules released into matrix</div></div></div>');
+        const unbind = ET.on('frame', s => {
+          const el = ctx.ui.q('#atp-val');
+          if (el) el.textContent = s.atpMade;
         });
-        ctx.unsubs.push(unsub);
+        ctx.state.unbind = unbind;
       },
       onExit(ctx) {
-        ctx.unsubs.forEach(u => u());
-        ctx.unsubs = [];
+        if (ctx.state.unbind) ctx.state.unbind();
+        ET.notes(false);
+      }
+    },
+    {
+      eyebrow: 'Cellular Export',
+      title: 'Powering the rest of the cell',
+      body: '<p class="lead"><strong>ATP exits through specialized transporters to power cellular work.</strong></p><p>ADP/ATP translocases and outer membrane porins shuttle newly minted ATP into the cytosol, where it fuels vital processes like ion pumps.</p>',
+      onEnter(ctx) {
+        ET.set({
+          chain: 'split',
+          span: 'cell',
+          fuel: 'NADH',
+          fuelRate: 1,
+          oxygen: true,
+          showATP: true
+        });
+        ET.notes(['translocase', 'porin', 'pump']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="total-atp" data-live>0</div></div><div class="stat"><div class="stat-label">Cell Work (Pump Turns)</div><div class="stat-value" id="pump-spent" data-live>0</div></div></div>');
+        const unbind = ET.on('frame', s => {
+          const atpEl = ctx.ui.q('#total-atp');
+          const spentEl = ctx.ui.q('#pump-spent');
+          if (atpEl) atpEl.textContent = s.atpMade;
+          if (spentEl && s.cell) spentEl.textContent = s.cell.atpSpent;
+        });
+        ctx.state.unbind = unbind;
+      },
+      onExit(ctx) {
+        if (ctx.state.unbind) ctx.state.unbind();
+        ET.notes(false);
       }
     }
   ]
 });
 
-const m = Membrane.mount(shell.stage, {
-  context: 'mitochondrion',
-  fuel: 'NADH',
-  fuelRate: 1,
-  proteins: { complex: { x: -60 }, synthase: { x: 50 }, leak: null },
-  contents: { inside: { water: 30, H: 22 }, outside: { water: 30, H: 22 } },
-  potential: 'nernst',
-  sideLabels: true,
-  viewOffset: shell.viewOffset
-});
-
+const ET = ElectronTransport.mount(shell.stage, { viewOffset: shell.viewOffset });
 shell.goTo(0);
 </script>
 </body>

@@ -42,6 +42,7 @@
 <script src="../kit/card-stage.js"></script>
 <script src="../kit/lesson-shell.js"></script>
 <script src="../membrane/chemiosmosis.js"></script>
+<script src="../chemiosmosis/light-reactions.js"></script>
 <script src="../cell/organelles.js"></script>
 <script src="../cell/chloroplast.js"></script>
 <script>
@@ -166,7 +167,7 @@ function bench(ctx) {
     ui.q('#rd-leak').textContent = s.leaked;
     ui.q('#rd-sel').textContent = s.selected ? NAMES[s.selected].text : '—';
     ui.q('#rd-stoich').textContent =
-      `${s.stoichiometry.protonsPerTurn} H⁺ a turn, ${s.stoichiometry.atpPerTurn} ATP a turn, read from membrane/chemiosmosis.js. ` +
+      `${s.stoichiometry.protonsPerTurn} H⁺ a turn, ${s.stoichiometry.atpPerTurn} ATP a turn, read from LightReactions's ring. ` +
       `${s.stoichiometry.protonsPerO2} H⁺ from water per O₂, ${s.stoichiometry.protonsPerNADPH} per NADPH. ` +
       `Grana about ${Math.round(s.granumNm)} nm across, ${s.thylakoidsPerGranum} thylakoids each; ` +
       `membranes drawn at ${Math.round(s.membraneNm)} nm against a real 4.`;

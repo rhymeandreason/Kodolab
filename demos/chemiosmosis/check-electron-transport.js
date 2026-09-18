@@ -30,8 +30,6 @@ console.log('== 1. the rotor, on the mitochondrion\'s ring');
   for (let i = 1; i <= 5000; i++) { r.pass(1); worst = Math.max(worst, r.atp * R.protonsPerTurn / R.atpPerTurn - r.protons); }
   is(worst <= 0, `over 5000 protons the ATP never outran what was paid (worst ${worst})`);
   is(r.atp === Math.floor(5000 * R.atpPerTurn / R.protonsPerTurn), `${r.atp} ATP for 5000 protons, the declared ${R.atpPerTurn} per ${R.protonsPerTurn}`);
-  is(C.PROTONS_PER_TURN === R.protonsPerTurn && C.ATP_PER_TURN === R.atpPerTurn,
-     'the core\'s default ring is this one, so an organelle box reading the core agrees with the membrane');
 }
 
 /* ---- 2. the fuels ---- */

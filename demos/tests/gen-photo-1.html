@@ -6,138 +6,116 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Photosynthesis and Chemiosmosis</title>
-<link rel="stylesheet" href="../css/kodo.css">
-<link rel="stylesheet" href="../css/lesson-shell.css">
+<title>From Sunlight to Sugar</title>
+<style>
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; }
+</style>
 </head>
 <body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="../lib/palette.js"></script>
-<script src="../lib/tokens-from-palette.js"></script>
-<script src="../lib/molecules.js"></script>
-<script src="../lib/mol-small.js"></script>
-<script src="../lib/scene.js"></script>
-<script src="../lib/atomkit.js"></script>
-<script src="../lib/annotate.js"></script>
-<script src="../kit/card-stage.js"></script>
-<script src="../membrane/parts.js"></script>
-<script src="../membrane/pump.js"></script>
-<script src="../membrane/chemiosmosis.js"></script>
-<script src="../membrane/sheet.js"></script>
-<script src="../chemiosmosis/circuit.js"></script>
-<script src="../chemiosmosis/electron-transport.js"></script>
-<script src="../chemiosmosis/light-reactions.js"></script>
-<script src="../membrane/membrane.js"></script>
-<script src="../kit/lesson-shell.js"></script>
-
+<script src="../kit/app.js" data-shell="steps" data-use="Chloroplast,LightReactions"></script>
 <script>
-let unsubs = [];
-function clearSubs() {
-  unsubs.forEach(fn => fn());
-  unsubs = [];
-}
-
 const shell = LessonShell.create({
-  brand: 'Photosynthesis: The Thylakoid Membrane',
+  brand: 'Photosynthesis: Light to Sugar',
   hint: 'Drag to orbit · Scroll to zoom',
   ctx: {},
   steps: [
     {
-      eyebrow: 'Solar Powerhouse',
-      title: 'How chloroplasts capture light',
-      body: '<p><b>Plants convert radiant sunlight into stable chemical energy across the thylakoid membrane inside chloroplasts.</b> Light-harvesting complexes capture photons to energize electrons and pump protons across the lipid bilayer.</p><p>Explore the two compartments: the outer <em>stroma</em> where sugar synthesis occurs, and the inner <em>lumen</em> where protons collect.</p>',
-      nextLabel: 'Shine light',
+      eyebrow: 'Organelle Scale',
+      title: 'The chloroplast captures light',
+      scene: 'organelle',
+      body: '<p class="lead"><strong>Light reactions happen inside membrane-bound compartments called thylakoids.</strong></p><p>Chloroplasts contain discs stacked into grana suspended in a fluid called the stroma. The thylakoids enclose a continuous inner space known as the lumen.</p>',
       onEnter(ctx) {
-        clearSubs();
-        m.notes(false);
-        m.set({
-          fuel: 'light',
-          fuelRate: 0,
-          proteins: { complex: { x: -60 }, synthase: { x: 50 }, leak: null }
-        });
-        ctx.ui.showPanel(m, { notes: ['complex', 'synthase', 'heads'], layers: ['water', 'ions'] });
+        chloro.notes(['granum', 'stroma']);
+        ctx.ui.controls('<div class="callout">Photosystems embedded in the thylakoid membranes convert photons into chemical energy.</div>');
+      },
+      onExit() {
+        chloro.notes(false);
       }
     },
     {
-      eyebrow: 'Light Reactions',
-      title: 'Building the proton gradient',
-      body: '<p><b>Absorbed photons drive the photosynthetic complexes to pump protons into the thylakoid lumen.</b> As protons accumulate in the lumen, the pH drops and creates a powerful electrochemical proton-motive force.</p><p>Adjust the sunlight intensity below to see how rapidly the complexes pump protons.</p>',
-      nextLabel: 'Harness the gradient',
+      eyebrow: 'Thylakoid Membrane',
+      title: 'Photosystem II splits water',
+      scene: 'membrane',
+      body: '<p class="lead"><strong>Sunlight drives the extraction of electrons by splitting water.</strong></p><p>Photons strike Photosystem II (PSII), exciting electrons that are passed down the transport chain. To replace them, PSII splits H₂O in the lumen, releasing O₂ as a byproduct and releasing protons.</p>',
       onEnter(ctx) {
-        clearSubs();
-        m.notes(false);
-        m.note('complex');
-        m.set({ fuel: 'light', fuelRate: 0.8 });
-
-        ctx.ui.controls(`
-          <div class="slider">
-            <div class="slider-head"><span class="label">Sunlight intensity</span><span class="value" id="rate-val">80%</span></div>
-            <input type="range" id="sunlight" min="0" max="1" step="0.05" value="0.8">
-          </div>
-          <div class="stats" style="margin-top:0.75rem;">
-            <div class="stat"><span class="stat-label">Proton Force</span><span class="stat-value" id="stat-pmf">-- mV</span></div>
-            <div class="stat"><span class="stat-label">Lumen pH</span><span class="stat-value" id="stat-ph">--</span></div>
-          </div>
-        `);
-
-        const slider = ctx.ui.q('#sunlight');
-        const rateVal = ctx.ui.q('#rate-val');
-        ctx.ui.range(slider, v => {
-          m.set({ fuelRate: v }, { snap: true });
-          if (rateVal) rateVal.textContent = Math.round(v * 100) + '%';
-        });
-
-        const unsub = m.on('frame', s => {
-          const pmfEl = ctx.ui.q('#stat-pmf');
-          const phEl = ctx.ui.q('#stat-ph');
-          if (pmfEl && s.pmf !== undefined) pmfEl.textContent = Math.round(s.pmf) + ' mV';
-          if (phEl && s.pH) phEl.textContent = s.pH.outside !== undefined ? s.pH.outside.toFixed(1) : '--';
-        });
-        unsubs.push(unsub);
+        lightMem.set({ chain: 'split', fuel: 'light', fuelRate: 1 });
+        lightMem.notes(['psii', 'water.split', 'oxygen']);
+        ctx.ui.controls('<div class="callout">Water splitting directly enriches the thylakoid lumen with protons.</div>');
+      },
+      onExit() {
+        lightMem.notes(false);
       }
     },
     {
-      eyebrow: 'Turbine Power',
-      title: 'ATP Synthase makes the fuel for sugar',
-      body: '<p><b>Protons stream back into the stroma through ATP synthase, spinning its rotor to synthesize ATP.</b></p><p>This cellular ATP, alongside NADPH, provides the direct chemical energy consumed by the Calvin cycle to assemble carbon dioxide into sugars.</p>',
-      nextLabel: 'Explore summary',
+      eyebrow: 'Proton Gradient',
+      title: 'Pumping protons into the lumen',
+      scene: 'membrane',
+      body: '<p class="lead"><strong>Cytochrome b6f uses electron energy to pump protons across the membrane.</strong></p><p>Plastoquinone carries electrons from PSII to cytochrome b6f. As electrons pass through, b6f pumps additional protons from the stroma into the lumen, establishing a steep electrochemical proton gradient.</p>',
       onEnter(ctx) {
-        clearSubs();
-        m.notes(false);
-        m.note('synthase');
-        m.set({ fuel: 'light', fuelRate: 1 });
-
+        lightMem.notes(['b6f', 'plastoquinone']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton-Motive Force</div><div class="stat-value" id="pmf-val" data-live>--</div><div class="stat-sub">mV across membrane</div></div></div>');
+        const unsub = lightMem.on('frame', s => {
+          const el = ctx.ui.q('#pmf-val');
+          if (el && s.pmf != null) el.textContent = Math.round(s.pmf) + ' mV';
+        });
+        ctx.unsub = unsub;
+      },
+      onExit(ctx) {
+        lightMem.notes(false);
+        if (ctx.unsub) ctx.unsub();
+      }
+    },
+    {
+      eyebrow: 'Energy Storage',
+      title: 'Making ATP and NADPH',
+      scene: 'membrane',
+      body: '<p class="lead"><strong>The proton gradient and Photosystem I produce high-energy molecules in the stroma.</strong></p><p>Photosystem I uses a second photon to load electrons onto NADP⁺ to form NADPH. Simultaneously, ATP synthase harnesses the outflow of protons to produce ATP.</p>',
+      onEnter(ctx) {
+        lightMem.notes(['psi', 'synthase', 'nadph']);
         ctx.ui.controls(`
-          <div class="stats">
-            <div class="stat"><span class="stat-label">ATP Synthesized</span><span class="stat-value" id="stat-atp">0</span></div>
-            <div class="stat"><span class="stat-label">Protons / ATP</span><span class="stat-value" id="stat-stoich">--</span></div>
+          <div class="stat-grid">
+            <div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="atp-val" data-live>0</div></div>
+            <div class="stat"><div class="stat-label">NADPH Made</div><div class="stat-value" id="nadph-val" data-live>0</div></div>
+          </div>
+          <div class="slider" style="margin-top: 0.75rem;">
+            <div class="slider-head"><span class="label">Light Intensity</span></div>
+            <input type="range" id="dimmer" min="0" max="1" step="0.05" value="1">
           </div>
         `);
-
-        const unsub = m.on('frame', s => {
-          const atpEl = ctx.ui.q('#stat-atp');
-          const stoichEl = ctx.ui.q('#stat-stoich');
-          if (atpEl && s.atpMade !== undefined) atpEl.textContent = s.atpMade;
-          if (stoichEl && s.stoichiometry && s.stoichiometry.protonsPerATP) {
-            stoichEl.textContent = s.stoichiometry.protonsPerATP.toFixed(1);
-          }
+        ctx.ui.range(ctx.ui.q('#dimmer'), v => lightMem.set({ fuelRate: v }, { snap: true }));
+        const unsub = lightMem.on('frame', s => {
+          const atpEl = ctx.ui.q('#atp-val');
+          const nadphEl = ctx.ui.q('#nadph-val');
+          if (atpEl && s.atpMade != null) atpEl.textContent = s.atpMade;
+          if (nadphEl && s.light && s.light.nadphMade != null) nadphEl.textContent = s.light.nadphMade;
         });
-        unsubs.push(unsub);
+        ctx.unsub = unsub;
+      },
+      onExit(ctx) {
+        lightMem.notes(false);
+        if (ctx.unsub) ctx.unsub();
+      }
+    },
+    {
+      eyebrow: 'The Calvin Cycle',
+      title: 'Synthesizing sugars in the stroma',
+      scene: 'organelle',
+      body: '<p class="lead"><strong>ATP and NADPH power the synthesis of sugar from carbon dioxide.</strong></p><p>The ATP and NADPH synthesized by the light reactions diffuse directly into the stroma. There, the Calvin cycle consumes them to fix CO₂ into three-carbon sugars, which are converted into glucose and stored as starch grains.</p>',
+      onEnter(ctx) {
+        chloro.notes(['starch', 'stroma']);
+        ctx.ui.controls('<div class="callout">Light energy is now stored in stable covalent carbon bonds.</div>');
+      },
+      onExit() {
+        chloro.notes(false);
       }
     }
   ]
 });
 
-const m = Membrane.mount(shell.stage, {
-  context: 'thylakoid',
-  fuel: 'light',
-  fuelRate: 0,
-  proteins: { complex: { x: -60 }, synthase: { x: 50 }, leak: null },
-  contents: { inside: { water: 30, H: 22 }, outside: { water: 30, H: 22 } },
-  potential: 'nernst',
-  viewOffset: shell.viewOffset
-});
+const chloro = shell.scene('organelle', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.8 }));
+const lightMem = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset, chain: 'split', fuel: 'light', fuelRate: 1 }));
 
 shell.goTo(0);
 </script>

@@ -6,221 +6,118 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Photosynthesis: Sunlight to Sugar</title>
-<link rel="stylesheet" href="../css/kodo.css">
-<link rel="stylesheet" href="../css/lesson-shell.css">
-<link rel="stylesheet" href="../graph/graph.css">
+<title>Photosynthesis: Light to Sugar</title>
 <style>
-  .readout-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    margin: 12px 0;
-  }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
 </style>
 </head>
 <body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/dist/plot.umd.min.js"></script>
-<script src="../lib/palette.js"></script>
-<script src="../lib/tokens-from-palette.js"></script>
-<script src="../lib/molecules.js"></script>
-<script src="../lib/mol-small.js"></script>
-<script src="../lib/scene.js"></script>
-<script src="../lib/atomkit.js"></script>
-<script src="../lib/annotate.js"></script>
-<script src="../kit/card-stage.js"></script>
-<script src="../membrane/parts.js"></script>
-<script src="../membrane/pump.js"></script>
-<script src="../membrane/chemiosmosis.js"></script>
-<script src="../membrane/sheet.js"></script>
-<script src="../chemiosmosis/circuit.js"></script>
-<script src="../chemiosmosis/electron-transport.js"></script>
-<script src="../chemiosmosis/light-reactions.js"></script>
-<script src="../membrane/membrane.js"></script>
-<script src="../graph/graph.js"></script>
-<script src="../kit/lesson-shell.js"></script>
-
+<script src="../kit/app.js" data-shell="steps" data-use="Chloroplast,LightReactions"></script>
 <script>
-let liveGraph = null;
-let unframe = null;
-
 const shell = LessonShell.create({
-  brand: 'Photosynthesis · Bio 101',
+  brand: 'Photosynthesis',
   hint: 'Drag to orbit · Scroll to zoom',
   ctx: { state: {} },
   steps: [
     {
-      eyebrow: 'Step 1 · Thylakoid Membrane',
-      title: 'Capturing photons to move protons',
-      body: '<p><b>Light reactions transform solar energy into chemical gradients across the thylakoid membrane.</b> Photons excite electrons, powering the photosynthetic complexes to pump protons from the stroma into the thylakoid lumen.</p><p>Adjust sunlight intensity to observe how proton pumping responds to available light.</p>',
-      nextLabel: 'Check the Gradient',
+      eyebrow: 'The Organelle',
+      title: 'Where light energy is captured',
+      scene: 'chloroplast',
+      body: '<p class="lead"><strong>Photosynthesis takes place inside chloroplasts.</strong> Disc-shaped thylakoids stack into grana suspended in a fluid stroma.</p><p>Light strikes the thylakoid membrane, initiating the reactions that split water, generate oxygen, and yield high-energy carriers.</p>',
+      nextLabel: 'Zoom to the membrane',
       onEnter(ctx) {
-        m.set({
-          fuel: 'light',
-          fuelRate: 1,
-          proteins: { complex: { x: -50 }, synthase: { x: 45 }, leak: null }
+        cp.notes(['granum', 'stroma', 'lumen']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Thylakoid Stacks</div><div class="stat-value" id="grana-count" data-live>--</div></div><div class="stat"><div class="stat-label">Organelle Length</div><div class="stat-value" id="cp-len" data-live>--</div></div></div>');
+        const u1 = cp.on('frame', s => {
+          const gEl = ctx.ui.q('#grana-count');
+          const lEl = ctx.ui.q('#cp-len');
+          if (gEl && s.counts) gEl.textContent = s.counts.grana;
+          if (lEl && s.lengthNm) lEl.textContent = Math.round(s.lengthNm) + ' nm';
         });
-        m.notes(['complex']);
-        ctx.ui.controls(`
-          <div class="slider">
-            <div class="slider-head"><span class="label">Sunlight intensity</span><span class="value" id="light-val">100%</span></div>
-            <input type="range" id="light-slider" min="0" max="1" step="0.05" value="1">
-          </div>
-          <div class="readout-grid stats">
-            <div class="stat"><div class="stat-label">Proton motive force</div><div class="stat-value" id="pmf-stat">0 mV</div></div>
-            <div class="stat"><div class="stat-label">Complex state</div><div class="stat-value" id="complex-stat">Pumping</div></div>
-          </div>
-        `);
-        ctx.ui.showPanel(m, { notes: ['complex', 'synthase'], layers: ['ions', 'membrane'] });
-
+        ctx.cleanup = () => { u1(); cp.notes(false); };
+      },
+      onExit(ctx) { if (ctx.cleanup) ctx.cleanup(); }
+    },
+    {
+      eyebrow: 'Photosystem II',
+      title: 'Splitting water to extract electrons',
+      scene: 'reactions',
+      body: '<p class="lead"><strong>Light strips electrons from water at Photosystem II.</strong> This reaction releases molecular oxygen as a byproduct.</p><p>Every water molecule split contributes protons directly into the inner thylakoid lumen, beginning the proton gradient.</p>',
+      nextLabel: 'Follow the gradient',
+      onEnter(ctx) {
+        lr.set({ fuel: 'light', fuelRate: 1, chain: 'split' });
+        lr.notes(['psii', 'water.split', 'oxygen']);
+        ctx.ui.controls('<div class="stats stat-grid"><div class="stat"><div class="stat-label">Waters Split</div><div class="stat-value" id="h2o-count" data-live>0</div></div><div class="stat"><div class="stat-label">O₂ Released</div><div class="stat-value" id="o2-count" data-live>0</div></div></div>');
+        const u = lr.on('frame', s => {
+          const h2oEl = ctx.ui.q('#h2o-count');
+          const o2El = ctx.ui.q('#o2-count');
+          if (h2oEl && s.light) h2oEl.textContent = s.light.waterSplit || 0;
+          if (o2El && s.light) o2El.textContent = s.light.o2Released || 0;
+        });
+        ctx.cleanup = () => { u(); lr.notes(false); };
+      },
+      onExit(ctx) { if (ctx.cleanup) ctx.cleanup(); }
+    },
+    {
+      eyebrow: 'Chemiosmosis',
+      title: 'Pumping protons and turning ATP synthase',
+      scene: 'reactions',
+      body: '<p class="lead"><strong>Cytochrome b6f pumps protons into the lumen to drive ATP synthesis.</strong> Protons flow back down their gradient through ATP synthase into the stroma.</p><p>The catalytic head in the stroma uses this rotational energy to synthesize ATP from ADP and inorganic phosphate.</p>',
+      nextLabel: 'Generate NADPH',
+      onEnter(ctx) {
+        lr.set({ fuel: 'light', fuelRate: 1, chain: 'split' });
+        lr.notes(['b6f', 'synthase']);
+        ctx.ui.controls('<div class="stats stat-grid"><div class="stat"><div class="stat-label">Proton Force (pmf)</div><div class="stat-value" id="pmf-val" data-live>0 mV</div></div><div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="atp-val" data-live>0</div></div></div>');
+        const u = lr.on('frame', s => {
+          const pmfEl = ctx.ui.q('#pmf-val');
+          const atpEl = ctx.ui.q('#atp-val');
+          if (pmfEl && s.pmf !== undefined) pmfEl.textContent = Math.round(s.pmf) + ' mV';
+          if (atpEl && s.atpMade !== undefined) atpEl.textContent = s.atpMade;
+        });
+        ctx.cleanup = () => { u(); lr.notes(false); };
+      },
+      onExit(ctx) { if (ctx.cleanup) ctx.cleanup(); }
+    },
+    {
+      eyebrow: 'Photosystem I & Summary',
+      title: 'Reducing NADP+ to power sugar synthesis',
+      scene: 'reactions',
+      body: '<p class="lead"><strong>Photosystem I re-energizes electrons to form NADPH.</strong> Both ATP and NADPH are released into the stroma.</p><p>These two products enter the Calvin cycle in the stroma to fix CO₂ into glucose. Try adjusting the light level to see how photon supply governs both fuel carriers.</p>',
+      nextLabel: 'Finish',
+      onEnter(ctx) {
+        lr.set({ fuel: 'light', fuelRate: 1, chain: 'split' });
+        lr.notes(['psi', 'nadph']);
+        ctx.ui.controls('<div class="slider"><div class="slider-head"><span class="label">Light Intensity</span><span class="value" id="light-val" data-live>100%</span></div><input type="range" id="light-slider" min="0" max="1" step="0.05" value="1"></div><div class="stats stat-grid"><div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="final-atp" data-live>0</div></div><div class="stat"><div class="stat-label">NADPH Made</div><div class="stat-value" id="final-nadph" data-live>0</div></div></div>');
         const slider = ctx.ui.q('#light-slider');
         ctx.ui.range(slider, v => {
-          m.set({ fuelRate: v }, { snap: true });
-          ctx.ui.q('#light-val').textContent = Math.round(v * 100) + '%';
+          lr.set({ fuel: v > 0 ? 'light' : null, fuelRate: v }, { snap: true });
+          const valEl = ctx.ui.q('#light-val');
+          if (valEl) valEl.textContent = Math.round(v * 100) + '%';
         });
-
-        unframe = m.on('frame', s => {
-          const pmfEl = ctx.ui.q('#pmf-stat');
-          const compEl = ctx.ui.q('#complex-stat');
-          if (pmfEl && s) pmfEl.textContent = Math.round(s.pmf) + ' mV';
-          if (compEl && s) compEl.textContent = s.complexLabel || (s.fuelRate > 0 ? 'Active' : 'Stalled');
-        });
-      },
-      onExit() {
-        if (unframe) { unframe(); unframe = null; }
-      }
-    },
-    {
-      eyebrow: 'Step 2 · Chemiosmosis',
-      title: 'The electrochemical gradient',
-      body: '<p><b>Protons concentrated in the thylakoid lumen create a strong proton-motive force.</b> The difference in proton concentration lowers the lumen pH and creates a positive charge inside.</p><p>Watch the live trace record the voltage and concentration gradient built by photon absorption.</p>',
-      nextLabel: 'Harness the Turbine',
-      onEnter(ctx) {
-        m.notes(false);
-        ctx.ui.controls(`
-          <div class="readout-grid stats">
-            <div class="stat"><div class="stat-label">Stroma pH</div><div class="stat-value" id="stroma-ph">7.5</div></div>
-            <div class="stat"><div class="stat-label">Lumen pH</div><div class="stat-value" id="lumen-ph">5.5</div></div>
-          </div>
-          <div id="graph-box" style="height:130px; margin-top:8px;"></div>
-        `);
-        ctx.ui.showPanel(m, { notes: ['inside', 'outside'], layers: ['ions'] });
-
-        const gBox = ctx.ui.q('#graph-box');
-        if (gBox) {
-          liveGraph = Graph.mount(gBox, { live: { span: 90 }, height: 130 }).follow(m, 'pmf');
-        }
-
-        unframe = m.on('frame', s => {
-          if (!s) return;
-          const sPh = ctx.ui.q('#stroma-ph');
-          const lPh = ctx.ui.q('#lumen-ph');
-          if (sPh) sPh.textContent = s.pH.inside.toFixed(1);
-          if (lPh) lPh.textContent = s.pH.outside.toFixed(1);
-        });
-      },
-      onExit() {
-        if (unframe) { unframe(); unframe = null; }
-        if (liveGraph) { liveGraph.destroy(); liveGraph = null; }
-      }
-    },
-    {
-      eyebrow: 'Step 3 · ATP Synthesis',
-      title: 'Powering ATP synthase',
-      body: '<p><b>Protons escape down their electrochemical gradient through ATP synthase.</b> The flow turns the molecular rotor, synthesizing ATP from ADP and inorganic phosphate in the stroma.</p><p>Every turn of the rotor drives catalytic cycles that release newly formed ATP into the stroma for the Calvin cycle.</p>',
-      nextLabel: 'Synthesizing Sugars',
-      onEnter(ctx) {
-        m.notes(['synthase']);
-        ctx.ui.controls(`
-          <div class="readout-grid stats">
-            <div class="stat"><div class="stat-label">ATP synthesized</div><div class="stat-value" id="atp-stat">0</div></div>
-            <div class="stat"><div class="stat-label">Rotor turns</div><div class="stat-value" id="rotor-stat">0</div></div>
-          </div>
-          <div id="graph-box" style="height:130px; margin-top:8px;"></div>
-        `);
-        ctx.ui.showPanel(m, { notes: ['synthase', 'complex'], layers: ['ions'] });
-
-        const gBox = ctx.ui.q('#graph-box');
-        if (gBox) {
-          liveGraph = Graph.mount(gBox, { live: { span: 90 }, height: 130 }).follow(m, 'atp');
-        }
-
-        unframe = m.on('frame', s => {
-          if (!s) return;
-          const atpEl = ctx.ui.q('#atp-stat');
-          const rotEl = ctx.ui.q('#rotor-stat');
-          if (atpEl) atpEl.textContent = s.atpMade;
-          if (rotEl) rotEl.textContent = s.rotorTurns.toFixed(1);
-        });
-      },
-      onExit() {
-        if (unframe) { unframe(); unframe = null; }
-        if (liveGraph) { liveGraph.destroy(); liveGraph = null; }
-      }
-    },
-    {
-      eyebrow: 'Step 4 · Calvin Cycle',
-      title: 'Using ATP to make sugar',
-      body: '<p><b>ATP and NADPH generated by the light reactions enter the Calvin cycle in the stroma.</b> The enzyme Rubisco fixes atmospheric CO₂ into 3-phosphoglycerate, which is reduced using ATP and NADPH into glyceraldehyde 3-phosphate (G3P) sugars.</p><p>Toggle light or uncouple the membrane below to see how ATP production ceases when the proton gradient collapses.</p>',
-      nextLabel: 'Restart Lesson',
-      onEnter(ctx) {
-        m.notes(false);
-        ctx.ui.controls(`
-          <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button class="btn secondary" id="btn-toggle-light">Toggle Light</button>
-            <button class="btn secondary" id="btn-toggle-leak">Add Proton Leak</button>
-          </div>
-          <div class="readout-grid stats">
-            <div class="stat"><div class="stat-label">Total ATP Made</div><div class="stat-value" id="final-atp">0</div></div>
-            <div class="stat"><div class="stat-label">Proton Motive Force</div><div class="stat-value" id="final-pmf">0 mV</div></div>
-          </div>
-        `);
-        ctx.ui.showPanel(m, { notes: ['complex', 'synthase', 'leak'], layers: ['ions', 'membrane'] });
-
-        let lightOn = true;
-        let leakOn = false;
-
-        ctx.ui.q('#btn-toggle-light').onclick = () => {
-          lightOn = !lightOn;
-          m.set({ fuelRate: lightOn ? 1 : 0 });
-        };
-
-        ctx.ui.q('#btn-toggle-leak').onclick = () => {
-          leakOn = !leakOn;
-          m.set({ proteins: { complex: { x: -50 }, synthase: { x: 45 }, leak: leakOn ? { x: 0 } : null } });
-          ctx.ui.q('#btn-toggle-leak').textContent = leakOn ? 'Remove Leak' : 'Add Proton Leak';
-        };
-
-        unframe = m.on('frame', s => {
-          if (!s) return;
+        const u = lr.on('frame', s => {
           const atpEl = ctx.ui.q('#final-atp');
-          const pmfEl = ctx.ui.q('#final-pmf');
-          if (atpEl) atpEl.textContent = s.atpMade;
-          if (pmfEl) pmfEl.textContent = Math.round(s.pmf) + ' mV';
+          const nadphEl = ctx.ui.q('#final-nadph');
+          if (atpEl && s.atpMade !== undefined) atpEl.textContent = s.atpMade;
+          if (nadphEl && s.light) nadphEl.textContent = s.light.nadphMade || 0;
         });
+        ctx.cleanup = () => { u(); lr.notes(false); };
       },
-      onExit() {
-        if (unframe) { unframe(); unframe = null; }
-      }
+      onExit(ctx) { if (ctx.cleanup) ctx.cleanup(); }
     }
-  ],
-  onStep(step) {}
+  ]
 });
 
-const m = Membrane.mount(shell.stage, {
+const cp = shell.scene('chloroplast', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.8 }));
+const lr = shell.scene('reactions', el => LightReactions.mount(el, {
   viewOffset: shell.viewOffset,
-  context: 'thylakoid',
+  chain: 'split',
   fuel: 'light',
   fuelRate: 1,
-  complexSeconds: 5,
-  proteins: { complex: { x: -50 }, synthase: { x: 45 }, leak: null },
-  contents: { inside: { water: 30, H: 18 }, outside: { water: 30, H: 24 } },
-  potential: 'nernst',
-  units: 'mM'
-});
+  showATP: true,
+  showFuel: true
+}));
 
 shell.goTo(0);
 </script>

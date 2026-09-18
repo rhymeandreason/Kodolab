@@ -25,17 +25,21 @@ const is   = (cond, m) => cond ? ok(m) : fail(m);
 /* ---- 1. ATP is never made for free ---- */
 console.log('== 1. stoichiometry, counted rather than declared');
 {
-  const r = C.rotor();
+  const c8 = { protonsPerTurn: 9, atpPerTurn: 3 };
+  const r = C.rotor(c8);
   let worst = 0;
   for (let i = 1; i <= 5000; i++) {
     r.pass(1);
-    worst = Math.max(worst, r.atp * C.PROTONS_PER_ATP - r.protons);
+    worst = Math.max(worst, r.atp * c8.protonsPerTurn / c8.atpPerTurn - r.protons);
   }
-  is(worst <= 0, `over 5000 protons, atp x ${C.PROTONS_PER_ATP} never exceeded the protons through (worst ${worst})`);
-  is(r.atp === Math.floor(5000 * C.ATP_PER_TURN / C.PROTONS_PER_TURN),
-     `${r.atp} ATP for 5000 protons, the declared ${C.ATP_PER_TURN} per ${C.PROTONS_PER_TURN}`);
-  const one = C.rotor(); one.pass(C.PROTONS_PER_TURN);
-  is(Math.abs(one.angle - Math.PI * 2) < 1e-9, 'a full turn is a full turn: PROTONS_PER_TURN protons, 2 pi');
+  is(worst <= 0, `over 5000 protons, atp x ${c8.protonsPerTurn / c8.atpPerTurn} never exceeded the protons through (worst ${worst})`);
+  is(r.atp === Math.floor(5000 * c8.atpPerTurn / c8.protonsPerTurn),
+     `${r.atp} ATP for 5000 protons, the declared ${c8.atpPerTurn} per ${c8.protonsPerTurn}`);
+  const one = C.rotor(c8); one.pass(c8.protonsPerTurn);
+  is(Math.abs(one.angle - Math.PI * 2) < 1e-9, 'a full turn is a full turn: protonsPerTurn protons, 2 pi');
+  let threw = false;
+  try { C.rotor(); } catch (e) { threw = true; }
+  is(threw, 'a rotor with no ring is refused: the ring is the component\'s, and there is no default to drift from');
   /* THE RING IS A PARAMETER: a c14 turns on 14 and pays out only when the
      protons have, so a rotor handed a ring cannot be the mitochondrion's. */
   const c14 = C.rotor({ protonsPerTurn: 14, atpPerTurn: 3 });
@@ -111,7 +115,7 @@ console.log('\n== 4. a turbine, not a pump');
   is(C.synthaseDirection({ inside: 30, outside: 30 }, -80) === -1, 'equal counts but the voltage is inward: the pmf alone drives it, which is why it is a MOTIVE FORCE');
   is(C.synthaseDirection({ inside: 30, outside: 31 }, 0) === 0, 'a one-particle wobble is not a gradient');
   let uphill = 0;
-  const r = C.rotor();
+  const r = C.rotor({ protonsPerTurn: 9, atpPerTurn: 3 });
   let counts = { inside: 44, outside: 16 };            // backwards from the start
   for (let i = 0; i < 500; i++) {
     if (C.synthaseDirection(counts, 0) === -1) { counts.outside--; counts.inside++; r.pass(1); }

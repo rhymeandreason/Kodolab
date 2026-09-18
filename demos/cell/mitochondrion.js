@@ -42,7 +42,7 @@
  *  arithmetic happens in, and the two are meant to be mounted together —
  *  the organelle for where, the membrane for how much. The one number they
  *  share is the rotor's stoichiometry, and it is read from
- *  membrane/chemiosmosis.js rather than typed, so the two boxes cannot
+ *  chemiosmosis/electron-transport.js rather than typed, so the two boxes cannot
  *  disagree about how many protons an ATP costs.
  *
  *  THE PROTONS ARE COUNTED, NOT SIMULATED. Each drawn proton is one route
@@ -150,13 +150,14 @@
     const P = Object.assign({}, DEFAULTS, opts);
     if (!global.CardStage) throw new Error('cell/mitochondrion.js: load kit/card-stage.js first');
     const V3 = THREE.Vector3;
-    const CHEM = global.Chemiosmosis;
-    /* The rotor's stoichiometry is membrane/chemiosmosis.js's, so this box and
-       a Membrane mounted beside it cannot disagree about what an ATP costs.
-       Absent (a page that loaded neither), the mammalian c8 ring's own 8 H⁺
-       per 3 ATP, and the fallback is the thing that is wrong if they drift. */
-    const PPT = CHEM ? CHEM.PROTONS_PER_TURN : 9;
-    const APT = CHEM ? CHEM.ATP_PER_TURN : 3;
+    const ET = global.ElectronTransport;
+    /* The rotor's stoichiometry is chemiosmosis/electron-transport.js's RING,
+       so this box and an ElectronTransport mounted beside it cannot disagree
+       about what an ATP costs. Absent (a page that loaded neither), the
+       mammalian c8 ring as that file draws it, and the fallback is the thing
+       that is wrong if they drift. */
+    const PPT = ET ? ET.RING.protonsPerTurn : 9;
+    const APT = ET ? ET.RING.atpPerTurn : 3;
 
     const listeners = {};
     const on = (ev, fn) => { (listeners[ev] || (listeners[ev] = [])).push(fn);
@@ -569,7 +570,7 @@
      computed from the numbers the builder was handed, so they cannot drift
      from what is drawn. The machines are icons and their factors are typed.
      `down` is where a zoom hands off: the physics of the gradient is
-     Chemiosmosis's, one rung down. */
+     ElectronTransport's, one rung down. */
   global.Mitochondrion.SCALE = {
     rung: 'organelle', form: 'single', unit: UNIT, sceneUnits: [],
     exag: {
@@ -578,6 +579,6 @@
       lumen: +(NM(LUM) / TRUE_NM.lumen).toFixed(1),
       junction: 1.4, complex: 3.5, synthase: 2.8, porin: 8, ribosome: 2, dna: 4,
     },
-    down: { inner: 'Chemiosmosis', crista: 'Chemiosmosis', synthase: 'Chemiosmosis', complex: 'Chemiosmosis' },
+    down: { inner: 'ElectronTransport', crista: 'ElectronTransport', synthase: 'ElectronTransport', complex: 'ElectronTransport' },
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

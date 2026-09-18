@@ -245,8 +245,8 @@
          mitochondrion (cell/organelles.js): two membranes, a lumen, a folded
          or packed interior. The kinship is in the construction, the identity
          is in the colour.
-         `head`/`tail` tint a bilayer set inside one (membrane/membrane.js's
-         `context`, which chemiosmosis.js uses for the thylakoid). */
+         `head`/`tail` tint a bilayer set inside one (membrane/sheet.js's
+         `context`, which LightReactions sets to the thylakoid). */
       /* `thylakoid` is a granum's stacked discs, `lamella` the sheets that
          run between grana — the same membrane, unstacked, so it is the same
          green a shade lighter and not a colour of its own. `stroma` is the

@@ -10,7 +10,7 @@
  *      node cell/check-mitochondrion.js
  *
  *  1. THE ROTOR'S RATIO IS NOT THE COMPONENT'S. It is read from
- *     membrane/chemiosmosis.js, so a Mitochondrion and a Membrane on one page
+ *     chemiosmosis/electron-transport.js, so a Mitochondrion and an ElectronTransport on one page
  *     cannot disagree about what an ATP costs. The check is that
  *     mitochondrion.js reads it rather than typing one.
  *  2. COMPLEX II IS NOT A DOOR. It is on the crista and in the legend, and no
@@ -41,22 +41,22 @@ const failures = [];
 const ok = (cond, msg) => { if (!cond) failures.push(msg); };
 
 const src = f => fs.readFileSync(path.join(here, '..', f), 'utf8');
-const ctx = load('lib/palette.js', 'membrane/chemiosmosis.js', 'cell/mitochondrion.js');
-const M = ctx.Mitochondrion, CHEM = ctx.Chemiosmosis;
+const ctx = load('lib/palette.js', 'membrane/chemiosmosis.js', 'chemiosmosis/electron-transport.js', 'cell/mitochondrion.js');
+const M = ctx.Mitochondrion, RING = ctx.ElectronTransport.RING;
 const LADDER = load('kit/scale.js').ScaleLadder;
 
 /* 1. the ratio */
 {
   const mito = src('cell/mitochondrion.js');
-  ok(/PROTONS_PER_TURN/.test(mito) && /ATP_PER_TURN/.test(mito),
-    'cell/mitochondrion.js does not read the rotor stoichiometry from Chemiosmosis.');
-  ok(CHEM.PROTONS_PER_TURN > 0 && CHEM.ATP_PER_TURN > 0,
-    'membrane/chemiosmosis.js has no stoichiometry to read.');
+  ok(/RING\.protonsPerTurn/.test(mito) && /RING\.atpPerTurn/.test(mito),
+    'cell/mitochondrion.js does not read the rotor stoichiometry from ElectronTransport.');
+  ok(RING.protonsPerTurn > 0 && RING.atpPerTurn > 0,
+    'chemiosmosis/electron-transport.js has no ring to read.');
   // The ledger the component prints, at the numbers it will print it with.
-  const atp = t => Math.floor((t / CHEM.PROTONS_PER_TURN) * CHEM.ATP_PER_TURN);
-  ok(atp(CHEM.PROTONS_PER_TURN) === CHEM.ATP_PER_TURN,
-    `one full turn should be ${CHEM.ATP_PER_TURN} ATP, the ledger says ${atp(CHEM.PROTONS_PER_TURN)}.`);
-  ok(atp(CHEM.PROTONS_PER_TURN - 1) < CHEM.ATP_PER_TURN,
+  const atp = t => Math.floor((t / RING.protonsPerTurn) * RING.atpPerTurn);
+  ok(atp(RING.protonsPerTurn) === RING.atpPerTurn,
+    `one full turn should be ${RING.atpPerTurn} ATP, the ledger says ${atp(RING.protonsPerTurn)}.`);
+  ok(atp(RING.protonsPerTurn - 1) < RING.atpPerTurn,
     'a turn short of complete already pays its last ATP: the rotor is being credited for work it has not done.');
 }
 
@@ -99,8 +99,8 @@ const LADDER = load('kit/scale.js').ScaleLadder;
     ok(S.exag[k] >= 1, `SCALE.exag.${k} is ${S.exag[k]}: an exaggeration below 1 is a part drawn SMALLER than life, which nothing here does.`);
   ok(S.exag.membrane > S.exag.ims,
     'the bilayer should be stretched harder than the space between the two membranes: it is the thinner of the two by a factor of five.');
-  ok(S.down && S.down.inner === 'Chemiosmosis',
-    'SCALE.down does not hand the inner membrane to Chemiosmosis. The gradient arithmetic lives there and nowhere in this component.');
+  ok(S.down && S.down.inner === 'ElectronTransport',
+    'SCALE.down does not hand the inner membrane to ElectronTransport. The gradient arithmetic lives there and nowhere in this component.');
 }
 
 /* 4. the words */

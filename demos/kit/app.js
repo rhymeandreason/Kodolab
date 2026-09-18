@@ -88,7 +88,7 @@
     'membrane/pump.js',
     'membrane/chemiosmosis.js',
     'membrane/sheet.js',
-    'chemiosmosis/circuit.js',  // before membrane.js, which still carries its machine for old pages
+    'chemiosmosis/circuit.js',  // the kit both circuit components build on
     'chemiosmosis/electron-transport.js',
     'chemiosmosis/light-reactions.js',
     'membrane/membrane.js',
@@ -151,18 +151,18 @@
      with molecule-lab.html, its last page. */
   const USES = {
     WaterSim:   ['water/watersim.js', 'water/watersim-mount.js'],
-    /* Membrane keeps circuit.js until the generated apps that mount a proton
-       circuit through it are regenerated against Chemiosmosis. */
     Membrane:   ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
+                 'membrane/chemiosmosis.js', 'membrane/sheet.js', 'membrane/membrane.js'],
+    /* The two proton circuits share circuit.js and nothing of each other.
+       pump.js and membrane.js are for ElectronTransport's span:'cell', where
+       the ATP is spent by a Na⁺/K⁺ pump in a plasma membrane stacked above
+       the mitochondrion. */
+    ElectronTransport: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
                  'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
-                 'chemiosmosis/electron-transport.js', 'chemiosmosis/light-reactions.js',
-                 'membrane/membrane.js'],
-    /* pump.js and membrane.js are for span:'cell', where the ATP is spent by
-       a Na⁺/K⁺ pump in a plasma membrane stacked above the mitochondrion. */
-    Chemiosmosis: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
+                 'chemiosmosis/electron-transport.js', 'membrane/membrane.js'],
+    LightReactions: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js',
                  'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
-                 'chemiosmosis/electron-transport.js', 'chemiosmosis/light-reactions.js',
-                 'membrane/membrane.js'],
+                 'chemiosmosis/light-reactions.js'],
     Proteinbox: ['folding/folding.js', 'kit/ribbon.js', 'kit/nucleic.js', 'kit/surface.js',
                  'kit/proteinbox.js', 'proteins/proteins.js'],
     Leaf:       ['lib/geo.js', 'leaf/leaf.js'],
@@ -172,11 +172,12 @@
     HbCrowd:    ['kit/ribbon.js', 'kit/tube.js', 'kit/surface.js',
                  'sickle/sickle-fibre.js', 'sickle/hbcrowd.js'],
     AnimalCell: ['lib/mol-small.js', 'lib/skel.js', 'lib/mol-sugars.js', 'cell/organelles.js', 'cell/animalcell.js'],
-    /* chemiosmosis.js is arithmetic with no THREE and no DOM, and the
-       organelle loads it for one thing: the rotor's stoichiometry, so this
-       box and a Membrane beside it cannot disagree about what an ATP costs. */
-    Mitochondrion: ['membrane/chemiosmosis.js', 'cell/organelles.js', 'cell/mitochondrion.js'],
-    Chloroplast: ['membrane/chemiosmosis.js', 'cell/organelles.js', 'cell/chloroplast.js'],
+    /* An organelle loads its circuit component for one thing: the ring, so
+       this box and the membrane beside it cannot disagree about what an ATP
+       costs. The component's arithmetic sits at the top of its file and
+       needs no THREE; nothing is mounted. */
+    Mitochondrion: ['membrane/chemiosmosis.js', 'chemiosmosis/electron-transport.js', 'cell/organelles.js', 'cell/mitochondrion.js'],
+    Chloroplast: ['membrane/chemiosmosis.js', 'chemiosmosis/light-reactions.js', 'cell/organelles.js', 'cell/chloroplast.js'],
     PlantCell:  ['lib/mol-small.js', 'cell/organelles.js', 'cell/plantcell.js'],
     /* fx.js is optional to the component and listed anyway: without it the
        reaction still runs and simply marks no bonds, which reads as a beat

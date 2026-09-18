@@ -46,7 +46,7 @@
  *  membrane/membrane.js with `context:'thylakoid'`, one rung down, and what
  *  the ATP and NADPH are spent on is a pathway lesson. What this owns is
  *  the ARCHITECTURE. The one number shared with the membrane is the
- *  rotor's stoichiometry, read from membrane/chemiosmosis.js, so the two
+ *  rotor's stoichiometry, read from chemiosmosis/light-reactions.js, so the two
  *  boxes cannot disagree about what an ATP costs.
  *
  *  THE PROTONS ARE COUNTED, NOT SIMULATED. A drawn proton stands for a
@@ -156,12 +156,13 @@
     if (!global.CardStage) throw new Error('cell/chloroplast.js: load kit/card-stage.js first');
     const P = Object.assign({}, DEFAULTS, opts);
     const V3 = THREE.Vector3;
-    const CHEM = global.Chemiosmosis;
-    /* The rotor's stoichiometry is membrane/chemiosmosis.js's, so this box
-       and a Membrane mounted beside it cannot disagree about what an ATP
-       costs. The fallback is the thing that is wrong if they drift. */
-    const PPT = CHEM ? CHEM.PROTONS_PER_TURN : 9;
-    const APT = CHEM ? CHEM.ATP_PER_TURN : 3;
+    const LR = global.LightReactions;
+    /* The rotor's stoichiometry is chemiosmosis/light-reactions.js's RING,
+       so this box and a LightReactions mounted beside it cannot disagree
+       about what an ATP costs. The fallback is the thing that is wrong if
+       they drift. */
+    const PPT = LR ? LR.RING.protonsPerTurn : 9;
+    const APT = LR ? LR.RING.atpPerTurn : 3;
 
     const listeners = {};
     const on = (ev, fn) => { (listeners[ev] || (listeners[ev] = [])).push(fn);
@@ -781,8 +782,8 @@
      four thin things are exaggerated, and their factors are computed from
      the numbers the builder was handed so they cannot drift from what is
      drawn. The machines are icons and their factors are typed. `down` is
-     where a zoom hands off: the gradient's physics is Chemiosmosis's, one
-     rung down, with context:'thylakoid'. */
+     where a zoom hands off: the gradient's physics is LightReactions's, one
+     rung down. */
   global.Chloroplast.SCALE = {
     rung: 'organelle', form: 'single', unit: UNIT, sceneUnits: [],
     exag: {
@@ -792,6 +793,6 @@
       ims: +(NM(IMS) / TRUE_NM.ims).toFixed(1),
       psii: 3, psi: 3, b6f: 3.5, synthase: 2.8, ribosome: 2.8, dna: 4, proton: 300, starch: 1,
     },
-    down: { thylakoid: 'Chemiosmosis', granum: 'Chemiosmosis', lamella: 'Chemiosmosis', synthase: 'Chemiosmosis', b6f: 'Chemiosmosis', psii: 'Chemiosmosis', psi: 'Chemiosmosis' },
+    down: { thylakoid: 'LightReactions', granum: 'LightReactions', lamella: 'LightReactions', synthase: 'LightReactions', b6f: 'LightReactions', psii: 'LightReactions', psi: 'LightReactions' },
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

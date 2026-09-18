@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base href="/demos/chemiosmosis/">
+<script defer src="/demos/lib/site.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>light-reactions-test — light in, protons into the lumen, ATP and NADPH out</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="Light lifts electrons out of water, and the thylakoid turns that into ATP and NADPH: PSII, b6f, PSI, water split, O₂ off, NADP⁺ to NADPH, one flash at a time.">
+<link rel="canonical" href="https://www.kodolab.org/library/lightreactions">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/library/lightreactions">
+<meta property="og:title" content="light-reactions-test — light in, protons into the lumen, ATP and NADPH out">
+<meta property="og:description" content="Light lifts electrons out of water, and the thylakoid turns that into ATP and NADPH: PSII, b6f, PSI, water split, O₂ off, NADP⁺ to NADPH, one flash at a time.">
+<meta name="robots" content="noindex">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
+<link rel="stylesheet" href="../css/annotate.css">
+<style>
+  .bench-group { display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .bench-group:first-child { padding-top: 0; border-top: 0; }
+  .bench-hd { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .bench-sub { font-family: var(--display); font-size: 13px; color: var(--ink-2); margin-bottom: -6px; }
+  .bench-group .segmented { flex-wrap: wrap; border-radius: 22px; }
+  .phase { font-family: var(--display); font-weight: 500; font-size: 15px; margin: 0; color: var(--ink); }
+  .phase:empty::before { content: 'idle'; color: var(--ink-3); }
+  table.rd { font-size: 13px; border-collapse: collapse; width: 100%; color: var(--ink-2); }
+  table.rd td { padding: 3px 0; border-bottom: 1px solid var(--line); }
+  table.rd td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+  .slider input[disabled] { opacity: .35; }
+  .bench-group [hidden] { display: none !important; }
+  .lshell-nav, .lshell-progress { display: none; }
+  .lshell-scroll { padding-bottom: 32px; }
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../lib/palette.js"></script>
+<script src="../lib/tokens-from-palette.js"></script>
+<script src="../lib/molecules.js"></script>
+<script src="../lib/mol-small.js"></script>
+<script src="../lib/atomkit.js"></script>
+<script src="../lib/scene.js"></script>
+<script src="../lib/annotate.js"></script>
+<script src="../kit/card-stage.js"></script>
+<script src="../kit/lesson-shell.js"></script>
+<script src="../membrane/parts.js"></script>
+<script src="../membrane/chemiosmosis.js"></script>
+<script src="../membrane/sheet.js"></script>
+<script src="../chemiosmosis/circuit.js"></script>
+<script src="../chemiosmosis/light-reactions.js"></script>
+
+<script>
+const shell = LessonShell.create({
+  brand: 'LightReactions · component bench',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [{
+    eyebrow: 'chemiosmosis/light-reactions.js',
+    title: 'Light in, protons into the lumen',
+    body: '<p>Light lifts electrons out of water; the chain pumps protons into the lumen as they pass, and ATP synthase spends the gradient into the stroma.</p>',
+    onEnter: bench,
+  }],
+});
+
+const m = LightReactions.mount(shell.stage, { viewOffset: shell.viewOffset });
+m.start();
+window.chemi = m;
+
+function bench(ctx) {
+  const ui = ctx.ui;
+  const seg = (id, opts) => `<div class="segmented" id="${id}" role="group">${
+    opts.map(([v, t]) => `<button type="button" data-v="${v}">${t}</button>`).join('')}</div>`;
+  ui.controls(`
+    <div class="bench-group">
+      <div class="bench-hd">how much detail</div>
+      <div>${seg('chain', [['lumped', 'one complex'], ['split', 'PSII · b6f · PSI']])}</div>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">light</div>
+      <div>${seg('fuel', [['light', 'light'], ['', 'dark']])}</div>
+      <div class="slider"><div class="slider-head"><span class="label">brightness</span><span class="value" id="rv"></span></div>
+        <input id="rate" type="range" min="0" max="1" step="0.01" value="1"></div>
+      <div class="row"><button class="btn secondary" type="button" id="flash">One flash</button></div>
+      <p class="foot" id="feedfoot"></p>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">conditions</div>
+      <label class="switch"><input type="checkbox" id="leak"><span class="track"></span>uncoupler in the membrane</label>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">what the chain is doing</div>
+      <p class="phase" id="phase"></p>
+      <p class="foot" id="phasecap" style="min-height:3em"></p>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">the ledger</div>
+      <table class="rd" id="rd"></table>
+      <p class="foot" id="verdict"></p>
+    </div>
+
+    <div class="bench-group">
+      <div class="row">
+        <button class="btn secondary" type="button" id="notes" aria-pressed="false">Show labels</button>
+        <button class="btn ghost" type="button" id="reset">Reset</button>
+      </div>
+    </div>`);
+
+  const S = { chain: 'lumped', fuel: 'light' };
+  const $ = s => ui.q(s);
+  const mark = (id, v) => { for (const b of ui.qa(`#${id} > button`)) b.setAttribute('aria-pressed', String(b.dataset.v === v)); };
+
+  /* The component spreads `complex` into PSII, b6f and PSI and makes room
+     itself, so only the uncoupler needs placing here. */
+  function layout() {
+    const p = S.chain === 'split' ? { complex:{ x:-70 }, synthase:{ x:70 } } : { complex:{ x:-80 }, synthase:{ x:40 } };
+    if ($('#leak').checked) p.leak = { x: 125 };
+    return p;
+  }
+  const apply = () => { m.set({ chain: S.chain, fuel: S.fuel, proteins: layout() }); if (labelsOn) showLabels(); sync(); };
+
+  function sync() {
+    mark('chain', S.chain); mark('fuel', S.fuel || '');
+    $('#rate').disabled = !S.fuel;
+    $('#feedfoot').textContent = S.fuel ? 'One flash on top of the light. Clearer in the dark.'
+      : 'Dark: each flash sends one pair of electrons the whole way and stops.';
+  }
+  for (const b of ui.qa('#chain > button')) b.onclick = () => { if (S.chain === b.dataset.v) return; S.chain = b.dataset.v; apply(); };
+  for (const b of ui.qa('#fuel > button')) b.onclick = () => { S.fuel = b.dataset.v || null; m.set({ fuel: S.fuel }); sync(); };
+  $('#flash').onclick = () => m.feed('light');
+  $('#leak').onchange = apply;
+  ui.range($('#rate'), v => { m.set({ fuelRate: v }); $('#rv').textContent = Math.round(v * 100) + '%'; });
+
+  let labelsOn = false;
+  function showLabels() {
+    const s = m.state();
+    const names = (s.chain !== 'split' ? ['complex', 'inside', 'outside']
+      : ['psii', 'water.split', 'plastoquinone', 'b6f', 'plastocyanin', 'psi'])
+      .concat(['synthase'], $('#leak').checked ? ['leak'] : []);
+    m.clearNotes(); m.notes(names);
+  }
+  $('#notes').onclick = () => {
+    labelsOn = !labelsOn;
+    $('#notes').setAttribute('aria-pressed', String(labelsOn));
+    $('#notes').textContent = labelsOn ? 'Hide labels' : 'Show labels';
+    labelsOn ? showLabels() : m.clearNotes();
+  };
+  $('#reset').onclick = () => {
+    m.reset();
+    const H = m.state().chain === 'split' ? 30 : 22;
+    m.set({ contents: { inside:{ water:30, H }, outside:{ water:30, H } } });
+    if (labelsOn) showLabels();
+  };
+
+  /* EVERY NUMBER HERE IS READ FROM state(), the ratios included: the panel
+     cannot claim a number the chain's table does not hold. */
+  const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+  m.on('frame', s => {
+    $('#phase').textContent = s.complexLabel || '';
+    $('#phasecap').textContent = s.complexCaption || '';
+    let rows =
+      row(`H⁺ in ${s.sides.outside}`, (s.counts.H || {}).outside | 0) +
+      row(`H⁺ in ${s.sides.inside}`, (s.counts.H || {}).inside | 0) +
+      row('proton-motive force', s.pmf.toFixed(0) + ' mV') +
+      row('protons pumped in', s.complexTurns);
+    if (s.complexes) {
+      for (const k of Object.keys(s.complexes)) rows += row(`${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
+      const L = s.light;
+      rows += row('H⁺ from water', L.protonsFromWater);
+      rows += row('H⁺ into the lumen per pair · per O₂', `${s.protonsPerFuel.light} · ${L.protonsPerO2}`);
+      rows += row(`photons (${L.photonsPerPair} a pair)`, L.photons);
+      rows += row('waters split · O₂ released', `${L.waterSplit} · ${L.o2Released}`);
+      rows += row('NADPH made', L.nadphMade);
+      rows += row('plastoquinol · loaded plastocyanin', `${s.shuttles.plastoquinol} · ${s.shuttles.plastocyaninLoaded}`);
+    } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
+    if (s.protonsLeaked || $('#leak').checked) rows += row('protons down the uncoupler', s.protonsLeaked);
+    rows += row(`ATP (${s.stoichiometry.protonsPerTurn} H⁺ per ${s.stoichiometry.atpPerTurn}, c${s.stoichiometry.ringSubunits} ring)`, s.atpMade);
+    $('#rd').innerHTML = rows;
+    $('#verdict').textContent =
+      s.pmf <= 2 ? 'No gradient, so the rotor is stopped. The synthase is a turbine and there is nothing to turn it.'
+      : s.protonsLeaked > 0 ? `${s.protonsLeaked} of the ${s.protonsLeaked + s.protonsThroughSynthase} protons home came down the hole and made nothing. The light was still absorbed, and all of it came out as heat.`
+      : `The gradient is holding at ${s.pmf.toFixed(0)} mV, and every ${s.stoichiometry.protonsPerATP.toFixed(1)} protons back through the synthase is one ATP.`;
+  });
+
+  apply();
+}
+
+shell.goTo(0);
+</script>
+</body>
+</html>

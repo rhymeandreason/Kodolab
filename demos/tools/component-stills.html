@@ -85,9 +85,13 @@ const SHOTS = [
       sideLabels: false, pumpAuto: true,
       cam: { theta: 0.35, phi: Math.PI / 2 - 0.22, r: 250 } }) },
 
-  { key: 'chemiosmosis', use: 'Chemiosmosis', warm: 14,
-    mount: el => Chemiosmosis.mount(el, { context: 'mitochondrion', chain: 'split', span: 'mitochondrion', fuel: 'NADH',
+  { key: 'electrontransport', use: 'ElectronTransport', warm: 14,
+    mount: el => ElectronTransport.mount(el, { chain: 'split', span: 'mitochondrion', fuel: 'NADH',
       proteins: { complex: { x: -95 }, synthase: { x: 45 }, translocase: { x: 105 } } }) },
+
+  { key: 'lightreactions', use: 'LightReactions', warm: 14,
+    mount: el => LightReactions.mount(el, { chain: 'split', fuel: 'light',
+      proteins: { complex: { x: -70 }, synthase: { x: 70 } } }) },
 
   /* The trajectory is fetched here rather than by the box: `protein:` starts
      a fetch and returns, and a capture taken before it lands is an empty

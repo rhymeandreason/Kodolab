@@ -16,7 +16,7 @@
  *  the other. What flips is which compartment that is. A mitochondrion pumps
  *  into the intermembrane space and makes ATP in the matrix; a thylakoid
  *  pumps into its lumen and makes ATP in the stroma. Drawn the way the
- *  respiration lesson draws both (chemiosmosis/circuit.js): the proton side
+ *  respiration lesson draws both (chemiosmosis/electron-transport.js): the proton side
  *  on top in a mitochondrion, at the bottom in a thylakoid, so F1 hangs down
  *  in one and stands up in the other.
  *

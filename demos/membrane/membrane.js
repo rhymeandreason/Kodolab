@@ -31,10 +31,10 @@
  *  K, CL and NA are channels for their ion; AQP is an aquaporin, a pore for
  *  water and nothing charged, single file, direction by headcount alone.
  *
- *  THE PROTON CIRCUIT IS chemiosmosis/circuit.js, a component of its own.
- *  While that file is loaded Membrane still accepts its params (`context`,
- *  `fuel`, `complex`, `synthase`, …) so the generated apps written against
- *  the old reference keep running; a page written today mounts Chemiosmosis.
+ *  THE PROTON CIRCUIT IS NOT HERE. A mitochondrion's inner membrane is
+ *  ElectronTransport and a thylakoid is LightReactions, both on the same
+ *  sheet.js; a `context`, a `fuel` or a `complex` handed to this component
+ *  gets a warning naming them and a plasma membrane.
  *
  *  WHAT IS EXAGGERATED is declared where it is set (sheet.js's exag,
  *  mvPerIon); the physics comments travel with the code they explain.
@@ -287,19 +287,17 @@
   let warnedCircuit = false;
   function create(THREE, root, camera, opts = {}) {
     if (!global.Sheet || !global.Pump) throw new Error('membrane.js: load membrane/parts.js, membrane/pump.js, membrane/chemiosmosis.js and membrane/sheet.js first');
-    const circuit = global.Chemiosmosis && global.Chemiosmosis.machine;
     const usesCircuit = (opts.context && opts.context !== 'plasma') || opts.fuel ||
       (opts.proteins && CIRCUIT_KEYS.some(k => opts.proteins[k]));
     if (usesCircuit && !warnedCircuit) {
       warnedCircuit = true;
-      console.warn(circuit ? 'Membrane: a proton circuit is Chemiosmosis now; mount that instead.'
-        : 'Membrane: a proton circuit is Chemiosmosis; load it and mount that.');
+      console.warn('Membrane: a proton circuit is ElectronTransport (a mitochondrion) or LightReactions (a thylakoid); mount one of those. This is a plasma membrane.');
     }
-    const P = Object.assign({ componentName: 'Membrane' }, global.Sheet.DEFAULTS, DEFAULTS,
-      circuit ? global.Chemiosmosis.MACHINE_DEFAULTS : {}, opts);
+    const P = Object.assign({ componentName: 'Membrane' }, global.Sheet.DEFAULTS, DEFAULTS, opts, { context: 'plasma' });
     P.E = Object.assign({}, global.Sheet.DEFAULTS.E, opts.E || {});
     P.proteins = Object.assign({}, opts.proteins || {});
-    return global.Sheet.create(THREE, root, camera, P, circuit ? [transport, circuit] : [transport]);
+    for (const k of CIRCUIT_KEYS) delete P.proteins[k];
+    return global.Sheet.create(THREE, root, camera, P, [transport]);
   }
 
   function mount(el, params = {}) {
@@ -312,8 +310,7 @@
      water count and both clipped the moment the particle count changed.
      `pick` returns a number, or side → number when `split` is set, and the
      graph labels the series with the CONTEXT's own names. `domain` is a
-     function of the first reading, evaluated once and then frozen.
-     The proton signals stay while Membrane still runs a circuit. */
+     function of the first reading, evaluated once and then frozen. */
   const { total, sides } = global.Sheet || { total: () => 0, sides: () => ({}) };
   const SIGNALS = {
     water:     { label: 'Free water', unit: 'molecules', split: true, pick: s => sides(s.counts.water), domain: s => [0, total(s.counts.water)] },
@@ -324,7 +321,6 @@
        reads as a magnitude. */
     voltage:   { label: 'Membrane potential', unit: 'mV', pick: s => s.mV, domain: () => [-100, 40] },
   };
-  if (global.Chemiosmosis && global.Chemiosmosis.SIGNALS) Object.assign(SIGNALS, global.Chemiosmosis.SIGNALS, { voltage: SIGNALS.voltage });
 
   global.Membrane = { create, mount, DEFAULTS, SIGNALS, transport };
   /* Scale (kit/scale.js). The sheet is angstroms at MolLib.SCALE display

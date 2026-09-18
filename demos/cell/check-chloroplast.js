@@ -10,7 +10,7 @@
  *      node cell/check-chloroplast.js
  *
  *  1. THE ROTOR'S RATIO IS NOT THE COMPONENT'S. Read from
- *     membrane/chemiosmosis.js, so a Chloroplast and a Membrane with
+ *     chemiosmosis/light-reactions.js, so a Chloroplast and a LightReactions with
  *     context:'thylakoid' on one page cannot disagree about what an ATP costs.
  *  2. WATER SPLITTING AT ITS REAL RATIO. 2 H₂O → O₂ + 4 H⁺ + 4 e⁻, two
  *     electrons per NADPH: one O₂ per four protons from water, two NADPH per
@@ -48,19 +48,19 @@ const failures = [];
 const ok = (cond, msg) => { if (!cond) failures.push(msg); };
 
 const src = f => fs.readFileSync(path.join(here, '..', f), 'utf8');
-const ctx = load('lib/palette.js', 'membrane/chemiosmosis.js', 'cell/chloroplast.js');
-const CH = ctx.Chloroplast, CHEM = ctx.Chemiosmosis;
+const ctx = load('lib/palette.js', 'membrane/chemiosmosis.js', 'chemiosmosis/light-reactions.js', 'cell/chloroplast.js');
+const CH = ctx.Chloroplast, RING = ctx.LightReactions.RING;
 const LADDER = load('kit/scale.js').ScaleLadder;
 
 /* 1. the ratio */
 {
   const t = src('cell/chloroplast.js');
-  ok(/PROTONS_PER_TURN/.test(t) && /ATP_PER_TURN/.test(t),
-    'cell/chloroplast.js does not read the rotor stoichiometry from Chemiosmosis.');
-  const atp = n => CH.LEDGER.atp(n, CHEM.PROTONS_PER_TURN, CHEM.ATP_PER_TURN);
-  ok(atp(CHEM.PROTONS_PER_TURN) === CHEM.ATP_PER_TURN,
-    `one full turn should be ${CHEM.ATP_PER_TURN} ATP, the ledger says ${atp(CHEM.PROTONS_PER_TURN)}.`);
-  ok(atp(CHEM.PROTONS_PER_TURN - 1) < CHEM.ATP_PER_TURN,
+  ok(/RING\.protonsPerTurn/.test(t) && /RING\.atpPerTurn/.test(t),
+    'cell/chloroplast.js does not read the rotor stoichiometry from LightReactions.');
+  const atp = n => CH.LEDGER.atp(n, RING.protonsPerTurn, RING.atpPerTurn);
+  ok(atp(RING.protonsPerTurn) === RING.atpPerTurn,
+    `one full turn should be ${RING.atpPerTurn} ATP, the ledger says ${atp(RING.protonsPerTurn)}.`);
+  ok(atp(RING.protonsPerTurn - 1) < RING.atpPerTurn,
     'a turn short of complete already pays its last ATP.');
 }
 
@@ -119,7 +119,7 @@ const LADDER = load('kit/scale.js').ScaleLadder;
   for (const k of ['membrane', 'lumen', 'gap', 'ims', 'psii', 'psi', 'b6f', 'synthase', 'starch'])
     ok(S.exag[k] >= 1, `SCALE.exag.${k} is ${S.exag[k]}: drawn smaller than life, which nothing here does.`);
   ok(S.exag.gap > S.exag.lumen, 'the stromal gap in a stack is the thinner thing and should be stretched harder than the lumen.');
-  ok(S.down && S.down.thylakoid === 'Chemiosmosis', 'SCALE.down does not hand the thylakoid to Chemiosmosis.');
+  ok(S.down && S.down.thylakoid === 'LightReactions', 'SCALE.down does not hand the thylakoid to LightReactions.');
 }
 
 /* 6. no Calvin cycle */

@@ -42,6 +42,7 @@
 <script src="../kit/card-stage.js"></script>
 <script src="../kit/lesson-shell.js"></script>
 <script src="../membrane/chemiosmosis.js"></script>
+<script src="../chemiosmosis/electron-transport.js"></script>
 <script src="../cell/organelles.js"></script>
 <script src="../cell/mitochondrion.js"></script>
 <script>
@@ -166,7 +167,7 @@ function bench(ctx) {
     ui.q('#rd-sel').textContent = s.selected ? NAMES[s.selected].text : '—';
     ui.q('#rd-stoich').textContent =
       `${s.stoichiometry.protonsPerTurn} H⁺ a turn, ${s.stoichiometry.atpPerTurn} ATP a turn — ` +
-      `${s.stoichiometry.protonsPerATP.toFixed(1)} H⁺ per ATP, read from membrane/chemiosmosis.js. ` +
+      `${s.stoichiometry.protonsPerATP.toFixed(1)} H⁺ per ATP, read from ElectronTransport's ring. ` +
       `Crista spacing ${s.cristaSpacingNm ? Math.round(s.cristaSpacingNm) + ' nm' : '—'}; ` +
       `membranes drawn at ${Math.round(s.membraneNm)} nm against a real 4.`;
   });

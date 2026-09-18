@@ -5,15 +5,15 @@
 <base href="/demos/chemiosmosis/">
 <script defer src="/demos/lib/site.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>chemiosmosis-test — pump protons out, let them back through the turbine</title>
+<title>electron-transport-test — pump protons out, let them back through the turbine</title>
 <!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
-<meta name="description" content="Protons pumped out, and the turbine they turn coming back: the chain, one complex or four, ATP synthase, no oxygen, uncouplers, mitochondrion or thylakoid.">
-<link rel="canonical" href="https://www.kodolab.org/library/chemiosmosis">
+<meta name="description" content="Respiration's chain pumping protons out, and the turbine they turn coming back: complexes I–IV, or one, NADH and FADH₂, no oxygen, uncouplers, the ATP getting out.">
+<link rel="canonical" href="https://www.kodolab.org/library/electrontransport">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kodolab">
-<meta property="og:url" content="https://www.kodolab.org/library/chemiosmosis">
-<meta property="og:title" content="chemiosmosis-test — pump protons out, let them back through the turbine">
-<meta property="og:description" content="Protons pumped out, and the turbine they turn coming back: the chain, one complex or four, ATP synthase, no oxygen, uncouplers, mitochondrion or thylakoid.">
+<meta property="og:url" content="https://www.kodolab.org/library/electrontransport">
+<meta property="og:title" content="electron-transport-test — pump protons out, let them back through the turbine">
+<meta property="og:description" content="Respiration's chain pumping protons out, and the turbine they turn coming back: complexes I–IV, or one, NADH and FADH₂, no oxygen, uncouplers, the ATP getting out.">
 <meta name="robots" content="noindex">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
@@ -54,25 +54,24 @@
 <script src="../membrane/sheet.js"></script>
 <script src="../chemiosmosis/circuit.js"></script>
 <script src="../chemiosmosis/electron-transport.js"></script>
-<script src="../chemiosmosis/light-reactions.js"></script>
 <script src="../membrane/membrane.js"></script>
 
 <script>
-const FUELS = { mitochondrion: ['NADH', 'FADH2'], thylakoid: ['light'] };
-const fuelName = f => ({ FADH2: 'FADH₂', light: 'light' })[f] || f;
+const FUELS = ['NADH', 'FADH2'];
+const fuelName = f => ({ FADH2: 'FADH₂' })[f] || f;
 
 const shell = LessonShell.create({
-  brand: 'Chemiosmosis · component bench',
+  brand: 'ElectronTransport · component bench',
   hint: 'Drag to orbit · Scroll to zoom',
   steps: [{
-    eyebrow: 'chemiosmosis/circuit.js',
+    eyebrow: 'chemiosmosis/electron-transport.js',
     title: 'Pump out, turn back in',
-    body: '<p>Something with energy to spend pumps protons out; ATP synthase lets them back down and turns.</p>',
+    body: '<p>NADH pays to pump protons out of the matrix; ATP synthase lets them back down and turns.</p>',
     onEnter: bench,
   }],
 });
 
-const m = Chemiosmosis.mount(shell.stage, { viewOffset: shell.viewOffset });
+const m = ElectronTransport.mount(shell.stage, { viewOffset: shell.viewOffset });
 m.start();
 window.chemi = m;
 
@@ -82,12 +81,11 @@ function bench(ctx) {
     opts.map(([v, t]) => `<button type="button" data-v="${v}">${t}</button>`).join('')}</div>`;
   ui.controls(`
     <div class="bench-group">
-      <div class="bench-hd">where</div>
-      ${seg('context', [['mitochondrion', 'mitochondrion'], ['thylakoid', 'thylakoid']])}
+      <div class="bench-hd">how much detail</div>
       <div class="bench-sub">the chain</div>
       <div>${seg('chain', [['lumped', 'one complex'], ['split', 'I · II · III · IV']])}</div>
-      <div class="bench-sub" data-mito>how far out</div>
-      <div data-mito>${seg('span', [['inner', 'inner membrane'], ['mitochondrion', '+ outer'], ['cell', '+ cell']])}</div>
+      <div class="bench-sub">how far out</div>
+      <div>${seg('span', [['inner', 'inner membrane'], ['mitochondrion', '+ outer'], ['cell', '+ cell']])}</div>
     </div>
 
     <div class="bench-group">
@@ -102,7 +100,7 @@ function bench(ctx) {
 
     <div class="bench-group">
       <div class="bench-hd">conditions</div>
-      <label class="switch" data-mito><input type="checkbox" id="o2" checked><span class="track"></span>oxygen</label>
+      <label class="switch"><input type="checkbox" id="o2" checked><span class="track"></span>oxygen</label>
       <label class="switch"><input type="checkbox" id="leak"><span class="track"></span>uncoupler in the membrane</label>
     </div>
 
@@ -125,10 +123,9 @@ function bench(ctx) {
       </div>
     </div>`);
 
-  const S = { context: 'mitochondrion', chain: 'lumped', span: 'inner', fuel: 'NADH' };
+  const S = { chain: 'lumped', span: 'inner', fuel: 'NADH' };
   const $ = s => ui.q(s);
   const mark = (id, v) => { for (const b of ui.qa(`#${id} > button`)) b.setAttribute('aria-pressed', String(b.dataset.v === v)); };
-  const mito = () => S.context === 'mitochondrion';
 
   /* A layout that fits the level: the component spreads `complex` into I–IV
      and makes room itself, so only the uncoupler needs placing here. */
@@ -139,40 +136,28 @@ function bench(ctx) {
     if ($('#leak').checked) p.leak = { x: wide ? 150 : 125 };
     return p;
   }
-  const apply = () => { m.set({ context: S.context, chain: S.chain, span: S.span, fuel: S.fuel,
+  const apply = () => { m.set({ chain: S.chain, span: S.span, fuel: S.fuel,
     oxygen: $('#o2').checked, proteins: layout() }); if (labelsOn) showLabels(); sync(); };
 
-  function buildFuels() {
-    $('#fuel-seg').innerHTML = seg('fuel', FUELS[S.context].map(f => [f, fuelName(f)]).concat([['', 'none']]));
-    $('#feeds').innerHTML = FUELS[S.context].map(f =>
-      `<button class="btn secondary" type="button" data-feed="${f}">${f === 'light' ? 'One flash' : 'Send one ' + fuelName(f)}</button>`).join('');
-    for (const b of ui.qa('#fuel > button')) b.onclick = () => { S.fuel = b.dataset.v || null; m.set({ fuel: S.fuel }); sync(); };
-    for (const b of ui.qa('[data-feed]')) b.onclick = () => m.feed(b.dataset.feed);
-  }
+  $('#fuel-seg').innerHTML = seg('fuel', FUELS.map(f => [f, fuelName(f)]).concat([['', 'none']]));
+  $('#feeds').innerHTML = FUELS.map(f => `<button class="btn secondary" type="button" data-feed="${f}">Send one ${fuelName(f)}</button>`).join('');
+  for (const b of ui.qa('#fuel > button')) b.onclick = () => { S.fuel = b.dataset.v || null; m.set({ fuel: S.fuel }); sync(); };
+  for (const b of ui.qa('[data-feed]')) b.onclick = () => m.feed(b.dataset.feed);
 
-  /* Every control reflects what can happen now: a thylakoid has no four-complex
-     chain, no outer membrane and no O₂ acceptor, so those rows leave rather
-     than sit greyed. */
   function sync() {
-    mark('context', S.context); mark('chain', S.chain); mark('span', S.span); mark('fuel', S.fuel || '');
-    for (const el of ui.qa('[data-mito]')) el.hidden = !mito();
-    ui.q('#chain > button[data-v="split"]').textContent = mito() ? 'I · II · III · IV' : 'PSII · b6f · PSI';
+    mark('chain', S.chain); mark('span', S.span); mark('fuel', S.fuel || '');
     $('#rate').disabled = !S.fuel;
-    const blocked = mito() && S.chain === 'lumped' && !$('#o2').checked;
+    const blocked = S.chain === 'lumped' && !$('#o2').checked;
     for (const b of ui.qa('[data-feed]')) b.disabled = blocked;
     $('#feedfoot').textContent = blocked ? 'No oxygen at the end of the chain, so a carrier has nowhere to send its electrons.'
       : S.fuel ? 'One carrier, one trip, on top of the supply. Clearer with the supply set to none.'
       : 'Supply off: each press goes round the chain once and stops.';
   }
 
-  for (const id of ['context', 'chain', 'span']) for (const b of ui.qa(`#${id} > button`)) b.onclick = () => {
+  for (const id of ['chain', 'span']) for (const b of ui.qa(`#${id} > button`)) b.onclick = () => {
     if (S[id] === b.dataset.v) return;
     S[id] = b.dataset.v;
-    if (id === 'context') {
-      if (!mito()) S.span = 'inner';
-      S.fuel = FUELS[S.context][0];
-      buildFuels(); apply(); m.reset();
-    } else apply();
+    apply();
   };
   $('#o2').onchange = () => { m.set({ oxygen: $('#o2').checked }); sync(); };
   $('#leak').onchange = apply;
@@ -182,7 +167,6 @@ function bench(ctx) {
   function showLabels() {
     const s = m.state();
     const names = (s.chain !== 'split' ? ['complex', 'inside', 'outside']
-      : s.light ? ['psii', 'water.split', 'plastoquinone', 'b6f', 'plastocyanin', 'psi']
       : ['complex.I', 'complex.II', 'complex.III', 'complex.IV', 'quinone', 'cytc'])
       .concat(['synthase'], $('#leak').checked ? ['leak'] : [], s.span !== 'inner' ? ['translocase', 'porin'] : [], s.span === 'cell' ? ['pump.atp'] : []);
     m.clearNotes(); m.notes(names);
@@ -212,22 +196,14 @@ function bench(ctx) {
       row('proton-motive force', s.pmf.toFixed(0) + ' mV') +
       row('protons pumped out', s.complexTurns);
     if (s.complexes) {
-      for (const k of Object.keys(s.complexes)) rows += row(`${s.light ? k : 'complex ' + k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
-      if (s.light) {
-        const L = s.light;
-        rows += row('H⁺ from water', L.protonsFromWater);
-        rows += row('H⁺ into the lumen per pair · per O₂', `${s.protonsPerFuel.light} · ${L.protonsPerO2}`);
-        rows += row(`photons (${L.photonsPerPair} a pair)`, L.photons);
-        rows += row('waters split · O₂ released', `${L.waterSplit} · ${L.o2Released}`);
-        rows += row('NADPH made', L.nadphMade);
-        rows += row('plastoquinol · loaded plastocyanin', `${s.shuttles.plastoquinol} · ${s.shuttles.plastocyaninLoaded}`);
-      } else {
-        rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
-        rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
-      }
+      for (const k of Object.keys(s.complexes)) rows += row(`complex ${k}: ${s.complexes[k].turns} turns × ${s.complexes[k].pumpsPerTurn}`, s.complexes[k].pumped);
+      rows += row('per NADH / per FADH₂', `${s.protonsPerFuel.NADH} / ${s.protonsPerFuel.FADH2}`);
+      rows += row('ubiquinol · loaded cyt c', `${s.shuttles.ubiquinol} · ${s.shuttles.cytcLoaded}`);
     } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
+    if (s.o2Left != null) rows += row('O₂ left', s.o2Left);
     if (s.protonsLeaked || $('#leak').checked) rows += row('protons down the uncoupler', s.protonsLeaked);
-    rows += row(`ATP (${s.stoichiometry.protonsPerTurn} H⁺ per ${s.stoichiometry.atpPerTurn})`, s.atpMade);
+    if (s.stoichiometry.protonsPerExport) rows += row('protons spent on export', s.protonsForExport);
+    rows += row(`ATP (${s.stoichiometry.protonsPerTurn} H⁺ per ${s.stoichiometry.atpPerTurn}, c${s.stoichiometry.ringSubunits} ring)`, s.atpMade);
     if (s.cell) rows += row('pump turns bought', s.cell.atpSpent) + row('cell membrane voltage', s.cell.mV.toFixed(0) + ' mV');
     $('#rd').innerHTML = rows;
     $('#verdict').textContent =
@@ -237,7 +213,7 @@ function bench(ctx) {
       : `The gradient is holding at ${s.pmf.toFixed(0)} mV, and every ${s.stoichiometry.protonsPerATP.toFixed(1)} protons back through the synthase is one ATP.`;
   });
 
-  buildFuels(); apply();
+  apply();
 }
 
 shell.goTo(0);

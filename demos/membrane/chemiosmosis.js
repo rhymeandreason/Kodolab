@@ -30,8 +30,7 @@
  *  from whoever builds it: chemiosmosis/electron-transport.js declares the
  *  c8, chemiosmosis/light-reactions.js the c14. The chain tables, the fuels
  *  and what the electrons end on live in those two files too; what is here
- *  is only what both run on. PROTONS_PER_TURN and ATP_PER_TURN below are the
- *  mitochondrion's, kept for the organelle boxes until they read their own.
+ *  is only what both run on.
  *
  *  pH IS EXAGGERATED and in one number. A drawn proton stands for a great
  *  many, so PROTONS_PER_PH says how many drawn ones make a pH unit. Without
@@ -40,9 +39,6 @@
 (function (global) {
   'use strict';
 
-  const PROTONS_PER_TURN = 9;
-  const ATP_PER_TURN = 3;
-  const PROTONS_PER_ATP = PROTONS_PER_TURN / ATP_PER_TURN;
   const PROTONS_PER_PH = 24;      // drawn protons per pH unit (exaggeration)
   const PH_REF = 7.0;             // both sides start here, before any pumping
   const MV_PER_PH = 61;           // Nernst at 37 C, the same 61 membrane.js uses
@@ -121,9 +117,11 @@
   }
 
   /* The rotor: protons in, angle and ATP out. One place, so the animation and
-     the count cannot disagree. */
+     the count cannot disagree. `ring` is { protonsPerTurn, atpPerTurn }, the
+     component's, and there is no default: a rotor with no ring is a bug. */
   function rotor(ring) {
-    const PPT = ring ? ring.protonsPerTurn : PROTONS_PER_TURN, APT = ring ? ring.atpPerTurn : ATP_PER_TURN;
+    if (!ring || !(ring.protonsPerTurn > 0) || !(ring.atpPerTurn > 0)) throw new Error('chemiosmosis: rotor() needs a ring { protonsPerTurn, atpPerTurn }');
+    const PPT = ring.protonsPerTurn, APT = ring.atpPerTurn;
     let protons = 0, atp = 0, angle = 0;
     return {
       pass(n = 1) {
@@ -298,7 +296,7 @@
 
   /* O₂ + 4e⁻: the chemistry both chains meet, made at one end and consumed at the other. */
   const E_PER_O2 = 4;
-  const API = { PROTONS_PER_TURN, ATP_PER_TURN, PROTONS_PER_ATP, PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
+  const API = { PROTONS_PER_PH, PH_REF, MV_PER_PH, PMF_STALL, DPSI_FLOOR,
                 CONTEXTS, sideName, pumpDir, protonState, synthaseDirection, rotor, rate, Complex, chainPath, E_PER_O2 };
   global.Chemiosmosis = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

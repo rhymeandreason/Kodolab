@@ -6,172 +6,108 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mitochondrial Chemiosmosis</title>
+<title>Proton Gradients & Uncouplers</title>
 <style>
-  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.readout-box { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 </style>
 </head>
 <body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="../kit/app.js" data-shell="steps" data-use="Membrane"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="ElectronTransport"></script>
 <script>
-let uncouplerActive = false;
-let unsub = null;
-
 const shell = LessonShell.create({
-  brand: 'Mitochondrial Bioenergetics',
+  brand: 'Cellular Respiration',
   hint: 'Drag to orbit · Scroll to zoom',
-  ctx: {},
+  ctx: {
+    updateReadouts: null
+  },
   steps: [
     {
-      eyebrow: 'Step 1 of 4',
-      title: 'Building the Proton Gradient',
-      body: '<p class="lead"><strong>The electron transport chain pumps protons out of the matrix.</strong></p><p>Electron carriers such as NADH power protein complexes to actively pump protons (H⁺) from the matrix across the inner membrane into the intermembrane space, establishing an electrochemical proton-motive force (PMF).</p>',
+      eyebrow: 'Step 1: The Proton Gradient',
+      title: 'Fuel oxidation pumps protons out of the matrix',
+      body: '<p class="lead"><strong>Electron transport complexes act as proton pumps.</strong> As high-energy electrons pass from NADH to oxygen, complexes pump protons from the mitochondrial matrix into the intermembrane space.</p><p>This creates a steep electrochemical gradient across the inner membrane, storing potential energy as proton-motive force (PMF).</p>',
+      nextLabel: 'Harvest the gradient',
       onEnter(ctx) {
-        m.set({
-          fuel: 'NADH',
-          fuelRate: 1,
-          proteins: { complex: { x: -60 }, synthase: null, leak: null }
-        });
-        m.notes(['complex', 'H']);
-        ctx.ui.controls('<div class="stat-grid"><div class="stat"><div class="stat-label">Proton-Motive Force</div><div class="stat-value" id="pmf-val" data-live>0 mV</div></div><div class="stat"><div class="stat-label">Complex Activity</div><div class="stat-value" id="act-val" data-live>Pumping</div></div></div>');
-        if (unsub) unsub();
-        unsub = m.on('frame', s => {
-          const pmfEl = ctx.ui.q('#pmf-val');
-          const actEl = ctx.ui.q('#act-val');
-          if (pmfEl && s.pmf != null) pmfEl.textContent = Math.round(s.pmf) + ' mV';
-          if (actEl && s.complexLabel) actEl.textContent = s.complexLabel;
-        });
-      },
-      onExit() {
-        if (unsub) { unsub(); unsub = null; }
-        m.notes(false);
-      }
-    },
-    {
-      eyebrow: 'Step 2 of 4',
-      title: 'ATP Synthase Harnesses the Gradient',
-      body: '<p class="lead"><strong>Protons flow down their gradient to power ATP synthesis.</strong></p><p>ATP synthase acts as a molecular turbine. Protons return to the matrix through the synthase rotor, driving conformational changes that synthesize ATP from ADP and inorganic phosphate.</p>',
-      onEnter(ctx) {
-        m.set({
-          fuel: 'NADH',
-          fuelRate: 1,
-          proteins: { complex: { x: -70 }, synthase: { x: 50 }, leak: null }
-        });
-        m.notes(['synthase']);
-        ctx.ui.controls('<div class="stat-grid"><div class="stat"><div class="stat-label">Proton-Motive Force</div><div class="stat-value" id="pmf-val" data-live>0 mV</div></div><div class="stat"><div class="stat-label">ATP Synthesized</div><div class="stat-value" id="atp-val" data-live>0</div></div></div>');
-        if (unsub) unsub();
-        unsub = m.on('frame', s => {
+        m.set({ fuel: 'NADH', fuelRate: 1, oxygen: true, proteins: { complex: { x: -60 }, synthase: { x: 50 }, leak: null } });
+        m.notes(['complex']);
+        ctx.ui.controls('<div class="readout-box"><div class="stat"><span class="stat-label">Proton-Motive Force</span><span class="stat-value" id="pmf-val" data-live>--</span></div><div class="stat"><span class="stat-label">ATP Synthesized</span><span class="stat-value" id="atp-val" data-live>0</span></div></div>');
+        ctx.updateReadouts = s => {
           const pmfEl = ctx.ui.q('#pmf-val');
           const atpEl = ctx.ui.q('#atp-val');
           if (pmfEl && s.pmf != null) pmfEl.textContent = Math.round(s.pmf) + ' mV';
           if (atpEl && s.atpMade != null) atpEl.textContent = s.atpMade;
-        });
-      },
-      onExit() {
-        if (unsub) { unsub(); unsub = null; }
-        m.notes(false);
-      }
-    },
-    {
-      eyebrow: 'Step 3 of 4',
-      title: 'Uncouplers Dissipate the Gradient',
-      body: '<p class="lead"><strong>Uncoupling proteins let protons bypass ATP synthase.</strong></p><p>An uncoupler provides a channel for protons to leak back into the matrix without turning the turbine. The PMF collapses, ATP synthesis stops, and energy from electron transfer is released directly as heat.</p>',
-      onEnter(ctx) {
-        m.set({
-          fuel: 'NADH',
-          fuelRate: 1,
-          proteins: { complex: { x: -80 }, synthase: { x: 40 }, leak: { x: -20 } }
-        });
-        m.notes(['leak']);
-        ctx.ui.controls('<div class="stat-grid"><div class="stat"><div class="stat-label">Proton-Motive Force</div><div class="stat-value" id="pmf-val" data-live>0 mV</div></div><div class="stat"><div class="stat-label">Protons Leaked</div><div class="stat-value" id="leak-val" data-live>0</div></div></div>');
-        if (unsub) unsub();
-        unsub = m.on('frame', s => {
-          const pmfEl = ctx.ui.q('#pmf-val');
-          const leakEl = ctx.ui.q('#leak-val');
-          if (pmfEl && s.pmf != null) pmfEl.textContent = Math.round(s.pmf) + ' mV';
-          if (leakEl && s.protonsLeaked != null) leakEl.textContent = s.protonsLeaked;
-        });
-      },
-      onExit() {
-        if (unsub) { unsub(); unsub = null; }
-        m.notes(false);
-      }
-    },
-    {
-      eyebrow: 'Step 4 of 4',
-      title: 'Experiment with the Proton Circuit',
-      body: '<p class="lead"><strong>Toggle uncoupling and control fuel supply to see the energetic outcome.</strong></p><p>Notice how opening the uncoupler channel rapidly drops the membrane potential and halts ATP production while the complexes continue consuming fuel.</p>',
-      onEnter(ctx) {
-        uncouplerActive = false;
-        m.set({
-          fuel: 'NADH',
-          fuelRate: 1,
-          proteins: { complex: { x: -80 }, synthase: { x: 40 }, leak: null }
-        });
-        ctx.ui.controls(`
-          <div class="slider">
-            <div class="slider-head">
-              <span class="label">Fuel Rate (NADH / O₂)</span>
-              <span class="value" id="rate-num" data-live>100%</span>
-            </div>
-            <input type="range" id="fuel-rate" min="0" max="1" step="0.05" value="1">
-          </div>
-          <div style="margin-top: 12px;">
-            <button class="btn secondary" id="btn-uncoupler">Insert Uncoupler (UCP1)</button>
-          </div>
-          <div class="stat-grid">
-            <div class="stat"><div class="stat-label">PMF</div><div class="stat-value" id="pmf-val" data-live>0 mV</div></div>
-            <div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="atp-val" data-live>0</div></div>
-          </div>
-        `);
-        
-        const rateNum = ctx.ui.q('#rate-num');
-        ctx.ui.range(ctx.ui.q('#fuel-rate'), v => {
-          m.set({ fuelRate: v });
-          if (rateNum) rateNum.textContent = Math.round(v * 100) + '%';
-        });
-
-        const btnUncoupler = ctx.ui.q('#btn-uncoupler');
-        btnUncoupler.onclick = () => {
-          uncouplerActive = !uncouplerActive;
-          if (uncouplerActive) {
-            m.set({ proteins: { complex: { x: -80 }, synthase: { x: 40 }, leak: { x: -20 } } });
-            btnUncoupler.textContent = 'Remove Uncoupler';
-            m.note('leak');
-          } else {
-            m.set({ proteins: { complex: { x: -80 }, synthase: { x: 40 }, leak: null } });
-            btnUncoupler.textContent = 'Insert Uncoupler (UCP1)';
-            m.notes(false);
-          }
         };
-
-        if (unsub) unsub();
-        unsub = m.on('frame', s => {
+      },
+      onExit(ctx) {
+        ctx.updateReadouts = null;
+      }
+    },
+    {
+      eyebrow: 'Step 2: Chemiosmosis',
+      title: 'ATP synthase taps the gradient like a turbine',
+      body: '<p class="lead"><strong>Protons return to the matrix exclusively through ATP synthase.</strong> The lipid bilayer is impermeable to ions, so protons must flow downhill through the channel in ATP synthase.</p><p>This proton flow turns the central rotor, driving the phosphorylation of ADP and inorganic phosphate into ATP.</p>',
+      nextLabel: 'Introduce an uncoupler',
+      onEnter(ctx) {
+        m.notes(['synthase']);
+        ctx.ui.controls('<div class="readout-box"><div class="stat"><span class="stat-label">Proton-Motive Force</span><span class="stat-value" id="pmf-val" data-live>--</span></div><div class="stat"><span class="stat-label">ATP Synthesized</span><span class="stat-value" id="atp-val" data-live>0</span></div></div>');
+        ctx.updateReadouts = s => {
           const pmfEl = ctx.ui.q('#pmf-val');
           const atpEl = ctx.ui.q('#atp-val');
           if (pmfEl && s.pmf != null) pmfEl.textContent = Math.round(s.pmf) + ' mV';
           if (atpEl && s.atpMade != null) atpEl.textContent = s.atpMade;
-        });
+        };
       },
-      onExit() {
-        if (unsub) { unsub(); unsub = null; }
+      onExit(ctx) {
+        ctx.updateReadouts = null;
+      }
+    },
+    {
+      eyebrow: 'Step 3: Uncoupling',
+      title: 'An uncoupler provides a bypass pore',
+      body: '<p class="lead"><strong>Uncouplers short-circuit the proton circuit.</strong> Molecules like DNP or thermogenin (UCP1) form a leak channel across the inner membrane.</p><p>Protons rush back into the matrix through the leak channel instead of passing through ATP synthase.</p>',
+      nextLabel: 'Observe the outcome',
+      onEnter(ctx) {
+        m.set({ proteins: { complex: { x: -70 }, leak: { x: -10 }, synthase: { x: 50 } } });
+        m.notes(['leak']);
+        ctx.ui.controls('<div class="readout-box"><div class="stat"><span class="stat-label">Proton-Motive Force</span><span class="stat-value" id="pmf-val" data-live>--</span></div><div class="stat"><span class="stat-label">ATP Synthesized</span><span class="stat-value" id="atp-val" data-live>0</span></div></div>');
+        ctx.updateReadouts = s => {
+          const pmfEl = ctx.ui.q('#pmf-val');
+          const atpEl = ctx.ui.q('#atp-val');
+          if (pmfEl && s.pmf != null) pmfEl.textContent = Math.round(s.pmf) + ' mV';
+          if (atpEl && s.atpMade != null) atpEl.textContent = s.atpMade;
+        };
+      },
+      onExit(ctx) {
+        ctx.updateReadouts = null;
+      }
+    },
+    {
+      eyebrow: 'Step 4: Metabolic Consequence',
+      title: 'Energy dissipates as heat instead of ATP',
+      body: '<p class="lead"><strong>Respiration continues, but ATP production stops.</strong> Because the proton gradient collapses, the ATP synthase turbine stalls.</p><p>Fuel is still consumed and oxygen is still reduced, but all the potential energy is lost directly as thermal heat.</p>',
+      onEnter(ctx) {
         m.notes(false);
+        ctx.ui.controls('<div class="readout-box"><div class="stat"><span class="stat-label">Protons Leaked</span><span class="stat-value" id="leaked-val" data-live>0</span></div><div class="stat"><span class="stat-label">Protons via Synthase</span><span class="stat-value" id="synth-val" data-live>0</span></div></div>');
+        ctx.updateReadouts = s => {
+          const leakEl = ctx.ui.q('#leaked-val');
+          const synthEl = ctx.ui.q('#synth-val');
+          if (leakEl && s.protonsLeaked != null) leakEl.textContent = s.protonsLeaked;
+          if (synthEl && s.protonsThroughSynthase != null) synthEl.textContent = s.protonsThroughSynthase;
+        };
+      },
+      onExit(ctx) {
+        ctx.updateReadouts = null;
       }
     }
   ]
 });
 
-const m = Membrane.mount(shell.stage, {
-  context: 'mitochondrion',
-  fuel: 'NADH',
-  fuelRate: 1,
-  proteins: { complex: { x: -60 }, synthase: null, leak: null },
-  contents: { inside: { water: 30, H: 22 }, outside: { water: 30, H: 22 } },
-  potential: 'nernst',
-  sideLabels: true,
-  viewOffset: shell.viewOffset
+const m = ElectronTransport.mount(shell.stage, { viewOffset: shell.viewOffset });
+m.on('frame', s => {
+  if (shell.ctx && typeof shell.ctx.updateReadouts === 'function') {
+    shell.ctx.updateReadouts(s);
+  }
 });
 
 shell.goTo(0);

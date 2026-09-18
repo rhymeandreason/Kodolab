@@ -8,112 +8,103 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Building the Proton Gradient</title>
 <style>
-  .chart-box { width: 100%; height: 140px; margin-top: 10px; }
+  #graph-box { width: 100%; height: 130px; margin-top: 10px; }
 </style>
 </head>
 <body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="../kit/app.js" data-shell="steps" data-use="Membrane,Graph"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="ElectronTransport,Graph"></script>
 <script>
 let g = null;
-let unsub = null;
 
 const shell = LessonShell.create({
-  brand: 'Chemiosmosis',
+  brand: 'Mitochondrial Bioenergetics',
   hint: 'Drag to orbit · Scroll to zoom',
-  ctx: {},
   steps: [
     {
-      eyebrow: 'Mitochondrial Inner Membrane',
-      title: 'Proton pumping across the bilayer',
-      body: '<p><b>Proton pumps harvest chemical energy to establish a gradient.</b> An electron transport complex consumes fuel (NADH) to translocate protons from the matrix into the intermembrane space.</p>',
+      eyebrow: 'Electrochemical Equilibrium',
+      title: 'Before the pumps start',
+      body: '<p class="lead"><strong>Without fuel, proton concentrations remain balanced across the membrane.</strong></p><p>Protons sit on both sides of the inner mitochondrial membrane with no net voltage or pH difference. The proton-motive force (pmf) stays near zero.</p>',
       nextLabel: 'Start pumping',
       onEnter(ctx) {
-        m.set({
-          context: 'mitochondrion',
+        ET.set({
           fuel: null,
-          fuelRate: 0,
           proteins: { complex: { x: -40 }, synthase: null, leak: null },
-          contents: { inside: { water: 30, H: 22 }, outside: { water: 30, H: 22 } },
-          potential: 'nernst'
+          contents: { inside: { water: 30, H: 22 }, outside: { water: 30, H: 22 } }
         });
-        m.reset();
-        m.note('complex', { text: 'ETC Complex' });
-        ctx.ui.showPanel(m);
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton-motive force</div><div class="stat-value" id="pmf-val" data-live>0 mV</div></div></div><div id="graph-box"></div>');
+        g = Graph.mount(ctx.ui.q('#graph-box'), { live: { span: 40 }, height: 120 }).follow(ET, 'pmf');
       },
       onExit() {
-        m.notes(false);
-      }
-    },
-    {
-      eyebrow: 'Gradient in Real Time',
-      title: 'Plotting the proton-motive force',
-      body: '<p><b>As protons accumulate outside, the proton-motive force (pmf) rises.</b> Watch the live trace record both the electrical voltage and chemical pH difference established by the active complex.</p>',
-      nextLabel: 'Add ATP Synthase',
-      onEnter(ctx) {
-        m.set({
-          fuel: 'NADH',
-          fuelRate: 1,
-          proteins: { complex: { x: -40 }, synthase: null, leak: null }
-        });
-        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton Motive Force</div><div class="stat-value" id="pmf-val">0 mV</div></div><div class="stat"><div class="stat-label">pH Difference (&Delta;pH)</div><div class="stat-value" id="dp-val">0.0</div></div></div><div id="graph-slot" class="chart-box"></div>');
-        
-        const el = ctx.ui.q('#graph-slot');
-        g = Graph.mount(el, { live: { span: 60 }, height: 130 }).follow(m, 'pmf');
-
-        unsub = m.on('frame', s => {
-          const pmfEl = ctx.ui.q('#pmf-val');
-          const dpEl = ctx.ui.q('#dp-val');
-          if (pmfEl && s.pmf !== undefined) pmfEl.textContent = Math.round(s.pmf) + ' mV';
-          if (dpEl && s.dpH !== undefined) dpEl.textContent = s.dpH.toFixed(2);
-        });
-      },
-      onExit() {
-        if (unsub) { unsub(); unsub = null; }
         if (g) { g.destroy(); g = null; }
       }
     },
     {
-      eyebrow: 'Coupling to Work',
-      title: 'Discharging the gradient through ATP synthase',
-      body: '<p><b>ATP synthase acts as a turbine driven by the returning protons.</b> Protons flow back down their electrochemical gradient, turning the rotor to synthesize ATP.</p>',
-      nextLabel: 'Finish',
+      eyebrow: 'Active Transport',
+      title: 'Pumping protons against the gradient',
+      body: '<p class="lead"><strong>Supplying NADH powers unidirectional proton translocation.</strong></p><p>The electron transport complex moves protons upward out of the matrix into the intermembrane space. Watch the live plot track the rapid surge in membrane potential and proton-motive force.</p>',
+      nextLabel: 'Observe stall',
       onEnter(ctx) {
-        m.set({
-          fuel: 'NADH',
-          fuelRate: 1,
-          proteins: { complex: { x: -45 }, synthase: { x: 45 }, leak: null }
-        });
-        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">ATP Made</div><div class="stat-value" id="atp-val">0</div></div><div class="stat"><div class="stat-label">pmf</div><div class="stat-value" id="pmf-val2">0 mV</div></div></div><div id="graph-slot2" class="chart-box"></div>');
-        
-        const el = ctx.ui.q('#graph-slot2');
-        g = Graph.mount(el, { live: { span: 60 }, height: 130 }).follow(m, 'atp');
-
-        unsub = m.on('frame', s => {
-          const atpEl = ctx.ui.q('#atp-val');
-          const pmfEl = ctx.ui.q('#pmf-val2');
-          if (atpEl && s.atpMade !== undefined) atpEl.textContent = s.atpMade;
-          if (pmfEl && s.pmf !== undefined) pmfEl.textContent = Math.round(s.pmf) + ' mV';
-        });
-        
-        m.notes(['complex', 'synthase']);
+        ET.set({ fuel: 'NADH', fuelRate: 1 });
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton-motive force</div><div class="stat-value" id="pmf-val" data-live>-- mV</div><div class="stat-sub" id="h-count">Pumping in progress</div></div></div><div id="graph-box"></div>');
+        g = Graph.mount(ctx.ui.q('#graph-box'), { live: { span: 40 }, height: 120 }).follow(ET, 'pmf');
       },
       onExit() {
-        m.notes(false);
-        if (unsub) { unsub(); unsub = null; }
+        if (g) { g.destroy(); g = null; }
+      }
+    },
+    {
+      eyebrow: 'Steady State',
+      title: 'Back-pressure limits the gradient',
+      body: '<p class="lead"><strong>The electrochemical gradient exerts resistance against further pumping.</strong></p><p>As positive charge and proton concentration accumulate in the intermembrane space, the energy needed to pump each additional proton increases until the complex approaches its stall potential.</p>',
+      nextLabel: 'Add ATP Synthase',
+      onEnter(ctx) {
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton-motive force</div><div class="stat-value" id="pmf-val" data-live>-- mV</div><div class="stat-sub">Near stall limit</div></div></div><div id="graph-box"></div>');
+        g = Graph.mount(ctx.ui.q('#graph-box'), { live: { span: 40 }, height: 120 }).follow(ET, 'pmf');
+      },
+      onExit() {
+        if (g) { g.destroy(); g = null; }
+      }
+    },
+    {
+      eyebrow: 'Chemiosmosis',
+      title: 'Spending the stored potential',
+      body: '<p class="lead"><strong>ATP synthase taps the gradient to make ATP.</strong></p><p>Protons flow back down their electrochemical gradient through the synthase turbine. This establishes a steady-state current where pumping rate balances ATP synthesis rate.</p>',
+      onEnter(ctx) {
+        ET.set({
+          proteins: { complex: { x: -60 }, synthase: { x: 40 }, leak: null },
+          showATP: true
+        });
+        ctx.ui.controls('<div class="stats"><div class="stat"><div class="stat-label">Proton-motive force</div><div class="stat-value" id="pmf-val" data-live>-- mV</div><div class="stat-sub" id="atp-val">ATP Made: 0</div></div></div><div id="graph-box"></div>');
+        g = Graph.mount(ctx.ui.q('#graph-box'), { live: { span: 40 }, height: 120 }).follow(ET, 'pmf');
+      },
+      onExit() {
         if (g) { g.destroy(); g = null; }
       }
     }
-  ],
-  onStep(step) {}
+  ]
 });
 
-const m = Membrane.mount(shell.stage, {
+const ET = ElectronTransport.mount(shell.stage, {
   viewOffset: shell.viewOffset,
-  context: 'mitochondrion',
-  potential: 'nernst',
-  proteins: { complex: { x: -40 }, synthase: null, leak: null }
+  fuel: null,
+  chain: 'lumped',
+  span: 'inner',
+  proteins: { complex: { x: -40 }, synthase: null, leak: null },
+  showATP: false,
+  showFuel: true
+});
+
+ET.on('frame', s => {
+  const pmfEl = document.querySelector('#pmf-val');
+  if (pmfEl && s.pmf != null) {
+    pmfEl.textContent = Math.round(s.pmf) + ' mV';
+  }
+  const atpEl = document.querySelector('#atp-val');
+  if (atpEl && s.atpMade != null) {
+    atpEl.textContent = 'ATP Made: ' + s.atpMade;
+  }
 });
 
 shell.goTo(0);
