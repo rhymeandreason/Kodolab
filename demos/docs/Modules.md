@@ -205,6 +205,7 @@ Each of these carries a caller's assumptions on purpose. **Not a candidate for a
 | `folding/villin.js` | `VillinLib` = `parseCA`/`segment` (PAE → rigid domains)/`poses` + `encode`/`decode`. `attic/folding-lab.html` act 3 only. Real ångströms | own header |
 | `lobes/lobes.js` | `Lobes.at(spec, i)` for the geometry, `Lobes.create(THREE).build(spec, {like: molGroup})` for meshes. The electrons a molecule is NOT sharing. **Not molecular orbitals** — the localised picture, and a page owes the student that word. **Always pass `like:`**, and `dirs.length` is not a pair count | own header, `lobes/check-lobes.js` |
 | `lib/mapcontent.js` | content, not code, and the door map's: `window.MapContent = {DOORS, CONCEPTS, QUESTIONS, CONTENT, PLACEMENTS}`. **QUESTIONS is question-major on purpose**, and rank belongs to the EDGE. `tools/mapcontent-io.js` is the one place that knows the shape | `tests/question-composer.md` |
+| `lib/lessons.js` | content, not code: `window.Lessons`, every lesson in teaching order (`key`, `url`, `file`, `title`, …). Shared: `lessons.html` draws its cards from it, `build/teacher.html` its class-link picker and lesson names. A new lesson is one row here | own header |
 | `questions.js` | content, not a module: `window.QuestionBank = {CONCEPTS, QUESTIONS}`, 27 coarse buckets, so more than one page reads the same rows. The `built` flag has to be kept true as lessons ship | the file's own header |
 
 ### Second simulations and figures

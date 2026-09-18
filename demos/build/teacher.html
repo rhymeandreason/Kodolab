@@ -56,13 +56,17 @@
         <!-- One link per class admits every student to a lesson and its tutor,
              and each browser that opens it reports back: api/event.js. -->
         <div class="share">
-          <p class="share-text"><b>Class link</b> No sign-in needed<button class="textbtn" type="button" id="newCode" title="The old link stops working">New code</button></p>
+          <div class="share-text">
+            <label for="lessonPick">Class link to</label>
+            <span class="selectwrap"><select id="lessonPick"></select><i class="ph-bold ph-caret-down" aria-hidden="true"></i></span>
+            <button class="textbtn" type="button" id="newCode" title="The old link stops working">New code</button>
+          </div>
           <div class="share-link">
             <label class="vh" for="classLink">Class link</label>
             <input id="classLink" readonly>
             <button class="btn btn--light" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy link</button>
           </div>
-          <p class="share-foot">Code <code class="bigcode" id="classCode"></code> also works on any lesson as <code>?class=…</code></p>
+          <p class="share-foot">Code <code class="bigcode" id="classCode"></code> No sign-in needed.</p>
         </div>
       </div>
 
@@ -221,6 +225,7 @@
 
 <div class="printsheet" id="printsheet" aria-hidden="true"></div>
 
+<script src="/demos/lib/lessons.js"></script>
 <script src="apps-client.js"></script>
 <script>
 (() => {
@@ -358,9 +363,24 @@
   }
 
   /* ---- lessons: the link, the sessions, the questions ------------------- */
-  // Respiration is the lesson under test; any lesson URL takes the same code.
-  const LESSON_PATH = fileForm ? '/demos/respiration-lab.html' : '/respiration';
-  const classLink = () => `${location.origin}${LESSON_PATH}?class=${current.class.code}`;
+  // Any lesson with a page takes the class code. The pick is this browser's
+  // convenience, not the class's: another teacher's laptop starts at Respiration.
+  const LESSONS = (window.Lessons || []).filter(l => l.file && !l.soon);
+  const LESSON_KEY = 'ss.teach.lesson';
+  let lessonKey = null;
+  try { lessonKey = localStorage.getItem(LESSON_KEY); } catch (e) {}
+  if (!LESSONS.some(l => l.key === lessonKey)) lessonKey = (LESSONS.find(l => l.key === 'respiration') || LESSONS[0] || {}).key;
+  $('lessonPick').innerHTML = LESSONS.map(l => `<option value="${esc(l.key)}">${esc(l.title)}</option>`).join('');
+  $('lessonPick').value = lessonKey;
+  $('lessonPick').addEventListener('change', () => {
+    lessonKey = $('lessonPick').value;
+    try { localStorage.setItem(LESSON_KEY, lessonKey); } catch (e) {}
+    paintSessions();
+  });
+  const classLink = () => {
+    const l = LESSONS.find(l => l.key === lessonKey) || {};
+    return `${location.origin}${fileForm ? l.file : l.url}?class=${current.class.code}`;
+  };
   // The phases respiration-lab.html reports, in its scroll order, said for a teacher.
   const PHASES = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
   const N_PHASES = Object.keys(PHASES).length;
@@ -370,9 +390,10 @@
   // Deployed a lesson is its short URL; on the dev server it is the file. Same lesson.
   // The browser's code, as lib/track.js shows it in the class card: first eight hex of the visitor id.
   const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
-  // Any other lesson by its file or short URL: /glycolysis-lab reads as Glycolysis.
-  const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p]
-    || String(p).replace(/^.*\//, '').replace(/(-lab)?(\.html)?$/, '').replace(/-/g, ' ').replace(/^./, c => c.toUpperCase()));
+  // A reported path is a short URL or a file, with or without .html; each names one lesson.
+  const TITLE = {};
+  for (const l of window.Lessons || []) for (const p of [l.url, l.file, l.file && l.file.replace(/\.html$/, ''), l.file && l.file.replace(/^\/demos/, '').replace(/\.html$/, '')]) if (p) TITLE[p] = l.title;
+  const pageName = p => TITLE[p] || p;
 
   const YES = '<i class="ph-bold ph-check-circle yes" aria-hidden="true"></i><span class="vh">yes</span>';
   // One pip per phase, filled through the one reached.

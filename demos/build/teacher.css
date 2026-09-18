@@ -129,8 +129,18 @@ body.teach {
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; padding: 1.35rem 1.4rem 1.4rem; border-radius: var(--r-card);
   background: var(--card); border: 1px solid var(--on-line);
 }
-.share-text { display: flex; align-items: baseline; gap: .5rem; margin: 0; color: var(--on-dim); font-size: .9rem; }
-.share-text b { color: var(--on); }
+.share-text { display: flex; align-items: center; gap: .6rem; margin: 0; color: var(--on-dim); font-size: .9rem; }
+.share-text label { display: inline; margin: 0; font-weight: 600; color: var(--on); white-space: nowrap; }
+.selectwrap { position: relative; min-width: 0; }
+.selectwrap select {
+  -webkit-appearance: none; appearance: none; max-width: 100%; cursor: pointer;
+  font: inherit; font-size: .95rem; font-weight: 600; color: var(--on);
+  background: var(--text-strong); border: 1px solid color-mix(in srgb, var(--text-inverse) 38%, transparent);
+  border-radius: var(--r-control); padding: .4rem 2rem .4rem .75rem; text-overflow: ellipsis;
+}
+.selectwrap select:hover { border-color: var(--on); }
+.selectwrap select:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.selectwrap i { position: absolute; right: .7rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--on-dim); font-size: .85rem; }
 .share-text .textbtn { margin-left: auto; color: var(--on-dim); }
 .share-text .textbtn:hover:not([disabled]) { color: var(--on); }
 .share-link { display: flex; gap: .5rem; }
