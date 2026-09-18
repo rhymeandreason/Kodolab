@@ -6,6 +6,7 @@
   "scripts": {
     "serve": "node demos/tools/dev-server.js",
     "check:ask": "node demos/ask/check-ask.js",
+    "check:auth": "node api/check-auth.js",
     "db": "node demos/tools/db.js"
   },
   "dependencies": {

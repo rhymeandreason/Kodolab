@@ -339,3 +339,5 @@ Two ways in, one account. `api/_accounts.js` is the checking, `api/auth.js` the 
 **Caps** are `_accounts.js`'s constants: ten minutes, five guesses, one live code per address, a minute between sends, ten a day to one address, ninety addresses a day. The last is Resend's free 100/day, which is a hard cap and not a bill.
 
 Env: `RESEND_API_KEY`. Sending is from `mail.kodolab.org`, DKIM-aligned, with the apex left to iCloud; DMARC sits at `p=none` collecting reports.
+
+`node api/check-auth.js` (or `npm run check:auth`) asserts all of it. It is **not** in `demos/tools/check.js`, because it writes: a bare `node tools/check.js` must not put rows in the live database. It writes only to an address at `.invalid`, which RFC 2606 reserves and no account can hold, so clearing its own rows at both ends can never reach a person's. Without `DATABASE_URL` the schema, code and linking checks are skipped and the sender checks still run, the way `check-ask.js` skips its `links` half. It never sends mail: the key is dropped from the environment before `_mail.js` loads.
