@@ -21,17 +21,17 @@
      teacher, so this page holds no rule about who may see what.
      ========================================================================= -->
 </head>
-<body class="kodo">
+<body class="kodo teach">
 <div class="page">
   <nav class="sitenav">
     <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <a class="navtitle" href="/teach" aria-current="page"><i class="ph-bold ph-chalkboard-teacher" aria-hidden="true"></i>Teach</a>
   </nav>
 
   <!-- The dashboard's own masthead: a band, not a document's title and rule.
        Which class, its link, and which view of it, all in one place. -->
   <header class="dashhead">
     <div class="dh-top">
-      <h1><i class="ph-bold ph-chalkboard-teacher" aria-hidden="true"></i>Teach</h1>
       <div class="classbar" id="classBar" hidden>
         <span class="vh" id="classesLabel">Classes</span>
         <div class="classtabs" id="classTabs" role="group" aria-labelledby="classesLabel"></div>
@@ -48,7 +48,7 @@
     <div id="classTop" hidden>
       <div class="dh-main">
         <div class="classhead">
-          <h2 id="className"></h2>
+          <h1 id="className"></h1>
           <button class="iconbtn" id="renameClass" type="button" title="Rename class" aria-label="Rename class"><i class="ph-bold ph-pencil-simple"></i></button>
           <p class="classmeta" id="classMeta"></p>
         </div>
@@ -82,7 +82,7 @@
       <!-- First run: the one thing to do is name a class. -->
       <div class="welcome" id="noClass" hidden>
         <div class="welcome-main">
-          <h2>Make your first class</h2>
+          <h1>Make your first class</h1>
           <p>A class gets one link. Students open any lesson with it, no sign-in, and you see how far each got and what they asked the tutor.</p>
           <form class="newclass newclass--first" id="firstClass">
             <label class="vh" for="firstClassName">Class name</label>

@@ -51,24 +51,44 @@ main h4 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem
    the window's edges while the content keeps .page's column; body.kodo's
    overflow-x: clip stops it adding a scrollbar. The selected view tab takes
    the paper's colour, so it reads as the page below opening out of the band. */
-.dashhead {
+body.teach {
   --on: var(--text-inverse);
   --on-dim: color-mix(in srgb, var(--text-inverse) 74%, transparent);
   --on-line: color-mix(in srgb, var(--text-inverse) 22%, transparent);
-  --focus-ring: 2px solid var(--text-inverse);
+}
+.dashhead, .teach .sitenav { --focus-ring: 2px solid var(--text-inverse); }
+.dashhead {
   position: relative; background: var(--text-strong); color: var(--on);
   box-shadow: 0 0 0 100vmax var(--text-strong); clip-path: inset(0 -100vmax);
   padding: 1.4rem 0 0; margin: 0 0 2.4rem;
 }
 .dashhead:not(:has(#classTop:not([hidden]))) { padding-bottom: 1.4rem; }
+/* Before load, and with no class yet, the band has nothing to hold: the bar alone. */
+.dashhead:not(:has(#classBar:not([hidden]))) { display: none; }
 .dh-top { display: flex; align-items: center; gap: .8rem 1.6rem; flex-wrap: wrap; }
-.dashhead h1 {
-  display: inline-flex; align-items: center; gap: .5rem; margin: 0;
-  font-family: var(--font-display); font-weight: 500; font-size: 1.15rem; letter-spacing: .01em; color: var(--on);
-}
-.dashhead h1 i { color: var(--spark); font-size: 1.25em; }
 
-.classbar { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; margin-left: auto; }
+/* ---- the site bar, on the band's ink ----
+   lib/site.js writes the links; this only recolours them. The page's own
+   place moves beside the mark, so the bar's copy of it is dropped. */
+.teach .sitenav { background: var(--text-strong); box-shadow: 0 0 0 100vmax var(--text-strong); clip-path: inset(0 -100vmax); }
+.teach .sitenav::after { background: var(--on-line); }
+.teach .sitenav .mark img { filter: brightness(0) invert(1); }
+.navtitle {
+  display: inline-flex; align-items: center; gap: .45rem; margin-left: .5rem; padding-left: 1.1rem;
+  border-left: 1px solid var(--on-line); text-decoration: none;
+  font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; line-height: 1; letter-spacing: -.01em; color: var(--on);
+}
+.navtitle i { color: var(--spark); font-size: 1.1em; }
+.navtitle:focus-visible { outline: var(--focus-ring); outline-offset: 4px; border-radius: 4px; }
+.teach .sitelinks a[aria-current="page"] { display: none; }
+.teach .sitelinks a, .teach .sitelinks .menu .summary { color: var(--on-dim); }
+.teach .sitelinks a:hover, .teach .sitelinks .menu .summary:hover, .teach .sitelinks .menu .summary[aria-expanded="true"] { color: var(--on); }
+.teach .sitelinks .signin { color: var(--on); }
+.teach .sitelinks .rule { background: var(--on-line); }
+.teach .sitelinks .menu .summary:focus-visible { outline: var(--focus-ring); }
+.teach .sitelinks .avatar { background: var(--spark); }
+
+.classbar { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
 .classtabs { display: flex; gap: .4rem; flex-wrap: wrap; }
 .classtabs button, .addclass {
   font: inherit; font-size: .92rem; font-weight: 600; cursor: pointer; line-height: 1.2;
@@ -94,7 +114,7 @@ main h4 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem
 
 .dh-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 30rem); gap: 1.5rem 3rem; align-items: end; padding: 2.2rem 0 2rem; }
 .classhead { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .4rem; }
-.classhead h2 {
+.classhead h1 {
   font-family: var(--font-display); font-weight: 500; font-size: clamp(2.2rem, 4.4vw, 3.4rem);
   letter-spacing: -.03em; line-height: 1; color: var(--on); margin: 0;
 }
@@ -110,7 +130,7 @@ main h4 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem
 .share-foot .bigcode { font-size: 1rem; font-weight: 600; letter-spacing: .08em; padding: .1rem .5rem; border-radius: 6px; background: color-mix(in srgb, var(--text-inverse) 12%, transparent); }
 .share-foot .textbtn { margin-left: auto; color: var(--on-dim); }
 .share-foot .textbtn:hover:not([disabled]) { color: var(--on); }
-@media (max-width: 820px) { .dh-main { grid-template-columns: minmax(0, 1fr); } .classbar { margin-left: 0; } }
+@media (max-width: 820px) { .dh-main { grid-template-columns: minmax(0, 1fr); } }
 
 .viewtabs { display: flex; gap: .3rem; flex-wrap: wrap; }
 .viewtabs button {
@@ -130,9 +150,9 @@ main h4 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem
 .welcome {
   display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem);
   background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 18px;
-  padding: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(1.5rem, 4vw, 3rem); margin-top: 2.4rem;
 }
-.welcome h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.8rem, 3.2vw, 2.4rem); letter-spacing: -.025em; line-height: 1.1; margin: 0 0 .8rem; color: var(--text-strong); }
+.welcome h1 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.8rem, 3.2vw, 2.4rem); letter-spacing: -.025em; line-height: 1.1; margin: 0 0 .8rem; color: var(--text-strong); }
 .welcome p { font-family: var(--font-editorial); font-size: 1.1rem; line-height: 1.5; color: var(--text-body); max-width: 34em; margin: 0 0 1.6rem; }
 .newclass--first { display: flex; gap: .6rem; flex-wrap: wrap; }
 .newclass--first input { flex: 1; min-width: 14rem; font-size: 1.05rem; padding: .75rem 1rem; }
