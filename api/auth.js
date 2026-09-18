@@ -72,6 +72,11 @@ module.exports = async function handler(req, res) {
       if (sent.error) {
         // FAILS CLOSED: a code nobody received must not be reported as sent.
         console.error('[auth] mail: ' + sent.error);
+        // The day's quota is gone until 00:00 UTC, so "in a moment" would be a
+        // lie that has the person retrying a door that cannot open. Google is
+        // unaffected, which is the thing worth saying.
+        if (sent.kind === 'daily_quota_exceeded')
+          return res.status(503).json({ error: 'Email sign-in has hit today\'s limit. Use Google, or email mary@kodolab.org.' });
         return res.status(502).json({ error: 'Could not send the email. Try again in a moment.' });
       }
       // `minutes` travels so the page can say how long the code lasts without

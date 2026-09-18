@@ -42,7 +42,14 @@ const MAX_ATTEMPTS   = 5;
 const COOLDOWN_S     = 60;
 const MAX_SENDS_DAY  = 10;   // to one address
 /* Under Resend's free 100 a day, which is a hard cap and not a bill: past it a
-   sign-in silently does not arrive, so the endpoint must refuse before then. */
+   sign-in silently does not arrive, so the endpoint must refuse before then.
+
+   COUNTED IN SENDS, NOT ADDRESSES, and on Resend's own day. This read rows
+   once, which is one per address, so thirty people asking four times each was
+   120 emails at Resend and 30 here: the guard reported headroom while sign-in
+   was already dead, and only on the morning it mattered. Resend's quota is a
+   UTC CALENDAR day that resets at 00:00 UTC, not a rolling window, so both
+   counters key to `utcDay` rather than `now() - '1 day'`. */
 const MAX_EMAILS_DAY = 90;
 const ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
 
@@ -218,6 +225,16 @@ function describeUser(u) {
 
 /* ---- email codes --------------------------------------------------------- */
 
+/* Midnight UTC today, as a Date the driver sends as a parameter. Computed here
+   rather than written as `date_trunc(...)` inside the statement because a
+   tagged template makes every ${} a parameter, and a parameter cannot become
+   SQL - which is the property worth keeping. This is the boundary Resend's
+   quota resets on, and every counter below keys to it. */
+function utcDay() {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
 /* A six-digit code, uniform. `randomInt` over the whole range and then padded,
    never `Math.random`, and never a digit at a time: both make some codes likelier. */
 const mintCode = () => String(crypto.randomInt(0, 1e6)).padStart(6, '0');
@@ -238,10 +255,11 @@ async function codeSend(email) {
   const db = log.sql();
   const e = normEmail(email);
   if (!looksLikeEmail(e)) return { error: 'That does not look like an email address.' };
+  const day = utcDay();
 
-  const [{ n }] = await db`SELECT count(*)::int AS n FROM login_codes
-                           WHERE sent_at > now() - '1 day'::interval AND email <> ${e}`;
-  if (n >= MAX_EMAILS_DAY) return { error: 'Too many sign-ins today. Try again tomorrow, or email mary@kodolab.org.' };
+  // Every send counts, this address's included: Resend meters them all.
+  const [{ n }] = await db`SELECT coalesce(sum(sends), 0)::int AS n FROM login_codes WHERE sent_at >= ${day}`;
+  if (n >= MAX_EMAILS_DAY) return { error: 'Too many sign-ins today. Try again after midnight UTC, or email mary@kodolab.org.' };
 
   const code = mintCode();
   const [row] = await db`
@@ -251,18 +269,17 @@ async function codeSend(email) {
       SET code_hash  = EXCLUDED.code_hash,
           expires_at = EXCLUDED.expires_at,
           attempts   = 0,
-          sends      = CASE WHEN login_codes.sent_at > now() - '1 day'::interval
-                            THEN login_codes.sends + 1 ELSE 1 END,
+          sends      = CASE WHEN login_codes.sent_at >= ${day} THEN login_codes.sends + 1 ELSE 1 END,
           sent_at    = now()
       WHERE login_codes.sent_at < now() - ${COOLDOWN_S + ' seconds'}::interval
-        AND (login_codes.sent_at < now() - '1 day'::interval OR login_codes.sends < ${MAX_SENDS_DAY})
+        AND (login_codes.sent_at < ${day} OR login_codes.sends < ${MAX_SENDS_DAY})
     RETURNING email`;
   if (row) return { code, email: e, minutes: CODE_TTL_MIN };
 
   // The upsert declined. Which guard it was is a read, and only now.
-  const [live] = await db`SELECT sends, sent_at > now() - '1 day'::interval AS today FROM login_codes WHERE email = ${e}`;
+  const [live] = await db`SELECT sends, sent_at >= ${day} AS today FROM login_codes WHERE email = ${e}`;
   if (live && live.today && live.sends >= MAX_SENDS_DAY)
-    return { error: 'Too many codes sent to that address today. Try again tomorrow.' };
+    return { error: 'Too many codes sent to that address today. Try again after midnight UTC.' };
   return { error: 'A code was just sent. Wait a minute, then ask again.' };
 }
 
@@ -301,10 +318,12 @@ async function codeVerify(email, code) {
   return { ok: true, email: e };
 }
 
-/* Rows a day old have nothing left to say: the code is spent or expired and
-   both caps have moved past them. Called on send, so nothing schedules it. */
+/* Rows from before today have nothing left to say: the code is spent or
+   expired and both caps key to midnight UTC, so nothing counts them any more.
+   Keyed to the same boundary rather than to a rolling day, or a sweep could
+   take a row the day's total still needs. Called on send; nothing schedules it. */
 async function codeSweep() {
-  try { await log.sql()`DELETE FROM login_codes WHERE sent_at < now() - '1 day'::interval`; }
+  try { await log.sql()`DELETE FROM login_codes WHERE sent_at < ${utcDay()}`; }
   catch (err) { console.error('[accounts] sweep: ' + ((err && err.message) || err)); }
 }
 

@@ -18,6 +18,13 @@
  *  the person waits for mail that will never arrive, then doubts the address
  *  they typed. The caller must surface what `send` returns.
  *
+ *  A 429 IS TWO DIFFERENT THINGS and the caller has to tell them apart.
+ *  `rate_limit_exceeded` is the per-second limit and retrying works.
+ *  `daily_quota_exceeded` is the free plan's 100 a day, which resets at 00:00
+ *  UTC and not on a rolling window, so "try again in a moment" can mean eleven
+ *  hours. `kind` carries Resend's own name for it; anything that tells a person
+ *  what to do next must read it.
+ *
  *  NO RETRY. Resend answers with the id of a queued message, so a timeout is
  *  ambiguous: the send may well have happened. Retrying mails a second code and
  *  invalidates the first, which reads to the person as a code that stopped
@@ -46,8 +53,9 @@ function key() {
 
 function enabled() { return !!key(); }
 
-/* {ok: true} or {error}. `error` is for the log, never for the person: it
-   carries the provider's words, which name the address and the account. */
+/* {ok: true} or {error, kind}. `error` is for the log, never for the person: it
+   carries the provider's words, which name the address and the account. `kind`
+   is Resend's error name, or null when the failure was never theirs to name. */
 async function send({ to, subject, text, html }) {
   const k = key();
   if (!k) {
@@ -64,10 +72,11 @@ async function send({ to, subject, text, html }) {
     });
   } catch (err) {
     // Includes the timeout, which does not mean the mail was not sent.
-    return { error: 'could not reach the mail provider: ' + ((err && err.message) || err) };
+    return { error: 'could not reach the mail provider: ' + ((err && err.message) || err), kind: null };
   }
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) return { error: `resend ${r.status}: ${body.message || body.name || 'no reason given'}` };
+  if (!r.ok) return { error: `resend ${r.status}: ${body.message || body.name || 'no reason given'}`,
+                      kind: body.name || null };
   return { ok: true, id: body.id || null };
 }
 

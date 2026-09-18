@@ -54,6 +54,26 @@ async function sender() {
   // The console path is a working sign-in on a dev machine, so it must not throw.
   const out = await mail.send({ to: E, subject: 'check', text: 'check' });
   is(out.ok === true && out.console === true, 'with no key the message goes to the console, and says so');
+
+  /* A 429 IS TWO DIFFERENT THINGS, and the page tells the person what to do
+     next from `kind` alone. Stubbed rather than provoked: reaching Resend's
+     real daily quota to test this would spend the day's sign-ins. */
+  process.env.RESEND_API_KEY = 're_0123456789abcdef';
+  const realFetch = global.fetch;
+  const answer = (status, body) => { global.fetch = async () => ({ ok: false, status, json: async () => body }); };
+  try {
+    answer(429, { name: 'daily_quota_exceeded', message: 'You have reached your daily email quota' });
+    const quota = await mail.send({ to: E, subject: 'x', text: 'x' });
+    is(quota.kind === 'daily_quota_exceeded', 'a spent daily quota is named, so the page can say it lasts until tomorrow');
+
+    answer(429, { name: 'rate_limit_exceeded', message: 'Too many requests' });
+    const fast = await mail.send({ to: E, subject: 'x', text: 'x' });
+    is(fast.kind === 'rate_limit_exceeded', 'the per-second limit is a different name, and retrying it works');
+
+    global.fetch = async () => { throw new Error('socket hung up'); };
+    const gone = await mail.send({ to: E, subject: 'x', text: 'x' });
+    is(!!gone.error && gone.kind === null, 'a failure Resend never named carries no kind');
+  } finally { global.fetch = realFetch; delete process.env.RESEND_API_KEY; }
 }
 
 /* ---- what a bad address does, offline ----------------------------------- */
@@ -65,6 +85,30 @@ async function shape() {
     const r = await accounts.codeSend(s);
     is(!!r.error && !r.code, `refused before any query: ${JSON.stringify(s)}`);
   }
+}
+
+/* ---- the cap counts what Resend counts ---------------------------------- */
+/* The bug this replaces: the cross-address cap read one row per ADDRESS while
+   Resend meters every EMAIL, so thirty people asking four times each was 120
+   sends and 30 against the guard. Asserted by putting a row with a `sends`
+   count above 1 in front of it and checking the total, not the row count. */
+async function caps() {
+  console.log('\ncaps\n');
+  const db = log.sql();
+  const day = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+
+  await db`INSERT INTO login_codes (email, code_hash, expires_at, sends, sent_at)
+           VALUES (${E}, null, now(), 7, now())
+           ON CONFLICT (email) DO UPDATE SET sends = 7, sent_at = now(), code_hash = null`;
+  const [{ rows, total }] = await db`SELECT count(*)::int AS rows, coalesce(sum(sends), 0)::int AS total
+                                     FROM login_codes WHERE sent_at >= ${day}`;
+  is(total >= 7 && total > rows, 'the day is counted in sends, not in addresses');
+
+  // The sweep keys to the same boundary, or it takes rows the total still needs.
+  await accounts.codeSweep();
+  const [{ n }] = await db`SELECT count(*)::int AS n FROM login_codes WHERE email = ${E}`;
+  is(n === 1, 'the sweep leaves today\'s rows alone');
+  await db`DELETE FROM login_codes WHERE email = ${E}`;
 }
 
 /* ---- the schema the linking rule rests on ------------------------------- */
@@ -157,6 +201,7 @@ async function wipe(label) {
     await wipe();          // a previous run that died part way, never a person's row
     try {
       await schema();
+      await caps();
       await codes();
       await linking();
     } finally {

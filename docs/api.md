@@ -336,7 +336,9 @@ Two ways in, one account. `api/_accounts.js` is the checking, `api/auth.js` the 
 
 **Sending fails closed**, unlike `_limit.js`: an undelivered code is an account nobody can enter, so `code` answers 502 rather than reporting a send. With no `RESEND_API_KEY` the code prints to the dev-server console, and `auth.js` gates that on `local(req)` — on a deployment a console send is a sign-in nobody receives.
 
-**Caps** are `_accounts.js`'s constants: ten minutes, five guesses, one live code per address, a minute between sends, ten a day to one address, ninety addresses a day. The last is Resend's free 100/day, which is a hard cap and not a bill.
+**Caps** are `_accounts.js`'s constants: ten minutes, five guesses, one live code per address, a minute between sends, ten a day to one address, ninety **sends** a day across all of them. The last guards Resend's free 100/day, which is a hard cap and not a bill. It counts sends rather than addresses, and keys to midnight UTC, because that is what Resend meters and when it resets: counting rows instead meant thirty people asking four times each was 120 emails there and 30 here, and the guard reported headroom while sign-in was already dead.
+
+**A 429 is two things.** `rate_limit_exceeded` is the per-second limit and retrying works; `daily_quota_exceeded` is the day's quota and retrying cannot work until 00:00 UTC. `_mail.js` carries Resend's own name as `kind` and `auth.js` answers 503 with "use Google" for the second, rather than telling someone to try again in a moment for eleven hours. Nothing notifies you when it happens: the only record is the function log, and a marker you would actually see is still to build.
 
 Env: `RESEND_API_KEY`. Sending is from `mail.kodolab.org`, DKIM-aligned, with the apex left to iCloud; DMARC sits at `p=none` collecting reports.
 
