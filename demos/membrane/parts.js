@@ -333,9 +333,10 @@
   /* =====================================================================
      membrane(opts) — head groups and tails, the way the textbook draws it.
 
-     `exclude(x, z)` returns the distance from that column to the nearest
-     protein, so lipids can be left out where a machine stands. Passing
-     nothing fills the whole patch.
+     `exclude(x, z, sign)` returns the distance from that column to the
+     nearest protein in the leaflet at y = sign·half, so lipids can be left
+     out where a machine stands, and a protein wider on one face than the
+     other keeps lipid close on both. Passing nothing fills the whole patch.
 
      SHAPE IS THE DECISION THAT MAKES THIS READ. A full disc of lipids is
      what a membrane really is and it is unusable: the near half stands
@@ -386,8 +387,8 @@
     for (let x = -o.reach; x <= o.reach; x += o.pitch)
       for (let z = -zLimit; z <= zLimit; z += o.pitch) {
         if (o.shape !== 'slab' && Math.hypot(x, z) > o.reach) continue;
-        if (o.exclude && o.exclude(x, z) < o.clear) continue;
-        cols.push([x, z]);
+        const up = !o.exclude || o.exclude(x, z, 1) >= o.clear, down = !o.exclude || o.exclude(x, z, -1) >= o.clear;
+        if (up || down) cols.push([x, z, up, down]);
       }
 
     const headGeo = new THREE.SphereGeometry(o.headR, 12, 9);
@@ -584,10 +585,11 @@
 
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Sc = new THREE.Vector3(1,1,1);
     for (const sign of [1, -1]) {
-      const heads = new THREE.InstancedMesh(headGeo, headMat, cols.length);
-      const tails = new THREE.InstancedMesh(tailGeo, tailMat, cols.length * 2);
+      const mine = cols.filter(c => c[sign > 0 ? 2 : 3]);
+      const heads = new THREE.InstancedMesh(headGeo, headMat, mine.length);
+      const tails = new THREE.InstancedMesh(tailGeo, tailMat, mine.length * 2);
       tails.geometry.setAttribute('aPhase', phaseAttr);
-      cols.forEach(([x, z], i) => {
+      mine.forEach(([x, z], i) => {
         M.compose(new THREE.Vector3(x, sign * o.half, z), Q, Sc);
         heads.setMatrixAt(i, M);
         [-1, 1].forEach((k, t) => {

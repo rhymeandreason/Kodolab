@@ -233,9 +233,11 @@
          cell is the colour that cell's organelle was. */
       const ctx = CHEM.CONTEXTS[P.context] || CHEM.CONTEXTS.plasma;
       const tint = global.MolLib.PALETTE.organelles[ctx.organelle] || global.MolLib.PALETTE.organelles.plasma;
-      /* `exclude` is a signed distance, so holes union as the MINIMUM. */
+      /* `exclude` is a signed distance, so holes union as the MINIMUM. A
+         hole's radius is a number, or a function of the leaflet's sign for
+         a machine wider on one face. */
       MEM = global.Parts.membrane({ half:HALF, reach:MEM_REACH, head:tint.head, tail:tint.tail, bowR:BOW,
-        exclude: holes.length ? (x, z) => holes.reduce((m, h) => Math.min(m, Math.hypot(x - h[0], z) - h[1]), Infinity) : undefined });
+        exclude: holes.length ? (x, z, s) => holes.reduce((m, h) => Math.min(m, Math.hypot(x - h[0], z) - (typeof h[1] === 'function' ? h[1](s) : h[1])), Infinity) : undefined });
       root.add(MEM.group);
       /* AFTER the sheet, because the arc belongs to it: a protein sits where
          the lipid it displaced would have, and turns with the surface. */

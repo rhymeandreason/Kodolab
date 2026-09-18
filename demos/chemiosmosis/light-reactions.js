@@ -161,6 +161,19 @@
         taper: -pumpDir() * 0.35, lobes: SPEC[key].lobes, lobeDepth: SPEC[key].lobe, color: PHO.antenna });
       part.setGates(0, 0); part.setGates = () => {};
       part.mesh.scale.x = SPEC[key].sx;
+      /* THE LIPID COMES UP TO THE BODY'S OWN EDGE at each leaflet's heads, read
+         off the mesh (taper, shoulders and lobes all included), not to one
+         circle for both faces. The x reach, because the slab is seen side-on. */
+      const pos = part.geometry.attributes.position, reach = { 1: 0, '-1': 0 };
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i);
+        for (const sg of [1, -1]) if (Math.abs(y - sg * HALF) < 1.5) reach[sg] = Math.max(reach[sg], Math.abs(pos.getX(i)) * SPEC[key].sx);
+      }
+      /* The sheet keeps a head's centre `clear` (4.5) past the hole's edge, so
+         this lets a head sink up to half its radius into the body: lipids sit
+         on a 7.2 lattice, and a strict fit leaves a column's worth of gap on
+         whichever side the lattice falls badly. */
+      part.holeAt = sg => reach[sg] - 3.1;
       return part;
     }
     const K = global.Circuit.kit(eng, {

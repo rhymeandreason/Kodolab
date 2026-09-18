@@ -1068,7 +1068,7 @@
             M.group.visible = !!pr[k];
             if (!pr[k]) continue;
             xs[k] = pr[k].x; M.group.position.x = xs[k];
-            holes.push([xs[k], holeOf(SPEC[k].R, SPEC[k].lobe)]); PORES.push({ x:xs[k], R:SPEC[k].R, lumen:8.0, kind:null });
+            holes.push([xs[k], M.holeAt || holeOf(SPEC[k].R, SPEC[k].lobe)]);   // holeAt(sign): a part's own reach per leaflet PORES.push({ x:xs[k], R:SPEC[k].R, lumen:8.0, kind:null });
           }
           SYNTH.group.visible = !!pr.synthase;
           synthX = pr.synthase ? pr.synthase.x : null;
