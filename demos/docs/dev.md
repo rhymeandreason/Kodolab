@@ -41,7 +41,7 @@ node tools/check.js                    # all but the slow two
 
 `check-hb.js` runs `--quick`; pass `--full` after changing a bake input (`bake-unfold.js`, `bake-hb.js`, `folding/folding.js`, `kit/ribbon.js`), about 60 s. Re-run a bake's checker after any bake: nothing about a stale one is visible from the page that plays it.
 
-Not in `check.js`: `tools/check-handedness.js` below, `tools/check-docs.js` (after editing an enumeration in a doc), and `chain/`'s and `chair/`'s, while those pages are test-status.
+Not in `check.js`: `tools/check-handedness.js` below, `tools/check-docs.js` (after editing §-references or SCIENCE.md headings), and `chain/`'s and `chair/`'s, while those pages are test-status.
 
 **`tools/check-handedness.js` is separate on purpose** — it needs the network and RDKit, and it is the only global-mirror check (why: `MolecularGeometry.md` §1.3). Run it after touching a ring builder or adding a stereocentre:
 
@@ -59,4 +59,3 @@ npm i && node tools/check-handedness.js
 * **`setTimeout` is throttled there too**, so a debounce does not fire on the schedule you typed against. A dropdown that looks empty a second after typing is usually this and not a bug.
 * **Screenshots with 4 live contexts come back blank** — the compositor does not pick up four WebGL layers. Verify with `readPixels` or `snapshot()` instead, and ask the human to look in Safari.
 * **`querySelectorAll` finds a control that `opacity: 0` has hidden.** Anything gated by `.near`, `.hub` or a class is verified with computed style, or it is not verified. And a synthetic `click` skips the pointer sequence half these bugs live in, so it passes on a completely dead button. Test controls with a real click.
-* `check-docs.js` treats any backticked path as a claim the file exists, and resolves it from `demos/` — so a checker outside `demos/tools/` needs its directory (`proteins/check-proteins.js`, not the bare name). Write a former filename in italics, not in backticks.
