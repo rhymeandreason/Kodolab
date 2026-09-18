@@ -27,9 +27,52 @@
     <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
   </nav>
 
-  <header class="pagehead">
-    <h1>teach</h1>
-    <p class="deck">Your classes, the link that opens a lesson for each, and what every student did there.</p>
+  <!-- The dashboard's own masthead: a band, not a document's title and rule.
+       Which class, its link, and which view of it, all in one place. -->
+  <header class="dashhead">
+    <div class="dh-top">
+      <h1><i class="ph-bold ph-chalkboard-teacher" aria-hidden="true"></i>Teach</h1>
+      <div class="classbar" id="classBar" hidden>
+        <span class="vh" id="classesLabel">Classes</span>
+        <div class="classtabs" id="classTabs" role="group" aria-labelledby="classesLabel"></div>
+        <button class="addclass" id="addClass" type="button"><i class="ph-bold ph-plus"></i>New class</button>
+        <form class="newclass" id="newClass" hidden>
+          <label class="vh" for="newClassName">New class name</label>
+          <input id="newClassName" placeholder="e.g. Bio 101, section 3" maxlength="80" required>
+          <button class="btn btn--light" type="submit">Create</button>
+          <button class="iconbtn" type="button" id="cancelClass" aria-label="Cancel"><i class="ph-bold ph-x"></i></button>
+        </form>
+      </div>
+    </div>
+
+    <div id="classTop" hidden>
+      <div class="dh-main">
+        <div class="classhead">
+          <h2 id="className"></h2>
+          <button class="iconbtn" id="renameClass" type="button" title="Rename class" aria-label="Rename class"><i class="ph-bold ph-pencil-simple"></i></button>
+          <p class="classmeta" id="classMeta"></p>
+        </div>
+
+        <!-- One link per class admits every student to a lesson and its tutor,
+             and each browser that opens it reports back: api/event.js. -->
+        <div class="share">
+          <p class="share-text"><b>Class link</b> Students open it on any laptop, no sign-in.</p>
+          <div class="share-link">
+            <label class="vh" for="classLink">Class link</label>
+            <input id="classLink" readonly>
+            <button class="btn btn--light" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy link</button>
+          </div>
+          <p class="share-foot">Code <code class="bigcode" id="classCode"></code> works on any lesson as <code>?class=…</code>
+            <button class="textbtn" type="button" id="newCode" title="The old link stops working">New code</button></p>
+        </div>
+      </div>
+
+      <div class="viewtabs" id="viewTabs" role="group" aria-label="View">
+        <button type="button" data-view="lessons" aria-pressed="true"><i class="ph-bold ph-book-open-text" aria-hidden="true"></i>Lessons<span class="chip" id="sessionCount"></span></button>
+        <button type="button" data-view="roster" aria-pressed="false"><i class="ph-bold ph-identification-card" aria-hidden="true"></i>Builder codes<span class="chip" id="classCount"></span></button>
+        <button type="button" data-view="feed" aria-pressed="false"><i class="ph-bold ph-chat-teardrop-text" aria-hidden="true"></i>Builder activity<span class="chip" id="feedCount"></span></button>
+      </div>
+    </div>
   </header>
 
   <main>
@@ -54,48 +97,8 @@
         </ol>
       </div>
 
-      <div class="classbar" id="classBar" hidden>
-        <span class="classbar-label" id="classesLabel">Classes</span>
-        <div class="classtabs" id="classTabs" role="group" aria-labelledby="classesLabel"></div>
-        <button class="addclass" id="addClass" type="button"><i class="ph-bold ph-plus"></i>New class</button>
-        <form class="newclass" id="newClass" hidden>
-          <label class="vh" for="newClassName">New class name</label>
-          <input id="newClassName" placeholder="e.g. Bio 101, section 3" maxlength="80" required>
-          <button class="btn btn--solid" type="submit">Create</button>
-          <button class="iconbtn" type="button" id="cancelClass" aria-label="Cancel"><i class="ph-bold ph-x"></i></button>
-        </form>
-      </div>
-
       <div id="classView" hidden>
-        <div class="classhead">
-          <h2 id="className"></h2>
-          <button class="iconbtn" id="renameClass" type="button" title="Rename class" aria-label="Rename class"><i class="ph-bold ph-pencil-simple"></i></button>
-          <p class="classmeta" id="classMeta"></p>
-        </div>
-
-        <div class="viewtabs" id="viewTabs" role="group" aria-label="View">
-          <button type="button" data-view="lessons" aria-pressed="true"><i class="ph-bold ph-book-open-text" aria-hidden="true"></i>Lessons<span class="chip" id="sessionCount"></span></button>
-          <button type="button" data-view="roster" aria-pressed="false"><i class="ph-bold ph-identification-card" aria-hidden="true"></i>Builder codes<span class="chip" id="classCount"></span></button>
-          <button type="button" data-view="feed" aria-pressed="false"><i class="ph-bold ph-chat-teardrop-text" aria-hidden="true"></i>Builder activity<span class="chip" id="feedCount"></span></button>
-        </div>
-
-        <!-- One link per class admits every student to a lesson and its tutor,
-             and each browser that opens it reports back: api/event.js. -->
         <section class="lessons" id="lessonsView">
-          <div class="share">
-            <div class="share-text">
-              <h3>Class link</h3>
-              <p>Put it on the board. Students open it on any laptop, no sign-in, and appear below as soon as the lesson loads.</p>
-            </div>
-            <div class="share-link">
-              <label class="vh" for="classLink">Class link</label>
-              <input id="classLink" readonly>
-              <button class="btn btn--solid" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy link</button>
-            </div>
-            <p class="share-foot">Class code <code class="bigcode" id="classCode"></code> Works on any lesson URL as <code>?class=…</code>
-              <button class="textbtn" type="button" id="newCode" title="The old link stops working">Make a new code</button></p>
-          </div>
-
           <div class="sechead2">
             <h3>Sessions</h3>
             <span class="spacer"></span>
@@ -278,7 +281,7 @@
       `<button type="button" title="Double-click to rename" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
     $('classBar').hidden = !data.classes.length;
     $('noClass').hidden = !!data.classes.length;
-    $('classView').hidden = !classId;
+    $('classView').hidden = $('classTop').hidden = !classId;
   }
   const newClassForm = open => {
     $('newClass').hidden = !open; $('addClass').hidden = open;
