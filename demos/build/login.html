@@ -252,10 +252,13 @@
    * on the network where Google is blocked, which is when they reach for email,
    * and would tell a stranger typing an address that it has an account. */
   const last = Apps.account.lastMethod();
-  if (last) {
-    const host = last === 'google' ? $('optGoogle') : $('emailForm');
-    host.classList.add('is-last');
-    host.insertAdjacentHTML('beforeend', '<span class="lastused">Last used</span>');
+  const tag = '<span class="lastused">Last used</span>';
+  if (last === 'google') {
+    $('optGoogle').classList.add('is-last');
+    $('optGoogle').insertAdjacentHTML('beforeend', tag);
+  } else if (last === 'email') {
+    // By the word "email" in the divider: that is the way in, not the button.
+    document.querySelector('.or span').insertAdjacentHTML('beforeend', tag);
   }
 
   Apps.account.state().then(s => {
