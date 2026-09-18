@@ -29,87 +29,129 @@
 
   <header class="pagehead">
     <h1>teach</h1>
-    <form class="newclass" id="newClass" hidden>
-      <input id="newClassName" placeholder="New class, e.g. Bio period 3" maxlength="80">
-      <button class="btn" type="submit"><i class="ph-bold ph-plus"></i>Add class</button>
-    </form>
+    <p class="deck">Your classes, the link that opens a lesson for each, and what every student did there.</p>
   </header>
 
   <main>
     <!-- Signed in -->
     <section id="dash" hidden>
-      <div class="classbar">
-        <div class="segmented" id="classTabs" role="tablist"></div>
+
+      <!-- First run: the one thing to do is name a class. -->
+      <div class="welcome" id="noClass" hidden>
+        <div class="welcome-main">
+          <h2>Make your first class</h2>
+          <p>A class gets one link. Students open any lesson with it, no sign-in, and you see how far each got and what they asked the tutor.</p>
+          <form class="newclass newclass--first" id="firstClass">
+            <label class="vh" for="firstClassName">Class name</label>
+            <input id="firstClassName" placeholder="e.g. Bio 101, section 3" maxlength="80" required>
+            <button class="btn btn--solid btn--lg" type="submit"><i class="ph-bold ph-plus"></i>Create class</button>
+          </form>
+        </div>
+        <ol class="steps">
+          <li><span class="n">1</span><b>Name a class</b><span>One per section or period.</span></li>
+          <li><span class="n">2</span><b>Share its link</b><span>Put it on the board or in your LMS.</span></li>
+          <li><span class="n">3</span><b>Watch it fill in</b><span>Progress, quiz scores and questions, live.</span></li>
+        </ol>
       </div>
 
-      <p class="empty" id="noClass" hidden>Make your first class above, then add students to it.</p>
+      <div class="classbar" id="classBar" hidden>
+        <span class="classbar-label" id="classesLabel">Classes</span>
+        <div class="classtabs" id="classTabs" role="group" aria-labelledby="classesLabel"></div>
+        <button class="addclass" id="addClass" type="button"><i class="ph-bold ph-plus"></i>New class</button>
+        <form class="newclass" id="newClass" hidden>
+          <label class="vh" for="newClassName">New class name</label>
+          <input id="newClassName" placeholder="e.g. Bio 101, section 3" maxlength="80" required>
+          <button class="btn btn--solid" type="submit">Create</button>
+          <button class="iconbtn" type="button" id="cancelClass" aria-label="Cancel"><i class="ph-bold ph-x"></i></button>
+        </form>
+      </div>
 
       <div id="classView" hidden>
-        <div class="viewtabs" id="viewTabs" role="tablist">
-          <button type="button" data-view="lessons" aria-pressed="true">Lessons<span class="chip" id="sessionCount"></span></button>
-          <button type="button" data-view="roster" aria-pressed="false">Builder codes<span class="chip" id="classCount"></span></button>
-          <button type="button" data-view="feed" aria-pressed="false">Builder activity</button>
-          <button type="button" data-view="addSeats" aria-pressed="false">Add builder codes</button>
+        <div class="classhead">
+          <h2 id="className"></h2>
+          <button class="iconbtn" id="renameClass" type="button" title="Rename class" aria-label="Rename class"><i class="ph-bold ph-pencil-simple"></i></button>
+          <p class="classmeta" id="classMeta"></p>
+        </div>
+
+        <div class="viewtabs" id="viewTabs" role="group" aria-label="View">
+          <button type="button" data-view="lessons" aria-pressed="true"><i class="ph-bold ph-book-open-text" aria-hidden="true"></i>Lessons<span class="chip" id="sessionCount"></span></button>
+          <button type="button" data-view="roster" aria-pressed="false"><i class="ph-bold ph-identification-card" aria-hidden="true"></i>Builder codes<span class="chip" id="classCount"></span></button>
+          <button type="button" data-view="feed" aria-pressed="false"><i class="ph-bold ph-chat-teardrop-text" aria-hidden="true"></i>Builder activity<span class="chip" id="feedCount"></span></button>
         </div>
 
         <!-- One link per class admits every student to a lesson and its tutor,
              and each browser that opens it reports back: api/event.js. -->
         <section class="lessons" id="lessonsView">
-          <div class="card linkcard">
-            <label for="classLink">Class link</label>
-            <div class="line">
-              <input id="classLink" readonly>
-              <button class="btn" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy</button>
-              <button class="btn" type="button" id="newCode" title="The old link stops working"><i class="ph-bold ph-arrows-clockwise"></i>New code</button>
+          <div class="share">
+            <div class="share-text">
+              <h3>Class link</h3>
+              <p>Put it on the board. Students open it on any laptop, no sign-in, and appear below as soon as the lesson loads.</p>
             </div>
-            <p class="sub">Put it on the board. Students open it on any laptop, no sign-in. The code is <code id="classCode"></code>; it works on any lesson URL as <code>?class=…</code>. Each browser shows up below once it opens the lesson.</p>
+            <div class="share-link">
+              <label class="vh" for="classLink">Class link</label>
+              <input id="classLink" readonly>
+              <button class="btn btn--solid" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy link</button>
+            </div>
+            <p class="share-foot">Class code <code class="bigcode" id="classCode"></code> Works on any lesson URL as <code>?class=…</code>
+              <button class="textbtn" type="button" id="newCode" title="The old link stops working">Make a new code</button></p>
           </div>
 
-          <div class="line sesshead">
-            <h3 class="cap">Sessions</h3>
+          <div class="sechead2">
+            <h3>Sessions</h3>
             <span class="spacer"></span>
-            <button class="btn" type="button" id="exportCsv"><i class="ph-bold ph-download-simple"></i>CSV</button>
+            <button class="btn" type="button" id="exportCsv"><i class="ph-bold ph-download-simple"></i>Download CSV</button>
           </div>
-          <div class="tablewrap">
+          <div class="tablewrap" id="sessionsWrap">
             <table class="sessions">
-              <thead><tr><th>Name · browser</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th>Done</th><th class="num">Quiz</th><th>Survey</th><th class="num">Asked</th></tr></thead>
+              <thead><tr><th>Name · browser</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th class="ctr">Done</th><th class="num">Quiz</th><th class="ctr">Survey</th><th class="num">Asked</th></tr></thead>
               <tbody id="sessions"></tbody>
             </table>
           </div>
-          <p class="empty" id="noSessions" hidden>Nobody has opened the link yet.</p>
-
+          <div class="emptystate" id="noSessions" hidden>
+            <i class="ph-bold ph-users-three" aria-hidden="true"></i>
+            <h4>No one has opened the link yet</h4>
+            <p>Share the class link above. Each student's browser shows up here the moment the lesson loads.</p>
+          </div>
         </section>
 
         <section class="roster" id="roster" hidden>
-          <div class="line printline">
+          <div class="sechead2">
+            <div>
+              <h3>Builder codes</h3>
+              <p class="sub">One code per student, for building apps. Students go to <b id="buildUrl"></b> and type their code.</p>
+            </div>
+            <span class="spacer"></span>
             <button class="btn" type="button" id="printCards"><i class="ph-bold ph-printer"></i>Print code cards</button>
-            <span class="sub">One code per student, for building apps. Students go to <b id="buildUrl"></b> and type their code.</span>
+            <button class="btn btn--solid" type="button" id="openAddSeats"><i class="ph-bold ph-user-plus"></i>Add students</button>
           </div>
-          <div class="tablewrap">
+
+          <div class="tablewrap" id="seatsWrap">
             <table>
-              <thead><tr><th>Student</th><th>Code</th><th class="num">Apps</th><th class="num">Prompts</th><th>Last active</th><th></th></tr></thead>
+              <thead><tr><th>Student</th><th>Code</th><th class="num">Apps</th><th class="num">Prompts</th><th>Last active</th><th><span class="vh">Actions</span></th></tr></thead>
               <tbody id="seats"></tbody>
             </table>
           </div>
-          <p class="empty" id="noSeats" hidden>No students yet.</p>
+          <div class="emptystate" id="noSeats" hidden>
+            <i class="ph-bold ph-identification-card" aria-hidden="true"></i>
+            <h4>No students yet</h4>
+            <p>Add a name or seat number for each student and each gets a code for building apps. Print them as cards to hand out.</p>
+            <button class="btn btn--solid" type="button" data-open-seats><i class="ph-bold ph-user-plus"></i>Add students</button>
+          </div>
         </section>
 
-        <form class="addseats card" id="addSeats" hidden>
-          <label for="seatLabels">Add students, one per line</label>
-          <textarea id="seatLabels" rows="4" placeholder="Seat 1&#10;Seat 2&#10;Jordan K."></textarea>
-          <p class="sub">A first name, nickname or seat number. Whatever you type is what this page shows.</p>
-          <div class="line">
-            <button class="btn" type="button" id="fillSeats">Fill with numbered seats</button>
-            <span class="spacer"></span>
-            <button class="btn btn--tint" type="submit">Add</button>
-          </div>
-          <p class="err" id="seatErr" hidden></p>
-        </form>
-
         <section class="feed" id="feedView" hidden>
-          <h3 class="cap">Prompts, newest first</h3>
+          <div class="sechead2">
+            <div>
+              <h3>Prompts</h3>
+              <p class="sub">Newest first. Open one to see the app it made.</p>
+            </div>
+          </div>
           <ol id="feed"></ol>
-          <p class="empty" id="noFeed" hidden>Nothing yet. Prompts show up here as students build.</p>
+          <div class="emptystate" id="noFeed" hidden>
+            <i class="ph-bold ph-sparkle" aria-hidden="true"></i>
+            <h4>No prompts yet</h4>
+            <p>When students build with their codes, every prompt they send lands here beside the page it produced.</p>
+          </div>
         </section>
       </div>
 
@@ -117,10 +159,31 @@
   </main>
 </div>
 
+<!-- Adding students: one label per line, one code each. -->
+<dialog class="studentbox seatbox" id="seatBox" aria-labelledby="seatBoxTitle">
+  <header>
+    <div><span class="ctx" id="seatBoxClass"></span><h2 id="seatBoxTitle">Add students</h2></div>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="closeSeats" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
+  </header>
+  <form class="addseats" id="addSeats">
+    <label for="seatLabels">One per line</label>
+    <textarea id="seatLabels" rows="8" placeholder="Seat 1&#10;Seat 2&#10;Jordan K."></textarea>
+    <p class="sub">A first name, nickname or seat number. Whatever you type is what this page shows. Each line gets its own code.</p>
+    <p class="err" id="seatErr" hidden></p>
+    <div class="line">
+      <button class="btn" type="button" id="fillSeats">Fill with 30 numbered seats</button>
+      <span class="spacer"></span>
+      <button class="btn btn--quiet" type="button" id="cancelSeats">Cancel</button>
+      <button class="btn btn--solid" type="submit">Make codes</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- One student's apps. The app viewer opens over it, so closing that comes back here. -->
 <dialog class="studentbox" id="student">
   <header>
-    <div><span class="cap" id="studentClass"></span><h2 id="studentName"></h2></div>
+    <div><span class="ctx" id="studentClass"></span><h2 id="studentName"></h2></div>
     <span class="spacer"></span>
     <button class="iconbtn" id="closeStudent" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
   </header>
@@ -130,7 +193,7 @@
 <!-- One session: its quiz, its survey, and the questions it asked. -->
 <dialog class="studentbox" id="session">
   <header>
-    <div><span class="cap" id="sessionClass"></span><h2 id="sessionName"></h2></div>
+    <div><span class="ctx" id="sessionClass"></span><h2 id="sessionName"></h2></div>
     <span class="spacer"></span>
     <button class="iconbtn" id="closeSession" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
   </header>
@@ -141,7 +204,7 @@
      produced on the right. -->
 <dialog class="viewer" id="viewer">
   <header>
-    <div><span class="cap" id="vOwner"></span><h2 id="vTitle"></h2></div>
+    <div><span class="ctx" id="vOwner"></span><h2 id="vTitle"></h2></div>
     <span class="spacer"></span>
     <a class="btn" id="vOpen" target="_blank" rel="noopener"><i class="ph-bold ph-arrow-square-out"></i>Open</a>
     <button class="iconbtn" id="vClose" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
@@ -202,7 +265,6 @@
       return true;
     }
     $('dash').hidden = false;
-    $('newClass').hidden = false;
     $('buildUrl').textContent = BUILD.replace(/^https?:\/\//, '');
     const want = new URLSearchParams(location.hash.slice(1)).get('class');
     classId = (data.classes.find(c => c.id === want) || data.classes[0] || {}).id || null;
@@ -214,23 +276,33 @@
   function paintClasses() {
     $('classTabs').innerHTML = data.classes.map(c =>
       `<button type="button" title="Double-click to rename" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
-    $('classTabs').hidden = !data.classes.length;
+    $('classBar').hidden = !data.classes.length;
     $('noClass').hidden = !!data.classes.length;
     $('classView').hidden = !classId;
   }
+  const newClassForm = open => {
+    $('newClass').hidden = !open; $('addClass').hidden = open;
+    if (open) $('newClassName').focus(); else $('newClassName').value = '';
+  };
+  $('addClass').addEventListener('click', () => newClassForm(true));
+  $('cancelClass').addEventListener('click', () => newClassForm(false));
+  $('newClass').addEventListener('keydown', e => { if (e.key === 'Escape') newClassForm(false); });
   $('classTabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-id]'); if (!b) return;
     openClass(b.dataset.id);
   });
-  $('newClass').addEventListener('submit', async e => {
+  async function makeClass(e, input) {
     e.preventDefault();
-    const name = $('newClassName').value.trim(); if (!name) return;
+    const name = input.value.trim(); if (!name) return;
     const r = await t('', { action: 'class', name });
-    $('newClassName').value = '';
+    input.value = '';
+    newClassForm(false);
     data.classes.push({ id: r.id, name: r.name, seats: 0 });
     await openClass(r.id);
     showView('lessons');
-  });
+  }
+  $('newClass').addEventListener('submit', e => makeClass(e, $('newClassName')));
+  $('firstClass').addEventListener('submit', e => makeClass(e, $('firstClassName')));
 
   async function openClass(id) {
     classId = id;
@@ -238,6 +310,7 @@
     history.replaceState(null, '', location.pathname + location.search + '#class=' + id);
     paintClasses();
     if ($('student').open) $('student').close();
+    if (id !== (current && current.class.id)) seatForm(false);
     current = await t('?class=' + encodeURIComponent(id));
     paintClass();
   }
@@ -245,13 +318,20 @@
   function paintClass() {
     const c = current;
     const active = c.seats.filter(s => !s.revoked_at).length;
-    $('classCount').textContent = active;
+    const n = (k, one, many) => k ? `${k} ${k === 1 ? one : many}` : `no ${many} yet`;
+    $('className').textContent = c.class.name;
+    $('classMeta').textContent = [n((c.sessions || []).length, 'lesson session', 'lesson sessions'), n(active, 'builder code', 'builder codes')].join(' · ').replace(/^n/, 'N');
+    $('classCount').textContent = active || '';
+    $('feedCount').textContent = c.feed.length || '';
     $('noSeats').hidden = !!c.seats.length;
+    $('seatsWrap').hidden = !c.seats.length;
+    $('printCards').hidden = !active;
+    $('openAddSeats').hidden = !c.seats.length;
     $('seats').innerHTML = c.seats.map(s => `<tr data-id="${esc(s.id)}" class="${s.revoked_at ? 'off' : ''}">
       <td><button class="textbtn name" data-act="work" type="button">${esc(s.label)}</button></td>
       <td><code>${esc(s.code)}</code>${s.revoked_at ? ' <span class="tag">off</span>' : ''}</td>
       <td class="num">${s.apps}</td><td class="num">${s.turns}</td>
-      <td class="dim">${esc(ago(s.last)) || '—'}</td>
+      <td class="dim">${esc(ago(s.last)) || 'Not yet'}</td>
       <td class="acts">
         <button class="iconbtn" data-act="label" type="button" title="Rename" aria-label="Rename"><i class="ph-bold ph-pencil-simple"></i></button>
         <button class="iconbtn" data-act="reissue" type="button" title="New code" aria-label="New code"><i class="ph-bold ph-arrows-clockwise"></i></button>
@@ -263,6 +343,7 @@
     paintSessions();
 
     $('noFeed').hidden = !!c.feed.length;
+    $('feed').hidden = !c.feed.length;
     $('feed').innerHTML = c.feed.map(f => `<li class="${f.error ? 'bad' : ''}">
       <button type="button" data-app="${esc(f.app_id)}" data-n="${f.n}">
         <span class="who"><b>${esc(f.label)}</b> · ${esc(f.title || 'untitled')} · v${f.n}</span>
@@ -287,6 +368,15 @@
   const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
   const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p] || p);
 
+  const YES = '<i class="ph-bold ph-check-circle yes" aria-hidden="true"></i><span class="vh">yes</span>';
+  // One pip per phase, filled through the one reached.
+  function progress(r) {
+    if (!r.phase) return '<span class="dim">Not started</span>';
+    const at = r.complete ? N_PHASES : (r.phase_i || 0) + 1, name = esc(PHASES[r.phase] || r.phase);
+    const pips = Array.from({ length: N_PHASES }, (_, k) => `<span class="${k < at ? 'on' : ''}"></span>`).join('');
+    return `<span class="prog"><span class="pips" role="img" aria-label="${at} of ${N_PHASES}">${pips}</span><span class="pname">${name}</span></span>`;
+  }
+
   function paintSessions() {
     const c = current;
     const rows = c.sessions || [];
@@ -294,24 +384,26 @@
     $('classCode').textContent = c.class.code || '';
     $('sessionCount').textContent = rows.length || '';
     $('noSessions').hidden = !!rows.length;
+    $('sessionsWrap').hidden = !rows.length;
+    $('exportCsv').hidden = !rows.length;
     $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
       <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${esc(shortId(r.visitor_id))}</code></button></td>
       <td class="dim">${esc((r.pages || []).map(pageName).join(', '))}</td>
       <td class="dim">${esc(ago(r.first_seen))}</td>
       <td class="dim">${esc(ago(r.last_seen))}</td>
       <td class="num">${mins(r.active_s || 0)}</td>
-      <td>${r.phase ? `${esc(PHASES[r.phase] || r.phase)} <span class="dim">${(r.phase_i || 0) + 1}/${N_PHASES}</span>` : '—'}</td>
-      <td>${r.complete ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td>${progress(r)}</td>
+      <td class="ctr">${r.complete ? YES : ''}</td>
       <td class="num">${r.quiz ? score(r.quiz) : ''}</td>
-      <td>${r.survey ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td class="ctr">${r.survey ? YES : ''}</td>
       <td class="num">${r.questions || 0}</td></tr>`).join('');
 
   }
 
   $('copyLink').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('classLink').value); $('copyLink').textContent = 'Copied'; }
+    try { await navigator.clipboard.writeText($('classLink').value); $('copyLink').innerHTML = '<i class="ph-bold ph-check"></i>Copied'; }
     catch { $('classLink').select(); }
-    setTimeout(() => { $('copyLink').innerHTML = '<i class="ph-bold ph-copy"></i>Copy'; }, 1500);
+    setTimeout(() => { $('copyLink').innerHTML = '<i class="ph-bold ph-copy"></i>Copy link'; }, 1500);
   });
   $('newCode').addEventListener('click', async () => {
     if (!confirm('Make a new class link? The old one stops admitting. Sessions already recorded stay.')) return;
@@ -333,15 +425,15 @@
       + dl('Completed', r.complete ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
     if (r.quiz) {
       const s = score(r.quiz);
-      parts.push(`<h3 class="cap">Quiz${s ? ' · ' + s : ''}</h3>`
+      parts.push(`<h3 class="bodyhead">Quiz${s ? ' · ' + s : ''}</h3>`
         + (Array.isArray(r.quiz.answers) ? r.quiz.answers : []).map(a => `<p class="qa ${a.correct ? 'ok' : 'bad'}"><i class="ph-bold ${a.correct ? 'ph-check' : 'ph-x'}"></i> ${esc(a.q)}<br><span class="dim">${esc(a.answer)}</span></p>`).join(''));
     }
     if (r.survey) {
-      parts.push('<h3 class="cap">Survey</h3>'
+      parts.push('<h3 class="bodyhead">Survey</h3>'
         + Object.entries(r.survey.answers || {}).map(([k, v]) => `<p class="qa">${esc(SURVEY_Q[k] || k)}<br><span class="dim">${esc(v == null || v === '' ? '—' : String(v))}</span></p>`).join(''));
     }
     const qs = (current.questions || []).filter(q => q.visitor_id === r.visitor_id);
-    if (qs.length) parts.push('<h3 class="cap">Asked the tutor</h3>' + qs.map(q => `<p class="qa">${esc(q.q)}${q.answer ? `<br><span class="dim">${esc(q.answer)}</span>` : ''}</p>`).join(''));
+    if (qs.length) parts.push('<h3 class="bodyhead">Asked the tutor</h3>' + qs.map(q => `<p class="qa">${esc(q.q)}${q.answer ? `<br><span class="dim">${esc(q.answer)}</span>` : ''}</p>`).join(''));
     $('sessionBody').innerHTML = parts.join('');
     if (!$('session').open) $('session').showModal();
   }
@@ -369,14 +461,15 @@
     URL.revokeObjectURL(a.href);
   });
 
-  $('classTabs').addEventListener('dblclick', async e => {
-    if (!e.target.closest('button[data-id]')) return;
+  async function renameClass() {
     const name = prompt('Rename the class', current.class.name);
     if (!name || !name.trim()) return;
     await t('', { action: 'rename', class: classId, name });
     data.classes.find(c => c.id === classId).name = current.class.name = name.trim();
     paintClasses(); paintClass();
-  });
+  }
+  $('renameClass').addEventListener('click', renameClass);
+  $('classTabs').addEventListener('dblclick', e => { if (e.target.closest('button[data-id]')) renameClass(); });
 
   $('seats').addEventListener('click', async e => {
     const b = e.target.closest('button[data-act]'); if (!b) return;
@@ -395,7 +488,7 @@
     await openClass(classId);
   });
 
-  const VIEWS = { lessons: 'lessonsView', roster: 'roster', feed: 'feedView', addSeats: 'addSeats' };
+  const VIEWS = { lessons: 'lessonsView', roster: 'roster', feed: 'feedView' };
   function showView(v) {
     for (const [k, id] of Object.entries(VIEWS)) $(id).hidden = k !== v;
     $('viewTabs').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
@@ -403,6 +496,19 @@
   $('viewTabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-view]'); if (b) showView(b.dataset.view);
   });
+
+  function seatForm(open) {
+    if (!open) { if ($('seatBox').open) $('seatBox').close(); return; }
+    $('seatBoxClass').textContent = current.class.name;
+    $('seatLabels').value = ''; show('seatErr', '');
+    $('seatBox').showModal();
+    $('seatLabels').focus();
+  }
+  $('seatBox').addEventListener('click', e => { if (e.target === $('seatBox')) seatForm(false); });
+  $('closeSeats').addEventListener('click', () => seatForm(false));
+  $('openAddSeats').addEventListener('click', () => seatForm(true));
+  $('roster').addEventListener('click', e => { if (e.target.closest('[data-open-seats]')) seatForm(true); });
+  $('cancelSeats').addEventListener('click', () => seatForm(false));
 
   $('fillSeats').addEventListener('click', () => {
     const n = current.seats.length;
@@ -415,9 +521,8 @@
     show('seatErr', '');
     try {
       await t('', { action: 'seats', class: classId, labels });
-      $('seatLabels').value = '';
+      seatForm(false);
       await openClass(classId);
-      showView('roster');
     } catch (err) { show('seatErr', err.message); }
   });
 
