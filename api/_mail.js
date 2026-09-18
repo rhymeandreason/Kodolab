@@ -39,7 +39,7 @@
  * ========================================================================== */
 'use strict';
 
-const FROM     = 'Kodo Lab <no-reply@mail.kodolab.org>';
+const FROM     = 'Kodolab <no-reply@mail.kodolab.org>';
 const REPLY_TO = 'mary@kodolab.org';
 const TIMEOUT_MS = 10e3;   // a serverless function should not hang on a hop
 

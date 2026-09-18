@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
       if (got.error) return res.status(429).json({ error: got.error });
       const sent = await mail.send({
         to: got.email,
-        subject: `Your Kodo Lab sign-in code: ${got.code}`,
+        subject: `Your Kodolab sign-in code: ${got.code}`,
         text: `${got.code}\n\nType this to sign in. It lasts ${got.minutes} minutes.\n\n`
             + `If you did not ask for it, nothing has happened to your account and you can ignore this.\n`,
       });

@@ -49,7 +49,9 @@ async function sender() {
   is(mail.enabled() === true, 'a key shaped like Resend\'s is accepted');
   delete process.env.RESEND_API_KEY;
 
-  is(/^Kodo Lab <no-reply@mail\./.test(mail.FROM), 'sending is from a subdomain, never the apex iCloud mailbox');
+  // The address, not the display name: pinning the name here would make this
+  // a second place to change it when the product is renamed.
+  is(/<no-reply@mail\.kodolab\.org>$/.test(mail.FROM), 'sending is from a subdomain, never the apex iCloud mailbox');
 
   // The console path is a working sign-in on a dev machine, so it must not throw.
   const out = await mail.send({ to: E, subject: 'check', text: 'check' });
