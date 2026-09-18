@@ -161,7 +161,7 @@
        so this box and a LightReactions mounted beside it cannot disagree
        about what an ATP costs. The fallback is the thing that is wrong if
        they drift. */
-    const PPT = LR ? LR.RING.protonsPerTurn : 9;
+    const PPT = LR ? LR.RING.protonsPerTurn : 14;
     const APT = LR ? LR.RING.atpPerTurn : 3;
 
     const listeners = {};

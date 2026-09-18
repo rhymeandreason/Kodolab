@@ -91,6 +91,8 @@ function bench(ctx) {
 
     <div class="bench-group">
       <div class="bench-hd">conditions</div>
+      <div class="bench-sub">cyclic electron flow</div>
+      <div>${seg('cyclic', [['0', 'off'], ['balance', 'balance the Calvin cycle']])}</div>
       <label class="switch"><input type="checkbox" id="leak"><span class="track"></span>uncoupler in the membrane</label>
     </div>
 
@@ -113,7 +115,7 @@ function bench(ctx) {
       </div>
     </div>`);
 
-  const S = { chain: 'lumped', fuel: 'light' };
+  const S = { chain: 'lumped', fuel: 'light', cyclic: '0' };
   const $ = s => ui.q(s);
   const mark = (id, v) => { for (const b of ui.qa(`#${id} > button`)) b.setAttribute('aria-pressed', String(b.dataset.v === v)); };
 
@@ -124,15 +126,16 @@ function bench(ctx) {
     if ($('#leak').checked) p.leak = { x: 125 };
     return p;
   }
-  const apply = () => { m.set({ chain: S.chain, fuel: S.fuel, proteins: layout() }); if (labelsOn) showLabels(); sync(); };
+  const apply = () => { m.set({ chain: S.chain, fuel: S.fuel, cyclic: S.cyclic === 'balance' ? LightReactions.cyclicToBalance() : 0, proteins: layout() }); if (labelsOn) showLabels(); sync(); };
 
   function sync() {
-    mark('chain', S.chain); mark('fuel', S.fuel || '');
+    mark('chain', S.chain); mark('fuel', S.fuel || ''); mark('cyclic', S.cyclic);
     $('#rate').disabled = !S.fuel;
     $('#feedfoot').textContent = S.fuel ? 'One flash on top of the light. Clearer in the dark.'
       : 'Dark: each flash sends one pair of electrons the whole way and stops.';
   }
   for (const b of ui.qa('#chain > button')) b.onclick = () => { if (S.chain === b.dataset.v) return; S.chain = b.dataset.v; apply(); };
+  for (const b of ui.qa('#cyclic > button')) b.onclick = () => { if (S.cyclic === b.dataset.v) return; S.cyclic = b.dataset.v; apply(); };
   for (const b of ui.qa('#fuel > button')) b.onclick = () => { S.fuel = b.dataset.v || null; m.set({ fuel: S.fuel }); sync(); };
   $('#flash').onclick = () => m.feed('light');
   $('#leak').onchange = apply;
@@ -178,6 +181,8 @@ function bench(ctx) {
       rows += row(`photons (${L.photonsPerPair} a pair)`, L.photons);
       rows += row('waters split · O₂ released', `${L.waterSplit} · ${L.o2Released}`);
       rows += row('NADPH made', L.nadphMade);
+      rows += row(`cyclic turns (${Math.round(L.cyclic * 100)}% of PSI's; ${Math.round(L.cyclicToBalance * 100)}% balances)`, L.cyclicTurns);
+      rows += row('ATP per NADPH: linear · at this share · measured', `${L.atpPerNADPH.linear.toFixed(2)} · ${L.atpPerNADPH.expected.toFixed(2)} · ${L.atpPerNADPH.measured == null ? '–' : L.atpPerNADPH.measured.toFixed(2)}`);
       rows += row('plastoquinol · loaded plastocyanin', `${s.shuttles.plastoquinol} · ${s.shuttles.plastocyaninLoaded}`);
     } else rows += row('H⁺ per turn of the complex', s.complexStoichiometry);
     if (s.protonsLeaked || $('#leak').checked) rows += row('protons down the uncoupler', s.protonsLeaked);

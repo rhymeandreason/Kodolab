@@ -15,9 +15,11 @@
  *  it with no THREE so chemiosmosis/check-light-reactions.js can run it in
  *  node:
  *
- *      RING             the chloroplast synthase's ring
+ *      RING             the chloroplast synthase's c14 ring: 14 H⁺ per 3 ATP
  *      CHAIN            PSII, b6f, PSI: protons per pair, photons per pair, water's protons
- *      protonsPerPair() · photonsPerPair() · protonsPerO2() · atpPerNADPH()
+ *      CALVIN           what the Calvin cycle spends, 3 ATP per 2 NADPH
+ *      protonsPerPair() · photonsPerPair() · protonsPerO2() · protonsPerNADPH(f)
+ *      atpPerNADPH(f) · photonsPerNADPH(f) · cyclicToBalance()
  *                       walked off the table, never typed
  *
  *      proteins: { complex | PSII | b6f | PSI | synthase | leak: {x} | null }
@@ -31,14 +33,17 @@
  *  `fuel` is 'light' or null, and `fuelRate` is the dimmer. Light has no
  *  token: nothing arrives at PSII and nothing leaves it, which is correct
  *  rather than missing. `feed('light')` is one flash: PSII turns once, and
- *  PSI owes one turn whenever its plastocyanins arrive.
+ *  PSI owes one turn whenever its plastocyanins arrive. `cyclic` is the
+ *  share of PSI's turns that send their electrons back to plastoquinone
+ *  instead of on to NADP⁺, the reason the ATP balances against the NADPH.
  *
  *  THE THYLAKOID PUMPS DOWN. The lumen is the enclosed compartment, so it is
  *  the bottom half of the screen, and every direction in the kit is read off
  *  membrane/chemiosmosis.js's pumpDir for this context; nothing here is a
  *  mitochondrion with its labels swapped.
  *
- *  Events: `pumped`, `atp`, `atpOut`, `oxygen` (n O₂ released), `nadph` (n made).
+ *  Events: `pumped`, `atp`, `atpOut`, `oxygen` (n O₂ released), `nadph` (n made),
+ *  `cyclic` (n turns gone round again).
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -46,11 +51,13 @@
   if (!CHEM) throw new Error('light-reactions.js: load membrane/chemiosmosis.js first');
 
   /* ---- the arithmetic, free of THREE ----
-     THE RING. A chloroplast's synthase turns on a c14 ring, so a full turn
-     takes more protons than a mitochondrion's c8 and every ATP costs more of
-     the gradient. Drawn as the mitochondrion's 9 per 3 for now, which the
-     checker records as a known exaggeration until the ring is drawn true. */
-  const RING = { c: 8, protonsPerTurn: 9, atpPerTurn: 3 };
+     THE RING. A chloroplast's synthase turns on a c14 ring (spinach, PDB
+     6FKF), so a full turn takes 14 protons for its 3 ATP, about 4.7 each,
+     against a mitochondrion's 8 for 3. Drawn true: fourteen rods, and the
+     rotor pays out an ATP on the 5th, 10th and 14th proton of a turn. That
+     is why the light reactions make about a third less ATP per proton than
+     a page remembering respiration expects, and why cyclic flow exists. */
+  const RING = { c: 14, protonsPerTurn: 14, atpPerTurn: 3 };
   const FUELS = { light: { weight: 1 } };
   /* THE LIGHT REACTIONS, SPLIT: the respiratory chain's shape, with water at
      the start. Per PAIR of electrons, linear flow:
@@ -65,7 +72,7 @@
 
      `photons` is one per electron at each photosystem. 6 H⁺ into the lumen
      a pair, so 12 per O₂; the checker asserts both off this table. Cyclic
-     flow around PSI is not drawn. */
+     flow around PSI is `cyclic`, below. */
   const CHAIN = {
     PSII: { takes: 'H2O', gives: 'PQ',    pumps: 0, fromWater: 2, photons: 2 },
     b6f:  { takes: 'PQ',  gives: 'PC',    pumps: 4 },
@@ -78,10 +85,32 @@
   const protonsPerPair = () => path().reduce((s, k) => s + CHAIN[k].pumps + (CHAIN[k].fromWater || 0), 0);
   const photonsPerPair = () => path().reduce((s, k) => s + (CHAIN[k].photons || 0), 0);
   const protonsPerO2 = () => protonsPerPair() * CHEM.E_PER_O2 / CARRIES.H2O;
-  /* Linear flow makes one NADPH per pair; the ATP is what the pair's protons buy. */
-  const atpPerNADPH = () => protonsPerPair() / (RING.protonsPerTurn / RING.atpPerTurn);
+  /* CYCLIC ELECTRON FLOW. Linear flow makes one NADPH per pair and buys
+     protonsPerPair() / (H⁺ per ATP) ATP with it, which on a c14 ring is
+     about 1.3; the Calvin cycle spends CALVIN.atp per CALVIN.nadph, 1.5. The
+     chloroplast makes up the difference by sending some of PSI's electrons
+     back to plastoquinone through ferredoxin instead of on to NADP⁺: b6f
+     pumps for them a second time and no NADPH is made. `f` is the share of
+     PSI's turns that go round again, so per NADPH there are 1/(1−f) turns
+     and f/(1−f) of them cyclic, each worth b6f's pumps and PSI's photons. */
+  const CALVIN = { atp: 3, nadph: 2 };
+  const perATP = () => RING.protonsPerTurn / RING.atpPerTurn;
+  const cyclicProtons = () => CHAIN.b6f.pumps;
+  const protonsPerNADPH = (f = 0) => protonsPerPair() + cyclicProtons() * f / (1 - f);
+  const atpPerNADPH = (f = 0) => protonsPerNADPH(f) / perATP();
+  const photonsPerNADPH = (f = 0) => photonsPerPair() + CHAIN.PSI.photons * f / (1 - f);
+  /* The share that lands ATP per NADPH on the Calvin cycle's, solved off the table. */
+  function cyclicToBalance() {
+    const want = CALVIN.atp / CALVIN.nadph * perATP();
+    const r = Math.max(0, (want - protonsPerPair()) / cyclicProtons());
+    return r / (1 + r);
+  }
 
-  const DEFAULTS = {};
+  const DEFAULTS = {
+    /* 0..1: the share of PSI's turns that go round again. 0 is linear flow
+       alone; cyclicToBalance() is what the Calvin cycle needs. */
+    cyclic: 0,
+  };
   const LINE = { keys: ['PSII', 'b6f', 'PSI'], donors: { PSII: 'light' }, rest: 'PSII', hub: 'b6f', end: 'PSI', stands: 'b6f',
                  q: ['PQ', 'PQH₂'], c: 'PC' };
   const OFFSETS = [-60, 0, 60];
@@ -145,7 +174,7 @@
     const PHOTON_LEN = 44, PHOTON_LIFE = 0.55, PHOTON_FALL = 0.22;
     const O2_SPEED = 40, WATER_FADE = 1.2;
     const photons = [], psiiWater = [], psiiO2 = [], riders = [];
-    const lightLedger = { photons: 0, waterSplit: 0, o2Released: 0, nadphMade: 0, protonsFromWater: 0, protonsToNADPH: 0 };
+    const lightLedger = { photons: 0, waterSplit: 0, o2Released: 0, nadphMade: 0, protonsFromWater: 0, protonsToNADPH: 0, cyclicTurns: 0 };
     /* A flash is one PSII turn, and PSI owes it one turn later, whenever its
        plastocyanins arrive: a count, so two quick flashes are two turns. */
     const credit = { PSI: 0 };
@@ -237,10 +266,50 @@
       for (const t of photons) root.remove(t.obj);
       for (const t of psiiWater.concat(psiiO2, riders)) dropToken(t.obj);
       photons.length = psiiWater.length = psiiO2.length = riders.length = 0;
-      credit.PSI = 0;
+      credit.PSI = 0; cyclicDue = 0; cycNow = false; cycQ = null; held = null;
     }
     K.hooks.resetChain = clearLight;
     const lightRate = () => P.fuel === 'light' ? K.fuelRate('light', P.fuelRate, null) : 0;
+
+    /* ---- cyclic electron flow, drawn ----
+       Every PSI turn adds the share to a debt; once the debt reaches one, a
+       cyclic turn is owed. PSI then reserves the next plastoquinone to come
+       free (PSII runs first every tick and would take it otherwise) and the
+       first turn it holds one goes round again. NEVER WAIT FOR ONE: both
+       quinones can be reduced and waiting on b6f, which is waiting on the
+       plastocyanins PSI is holding, and a PSI that held out for a quinone
+       would lock the whole chain; the electrons go to NADP⁺ instead and the
+       debt stands. A cyclic turn takes the plastocyanins' electrons to the
+       stroma-side ridge where ferredoxin sits (not drawn) and on `occlude`
+       sends them back into the membrane onto the reserved quinone, charged
+       with two stroma protons; b6f then pumps for them again. No NADP⁺
+       arrives and no NADPH leaves. */
+    let cyclicDue = 0, cycNow = false, cycQ = null, held = null;
+    const share = () => Math.max(0, Math.min(1, P.cyclic || 0));
+    const owed = () => share() > 0 && cyclicDue >= 1;
+    const ridgeAt = () => ({ x: xs.PSI, y: -pumpDir() * RIDGE_PSI.userData.baseY, z: 0 });
+    /* Polled while PSI idles at binding: hold a quinone while a turn is owed, let it go when not. */
+    function cyclicWatch() {
+      if (owed() && !held) held = K.shuttles.reserveQ('PSI');
+      if (!owed() && held) { K.shuttles.releaseQ(held); held = null; }
+      return true;
+    }
+    function cyclicDecide() {
+      cycNow = false;
+      if (!held || !owed()) return;
+      const q = held; held = null;
+      cyclicDue -= 1; cycNow = true;
+      q.reservedFor = null; q.state = 'toDonor'; q.charged = false; q.to = K.shuttles.qDock('PSI', q.x, q.i); cycQ = q;
+    }
+    /* The debt grows as a turn ends, so the share is counted against turns taken. */
+    const cyclicOwe = () => { cyclicDue = Math.min(1, cyclicDue + share()); };
+    function cycleBack() {
+      const q = cycQ; cycQ = null;
+      lightLedger.cyclicTurns++;
+      if (q) K.electrons.sendE(K.electrons.E_PER_TURN, ridgeAt(), [{ x: xs.PSI - 8, y: -pumpDir() * (CX.PSI.height + 2), z: 0 }, K.shapes.midOf('PSI', -6)], q,
+        () => { q.charged = true; K.shuttles.protonateQ(q); });
+      eng.emit('cyclic', lightLedger.cyclicTurns);
+    }
 
     /* ---- the three machines ---- */
     const RUN = {
@@ -248,10 +317,11 @@
       b6f: K.hub('b6f'),
       PSI: K.terminal('PSI', {
         rate: () => credit.PSI > 0 ? 1 : lightRate(),
-        ready: () => true,
-        site: () => chips.PSI ? posOf(chips.PSI) : faceOf('PSI', -1),
-        onLoad: () => { flash('PSI'); K.carrierArrive('PSI', NADP); },
-        onOcclude: () => { flash('PSI'); reduceNADP(); },
+        ready: cyclicWatch,
+        load: cyclicDecide,
+        site: () => cycNow ? ridgeAt() : chips.PSI ? posOf(chips.PSI) : faceOf('PSI', -1),
+        onLoad: () => { flash('PSI'); if (!cycNow) K.carrierArrive('PSI', NADP); },
+        onOcclude: () => { flash('PSI'); if (cycNow) cycleBack(); else reduceNADP(); cyclicOwe(); },
         onWrap: () => { if (credit.PSI > 0) credit.PSI--; },
       }),
     };
@@ -291,8 +361,16 @@
           protonsPerFuel: sp ? { light: protonsPerPair() } : null,
           shuttles: sp ? { plastoquinol: sh.reduced, plastocyaninLoaded: sh.loaded } : null,
           /* The light reactions' own ledger, split only: every count is an
-             event that happened, and the ratios are the table's. */
-          light: sp ? Object.assign({}, lightLedger, { photonsPerPair: photonsPerPair(), protonsPerO2: protonsPerO2() }) : null,
+             event that happened, and the ratios are the table's. `measured`
+             ATP per NADPH is this run's, off the rotor against the ledger;
+             it settles toward `expected` over a long run and is null before
+             the first NADPH. */
+          light: sp ? Object.assign({}, lightLedger, {
+            photonsPerPair: photonsPerPair(), protonsPerO2: protonsPerO2(),
+            cyclic: P.cyclic || 0, cyclicToBalance: cyclicToBalance(),
+            atpPerNADPH: { linear: atpPerNADPH(0), expected: atpPerNADPH(P.cyclic || 0), calvin: CALVIN.atp / CALVIN.nadph,
+                           measured: lightLedger.nadphMade ? +(s.atpMade / lightLedger.nadphMade).toFixed(2) : null },
+          }) : null,
         };
       },
       reset() { for (const k in lightLedger) lightLedger[k] = 0; },
@@ -312,7 +390,7 @@
         b6f: { text: 'cytochrome b6f', offset: [-10, -40],
           card: `The one pump in the chain, and a close relative of the mitochondrion's complex III. It takes the pair from plastoquinol and hands them to plastocyanin one at a time; ${CHAIN.b6f.pumps} protons end up in the lumen per pair, by the same Q cycle: some ride in on plastoquinol, the rest are taken from the stroma, and no channel opens. As the lumen turns acidic it slows, so the chain cannot outrun the synthase.` },
         psi: { text: 'photosystem I', offset: [40, -34],
-          card: `A second photon lifts each electron again, higher than PSII could, high enough to reduce NADP⁺. On its stroma face, ferredoxin and the enzyme FNR (not drawn) make NADPH from NADP⁺, two electrons and one proton from the stroma. PSI pumps nothing either.` },
+          card: `A second photon lifts each electron again, higher than PSII could, high enough to reduce NADP⁺. On its stroma face, ferredoxin and the enzyme FNR (not drawn) make NADPH from NADP⁺, two electrons and one proton from the stroma. PSI pumps nothing either. Some turns send the electrons back to plastoquinone instead, so b6f pumps for them twice: that cyclic flow is how the chloroplast makes the extra ATP the Calvin cycle needs beyond ${atpPerNADPH(0).toFixed(1)} per NADPH.` },
         plastoquinone: { text: 'plastoquinone', offset: [-40, 26],
           card: 'A small oily molecule that moves inside the membrane. It picks up two electrons at PSII, becomes plastoquinol, delivers them to b6f and goes back for more. It does the job ubiquinone does in a mitochondrion.' },
         plastocyanin: { text: 'plastocyanin', offset: [36, 30],
@@ -354,7 +432,8 @@
   }
 
   global.LightReactions = { create, mount, machine, DEFAULTS, SIGNALS,
-    RING, FUELS, CHAIN, CARRIES, chainPath: path, protonsPerPair, photonsPerPair, protonsPerO2, atpPerNADPH };
+    RING, CALVIN, FUELS, CHAIN, CARRIES, chainPath: path, protonsPerPair, photonsPerPair, protonsPerO2,
+    protonsPerNADPH, atpPerNADPH, photonsPerNADPH, cyclicToBalance };
   if (global.Circuit) global.LightReactions.SCALE = global.Circuit.SCALE();
   if (typeof module !== 'undefined' && module.exports) module.exports = global.LightReactions;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

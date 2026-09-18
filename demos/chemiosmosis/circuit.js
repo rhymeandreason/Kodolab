@@ -546,6 +546,20 @@
     const Q_Z = 6, Q_SPEED = 40, C_SPEED = 36;
     const qTokens = [], cTokens = [];
     let shuttleCtx = null;
+    /* A FREE QUINONE MAY BE SPOKEN FOR. A machine that fires less often than
+       the donors (a cyclic turn at PSI) never finds one free, because the
+       donors run first every tick; it reserves the next one to come free and
+       the donors pass it by. Reserving never waits on anyone, so it cannot
+       lock the chain. */
+    const freeQ = key => qTokens.filter(q => q.state === 'free' && (!q.reservedFor || q.reservedFor === key));
+    function reserveQ(key) {
+      const have = qTokens.find(q => q.reservedFor === key && q.state === 'free');
+      if (have) return have;
+      const q = freeQ(key)[0];
+      if (q) q.reservedFor = key;
+      return q || null;
+    }
+    const releaseQ = q => { if (q) q.reservedFor = null; };
     /* AT REST IN THE LIPID, between the last donor and the hub, where no protein stands. */
     const qHome = i => ({ x: (xs[line.rest] + xs[line.hub]) / 2 + (i ? 5 : -5), y: 0, z: i ? -Q_Z : Q_Z });
     /* A quinone site is inside the membrane part of the complex, so it docks
@@ -692,7 +706,7 @@
       dropShuttles();
       shuttleCtx = P.context;
       for (let i = 0; i < 2; i++) {
-        const q = { obj: buildToken(line.q[0], line.qColor, 1), i, state: 'free', charged: false };
+        const q = { obj: buildToken(line.q[0], line.qColor, 1), i, state: 'free', charged: false, reservedFor: null };
         Object.assign(q, qHome(i)); q.to = qHome(i);
         root.add(q.obj); seat(q.obj, q.x, q.y, q.z); qTokens.push(q);
         const c = { obj: buildToken(line.c, line.cColor, 1), i, state: 'home', e: null };
@@ -708,7 +722,7 @@
     }
     function homeShuttles() {
       for (const q of qTokens) freeQH(q);
-      for (const q of qTokens) { if (q.state !== 'free') relabel(q.obj, line.q[0], 8.0); q.state = 'free'; q.charged = false; q.to = qHome(q.i); }
+      for (const q of qTokens) { if (q.state !== 'free') relabel(q.obj, line.q[0], 8.0); q.state = 'free'; q.charged = false; q.reservedFor = null; q.to = qHome(q.i); }
       for (const c of cTokens) { ePill(false, c); c.state = 'home'; c.to = cHome(c.i); }
       clearE();
     }
@@ -902,10 +916,10 @@
       const r = runner({
         key, part: CX[key], n: ROW(key).pumps, x: () => xs[key],
         rate: () => donorRate(key, fuel),
-        ready: () => qTokens.some(q => q.state === 'free'),
+        ready: () => freeQ(key).length > 0,
         load: () => {
-          const q = qTokens.filter(q => q.state === 'free').sort((a, b) => Math.abs(a.x - xs[key]) - Math.abs(b.x - xs[key]))[0];
-          q.state = 'toDonor'; q.charged = false; q.to = qDock(key, q.x, q.i); r.q = q;
+          const q = freeQ(key).sort((a, b) => Math.abs(a.x - xs[key]) - Math.abs(b.x - xs[key]))[0];
+          q.reservedFor = null; q.state = 'toDonor'; q.charged = false; q.to = qDock(key, q.x, q.i); r.q = q;
         },
         onLoad: () => { carrierArrive(key, hooks.token && hooks.token(key, pulse[key] || fuel)); if (more.onLoad) more.onLoad(); },
         onOcclude: () => {
@@ -970,12 +984,13 @@
         rate: more.rate,
         ready: () => more.ready() && cTokens.filter(c => c.state === 'atEnd').length * cCarries() >= E_PER_TURN,
         load: () => {
+          /* The component's load first: it may decide where this turn's electrons are going. */
+          if (more.load) more.load();
           const site = more.site ? more.site() : faceOf(key, -1);
           for (const c of cTokens.filter(c => c.state === 'atEnd').slice(0, E_PER_TURN / cCarries())) {
             handOff(c, [faceOf(key, 1, -3), midOf(key)], site);
             ePill(false, c); c.state = 'returning'; c.to = cHome(c.i);
           }
-          if (more.load) more.load();
         },
         onLoad: more.onLoad, onOcclude: more.onOcclude, onWrap: more.onWrap, onPhase: more.onPhase,
       });
@@ -1199,7 +1214,7 @@
       chips, pulse, waiting, leaving, carrierArrive, fuelSpend, clearFuel, lumpedDock,
       atp: { ROT, launchNucleotide, chips: atpChips },
       electrons: { sendE, handOff, clearE, E_PER_TURN },
-      shuttles: { qTokens, cTokens, qDock, qHome, cHome, cDock, protonateQ, ePill, counts: shuttleCounts },
+      shuttles: { qTokens, cTokens, qDock, qHome, cHome, cDock, protonateQ, ePill, counts: shuttleCounts, freeQ, reserveQ, releaseQ },
       doors: { pmfNow, backPressure, reMV, protonPool, get protonRef() { return protonRef; }, set protonRef(v) { protonRef = v; } },
       runner, donor, hub, terminal, lumped, runners, leadRunner, resetChain, feedSplit, feedLumped, fuelRate,
       at, emit: eng.emit,

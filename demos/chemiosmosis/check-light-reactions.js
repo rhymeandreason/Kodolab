@@ -23,6 +23,9 @@ const is   = (cond, m) => cond ? ok(m) : fail(m);
 console.log('== 1. the rotor, on the chloroplast\'s ring');
 {
   const R = LR.RING;
+  is(R.c === 14, `a chloroplast's c ring has ${R.c} subunits, not a mammal's 8`);
+  is(R.protonsPerTurn === R.c, 'a full turn is one proton per c subunit: the ring is drawn true, not rounded up');
+  is(Math.abs(R.protonsPerTurn / R.atpPerTurn - 14 / 3) < 1e-9, `${(R.protonsPerTurn / R.atpPerTurn).toFixed(2)} H⁺ per ATP, more than a mitochondrion's 3`);
   const r = C.rotor(R);
   let worst = 0;
   for (let i = 1; i <= 5000; i++) { r.pass(1); worst = Math.max(worst, r.atp * R.protonsPerTurn / R.atpPerTurn - r.protons); }
@@ -58,11 +61,24 @@ console.log('\n== 3. the light reactions, split: the ledger');
   const r = C.Complex.selfTest(2000, n);
   if (!r.ok) r.failures.slice(0, 3).forEach(fail);
   else ok(`b6f: a pump at ${n} seats, never open both ends`);
-  /* ATP PER NADPH, linear flow. The Calvin cycle spends 3 ATP for 2 NADPH,
-     and a linear chain cannot pay that: the shortfall is why cyclic flow
-     exists. Recorded here as the number the page prints, not as balanced. */
-  const perATP = LR.RING.protonsPerTurn / LR.RING.atpPerTurn;
-  is(Math.abs(LR.atpPerNADPH() - LR.protonsPerPair() / perATP) < 1e-9, `${LR.atpPerNADPH().toFixed(2)} ATP per NADPH on linear flow, at ${perATP.toFixed(2)} H⁺ per ATP`);
+}
+
+/* ---- 4. cyclic flow balances the ledger ---- */
+console.log('\n== 4. ATP per NADPH: linear flow falls short, cyclic flow makes it up');
+{
+  const perATP = LR.RING.protonsPerTurn / LR.RING.atpPerTurn, calvin = LR.CALVIN.atp / LR.CALVIN.nadph;
+  is(calvin === 1.5, `the Calvin cycle spends ${LR.CALVIN.atp} ATP per ${LR.CALVIN.nadph} NADPH`);
+  is(LR.protonsPerNADPH(0) === LR.protonsPerPair(), 'linear flow: one NADPH per pair, and the pair\'s protons');
+  is(Math.abs(LR.atpPerNADPH(0) - LR.protonsPerPair() / perATP) < 1e-9 && LR.atpPerNADPH(0) < calvin,
+     `${LR.atpPerNADPH(0).toFixed(2)} ATP per NADPH on linear flow alone, short of the Calvin cycle's ${calvin}`);
+  const f = LR.cyclicToBalance();
+  is(f > 0 && f < 1, `${(f * 100).toFixed(0)}% of PSI's turns cyclic balances it`);
+  is(Math.abs(LR.atpPerNADPH(f) - calvin) < 1e-9, `${LR.atpPerNADPH(f).toFixed(2)} ATP per NADPH at that share: the Calvin cycle's`);
+  is(LR.protonsPerNADPH(f) > LR.protonsPerNADPH(0), `${LR.protonsPerNADPH(f).toFixed(1)} H⁺ per NADPH with cyclic flow against ${LR.protonsPerNADPH(0)} without`);
+  is(LR.photonsPerNADPH(f) > LR.photonsPerNADPH(0), `and it costs light: ${LR.photonsPerNADPH(f).toFixed(1)} photons per NADPH against ${LR.photonsPerNADPH(0)}`);
+  is(LR.atpPerNADPH(0.5) > LR.atpPerNADPH(f), 'more cyclic flow, more ATP per NADPH: the dial is monotone');
+  /* THE DRAWN TURN MATCHES THE TABLE: a cyclic turn is b6f's pumps and PSI's photons, nothing from water. */
+  is(LR.CHAIN.b6f.pumps === 4 && LR.CHAIN.PSI.photons === 2, 'a cyclic turn is worth b6f\'s 4 H⁺ for PSI\'s 2 photons, and splits no water');
 }
 
 console.log(bad ? `\n${bad} FAILED` : '\nall good');
