@@ -16,11 +16,15 @@
    gap away: "Code sent to..." belongs to the code box. */
 .code + .sub { margin-top: -.9rem; }
 .door p { margin: 0; }
-.cap {
-  /* The door's title, so it takes the sheet's larger cap step; --cap-sm is for
-     a label inside a control, and set one of these it read as a caption. */
-  margin: 0; font-family: var(--font-display); font-size: var(--cap-lg); font-weight: var(--cap-weight);
-  letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim);
+/* THE DOOR'S TITLE IS A HEADING, NOT AN EYEBROW. It was a letterspaced
+   uppercase micro-cap, and at the largest cap step kodo.css has (12px) it still
+   read as a label above the content rather than the name of the door, one rank
+   below the serif sentence under it. Display face, sentence case, --text-lg in
+   the strongest ink: the page's h1, then this, then the serif line. */
+.doorhead {
+  margin: 0; font-family: var(--font-display); font-size: var(--text-lg);
+  font-weight: var(--weight-semibold); line-height: var(--leading-tight);
+  letter-spacing: -.005em; color: var(--text-strong);
 }
 .say { font-family: var(--font-editorial); font-size: 1.05rem; line-height: 1.45; color: var(--text-body); }
 .say b, .sub b { color: var(--text-strong); }
