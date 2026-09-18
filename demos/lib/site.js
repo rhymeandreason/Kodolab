@@ -231,7 +231,7 @@
      second masthead over it. Same rule the foot below follows. The builder's
      bar and the front door's mast are the two exceptions: each writes the four
      links itself, in its own ink, and is only given the account. */
-  var OWN = 'header.bar > nav.links, .mast nav.links, .hero nav.links';
+  var OWN = 'header.bar nav.links, .mast nav.links, .hero nav.links';
   function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
   function nav() {
     var own = document.querySelectorAll(OWN);
