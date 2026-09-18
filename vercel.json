@@ -12,7 +12,7 @@
     { "source": "/demos/(.*)",
       "headers": [ { "key": "Access-Control-Allow-Origin", "value": "*" } ] },
     { "source": "/demos/(.*)\\.(js|css|json|pdb|cif|sdf|bin|csv|webp|png|jpg|svg|mp4)",
-      "headers": [ { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=86400" } ] },
+      "headers": [ { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=1800" } ] },
     { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
   ],
   "redirects": [
