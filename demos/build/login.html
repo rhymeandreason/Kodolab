@@ -59,6 +59,7 @@
     <section class="door">
       <h2 class="cap">Teachers and builders</h2>
       <div class="stack" id="out">
+        <p class="say" id="firstTime">The first time, enter your invite code after signing in.</p>
         <div class="gbtn" id="gbtn"></div>
         <p class="sub" id="noGoogle" hidden>Google sign-in is not set up on this server.</p>
         <p class="or"><span>or sign in with email</span></p>
@@ -75,10 +76,9 @@
           <button class="cta" type="submit">Sign in</button>
         </form>
         <p class="sub" id="otpSaid" hidden></p>
-        <!-- Inside #out, so it goes when they sign in: past that point the
+        <!-- Inside #out, so both go when they sign in: past that point the
              invite is the next page's business, not a warning. -->
-        <p class="sub" id="inviteNote">New here? You enter an invite code after signing in, or
-          <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">join the waitlist</a>.</p>
+        <p class="sub">No invite? <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>.</p>
       </div>
       <div class="stack" id="in" hidden>
         <p class="say" id="inLine"></p>
@@ -204,7 +204,7 @@
     $('otpForm').hidden = !said;
     // Two codes on screen at once is the one confusion this door has to avoid:
     // while a sign-in code is being typed, the invite is not the subject.
-    $('inviteNote').hidden = !!said;
+    $('firstTime').hidden = !!said;
     show('otpSaid', said || '');
     if (said) { $('otp').value = ''; $('otp').focus(); } else { sentTo = null; $('email').focus(); }
   }
