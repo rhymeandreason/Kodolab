@@ -56,14 +56,13 @@
         <!-- One link per class admits every student to a lesson and its tutor,
              and each browser that opens it reports back: api/event.js. -->
         <div class="share">
-          <p class="share-text"><b>Class link</b> Students open it on any laptop, no sign-in.</p>
+          <p class="share-text"><b>Class link</b> No sign-in needed<button class="textbtn" type="button" id="newCode" title="The old link stops working">New code</button></p>
           <div class="share-link">
             <label class="vh" for="classLink">Class link</label>
             <input id="classLink" readonly>
-            <button class="btn btn--solid" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy link</button>
+            <button class="btn btn--light" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy link</button>
           </div>
-          <p class="share-foot">Code <code class="bigcode" id="classCode"></code> works on any lesson as <code>?class=…</code>
-            <button class="textbtn" type="button" id="newCode" title="The old link stops working">New code</button></p>
+          <p class="share-foot">Code <code class="bigcode" id="classCode"></code> also works on any lesson as <code>?class=…</code></p>
         </div>
       </div>
 
@@ -99,6 +98,8 @@
 
       <div id="classView" hidden>
         <section class="lessons" id="lessonsView">
+          <dl class="stats" id="stats"></dl>
+
           <div class="sechead2">
             <h3>Sessions</h3>
             <span class="spacer"></span>
@@ -369,7 +370,9 @@
   // Deployed a lesson is its short URL; on the dev server it is the file. Same lesson.
   // The browser's code, as lib/track.js shows it in the class card: first eight hex of the visitor id.
   const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
-  const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p] || p);
+  // Any other lesson by its file or short URL: /glycolysis-lab reads as Glycolysis.
+  const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p]
+    || String(p).replace(/^.*\//, '').replace(/(-lab)?(\.html)?$/, '').replace(/-/g, ' ').replace(/^./, c => c.toUpperCase()));
 
   const YES = '<i class="ph-bold ph-check-circle yes" aria-hidden="true"></i><span class="vh">yes</span>';
   // One pip per phase, filled through the one reached.
@@ -380,6 +383,22 @@
     return `<span class="prog"><span class="pips" role="img" aria-label="${at} of ${N_PHASES}">${pips}</span><span class="pname">${name}</span></span>`;
   }
 
+  // The class at a glance, over every session the table lists.
+  function paintStats(rows) {
+    const done = rows.filter(r => r.complete).length;
+    const quizzes = rows.map(r => r.quiz && Number(r.quiz.score) / Number(r.quiz.total)).filter(Number.isFinite);
+    const avg = quizzes.length ? Math.round(100 * quizzes.reduce((a, b) => a + b, 0) / quizzes.length) + '%' : '—';
+    const asked = rows.reduce((a, r) => a + (r.questions || 0), 0);
+    const time = rows.map(r => r.active_s || 0).sort((a, b) => a - b);
+    const median = time.length ? mins(time[time.length >> 1]) : '—';
+    const tile = (k, v, note) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}${note ? `<span>${esc(note)}</span>` : ''}</dd></div>`;
+    $('stats').innerHTML = tile('Opened the lesson', rows.length)
+      + tile('Finished', done, rows.length ? `of ${rows.length}` : '')
+      + tile('Quiz average', avg, quizzes.length ? `${quizzes.length} taken` : 'none taken')
+      + tile('Typical time on screen', median)
+      + tile('Questions to the tutor', asked);
+  }
+
   function paintSessions() {
     const c = current;
     const rows = c.sessions || [];
@@ -388,6 +407,8 @@
     $('sessionCount').textContent = rows.length || '';
     $('noSessions').hidden = !!rows.length;
     $('sessionsWrap').hidden = !rows.length;
+    $('stats').hidden = !rows.length;
+    paintStats(rows);
     $('exportCsv').hidden = !rows.length;
     $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
       <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${esc(shortId(r.visitor_id))}</code></button></td>
