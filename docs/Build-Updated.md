@@ -1,4 +1,4 @@
-<!-- KIND: argument, then recipe. The brief for the site build and for what the build makes possible after Beta: current Three.js, ES modules, a declared component contract. Sections 1-8 are Beta work; 9-11 are after. Generator-Recommendation.md is its companion: what a generated app should be stored as, which sections 7, 9 and 10 leave room for. Read whole before touching tools/build.js, vercel.json's build settings, or a page's bake markers. Retire into demos/docs/ once it ships. -->
+<!-- KIND: argument, then recipe. The brief for the site build and for what the build makes possible after Beta: current Three.js, ES modules, a declared component contract. Section 12 says what is worth doing now, beside the content work, and what waits: most of the build waits until after Beta. Generator-Recommendation.md is its companion: what a generated app should be stored as, which sections 7, 9 and 10 leave room for. Read whole before touching tools/build.js, vercel.json's build settings, or a page's bake markers. Retire into demos/docs/ once it ships. -->
 
 # The build, and what follows it
 
@@ -30,7 +30,7 @@ Two thirds of what we send is comments. The comments stay in the source, where t
 
 **Plain scripts first, ES modules second.** Pages load globals in an order the page states. The build concatenates in that order and minifies; nothing is converted. That ships the load-time win without touching a library file. Modules are the end state and have their own section (9), because three things this plan would otherwise hand-build (the shared `core` bundle, per-page molecule data, the `ORDER` tables) are what imports give for free.
 
-**Three.js moves to current early, not last.** The upgrade depends only on bundling and the smoke run's screenshot diff. It is what the generator gains most from, since a model writes current Three, and every component built before it is a component ported after it.
+**Three.js moves to current early in the build, not last.** The upgrade depends only on bundling and the smoke run's screenshot diff, and it is what the generator gains most from, since a model writes current Three. It is not a reason to hold up a component: with colour management off, what breaks is the five shader files and the light intensities (section 6), so ordinary geometry and material code written on r128 ports almost free.
 
 **Two devDependencies in the root `package.json`:** `esbuild`, to minify and later to bundle, and `playwright-core`, to drive the Chrome already installed for the smoke run (section 5). Neither ships to a student.
 
@@ -118,7 +118,7 @@ A bundle is the files concatenated in the page's order, each minified by esbuild
 
 * `build.js --check`: every marker has a bake, every bake's inputs exist, every public page's text-bearing bakes produced text.
 
-* A smoke run over `dist/`: load each featured page in headless Chrome at 1440x900, fail on any page error, any failed request other than `/_vercel/*`, or a missing global a page's inline script names, and write a screenshot per page for a person to glance at. This is the gate on bundling, on the Three.js upgrade and on every module conversion, and it runs before every deploy, in `tools/check.js deploy`.
+* A smoke run over `dist/`: load each featured page in headless Chrome at 1440x900, fail on any page error, any failed request other than `/_vercel/*`, or a missing global a page's inline script names, and write a screenshot per page for a person to glance at. This is the gate on bundling, on the Three.js upgrade and on every module conversion, and it runs before every deploy, in `tools/check.js deploy`. **It does not need the build**: pointed at the dev server it is a regression gate for the featured lessons today (section 12), and it moves to `dist/` when `dist/` exists.
 
   Headless Chrome is not the hidden tab of the in-app browser: tried on `glycolysis-lab.html`, rAF ran at 62 fps, WebGL was live, and the screenshot showed the rendered glucose. So the run can wait for a scene to draw and compare it against the previous build's shot. It uses the installed Chrome (`channel: 'chrome'`), so nothing is downloaded. Playwright's WebKit (`npx playwright install webkit`, \~70 MB) adds a Safari-engine pass, which is the engine the lessons are judged in. Worth installing before section 6, where colour is the thing being compared.
 
@@ -246,25 +246,35 @@ After Beta. The generator is the product, and today its reference is prose: each
 
 ## 12. Order of work
 
-**For Beta:**
+Content is what a Beta user judges, and a 1.5 s cold load is tolerable. So the components and lessons in progress come first, and the build waits, except for the short list below.
 
-1. `tools/build.js` copying to `dist/`, `vercel.json` pointed at it, a deploy that serves the same site. Nothing else changes, so a problem here is the build's alone.
-2. Bundling, scripts and stylesheets, behind the smoke run, then `immutable` on `_b/`. First because load time is what a student feels, and it depends on no bake.
-3. Three.js r128 to current, behind the screenshot diff (section 6). Early, so nothing new is built on r128.
-4. Generated-app bundles (section 7). The contract-version stamp first, since it is one attribute and every app stored without it is a cost. Then the sandbox cache test, whose answer decides whether bundles alone help; then per-component bundles and the splice in `framed()`.
-5. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
-6. `sitenav`: every page's top bar from one template. The priority for search and for a consistent layout.
-7. `shelf` on `/lessons`, coming-soon cards included. `gallery` on the homepage, and `proteins.js` leaves it.
-8. `steps`, tree first, then glycolysis.
-9. The protein story template (section 8): myoglobin extracted first, then prion and ATP synthase, each checked against its own screenshot.
-10. The protein and molecule sheets as partials, then a page per library entry.
-11. The auth review (section 11). Independent of everything above; before Beta widens.
+**Now, beside the content work.** Each is under a day, and each either cannot be done after the fact or protects Beta:
 
-**After Beta:**
+1. **The contract-version stamp on stored apps** (section 7). One attribute. Every app a Beta user saves without it cannot be told apart later.
+2. **The smoke run, against the dev server** (section 5). Featured lessons loaded in headless Chrome, failing on errors, a screenshot each. New components are being built fast across shared modules and parallel sessions, and this is the cheapest gate on a featured lesson breaking.
+3. **The auth review** (section 11). Independent of everything else; before Beta widens.
+4. **The draft walk in the builder, and a read of the request log** (`Generator-Recommendation.md` §§5, 7). A Beta teacher should not be shown a blank page that passed its checks.
+5. **New components are born in the later shape.** A seeded random source and a fixed `step(dt)` that drawing does not call, and parameters declared as data beside `DEFAULTS` (section 10). No extra cost in a component being written anyway, and it saves retrofitting each one. Meiosis needs the seeded randomness regardless.
 
-12. Read the builder's request log, then the shell's badge and the draft walk (`Generator-Recommendation.md` §§5-7). Small, independent, and the log decides whether that document's larger half is built.
-13. Parameter declarations and validation in `card-stage.js` (section 10, readers 1-3). Needs no modules, and the generator improves the day it lands.
-14. Declared widgets, then the document form, if the log supports it (`Generator-Recommendation.md` §6). After 13, which they bind to.
-15. Seeded `step(dt)`, component by component, and the sims join the screenshot diff.
-16. ES modules, leaf-first (section 9), then per-page molecule data by import, then the `.d.ts`.
-17. A `WebGPURenderer` bench for WaterSim, CPU path kept.
+**Pulled forward only if search is a growth channel right after Beta:** steps 6 and 10 to 12 below (the copy to `dist/`, then the `head`, `sitenav` and `steps` bakes). Indexing lags by weeks and that delay is outside our control. If Beta grows through teachers recruited directly, they wait with the rest.
+
+**The build, after Beta:**
+
+6. `tools/build.js` copying to `dist/`, `vercel.json` pointed at it, a deploy that serves the same site. Nothing else changes, so a problem here is the build's alone.
+7. Bundling, scripts and stylesheets, behind the smoke run, then `immutable` on `_b/`. First because load time is what a student feels, and it depends on no bake.
+8. Three.js r128 to current, behind the screenshot diff (section 6). Sooner if a new component needs something r128 lacks.
+9. Generated-app bundles (section 7): the sandbox cache test, whose answer decides whether bundles alone help; then per-component bundles and the splice in `framed()`.
+10. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
+11. `sitenav`: every page's top bar from one template. The priority for search and for a consistent layout.
+12. `steps`, tree first, then glycolysis. `shelf` on `/lessons`, coming-soon cards included. `gallery` on the homepage, and `proteins.js` leaves it.
+13. The protein story template (section 8): myoglobin extracted first, then prion and ATP synthase, each checked against its own screenshot.
+14. The protein and molecule sheets as partials, then a page per library entry.
+
+**After the build.** None of these costs more for having waited:
+
+15. The shell's badge (`Generator-Recommendation.md` §6). Small, and it removes most generated CSS.
+16. Parameter declarations and validation in `card-stage.js` for the components that predate item 5 (section 10, readers 1-3). Needs no modules, and the generator improves the day it lands.
+17. Declared widgets, then the document form, if the request log supports it (`Generator-Recommendation.md` §6). After 16, which they bind to.
+18. Seeded `step(dt)` for the older sims, and they join the screenshot diff.
+19. ES modules, leaf-first (section 9), then per-page molecule data by import, then the `.d.ts`.
+20. A `WebGPURenderer` bench for WaterSim, CPU path kept.
