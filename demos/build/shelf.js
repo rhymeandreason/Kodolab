@@ -121,8 +121,8 @@ window.Shelf = (() => {
     + `<time class="when" datetime="${new Date(m.edited || m.at || Date.now()).toISOString()}">${esc(ago(m.edited || m.at))}</time>`
     + `</span></a>`
     + `<span class="acts">`
-    + `<a class="btn btn--soft" href="${esc(Apps.link('view', m.id))}" target="_blank" rel="noopener"><i class="ph-bold ph-arrow-square-out"></i>View</a>`
-    + `<a class="btn btn--soft" href="${esc(Apps.link('edit', m.id))}"><i class="ph-bold ph-pencil-simple"></i>Edit</a>`
+    + `<a class="btn act-view" href="${esc(Apps.link('view', m.id))}" target="_blank" rel="noopener"><i class="ph-bold ph-arrow-square-out"></i>View</a>`
+    + `<a class="btn act-edit" href="${esc(Apps.link('edit', m.id))}"><i class="ph-bold ph-pencil-simple"></i>Edit</a>`
     + `<span class="spacer"></span>`
     + `<button class="iconbtn" data-act="copy" type="button" title="Copy the public link" aria-label="Copy the public link"><i class="ph-bold ph-link"></i></button>`
     + (m.token || m.mine ? `<button class="iconbtn" data-act="del" type="button" title="Delete this app" aria-label="Delete this app"><i class="ph-bold ph-trash"></i></button>` : '')

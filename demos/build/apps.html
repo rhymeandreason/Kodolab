@@ -9,6 +9,7 @@
 <base href="/demos/build/">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
 <link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/library.css">
 <link rel="stylesheet" href="shelf.css">
 <!-- =========================================================================
      EVERY APP THIS PERSON MADE, as the cards the builder's own shelf draws
@@ -17,27 +18,63 @@
      comes back here.
      ========================================================================= -->
 <style>
-  .shelfwrap { padding-bottom: 5rem; }
-  .empty { font-family: var(--font-editorial); font-size: 1.05rem; color: var(--text-muted); }
-  .empty a { color: var(--accent); }
+  /* library.css's head and foot around build/shelf.js's cards; the cards are
+     shelf.css's, shared with the builder. */
+  /* The homepage's `.cta.big.hot`, so the page's one action is not a card's navy Edit. */
+  .head .go { display: inline-flex; align-items: center; gap: .55em; margin-top: 1.4rem; font: 500 16px var(--sans); letter-spacing: .06em; text-decoration: none; color: var(--paper); background: var(--coral); padding: 1rem 1.9rem; border-radius: 999px; box-shadow: 0 8px 20px -8px rgba(var(--ink-t), .5); transition: transform .15s var(--soft), box-shadow .15s; }
+  .head .go:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -8px rgba(var(--ink-t), .55); }
+  .shelfwrap { padding: 1rem 0 5rem; }
+  .empty { font-family: var(--serif); font-style: italic; font-size: 1.1rem; color: var(--ink-3); padding: 2rem 0; border-top: 1px solid rgba(var(--ink-t), .12); }
+  .empty a { color: var(--ink); }
+
+  /* library.css's `.card` and `.name` are the catalogue's; the shelf uses the
+     same two words for a scaled-down scene and a title. Undo what leaks. */
+  .mine .card { border: 0; border-radius: 0; box-shadow: none; overflow: visible; cursor: inherit; transition: none; }
+
 </style>
 </head>
-<body class="kodo">
-<div class="page">
-  <nav class="sitenav">
-    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-  </nav>
+<body>
 
-  <header class="pagehead">
-    <h1>my apps</h1>
-    <span class="meta" id="count" hidden></span>
-  </header>
+<header class="bar">
+  <div class="wrap">
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The site's three places, the same words and order as lib/site.js's
+         list; site.js only adds the account here. -->
+    <nav class="links" aria-label="Site">
+      <a class="lnk" href="/lessons">Lessons</a>
+      <a class="lnk" href="/library">Library</a>
+      <a class="lnk" href="/build">Build</a>
+    </nav>
+  </div>
+</header>
 
-  <main class="shelfwrap">
+<section class="head">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Kodolab Build</span>
+      <h1>My apps</h1>
+    </div>
+    <div>
+      <p class="lede">Every lesson you have built. <b>Open one to keep editing</b>, or share its link.</p>
+      <p class="meta" id="count" hidden></p>
+      <a class="go" id="newLink" href="build.html">Build a new one <span aria-hidden="true">&rarr;</span></a>
+    </div>
+  </div>
+</section>
+
+<main class="shelfwrap">
+  <div class="wrap">
     <div id="mine" hidden></div>
     <p class="empty" id="empty" hidden>Nothing yet. <a id="buildLink" href="build.html">Build one</a>.</p>
-  </main>
-</div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Kodolab · <a href="https://www.linkedin.com/in/maryhuang1/" target="_blank" rel="noopener">Mary Huang</a> · <a href="/lessons">Lessons</a> · <a href="/contribute">Contribute</a> · <a href="mailto:mary@kodolab.org">Email</a> · <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Send feedback</a> · <a href="/privacy">Privacy</a></span>
+    <span class="dots"><i style="background:var(--green)"></i><i style="background:var(--coral)"></i><i style="background:var(--blue)"></i><i style="background:var(--amber)"></i><i style="background:var(--violet)"></i></span>
+  </div>
+</footer>
 
 <script src="apps-client.js"></script>
 <script src="shelf.js"></script>
@@ -45,7 +82,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  $('buildLink').href = Apps.page('build');
+  $('buildLink').href = $('newLink').href = Apps.page('build');
 
   const shelf = Shelf.mount($('mine'), {
     limit: 60,
