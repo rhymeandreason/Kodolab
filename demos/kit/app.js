@@ -202,7 +202,8 @@
     /* Every domain file in MolLib.DOMAINS, because the component takes a
        molecule BY NAME and cannot know which one a page will ask for. Listing
        a subset is not a smaller download, it is a page that draws nothing for
-       `pyruvate` and says why to nobody. */
+       `pyruvate` and says why to nobody. A page that names its molecules in
+       data-mol gets only their files instead: see MOLS below. */
     Diagram:    ['lib/skel.js', 'lib/mol-small.js', 'lib/mol-aminoacids.js',
                  'lib/mol-pathways.js', 'lib/mol-krebs.js', 'lib/mol-carriers.js',
                  'lib/mol-sugars.js', 'lib/mol-glycans.js', 'lib/mol-lipids.js',
@@ -217,13 +218,45 @@
                  'lib/mol-nucleic.js', 'lib/molview.js', 'molecule/molecule.js'],
   };
 
+  /* Which domain file registers each molecule key, so a page's data-mol can
+     load only those files. check-app.js fails when this and the library
+     disagree; `node kit/check-app.js --write` rewrites the block. */
+  // mols:begin
+  const MOLS = {
+    'lib/mol-small.js':      'water ammonia methane o2 co2 carbonic ethanol',
+    'lib/mol-aminoacids.js': 'glycine alanine serine cysteine dAlanine proline glutamine glutamate',
+    'lib/mol-pathways.js':   'g6p f6p f16bp dhap g3p bpg13 pga3 pga2 pep pyruvate lactate acetaldehyde ethanolSkel',
+    'lib/mol-krebs.js':      'oaa citrate isocitrate akg succinate fumarate malate',
+    'lib/mol-carriers.js':   'amp pi atp nadh coa acetylcoa succinylcoa fadh2 fad fmnh2 fmn ubiquinol ubiquinone atpSkel nadhSkel',
+    'lib/mol-heme.js':       'heme hemeOx hemeC hemeCOx',
+    'lib/mol-sugars.js':     'galactose alphaGlucose ribose deoxyribose glucose ascorbate',
+    'lib/mol-glycans.js':    'maltose cellobiose galactobiose lactose',
+    'lib/mol-lipids.js':     'palmitate glycerol popc palmitoleate',
+    'lib/mol-nucleic.js':    'adenine thymine guanine cytosine phosphate dATP dTTP dGTP dCTP pyrimidine purine',
+  };
+  // mols:end
+  const MOL_FILE = {};
+  for (const f in MOLS) for (const k of MOLS[f].split(' ')) MOL_FILE[k] = f;
+  // The components that take a molecule by name and so load every domain file.
+  const BY_NAME = ['Molecule', 'Diagram'];
+
+  /* The molecule keys a page's source names as quoted strings. A generated
+     page is read before it runs, so its data-mol can be written for it; a key
+     built at runtime is missed, and Molecule and Diagram report the miss. */
+  function molsNamed(src) {
+    const out = [];
+    for (const m of String(src).matchAll(/['"`]([A-Za-z][A-Za-z0-9]*)['"`]/g))
+      if (MOL_FILE[m[1]] && out.indexOf(m[1]) < 0) out.push(m[1]);
+    return out;
+  }
+
   const CSS = { Proteinbox: ['kit/proteinbox.css'], Graph: ['graph/graph.css'],
                 RespirationReaction: ['respiration/respiration.css'],
                 Diagram: ['diagram/diagram.css'] };
 
   /* The list a page's data-use resolves to, or an Error naming what is wrong
      with it. Exported so the builder can answer the same question offline. */
-  function plan(names, shell) {
+  function plan(names, shell, mols) {
     const want = [], bad = [];
     const tpl = String(shell || 'steps').trim() || 'steps';
     if (!SHELLS[tpl]) throw new Error(`kit/app.js: no template named ${tpl}. There is ${Object.keys(SHELLS).join(', ')}.`);
@@ -235,9 +268,16 @@
     }
     if (bad.length) throw new Error(`kit/app.js: no component named ${bad.join(', ')}. The reference lists what there is.`);
 
+    const keys = (mols || []).map(k => String(k).trim()).filter(Boolean);
+    const unknown = keys.filter(k => !MOL_FILE[k]);
+    if (unknown.length) throw new Error(`kit/app.js: no molecule named ${unknown.join(', ')}. data-mol takes MolLib keys.`);
+    const narrow = keys.length > 0 && want.some(n => BY_NAME.indexOf(n) >= 0);
+
     const files = new Set(CORE);
     for (const f of SHELLS[tpl].files) files.add(f);
-    for (const n of want) for (const f of USES[n]) files.add(f);
+    for (const n of want) for (const f of USES[n])
+      if (!(narrow && MOLS[f] && BY_NAME.indexOf(n) >= 0)) files.add(f);
+    if (narrow) for (const k of keys) files.add(MOL_FILE[k]);
 
     const css = CORE_CSS.slice();
     for (const n of want) for (const f of (CSS[n] || [])) if (css.indexOf(f) < 0) css.push(f);
@@ -245,10 +285,10 @@
     const scripts = ORDER.filter(f => files.has(f));
     const missing = [...files].filter(f => ORDER.indexOf(f) < 0);
     if (missing.length) throw new Error(`kit/app.js: ${missing.join(', ')} is not in ORDER, so it has no load position.`);
-    return { want, shell: tpl, scripts, css };
+    return { want, shell: tpl, scripts, css, mols: narrow ? keys : null };
   }
 
-  if (typeof module === 'object' && module.exports) { module.exports = { plan, USES, CSS, CORE, CORE_CSS, ORDER, SHELLS }; return; }
+  if (typeof module === 'object' && module.exports) { module.exports = { plan, molsNamed, USES, CSS, CORE, CORE_CSS, ORDER, SHELLS, MOLS }; return; }
 
   /* The page's own tag says where the library is: this file is at <base>kit/,
      so every path below hangs off the same prefix, and a page one folder down
@@ -258,10 +298,23 @@
   const url = f => (/^https?:/.test(f) ? f : base + f);
 
   let out;
-  try { out = plan((tag.getAttribute('data-use') || '').split(','), tag.getAttribute('data-shell')); }
+  try { out = plan((tag.getAttribute('data-use') || '').split(','), tag.getAttribute('data-shell'),
+                   (tag.getAttribute('data-mol') || '').split(',')); }
   catch (e) {
     document.write(`<p style="font:14px/1.5 system-ui;padding:2rem;color:#b00">${e.message}</p>`);
     throw e;
+  }
+  /* What Molecule and Diagram say when a key's file was left out by data-mol. */
+  if (out.mols) {
+    const told = new Set();       // once per key: a rebuild would repeat it into the builder's error list
+    window.AppMols = {
+      missing(key) {
+        const f = MOL_FILE[key];
+        if (!f || out.mols.indexOf(key) >= 0 || told.has(key)) return null;
+        told.add(key);
+        return `"${key}" is in ${f}, which this page does not load. Add ${key} to data-mol on the kit/app.js tag.`;
+      },
+    };
   }
   for (const f of out.css) document.write(`<link rel="stylesheet" href="${url(f)}">`);
   for (const f of out.scripts) document.write(`<scr` + `ipt src="${url(f)}"></scr` + `ipt>`);

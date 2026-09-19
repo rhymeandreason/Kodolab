@@ -303,7 +303,35 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
 }catch(e){return false}}
 })();</script>`;
 
+  /* kit/app.js's own tables, fetched once, so a page's data-mol can be written
+     before it runs: a page that mounts Molecule or Diagram then loads the domain
+     files of the molecules it names instead of all ten. Until this arrives, or
+     if it fails, a page loads every domain file, as it would without data-mol.
+     app.js returns its exports before touching the document when `module` is
+     defined, which is how the builder reads it in node too. */
+  let Loader = null;
+  fetch(`${location.origin}/demos/kit/app.js`).then(r => r.ok ? r.text() : Promise.reject())
+    .then(src => { const module = { exports: {} }; new Function('module', src)(module); Loader = module.exports; })
+    .catch(() => {});
+
+  /* Unions what the page declared with what its source names, so the model
+     adding a key the scan missed only ever widens the list. */
+  function withMols(html) {
+    if (!Loader) return html;
+    return html.replace(/<script\b[^>]*\bsrc="[^"]*kit\/app\.js"[^>]*>/i, tag => {
+      const use = /\bdata-use="([^"]*)"/.exec(tag);
+      if (!use || !/\b(Molecule|Diagram)\b/.test(use[1])) return tag;
+      const had = /\sdata-mol="([^"]*)"/.exec(tag);
+      const keys = [...new Set([...(had ? had[1].split(',') : []).map(k => k.trim()).filter(Boolean),
+                                ...Loader.molsNamed(html)])];
+      if (!keys.length) return tag;
+      const attr = ` data-mol="${keys.join(',')}"`;
+      return had ? tag.replace(had[0], attr) : tag.replace(/>$/, attr + '>');
+    });
+  }
+
   function framed(html, relay = RELAY) {
+    html = withMols(html);
     const base = `<base href="${location.origin}/demos/build/">`;
     const head = /<head[^>]*>/i.exec(html);
     return head ? html.slice(0, head.index + head[0].length) + '\n' + base + relay + html.slice(head.index + head[0].length)

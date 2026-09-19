@@ -52,6 +52,8 @@ The empty field is the authoring decision — where it goes in the spec, under w
 
 Provenance, formula against atoms and `charge`, sphere clearance on every bonded pair, and every declared `stereo` / `topology` / `chirality` claim. Run it after any geometry change.
 
+A new key also goes in `kit/app.js`'s `MOLS`, or a page naming it in `data-mol` throws: `node kit/check-app.js --write`.
+
 ## 7. Any stereocentre: add a `REF` row and run `check-handedness.js`
 
 ```bash

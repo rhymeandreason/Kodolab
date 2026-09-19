@@ -135,13 +135,14 @@ Generated apps run in a sandboxed frame from the database and are disallowed in 
 1. `tools/build.js` copying to `dist/`, `vercel.json` pointed at it, a deploy that serves the same site. Nothing else changes, so a problem here is the build's alone.
 2. Bundling, scripts and stylesheets, behind the smoke run, then `immutable` on `_b/`. First because load time is what a student feels, and it depends on no bake.
 3. Generated-app bundles (section 6). The sandbox cache test first, since its answer decides whether bundles alone help; then per-component bundles and the splice in `framed()`.
-4. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
-5. `sitenav`: every page's top bar from one template. The priority for search and for a consistent layout.
-6. `shelf` on `/lessons`, coming-soon cards included. `gallery` on the homepage, and `proteins.js` leaves it.
-7. The protein story template (section 9): myoglobin extracted first, then prion and ATP synthase, each checked against its own screenshot.
-8. The protein and molecule sheets as partials (section 9).
-9. `steps`, tree first, then glycolysis.
-10. Three.js r128 to current, behind the screenshot diff (section 8).
+4. Per-page molecule data (section 10), if the size report shows it is worth it.
+5. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
+6. `sitenav`: every page's top bar from one template. The priority for search and for a consistent layout.
+7. `shelf` on `/lessons`, coming-soon cards included. `gallery` on the homepage, and `proteins.js` leaves it.
+8. The protein story template (section 9): myoglobin extracted first, then prion and ATP synthase, each checked against its own screenshot.
+9. The protein and molecule sheets as partials (section 9).
+10. `steps`, tree first, then glycolysis.
+11. Three.js r128 to current, behind the screenshot diff (section 8).
 
 ## 8. Upgrading Three.js
 
@@ -181,3 +182,20 @@ So:
 
 `kit/modal.js` owns open, close, focus and the stack, and deliberately leaves the markup to the page. Without includes, that meant copies: `molecules.html`'s sheet is labelled a copy of `proteins/index.html`'s, and `respiration-lab.html` has its own `#molmodal`; `nodegraph/nodegraph.html` and `sickle-lab.html` mount `Proteinbox` their own way. Each sheet becomes a partial (`<!-- bake:molsheet -->`, `<!-- bake:protsheet -->`) with one stylesheet and one script that fills it. The markup is still HTML in the page, as `modal.js` asks; it is written once.
 
+## 10. Molecule and protein data per page
+
+The domain files (`mol-sugars.js`, `mol-carriers.js`, …) group specs so a hand-written page loads a reasonable subset. With a build, a page can ship only the specs it uses.
+
+**What it saves.** Measured on `glycolysis-lab.html` (2026-09-18): the page registers 34 specs and names 15 as string literals in its own source and the modules it loads; the other 19 (lactate, CoA, FAD, ubiquinone, …) are the other pathway lessons'. `skel.js` only builds specs at load; neither the page nor `reaction.js` calls it at runtime. The three domain files plus `skel.js` are about 62 KB gzipped; the page's own specs, pre-built, about 15 KB. Registering the whole library costs about 30 ms, so the saving is bytes, not CPU.
+
+**The larger case is a page that shows one or two as detail.** `respiration-lab.html` mounts `Molecule` and `Proteinbox` through `kit/app.js`, whose `USES` load every domain file plus `skel.js` (about 122 KB gzipped) and the whole `proteins/proteins.js` (33 KB) for a few molecule views and ATP synthase: more than three.js, on a hub page. More lessons will pull in a protein or two as a detail example this way.
+
+**The page declares its list; the build does not infer it.** A literal-name scan cannot see a key built at runtime, and a missing spec fails at the step that first draws it, not at load, so the smoke run (section 5) would not catch it. The list is declared in the page, beside its steps table. The build loads the library through `lib-node.js`, takes the declared keys plus every spec a Skel-built one derives from, and writes `_b/<page>.mol.<hash>.js`: specs already scaled and built, so `skel.js` leaves pages that only used it to build. A lookup that misses fetches the key's whole domain file (`spec.domain` names it) and warns, so a wrong list makes a page slower, never broken.
+
+**A page on `kit/app.js` declares the same way**, on its tag: `data-mol="atp,adp,nadh"` and `data-protein="atp-synthase"`. Unbuilt (the dev server), `app.js` loads whole domains as today. Built, the page's splice (section 6) writes the page's data file instead of the domain bundles. A generated app may declare them too; one that does not keeps whole-domain bundles, and the miss fallback covers one that declares too few.
+
+**Proteins subset the same way.** Each structure's bake is already its own file, fetched when drawn; the aggregate is `proteins/proteins.js`, the index `ProteinLib` reads. The per-page data file carries only the declared entries, and `ProteinLib`'s API is unchanged. The `gallery` bake takes it off the homepage; `proteins/index.html`, `library.html` and the node graph genuinely use the whole index and keep it.
+
+**What stays.** The domain files and `proteins.js` are the source: the checkers, `lib-node.js` and hand editing read them.
+
+**Order.** After bundling, once the size report (section 5) shows what each page's molecule data weighs.

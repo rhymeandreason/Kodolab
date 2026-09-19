@@ -92,7 +92,10 @@
          molecule. A missing mol-*.js is the usual cause. */
       if (!spec) {
         panel.innerHTML = ''; wrap.classList.add('is-empty'); last = null;
-        if (typeof P.molecule === 'string')
+        const why = typeof P.molecule === 'string' && global.AppMols && global.AppMols.missing(P.molecule);
+        // reportError reaches the builder's relay, so the next turn hears it; a warn does not.
+        if (why) global.reportError(new Error('Diagram: ' + why));
+        else if (typeof P.molecule === 'string')
           console.warn(`Diagram: no molecule named "${P.molecule}" — is its mol-*.js loaded?`);
         emit('render', null);
         return;

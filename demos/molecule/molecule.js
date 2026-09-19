@@ -189,7 +189,10 @@
       spec = specOf(P.molecule);
       if (!spec) {
         last = null; wireAnchors();
-        if (typeof P.molecule === 'string')
+        const why = typeof P.molecule === 'string' && global.AppMols && global.AppMols.missing(P.molecule);
+        // reportError reaches the builder's relay, so the next turn hears it; a warn does not.
+        if (why) global.reportError(new Error('Molecule: ' + why));
+        else if (typeof P.molecule === 'string')
           console.warn(`Molecule: no molecule named "${P.molecule}" - is its mol-*.js loaded?`);
         emit('render', null);
         return;

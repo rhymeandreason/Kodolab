@@ -29,7 +29,7 @@ const full = process.argv.includes('--full');
 
 const CHECKERS = [
   'tools/check-pages.js', 'tools/seo.js --check', 'ask/check-ask.js',
-  'check-molecules.js', 'kit/check-kit.js', 'lobes/check-lobes.js', 'macromolecule/check-macromolecule.js',
+  'check-molecules.js', 'kit/check-kit.js', 'kit/check-app.js', 'lobes/check-lobes.js', 'macromolecule/check-macromolecule.js',
   'molecule-builder/check-molecule-builder.js', 'dna/check-dna.js', 'massaction/check-massaction.js',
   'membrane/check-chemiosmosis.js', 'chemiosmosis/check-electron-transport.js',
   'chemiosmosis/check-light-reactions.js', 'cell/check-mitochondrion.js',
