@@ -20,7 +20,7 @@
 
 <!-- ===================================================================
      THE WHOLE LIBRARY ON ONE SHELF: components, then proteins, then
-     molecules, drawn in lessons.html's language (its bar, its spine, its
+     molecules, drawn in lessons.html's language (its bar, its head, its
      cards) because the two are the site's sibling places.
 
      TWO OF THE THREE ARE READ FROM A REGISTRY. A protein card is
@@ -101,40 +101,41 @@
   .head h1 em { color: var(--coral); }
   .head .lede { font-family: var(--serif); font-size: clamp(1.05rem, 1.5vw, 1.25rem); line-height: 1.5; color: var(--ink-2); margin: 0; max-width: 30em; }
   .head .lede b { font-weight: 600; color: var(--ink); }
-  /* The counts are the way in: each one a door to its section, coloured as its spine dot. */
+  /* The counts are the way in: each one a door to its section. */
   .jump { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0 0; }
   .jump a { display: inline-flex; align-items: center; gap: .5em; font: 600 11.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; text-decoration: none; color: var(--ink-3); border: 1.5px solid rgba(var(--ink-t), .18); border-radius: 999px; padding: .5em .95em; transition: color .15s, border-color .15s; }
   .jump a:hover { color: var(--ink); border-color: var(--ink); }
-  .jump a i { width: 8px; height: 8px; border-radius: 50%; background: var(--hue); }
   @media (max-width: 800px) { .head .wrap { grid-template-columns: 1fr; gap: 1.5rem; } }
 
-  /* ---- a section: lessons.html's unit, a spine and a shelf ------------------- */
+  /* ---- a section: a head across the page, then its shelf -------------------
+     No rail: lessons.html's spine says "in this order", and a library has none. */
   main { padding: 0 0 5rem; }
-  .unit { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 2.5rem; padding: 2.8rem 0 3.2rem; position: relative; scroll-margin-top: var(--bar-h); }
-  .unit::before { content: ''; position: absolute; left: 9px; top: 0; bottom: 0; width: 2px; background: rgba(var(--ink-t), .1); }
-  .unit:first-child::before { top: 3.2rem; }
-  .unit:last-child::before { bottom: auto; height: 3.2rem; }
-  .uhead { position: sticky; top: calc(var(--bar-h) + 1rem); align-self: start; padding-left: 2rem; }
-  .uhead::before { content: ''; position: absolute; left: 0; top: .55rem; width: 20px; height: 20px; border-radius: 50%; background: var(--hue); box-shadow: 0 0 0 5px var(--paper); }
-  .uhead .n { display: block; font: 500 12px/1 var(--sans); letter-spacing: .24em; text-transform: uppercase; color: var(--mute); margin-bottom: .55rem; }
-  .uhead h2 { font-size: clamp(1.4rem, 2.2vw, 1.75rem); line-height: 1.1; }
-  .uhead .why { font-family: var(--serif); font-style: italic; font-size: .95rem; line-height: 1.4; color: var(--ink-3); margin: .7rem 0 0; }
-  .uhead .go { display: inline-block; margin-top: 1rem; font: 600 11.5px var(--sans); letter-spacing: .14em; text-transform: uppercase; text-decoration: none; color: var(--ink-3); border-bottom: 1.5px solid var(--hue); padding-bottom: 2px; }
-  .uhead .go:hover { color: var(--ink); }
-  @media (max-width: 900px) {
-    .unit { grid-template-columns: 1fr; gap: 1.4rem; padding-top: 2rem; }
-    .uhead { position: static; }
-  }
+  .unit { padding: 2.6rem 0 3rem; scroll-margin-top: var(--bar-h); }
+  .uhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; flex-wrap: wrap; padding-bottom: 1.1rem; margin-bottom: 1.6rem; border-bottom: 1px solid rgba(var(--ink-t), .12); }
+  .uhead .n { display: block; font: 500 12px/1 var(--sans); letter-spacing: .24em; text-transform: uppercase; color: var(--hue); margin-bottom: .7rem; }
+  .uhead h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); line-height: 1; letter-spacing: -.025em; }
+  .uhead .why { font-family: var(--serif); font-style: italic; font-size: 1rem; line-height: 1.4; color: var(--ink-3); margin: .6rem 0 0; max-width: 34em; }
+  /* The way out of a section into the whole collection: lessons.html's ghost
+     .cta, filling with ink on hover. The one button a section has. */
+  .uhead .go { display: inline-flex; align-items: center; gap: .55em; font: 500 14px var(--sans); letter-spacing: .04em; text-decoration: none; white-space: nowrap; color: var(--ink); padding: .7rem 1.25rem; border-radius: 999px; box-shadow: inset 0 0 0 1.5px rgba(var(--ink-t), .35); transition: background .15s, color .15s, box-shadow .15s, transform .15s var(--soft); }
+  .uhead .go:hover { background: var(--ink); color: var(--paper); box-shadow: inset 0 0 0 1.5px var(--ink); transform: translateY(-1px); }
+  .uhead .go span { transition: transform .15s var(--soft); }
+  .uhead .go:hover span { transform: translateX(3px); }
 
   /* Every column count is FIXED, not auto-fill: the two shelves are cut to
      2 x their columns in JS, and an auto-fill track would land the cut mid-row. */
   .grid { display: grid; gap: 1.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .grid.prots { gap: 1.1rem; }
+  .grid.prots { gap: 1.1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid.mols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
-  @media (min-width: 900px) {
+  @media (min-width: 760px) {
     .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .grid.prots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .grid.mols { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1100px) {
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.prots { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .grid.mols { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   }
 
   /* ---- a card: lessons.html's -------------------------------------------------- */
@@ -205,9 +206,9 @@
       <p class="lede"><b>Everything a lesson here is built from.</b> Whole scenes a page mounts by name, and the proteins and molecules they draw.</p>
       <!-- Labels are written at render from the lists they count. -->
       <nav class="jump" id="tally" aria-label="Jump to a section">
-        <a href="#components" data-n="comp" style="--hue:var(--blue)"><i></i></a>
-        <a href="#proteins" data-n="prot" style="--hue:var(--coral)"><i></i></a>
-        <a href="#molecules" data-n="mol" style="--hue:var(--violet)"><i></i></a>
+        <a href="#components" data-n="comp"></a>
+        <a href="#proteins" data-n="prot"></a>
+        <a href="#molecules" data-n="mol"></a>
       </nav>
     </div>
   </div>
@@ -216,7 +217,7 @@
 <main>
   <div class="wrap">
     <section class="unit" id="components" style="--hue:var(--blue)">
-      <div class="uhead"><span class="n">Scenes</span><h2>Components</h2><p class="why">A whole 3D scene, mounted by name and driven by a few settings. Open one to try it.</p></div>
+      <div class="uhead"><div><span class="n">Scenes</span><h2>Components</h2><p class="why">A whole 3D scene, mounted by name and driven by a few settings. Open one to try it.</p></div></div>
       <div class="grid" id="comp-grid">
         <a class="card" href="/library/watersim"><div class="stage shot" style="background-image:url(media/components/watersim.webp)"></div><div class="body"><h3 class="name">WaterSim</h3><p class="blurb">Liquid water, and what follows from hydrogen bonds.</p><ul class="feats"><li>temperature</li><li>phase change</li><li>ice floating</li><li>salt dissolving</li></ul><div class="rung">molecules · bulk</div></div></a>
         <a class="card" href="/library/membrane"><div class="stage shot" style="background-image:url(media/components/membrane.webp)"></div><div class="body"><h3 class="name">Membrane</h3><p class="blurb">A bilayer, its proteins, and what crosses.</p><ul class="feats"><li>diffusion</li><li>osmosis</li><li>selectivity</li><li>pumps and ATP</li><li>resting potential</li><li>chemiosmosis</li></ul><div class="rung">membrane · bulk</div></div></a>
@@ -242,12 +243,12 @@
     </section>
 
     <section class="unit" id="proteins" style="--hue:var(--coral)">
-      <div class="uhead"><span class="n">Real coordinates</span><h2>Proteins</h2><p class="why">Built from real coordinates, measured or predicted.</p><a class="go" href="/proteins">The whole gallery &rarr;</a></div>
+      <div class="uhead"><div><span class="n">Real coordinates</span><h2>Proteins</h2><p class="why">Built from real coordinates, measured or predicted.</p></div><a class="go" href="/proteins" id="go-prot">The whole gallery <span aria-hidden="true">&rarr;</span></a></div>
       <div class="grid prots" id="prot-grid"></div>
     </section>
 
     <section class="unit" id="molecules" style="--hue:var(--violet)">
-      <div class="uhead"><span class="n">Checked specs</span><h2>Molecules</h2><p class="why">Every molecule the lessons draw, each held to its chemistry by a test.</p><a class="go" href="/molecules">Every molecule &rarr;</a></div>
+      <div class="uhead"><div><span class="n">Checked specs</span><h2>Molecules</h2><p class="why">Every molecule the lessons draw, each held to its chemistry by a test.</p></div><a class="go" href="/molecules" id="go-mol">All molecules <span aria-hidden="true">&rarr;</span></a></div>
       <div class="grid mols" id="mol-grid"></div>
     </section>
   </div>
@@ -373,6 +374,8 @@ for (const a of $('tally').children) {
   const [n, word] = COUNTS[a.dataset.n];
   a.append(`${n} ${word}`);
 }
+$('go-prot').firstChild.textContent = `All ${COUNTS.prot[0]} proteins `;
+$('go-mol').firstChild.textContent = `All ${COUNTS.mol[0]} molecules `;
 
 /* A BARE FRAGMENT IS NOT A FRAGMENT UNDER `<base href="/demos/">`: the browser
    resolves `#molecules` against the BASE, not the document, so clicking one of
