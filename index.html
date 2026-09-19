@@ -423,7 +423,21 @@
     </div>
     <a class="more" href="/proteins">The whole collection →</a>
   </div>
-  <div class="marquee" id="marquee"></div>
+  <div class="marquee" id="marquee">
+    <!-- seo-gallery hemoglobin gfp collagen atp-synthase antibody ferritin rubisco insulin napump lysozyme myoglobin prion -->
+    <a href="/proteins/hemoglobin"><span class="pic"><img src="demos/proteins/stills/hemoglobin.webp" alt="" loading="lazy"></span><span class="name">Hemoglobin</span><span class="does">oxygen carrier</span></a>
+    <a href="/proteins/gfp"><span class="pic"><img src="demos/proteins/stills/gfp.webp" alt="" loading="lazy"></span><span class="name">GFP</span><span class="does">reporter</span></a>
+    <a href="/proteins/collagen"><span class="pic"><img src="demos/proteins/stills/collagen.webp" alt="" loading="lazy"></span><span class="name">Collagen</span><span class="does">structural</span></a>
+    <a href="/proteins/atp-synthase"><span class="pic"><img src="demos/proteins/stills/atp-synthase.webp" alt="" loading="lazy"></span><span class="name">ATP synthase</span><span class="does">enzyme</span></a>
+    <a href="/proteins/antibody"><span class="pic"><img src="demos/proteins/stills/antibody.webp" alt="" loading="lazy"></span><span class="name">Antibody</span><span class="does">recognition</span></a>
+    <a href="/proteins/ferritin"><span class="pic"><img src="demos/proteins/stills/ferritin.webp" alt="" loading="lazy"></span><span class="name">Ferritin</span><span class="does">storage</span></a>
+    <a href="/proteins/rubisco"><span class="pic"><img src="demos/proteins/stills/rubisco.webp" alt="" loading="lazy"></span><span class="name">Rubisco</span><span class="does">enzyme</span></a>
+    <a href="/proteins/insulin"><span class="pic"><img src="demos/proteins/stills/insulin.webp" alt="" loading="lazy"></span><span class="name">Insulin</span><span class="does">hormone</span></a>
+    <a href="/proteins/napump"><span class="pic"><img src="demos/proteins/stills/napump.webp" alt="" loading="lazy"></span><span class="name">Na⁺/K⁺-ATPase</span><span class="does">enzyme</span></a>
+    <a href="/proteins/lysozyme"><span class="pic"><img src="demos/proteins/stills/lysozyme.webp" alt="" loading="lazy"></span><span class="name">Lysozyme</span><span class="does">enzyme</span></a>
+    <a href="/proteins/myoglobin"><span class="pic"><img src="demos/proteins/stills/myoglobin.webp" alt="" loading="lazy"></span><span class="name">Myoglobin</span><span class="does">oxygen carrier</span></a>
+    <a href="/proteins/prion"><span class="pic"><img src="demos/proteins/stills/prion.webp" alt="" loading="lazy"></span><span class="name">Prion protein</span><span class="does"></span></a>    <!-- /seo-gallery -->
+  </div>
 </section>
 
 <!-- ============ 4b. the waitlist ============ -->
@@ -600,7 +614,6 @@
 <script defer src="demos/kit/molbox.js"></script>
 <script defer src="demos/water/watersim.js"></script>
 <script defer src="demos/water/watersim-mount.js"></script>
-<script defer src="demos/proteins/proteins.js"></script>
 <script defer src="demos/membrane/parts.js"></script>
 <script defer src="demos/membrane/pump.js"></script>
 <script defer src="demos/membrane/chemiosmosis.js"></script>
@@ -742,16 +755,16 @@ const lenis = new Lenis({ autoRaf: true, duration: 1.1 });
   document.getElementById("gateClose").addEventListener("click", () => gate.classList.remove("on"));
 })();
 
-/* ---- 4. the gallery: stills from proteins/stills, names from the registry -- */
+/* ---- 4. the gallery: written into the page by demos/tools/seo.js ---------
+   Doubled so the slide loops without a seam. The copy is decoration, so a
+   screen reader and the Tab key meet each protein once. */
 (() => {
   const m = document.getElementById("marquee");
-  const keys = ["hemoglobin", "gfp", "collagen", "atp-synthase", "antibody", "ferritin", "rubisco", "insulin", "napump", "lysozyme", "myoglobin", "prion"];
-  const esc = t => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-  const html = keys.map(k => {
-    const p = ProteinLib.byKey(k); if (!p) return "";
-    return `<a href="/proteins/${k}"><span class="pic"><img src="demos/proteins/stills/${k}.webp" alt="" loading="lazy"></span><span class="name">${esc(p.name)}</span><span class="does">${esc(p.does && p.does !== "unknown" ? p.does : "")}</span></a>`;
-  }).join("");
-  m.innerHTML = html + html;   // doubled, so the slide loops without a seam
+  for (const a of [...m.children]) {
+    const c = a.cloneNode(true);
+    c.setAttribute("aria-hidden", "true"); c.tabIndex = -1;
+    m.appendChild(c);
+  }
 })();
 });
 </script>

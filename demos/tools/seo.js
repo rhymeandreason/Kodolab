@@ -282,5 +282,26 @@ const robots = '# Written by demos/tools/seo.js.\nUser-agent: *\n'
   + `\n\nSitemap: ${SITE}/sitemap.xml\n`;
 write('robots.txt', read('robots.txt'), robots);
 
+/* THE HOMEPAGE GALLERY is written into index.html rather than painted by its
+   script, so search reads the protein names and the page does not load
+   proteins.js for twelve of them. Which proteins, and in what order, is the
+   page's choice: the keys ride in the block's opening comment. */
+const GALLERY = /(<!-- seo-gallery ([a-z0-9 -]+?) -->\n)[\s\S]*?(\s*<!-- \/seo-gallery -->)/;
+{
+  const ProteinLib = require(path.join(DEMOS, 'proteins', 'proteins.js'));
+  const html = read('index.html'), m = html.match(GALLERY);
+  if (!m) fail('index.html: no seo-gallery block in #marquee');
+  else {
+    const cards = m[2].trim().split(/\s+/).map(k => {
+      const p = ProteinLib.byKey(k);
+      if (!p) { fail(`index.html gallery: no protein "${k}" in proteins.js`); return ''; }
+      const does = p.does && p.does !== 'unknown' ? p.does : '';
+      return `    <a href="/proteins/${k}"><span class="pic"><img src="demos/proteins/stills/${k}.webp" alt="" loading="lazy"></span>`
+        + `<span class="name">${esc(p.name)}</span><span class="does">${esc(does)}</span></a>`;
+    });
+    write('index.html', html, html.replace(GALLERY, (_, open, keys, close) => open + cards.join('\n') + close));
+  }
+}
+
 if (fails) { console.log(`FAIL: ${fails} search claim(s) out of date`); process.exit(1); }
 console.log(`${CHECK ? 'PASS' : 'done'}: ${indexed.length} indexed page(s), ${HIDDEN.length} hidden route(s)`);
