@@ -690,7 +690,7 @@
     if (!global.Membrane) throw new Error("ElectronTransport: span:'cell' needs membrane/parts.js and membrane/membrane.js");
     const { INNER_Y, PLASMA_Y, OUTER_GAP } = STACK;
     const OUTER_Y = INNER_Y + OUTER_GAP, CYTOSOL = PLASMA_Y - OUTER_Y;
-    let mito = null, cell = null, nb = null, last = null, vw = null;
+    let mito = null, cell = null, nb = null, last = null, vw = null, spent = 0;
     const listeners = {};
     const emit = (ev, ...a) => CardStage.fire(listeners[ev], a, 'ElectronTransport ' + ev);
     /* CardStage draws ONE FRAME AT CREATE, so afterFrame runs before either
@@ -719,12 +719,11 @@
       potential: 'nernst', pumpAuto: false, extent: 240, bounds: { up: 78, down: CYTOSOL - 8 },
     });
     const mitoOpts = Object.assign({}, params, { span: 'mitochondrion', extent: 240, bounds: { down: 95 },
-      curve: params.curve != null ? params.curve : 12, atpTo: worldOf(cell, gCell, 'pump.atp') });
+      curve: params.curve != null ? params.curve : 12, atpTo: worldOf(cell, gCell, 'pump.atp'),
+      atpLand: () => { if (!cell.spend({ docked: true })) return false; spent++; emit('spent', spent); return true; } });
     delete mitoOpts.cam; delete mitoOpts.stage; delete mitoOpts.viewOffset;
     mito = create(THREE, gMito, box.camera, mitoOpts);
     if (params.cut !== false) { mito.set({ cut: true }); cell.set({ cut: true }); }
-    let spent = 0;
-    mito.on('atpDelivered', n => { if (cell.spend()) { spent++; emit('spent', spent); } });
     cell.on('turn', n => emit('turn', n));
     cell.on('turned', n => emit('turned', n));
 

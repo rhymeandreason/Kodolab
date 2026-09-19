@@ -23,8 +23,9 @@
  *  membrane/sheet.js; this file is the machines that make it a plasma
  *  membrane. It refuses the lesson: no captions, no buttons, no step.
  *  'cross' (t, dir) is a molecule through the bilayer, 'conduct' (t, dir) one
- *  through a pore, 'turn' and 'turned' the pump starting and finishing. An
- *  ATP chip flying from a DOM button is the page's, which calls spend().
+ *  through a pore, 'turn' and 'turned' the pump starting and finishing. The
+ *  ATP a turn spends is drawn here, docking on the pump's head; a page only
+ *  calls spend().
  *
  *  Proteins are a LAYOUT, not a step:
  *      proteins: { K | CL | NA | AQP | pump: {x} | null }
@@ -122,6 +123,81 @@
     const PUMPHEAD = buildPumpHead();
     PUMP.group.add(PUMPHEAD);
 
+    /* ---- the ATP a turn spends, drawn on the head ----
+       Pump.at()'s `phosphate` is the chemistry, and this only draws it: the
+       ATP docks on N, its terminal phosphate moves onto P's aspartate as the
+       gates shut on the sodium, the ADP leaves, and the phosphate rides the
+       outward half until A takes it off as the gates shut on the potassium,
+       leaving as Pᵢ. Children of the pump's group, so the curve bends them
+       with the protein. y is in the head-up frame; place() flips it to the
+       cytosol. */
+    const NUC = eng.nucleotide;
+    const DOCK = { x: HEAD_N.x + 0.6, y: HEAD_N.y + HEAD_N.r + 0.8, z: 0 };
+    const TERM = { x: DOCK.x - NUC.GAP, y: DOCK.y, z: 0 };
+    /* On P's face toward the camera: the domain sits behind the ATP's line. */
+    const ON_P = { x: HEAD_P.x, y: HEAD_P.y, z: HEAD_P.r * 0.92 + NUC.R_BEAD * 0.5 };
+    const PI_OFF = { x: HEAD_A.x - 9, y: HEAD_A.y + 13, z: 2 };
+    const ADP_OFF = { x: DOCK.x + 9, y: DOCK.y + 15, z: 0 };
+    const APPROACH = 26;
+    const TOKENS = new THREE.Group();
+    PUMP.group.add(TOKENS);
+    let side = -1, docked = false, atpObj = null, piObj = null;
+    const place = (o, a, b, t, dy) => o.position.set(a.x + (b.x - a.x) * t, side * (a.y + (b.y - a.y) * t + (dy || 0)), a.z + (b.z - a.z) * t);
+    const fadeTo = (o, a) => o.traverse(m => { if (m.material) { m.material.transparent = a < 1; m.material.opacity = Math.max(0, a); } });
+    function retag(o, text, h) {
+      const old = o.userData.tag;
+      if (old && old.userData.text === text) return;
+      if (old) { eng.kit.forget(old); o.remove(old); }
+      const tag = eng.kit.pill(text, h);
+      tag.userData.text = text;
+      /* On the cytosol side: above the bead in the head-up frame is over the lobe it docks to. */
+      tag.position.set(0, side * (NUC.R_BEAD + h * 0.8), 0);
+      o.add(tag); o.userData.tag = tag;
+    }
+    function dropTokens() {
+      for (const o of [atpObj, piObj]) if (o) { o.traverse(m => { if (m.isSprite) eng.kit.forget(m); }); TOKENS.remove(o); }
+      atpObj = piObj = null;
+    }
+    function newTokens() {
+      dropTokens();
+      atpObj = NUC(3);
+      atpObj.userData.tag.userData.text = 'ATP';
+      atpObj.userData.tag.position.y = side * (NUC.R_BEAD + 5.2);
+      piObj = new THREE.Group();
+      piObj.add(new THREE.Mesh(new THREE.SphereGeometry(NUC.R_BEAD, 16, 12), rgb.flat(global.MolLib.PALETTE.atoms.P)));
+      piObj.visible = false;
+      TOKENS.add(atpObj, piObj);
+    }
+    function drawTokens(st) {
+      if (!running || !atpObj) return;
+      const { phase: id, k } = st, f = st.phosphate.transfer;
+      const whole = id === 'load-na' || (id === 'occlude-na' && f === 0);
+      atpObj.userData.beads[2].visible = atpObj.userData.links[1].visible = whole;
+      atpObj.visible = id === 'load-na' || id === 'occlude-na' || id === 'open-out';
+      piObj.visible = !whole && id !== 'load-na' && id !== 'release-k';
+      if (id === 'load-na') {
+        const t = docked ? 1 : Math.min(1, k / 0.6);
+        place(atpObj, DOCK, DOCK, 0, APPROACH * (1 - t * t * (3 - 2 * t)));
+        fadeTo(atpObj, docked ? 1 : Math.min(1, k * 4));
+        retag(atpObj, 'ATP', 6.4);
+      } else if (id === 'occlude-na') {
+        place(atpObj, DOCK, DOCK, 0); fadeTo(atpObj, 1);
+        if (f >= 0.5) retag(atpObj, 'ADP', 6.4);
+        place(piObj, TERM, ON_P, f); fadeTo(piObj, 1);
+        if (f > 0) retag(piObj, 'P', 5.2);
+      } else if (id === 'open-out') {
+        retag(atpObj, 'ADP', 6.4);
+        place(atpObj, DOCK, ADP_OFF, k * k); fadeTo(atpObj, 1 - k);
+      }
+      if (id === 'open-out' || id === 'release-na' || id === 'load-k') { place(piObj, ON_P, ON_P, 0); fadeTo(piObj, 1); retag(piObj, 'P', 5.2); }
+      if (id === 'occlude-k') {
+        place(piObj, ON_P, PI_OFF, 1 - f); fadeTo(piObj, 1);
+        retag(piObj, 1 - f >= 0.5 ? 'Pᵢ' : 'P', 5.2);
+      } else if (id === 'open-in') {
+        place(piObj, PI_OFF, PI_OFF, 0, 8 * k); fadeTo(piObj, 1 - k); retag(piObj, 'Pᵢ', 5.2);
+      }
+    }
+
     /* ---- the pump's cargo is REAL IONS ----
        A spend recruits travellers out of the solution, so setting them down
        on the far side changes the counts and moves the voltage. parts.js's Pump owns
@@ -156,23 +232,26 @@
       cargo[kind].length = 0;
     }
     /* Paid up front: a real pump phosphorylates itself at the START. */
-    function startTurn() { pumpT = 0; running = true; lastPhase = ''; atpSpent++; eng.emit('turn', atpSpent); }
+    function startTurn(fromDock) { pumpT = 0; running = true; lastPhase = ''; atpSpent++; docked = !!fromDock; newTokens(); eng.emit('turn', atpSpent); }
     function finishCycle() { eng.chargeOut += 1; eng.mV = Math.max(-95, P.mvPerIon * eng.chargeOut); }
-    /* One press buys one turn. False if a turn is under way or nothing to carry. */
-    function spend() {
+    /* One press buys one turn. False if a turn is under way or nothing to carry.
+       The ATP comes up out of the cytosol to dock, unless `docked`: a caller
+       that walked its own ATP to 'pump.atp' hands it over already bound. */
+    function spend(opts) {
       if (!P.proteins.pump || running) return false;
       cargo.NA = recruit('NA', 3);
       if (!cargo.NA.length) return false;
-      startTurn();
+      startTurn(opts && opts.docked);
       return true;
     }
     function runPumpCycle(dt) {
       if (!P.proteins.pump) return null;
       if (running) {
         pumpT += dt / P.turnSeconds;
-        if (pumpT >= 1) { pumpT = 0; running = false; deliver('K'); finishCycle(); lastPhase = ''; eng.emit('turned', atpSpent); }
+        if (pumpT >= 1) { pumpT = 0; running = false; deliver('K'); finishCycle(); lastPhase = ''; dropTokens(); eng.emit('turned', atpSpent); }
       }
       const st = global.Pump.at(pumpT);
+      drawTokens(st);
       /* setGates rebuilds the lathe, which costs a frame's worth of time on
          its own; an idle pump asks for the same gates every frame. */
       if (st.gates.top !== lastGates.top || st.gates.bottom !== lastGates.bottom) {
@@ -195,6 +274,7 @@
 
     const at = eng.at;
     const H_ = () => eng.T.height;
+    const _dock = new THREE.Vector3();
     return {
       keys: { K:null, CL:null, NA:null, AQP:null, pump:null },
       parts: [CHANNEL, CLCHAN, NACHAN, AQP, PUMP],
@@ -222,7 +302,7 @@
       /* The head hangs on the CYTOSOLIC side, the side the pump's ATP and its
          Na⁺ both come from. Positioned by sign: a negative scale would turn
          the lighting inside out. */
-      orient(d) { for (const child of PUMPHEAD.children) child.position.y = -d * child.userData.baseY; },
+      orient(d) { side = -d; for (const child of PUMPHEAD.children) child.position.y = -d * child.userData.baseY; },
       pre(dt) {
         if (P.proteins.pump && P.pumpAuto && P.pumpOn && !running && cargo.NA.length === 0) {
           const got = recruit('NA', 3);
@@ -232,7 +312,7 @@
         phase = st ? st.phase : null;
       },
       state: () => ({ atpSpent, pumpRunning:running, pumpPhase:phase, pumpT }),
-      reset() { pumpT = 0; running = false; atpSpent = 0; lastPhase = ''; cargo.NA.length = 0; cargo.K.length = 0; },
+      reset() { pumpT = 0; running = false; atpSpent = 0; lastPhase = ''; cargo.NA.length = 0; cargo.K.length = 0; dropTokens(); },
       clear() { cargo.NA.length = 0; cargo.K.length = 0; },
       api: { spend },
       anchors: {
@@ -246,7 +326,11 @@
            reaches this protein from INSIDE the cell, the side the Na⁺ it
            carries starts on. Aim a delivery here and not at `pump`, the top
            of the barrel, which an ATP would have to cross the membrane to reach. */
-        'pump.atp': () => P.proteins.pump ? at(pumpX + HEAD_N.x, -CHEM.pumpDir(P.context) * HEAD_N.y) : null,
+        'pump.atp': () => {
+          if (!P.proteins.pump) return null;
+          PUMP.group.updateMatrix();
+          return _dock.set(DOCK.x, side * DOCK.y, 0).applyMatrix4(PUMP.group.matrix);
+        },
         'pump.head': () => P.proteins.pump ? at(pumpX + HEAD_P.x, -CHEM.pumpDir(P.context) * HEAD_P.y) : null,
         NA: () => eng.firstOf('NA'), K: () => eng.firstOf('K'), CL: () => eng.firstOf('CL'), A: () => eng.firstOf('A'),
       },

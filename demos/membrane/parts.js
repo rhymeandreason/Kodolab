@@ -917,7 +917,7 @@
   function at(t) {
     const { phase, k, p } = locate(t);
     return {
-      t: p, phase: phase.id, label: phase.label, caption: phase.caption,
+      t: p, phase: phase.id, k, label: phase.label, caption: phase.caption,
       gates: gatesOf(phase.id, k),
       cargo: cargoOf(phase.id, k),
       phosphate: phosphoOf(phase.id, k),

@@ -264,6 +264,8 @@ m.reset();                       // zero the counters after a change of scene
 m.spend();                       // one ATP, one pump turn; false if a turn is running or no Na⁺ inside
 ```
 
+**The ATP is drawn, and so is where its phosphate goes.** Every turn, button or `pumpAuto`, an ATP rises out of the cytosol and docks on the pump's head (the N domain); as the gates shut on the sodium its end phosphate moves onto the P domain and ADP drifts off; the pump carries that phosphate through the outward half and drops it as Pᵢ when the gates shut on the potassium. So don't fly your own ATP token at the pump: the component already shows the spending, and a second one reads as two ATP per turn.
+
 Or in millimolar, which is how a page should say it: `units: 'mM'` at mount, then `contents: { inside: { K:140, NA:12 }, outside: { NA:470, CL:550 } }`, and the module turns it into counts at one particle per 20 mM. Leave water out; it fills each side. A concentration the page states comes from `state().concentration`, never typed. Blood is about 150 mM Na⁺, seawater 470, a river under 1.
 
 Changing `contents` adds and removes only the difference, by current side, so a water that already crossed stays crossed. **The budget is 220 particles on stage, at most 110 of them ions**; past it nothing more is added. Keep the particle count equal per side and fewer free waters where the solute is; that is what makes osmosis a headcount rather than a pull. About 78 a side reads well: 78 water on the fresh side, and 26 water with 26 Na⁺ and 26 Cl⁻ on the salty one.
@@ -294,7 +296,7 @@ Three habits worth copying. A verdict goes in words, not digits: `net` and the e
 
 Events: `frame` (state, dt) · `cross` (traveller, dir) through the bilayer · `conduct` (traveller, dir) through a channel · `turn` (n) a pump turn starting · `turned` (n) one finishing.
 
-Anchors for `note()`: `channel.K`, `channel.CL`, `channel.NA`, `aquaporin`, `pump` (each only when in the layout), `heads` and `tails` (the bilayer's halves), `outside`, `inside`, and one molecule of each kind on stage: `water`, `NA`, `K`, `CL`, `A`. Two at once: `m.notes(['channel.K', 'pump'])`.
+Anchors for `note()`: `channel.K`, `channel.CL`, `channel.NA`, `aquaporin`, `pump`, `pump.atp` (where the ATP docks), `pump.head` (the domain that carries the phosphate) (each only when in the layout), `heads` and `tails` (the bilayer's halves), `outside`, `inside`, and one molecule of each kind on stage: `water`, `NA`, `K`, `CL`, `A`. Two at once: `m.notes(['channel.K', 'pump'])`.
 
 Layers for `show()`: `water`, `ions`, `badges` (the charge signs), `shells`, `cut` (proteins cut open), `membrane`.
 

@@ -167,6 +167,34 @@
       g.scale.setScalar(K_());
       return g;
     }
+    /* ATP or ADP DRAWN AS ITS PHOSPHATES: three beads against two is what
+       tells them apart at this scale, and the terminal bond is the `condense`
+       slate because making it is a condensation. The terminal bead is at −x
+       for every caller, so a nucleotide handed from one machine to another
+       arrives the way the receiver seats it. */
+    const R_BEAD = 2.2, BEAD_GAP = 5.0;
+    function nucleotide(n) {
+      const g = new THREE.Group();
+      const PAL = global.MolLib.PALETTE;
+      const x = i => ((n - 1) / 2 - i) * BEAD_GAP;
+      const beads = [], links = [];
+      for (let i = 0; i < n; i++) {
+        const b = new THREE.Mesh(new THREE.SphereGeometry(R_BEAD, 16, 12), global.Parts.flat(PAL.atoms.P));
+        b.position.x = x(i); g.add(b); beads.push(b);
+      }
+      for (let i = 0; i < n - 1; i++) {
+        const link = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, BEAD_GAP, 8),
+          global.Parts.flat(i === n - 2 && n === 3 ? PAL.bonds.condense : PAL.bonds.covalent));
+        link.rotation.z = Math.PI / 2; link.position.x = x(i) - BEAD_GAP / 2;
+        g.add(link); links.push(link);
+      }
+      const tag = kit.pill(n === 3 ? 'ATP' : 'ADP', 6.4);
+      tag.position.set(0, R_BEAD + 5.2, 0);
+      g.add(tag);
+      g.userData = { newest: beads[n - 1], beads, links, tag };
+      return g;
+    }
+    nucleotide.R_BEAD = R_BEAD; nucleotide.GAP = BEAD_GAP;
 
     const travellers = [];
     let PORES = [], T = null, cut = false;
@@ -177,7 +205,7 @@
        the voltage are replaced as the sim runs. */
     const eng = {
       THREE, root, camera, P, CHEM, HALF, BOW, kit, emit, seat, rnd,
-      K_, ionRadius, chargedIon, smallMolecule, travellers, crossed, pumpDir,
+      K_, ionRadius, chargedIon, smallMolecule, nucleotide, travellers, crossed, pumpDir,
       get MEM() { return MEM; }, get T() { return T; }, get PORES() { return PORES; },
       get cut() { return cut; },
       get mV() { return mV; }, set mV(v) { mV = v; },

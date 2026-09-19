@@ -65,6 +65,9 @@
        pump in another sim sharing this scene. Takes precedence over atpExit;
        'atpDelivered' fires on arrival, the moment something may spend it. */
     atpTo: null,
+    /* Called on arrival; true means the receiver took the molecule and now
+       draws it, so this one goes at once instead of fading over the top. */
+    atpLand: null,
   };
   /* How close the chain may pack. Tuned against the default camera. */
   const CHAIN_GAP = 50;
@@ -294,34 +297,12 @@
        One molecule leaves the head per third-turn, on the SAME pass() that
        increments the count. The route it walks is the component's, through
        hooks.atpLegs: a mitochondrion's ATP has doors to get out by, a
-       thylakoid's is spent where it is made. DRAWN AS ITS PHOSPHATES: three
-       beads against two is what tells ATP from ADP at this scale, and the
-       third bond is the `condense` slate because it is a condensation. */
+       thylakoid's is spent where it is made. Drawn by sheet.js's nucleotide(),
+       the same body the pump seats. */
     const ROT = CHEM.rotor(ring);
     const ATP_MAX = 8, ATP_SNAP = 0.35, ATP_SPEED = 52, ATP_FADE = 0.8;
     const atpChips = [];
-    const R_BEAD = 2.2, BEAD_GAP = 5.0;
-    function buildNucleotide(n) {
-      const g = new THREE.Group();
-      const PAL = global.MolLib.PALETTE;
-      const x = i => (i - (n - 1) / 2) * BEAD_GAP;
-      const beads = [];
-      for (let i = 0; i < n; i++) {
-        const b = new THREE.Mesh(new THREE.SphereGeometry(R_BEAD, 16, 12), Parts.flat(PAL.atoms.P));
-        b.position.x = x(i); g.add(b); beads.push(b);
-      }
-      for (let i = 0; i < n - 1; i++) {
-        const link = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, BEAD_GAP, 8),
-          Parts.flat(i === n - 2 && n === 3 ? PAL.bonds.condense : PAL.bonds.covalent));
-        link.rotation.z = Math.PI / 2; link.position.x = x(i) + BEAD_GAP / 2;
-        g.add(link);
-      }
-      const tag = kit.pill(n === 3 ? 'ATP' : 'ADP', 6.4);
-      tag.position.set(0, R_BEAD + 5.2, 0);
-      g.add(tag);
-      g.userData = { newest: beads[n - 1], tag };
-      return g;
-    }
+    const buildNucleotide = eng.nucleotide;
     const _atp = new THREE.Vector3();
     function atpRoute() {
       const d = pumpDir();
@@ -376,7 +357,9 @@
             c.done = true;
             if (leg.on) leg.on();
             if (leg.out && !c.left) { c.left = true; eng.emit('atpOut', ROT.atp); }
-            if (leg.land) eng.emit('atpDelivered', ROT.atp);
+            let taken = false;
+            if (leg.land) { taken = !!(P.atpLand && P.atpLand()); eng.emit('atpDelivered', ROT.atp); }
+            if (taken) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); continue; }
             if (leg.fade) c.dying = true;
           }
           if (c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
