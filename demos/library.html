@@ -112,7 +112,6 @@
   main { padding: 0 0 5rem; }
   .unit { padding: 2.6rem 0 3rem; scroll-margin-top: var(--bar-h); }
   .uhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; flex-wrap: wrap; padding-bottom: 1.1rem; margin-bottom: 1.6rem; border-bottom: 1px solid rgba(var(--ink-t), .12); }
-  .uhead .n { display: block; font: 500 12px/1 var(--sans); letter-spacing: .24em; text-transform: uppercase; color: var(--hue); margin-bottom: .7rem; }
   .uhead h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); line-height: 1; letter-spacing: -.025em; }
   .uhead .why { font-family: var(--serif); font-style: italic; font-size: 1rem; line-height: 1.4; color: var(--ink-3); margin: .6rem 0 0; max-width: 34em; }
   /* The way out of a section into the whole collection: lessons.html's ghost
@@ -150,6 +149,8 @@
   .stage { position: relative; height: 150px; background: var(--paper) center / contain no-repeat; }
   .stage.shot { background-size: cover; }
   .grid.prots .stage, .grid.mols .stage { height: 140px; }
+  /* A component scene sits on the warmer paper; a lone structure on the lighter. */
+  #comp-grid .stage { background-color: var(--paper-2); }
   .stage > * { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; }
   .body { padding: .95rem 1.05rem 1.05rem; display: flex; flex-direction: column; flex: 1; }
   .name { font-family: var(--display); font-size: 1.05rem; font-weight: 500; line-height: 1.12; letter-spacing: -0.02em; margin: 0; }
@@ -213,8 +214,8 @@
 
 <main>
   <div class="wrap">
-    <section class="unit" id="components" style="--hue:var(--blue)">
-      <div class="uhead"><div><span class="n">Scenes</span><h2>Components</h2><p class="why">A whole 3D scene, mounted by name and driven by a few settings. Open one to try it.</p></div></div>
+    <section class="unit" id="components">
+      <div class="uhead"><div><h2>Components</h2><p class="why">A whole 3D scene, mounted by name and driven by a few settings. Open one to try it.</p></div></div>
       <div class="grid" id="comp-grid">
         <a class="card" href="/library/watersim"><div class="stage shot" style="background-image:url(media/components/watersim.webp)"></div><div class="body"><h3 class="name">WaterSim</h3><p class="blurb">Liquid water, and what follows from hydrogen bonds.</p><ul class="feats"><li>temperature</li><li>phase change</li><li>ice floating</li><li>salt dissolving</li></ul><div class="rung">molecules · bulk</div></div></a>
         <a class="card" href="/library/membrane"><div class="stage shot" style="background-image:url(media/components/membrane.webp)"></div><div class="body"><h3 class="name">Membrane</h3><p class="blurb">A bilayer, its proteins, and what crosses.</p><ul class="feats"><li>diffusion</li><li>osmosis</li><li>selectivity</li><li>pumps and ATP</li><li>resting potential</li><li>chemiosmosis</li></ul><div class="rung">membrane · bulk</div></div></a>
@@ -239,13 +240,13 @@
       </div>
     </section>
 
-    <section class="unit" id="proteins" style="--hue:var(--coral)">
-      <div class="uhead"><div><span class="n">Real coordinates</span><h2>Proteins</h2><p class="why">Built from real coordinates, measured or predicted.</p></div><a class="go" href="/proteins" id="go-prot">The whole gallery <span aria-hidden="true">&rarr;</span></a></div>
+    <section class="unit" id="proteins">
+      <div class="uhead"><div><h2>Proteins</h2><p class="why">Built from real coordinates, measured or predicted.</p></div><a class="go" href="/proteins" id="go-prot">The whole gallery <span aria-hidden="true">&rarr;</span></a></div>
       <div class="grid prots" id="prot-grid"></div>
     </section>
 
-    <section class="unit" id="molecules" style="--hue:var(--violet)">
-      <div class="uhead"><div><span class="n">Checked specs</span><h2>Molecules</h2><p class="why">Every molecule the lessons draw, each held to its chemistry by a test.</p></div><a class="go" href="/molecules" id="go-mol">All molecules <span aria-hidden="true">&rarr;</span></a></div>
+    <section class="unit" id="molecules">
+      <div class="uhead"><div><h2>Molecules</h2><p class="why">Every molecule the lessons draw, each held to its chemistry by a test.</p></div><a class="go" href="/molecules" id="go-mol">All molecules <span aria-hidden="true">&rarr;</span></a></div>
       <div class="grid mols" id="mol-grid"></div>
     </section>
   </div>
