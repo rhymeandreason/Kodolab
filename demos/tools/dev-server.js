@@ -504,6 +504,39 @@ function stills(req, res, json) {
   });
 }
 
+/* ---- a screenshot of the caller's window ----------------------------------
+ * POST { x, y, w, h } in screen points → image/png of that rectangle, from
+ * macOS `screencapture`. For lessons.html's embed sheet, whose own capture
+ * would ask permission on every click. The rectangle is the browser window;
+ * the page finds what it wants inside it. macOS asks once for Screen Recording
+ * for whatever runs this server, and until it is granted the capture comes
+ * back with the desktop and no windows.
+ */
+function screenshot(req, res, json) {
+  if (!require(path.join(ROOT, 'api/_local.js')).local(req)) {
+    return json(403, { error: 'screenshots are taken on this machine only' });
+  }
+  if (req.method !== 'POST') return json(405, { error: 'POST only' });
+  if (process.platform !== 'darwin') return json(501, { error: 'screencapture is macOS only' });
+  let raw = '';
+  req.on('data', d => { raw += d; if (raw.length > 1e4) req.destroy(); });
+  req.on('end', () => {
+    let r;
+    try { r = JSON.parse(raw); } catch { return json(400, { error: 'body is not JSON' }); }
+    const n = ['x', 'y', 'w', 'h'].map(k => Math.round(Number(r[k])));
+    if (n.some(v => !Number.isFinite(v)) || n[2] <= 0 || n[3] <= 0) return json(400, { error: 'x, y, w, h must be numbers' });
+    const file = path.join(require('os').tmpdir(), `kodo-shot-${process.pid}-${Date.now()}.png`);
+    require('child_process').execFile('screencapture', ['-x', '-t', 'png', '-R', n.join(','), file], err => {
+      if (err) return json(500, { error: 'screencapture failed: ' + err.message });
+      let buf;
+      try { buf = fs.readFileSync(file); fs.unlinkSync(file); }
+      catch (e) { return json(500, { error: 'no capture written' }); }
+      res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' });
+      res.end(buf);
+    });
+  });
+}
+
 /* ---- the question bank ----------------------------------------------------
  * GET  → the rows on disk, and the mtime a save has to match.
  * POST → validate and rewrite demos/questions.js.
@@ -718,6 +751,7 @@ function api(url, req, res) {
   if (url === '/api/clips') return clips(req, res, json);
   if (url === '/api/images') return images(req, res, json);
   if (url === '/api/stills') return stills(req, res, json);
+  if (url === '/api/screenshot') return screenshot(req, res, json);
 
   if (url !== '/api/ask' && url !== '/api/log' && url !== '/api/find' &&
       url !== '/api/extend' && url !== '/api/land' &&

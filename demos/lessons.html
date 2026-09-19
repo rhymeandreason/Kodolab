@@ -235,11 +235,11 @@
      the right is the framed lesson itself, so what the code says is what a
      teacher is looking at. The iframe is made on open and dropped on close:
      a WebGL page left running behind this one costs every frame. */
-  dialog.sheet { width: min(1180px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); padding: 0; border: 0; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 40px 100px -30px rgba(var(--ink-t), .6); overflow: hidden; }
+  dialog.sheet { --gap: 2.5rem; width: calc(100vw - 2 * var(--gap)); max-width: none; max-height: calc(100vh - 2 * var(--gap)); padding: 0; border: 0; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 40px 100px -30px rgba(var(--ink-t), .6); overflow: hidden; }
   dialog.sheet::backdrop { background: rgba(20, 33, 61, .55); backdrop-filter: blur(3px); }
   /* A fixed height, so the controls column has something to scroll inside of:
      a grid with only a max-height gives its rows no height to overflow. */
-  .sheet .in { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); height: calc(100vh - 2rem); }
+  .sheet .in { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); height: calc(100vh - 2 * var(--gap)); }
   .sheet .ctl { min-height: 0; padding: 1.8rem 1.7rem 1.6rem; display: flex; flex-direction: column; gap: 1.1rem; overflow: auto; border-right: 1px solid rgba(var(--ink-t), .1); }
   .sheet .ctl h2 { font-size: 1.55rem; line-height: 1.1; }
   .sheet label.f { display: flex; flex-direction: column; gap: .35rem; font: 500 11.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
@@ -277,6 +277,14 @@
      and scaled to fit, by the same declaration the teacher pastes. */
   .sheet .frame iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; }
   .sheet .frame .cap { position: absolute; left: 12px; bottom: 10px; font: 500 10.5px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); background: rgba(255, 255, 255, .8); padding: 5px 8px; border-radius: 999px; pointer-events: none; }
+  /* While a PNG is taken: square corners, no label, and a magenta ring that
+     savePNG() finds in the captured screen to know where the frame is. */
+  .sheet .frame.shooting { border-radius: 0; box-shadow: none; outline: 4px solid #f0f; }
+  .sheet .frame.shooting .cap { display: none; }
+  /* kodo.css's .btn, which this page does not load: hair border, fills with ink on hover. */
+  .sheet .btn { position: absolute; right: 1.2rem; bottom: 1.2rem; display: inline-flex; align-items: center; border: 1px solid rgba(var(--ink-t), .2); border-radius: 10px; padding: 6px 16px; background: transparent; color: var(--ink-3); font: 600 13px/18px var(--sans); letter-spacing: .5px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+  .sheet .btn:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .sheet .btn[hidden] { display: none; }
   .sheet .x { position: absolute; top: 12px; right: 14px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 0; background: #fff; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 0 2px 10px rgba(var(--ink-t), .2); }
   @media (max-width: 860px) {
     .sheet .in { grid-template-columns: 1fr; }
@@ -416,6 +424,7 @@
         <div class="frame" id="s-frame"><span class="cap">Live preview</span></div>
         <p class="credit" id="s-credit"></p>
       </div>
+      <button class="btn" type="button" id="s-png" hidden>Save as PNG</button>
     </div>
   </div>
 </dialog>
@@ -598,6 +607,62 @@ function card(l, extra = '') {
     try { await navigator.clipboard.writeText(text); }
     catch (e) { const r = document.createRange(); r.selectNodeContents(code); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); }
     ok.hidden = false; clearTimeout(okTimer); okTimer = setTimeout(() => { ok.hidden = true; }, 1800);
+  });
+  /* SAVE AS PNG, FROM THE SCREEN ITSELF, LOCALHOST ONLY. Rasterising the DOM
+     drops web fonts in Safari and reads a blank WebGL buffer, and a page's own
+     screen capture asks permission on every click. So the dev server runs
+     macOS `screencapture` over this window (tools/dev-server.js, /api/screenshot)
+     and the page crops the frame out of it. Where the frame sits is found, not
+     computed, since the browser's toolbar height is not something a page can
+     read: the page rings the frame in magenta and looks for the ring. The PNG is
+     the preview's own pixels, so it is the requested size times the display's
+     pixel ratio when the pane has room, smaller when the preview is scaled down. */
+  const png = document.getElementById('s-png');
+  png.hidden = !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  async function grab() {
+    frame.classList.add('shooting');
+    try {
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise(r => setTimeout(r, 80));   // past the compositor, onto the glass
+      const res = await fetch('/api/screenshot', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x: screenX, y: screenY, w: outerWidth, h: outerHeight }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+      const img = await createImageBitmap(await res.blob());
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      return c;
+    } finally { frame.classList.remove('shooting'); }
+  }
+  function crop(c) {
+    const W = c.width, H = c.height, d = c.getContext('2d').getImageData(0, 0, W, H).data;
+    let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (d[i] > 200 && d[i + 1] < 70 && d[i + 2] > 200) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+    if (x1 < 0) return null;
+    const r = frame.getBoundingClientRect(), px = (x1 - x0 + 1) / (r.width + 8);   // captured px per CSS px
+    const ring = Math.ceil(4 * px) + 1;   // one extra px for an edge on a fractional pixel
+    const out = document.createElement('canvas');
+    out.width = x1 - x0 + 1 - 2 * ring; out.height = y1 - y0 + 1 - 2 * ring;
+    out.getContext('2d').drawImage(c, x0 + ring, y0 + ring, out.width, out.height, 0, 0, out.width, out.height);
+    return out;
+  }
+  let pngTimer = 0;
+  const say = t => { png.textContent = t; clearTimeout(pngTimer); pngTimer = setTimeout(() => { png.textContent = 'Save as PNG'; }, 2400); };
+  png.addEventListener('click', async () => {
+    let c;
+    try { c = crop(await grab()); } catch (e) { return say(String(e.message || e)); }
+    // A capture with no windows in it is macOS withholding Screen Recording.
+    if (!c) return say('Frame not found: allow Screen Recording for the terminal');
+    const z = size(), a = document.createElement('a');
+    a.download = `${sel.value}${simple.checked ? '-simple' : ''}-${z.w}x${z.h}.png`;
+    a.href = URL.createObjectURL(await new Promise(r => c.toBlob(r, 'image/png')));
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    say(`Saved ${c.width}×${c.height}`);
   });
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-embed]'); if (!b) return;
