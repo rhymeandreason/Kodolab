@@ -107,6 +107,7 @@
           <div class="sechead2">
             <h3>Sessions</h3>
             <span class="spacer"></span>
+            <button class="btn btn--solid" type="button" id="refreshSessions"><i class="ph-bold ph-arrow-clockwise"></i>Refresh</button>
             <button class="btn" type="button" id="exportCsv"><i class="ph-bold ph-download-simple"></i>Download CSV</button>
           </div>
           <div class="tablewrap" id="sessionsWrap">
@@ -492,6 +493,13 @@
   $('closeSession').addEventListener('click', () => $('session').close());
   $('session').addEventListener('click', e => { if (e.target === $('session')) $('session').close(); });
 
+  // The dashboard loads once; a student who opens the lesson after that needs a fetch.
+  $('refreshSessions').addEventListener('click', async () => {
+    const b = $('refreshSessions'), id = classId;
+    b.disabled = true;
+    try { const fresh = await fetchClass(id); if (classId === id) { current = fresh; paintClass(); } }
+    catch (e) {} finally { b.disabled = false; }
+  });
   $('exportCsv').addEventListener('click', () => {
     const rows = current.sessions || [];
     /* A cell opening with = + - @ or a control character is a formula to a
