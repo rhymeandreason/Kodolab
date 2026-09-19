@@ -74,75 +74,65 @@
        different kind of door. */
     const AQP_R = 12.0, AQP_LOBE = 0.10, AQP_HOLE = AQP_R * (1 + AQP_LOBE) + 0.5;
     const AQP     = rgb.transporter({ half:HALF, site:6.4, mouth:8.4, radius:AQP_R, lobes:4, lobeDepth:AQP_LOBE, color:0x3fa7a0 });
-    const PUMP    = rgb.transporter({ half:HALF, color:0x4f9e78 });
+    /* A P-TYPE ATPase IS MOSTLY NOT IN THE MEMBRANE. The part in the
+       bilayer carries the ions; the cytoplasmic head, where the ATP binds and
+       the phosphate is held, is a big domain hanging into the cytosol. Drawn
+       the way figures of this pump draw it: ONE BODY, waisted in the
+       membrane and flared at both ends, the cytosolic end the bigger. Not
+       separate lobes, which read as parts bolted on, and nothing coaxial
+       hanging off it, which reads as an axle. The foot is −y because this
+       component is always a plasma membrane. */
+    const PUMP    = rgb.transporter({ half:HALF, over:20, flare:[0.5, 0.2], color:0x4f9e78 });
     eng.root.add(CHANNEL.group, CLCHAN.group, NACHAN.group, AQP.group, PUMP.group);
     let pumpX = 0;
 
-    /* ---- the pump's cytoplasmic headpiece ----
-       A P-TYPE ATPase IS MOSTLY NOT IN THE MEMBRANE. Ten transmembrane
-       helices carry the ions, and hanging off them on the cytoplasmic side is
-       a headpiece about as tall again, in three domains:
-
-         N  nucleotide-binding — the ATP lands HERE, and it is the lobe that
-            reaches furthest out into the cytosol
-         P  phosphorylation — the aspartate that takes the phosphate, at the
-            foot of the head where it meets the membrane
-         A  actuator — takes the phosphate off again, on the other flank
-
-       Drawn because the ATP had nowhere to dock: a token arriving at a bare
-       barrel reads as landing on the membrane rather than on the protein. N
-       sits proud and off-axis on purpose — that asymmetry is what makes the
-       head read as a headpiece and not a second barrel. The lobes and their
-       sizes are a schematic; what is honest is the arrangement, the
-       proportion to the membrane part, and which lobe the nucleotide goes to.
-
-       CLEAR OF THE BARREL, which reaches PUMP.height, and SMALLER THAN F1,
-       which is a fact: the synthase's head is about 10 nm across and this one
-       about 7, and a reader comparing them on one stage is comparing the real
-       proteins. Measure it against circuit.js's rotor lobes. */
-    const HEAD_N = { x: 6.2,  y: 39.0, r: 4.8 };
-    const HEAD_P = { x: 0.4,  y: 34.0, r: 4.2 };
-    const HEAD_A = { x: -6.0, y: 36.5, r: 3.5 };
-    function buildPumpHead() {
-      const g = new THREE.Group();
-      const mat = () => rgb.flat(0x4f9e78);
-      /* The stalk is the helices continuing out of the bilayer, so it starts
-         inside it rather than at its face. */
-      const stalk = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 4.2, 22, 12), mat());
-      stalk.userData.baseY = HALF + 9; g.add(stalk);
-      for (const [key, L] of [['N', HEAD_N], ['P', HEAD_P], ['A', HEAD_A]]) {
-        const lobe = new THREE.Mesh(new THREE.SphereGeometry(L.r, 18, 13), mat());
-        lobe.scale.set(1, 0.92, 0.92);
-        lobe.position.x = L.x;
-        lobe.userData.baseY = L.y;
-        lobe.userData.domain = key;
-        g.add(lobe);
-      }
-      return g;
-    }
-    const PUMPHEAD = buildPumpHead();
-    PUMP.group.add(PUMPHEAD);
-
-    /* ---- the ATP a turn spends, drawn on the head ----
+    /* ---- the ATP a turn spends, drawn on the foot ----
        Pump.at()'s `phosphate` is the chemistry, and this only draws it: the
-       ATP docks on N, its terminal phosphate moves onto P's aspartate as the
-       gates shut on the sodium, the ADP leaves, and the phosphate rides the
-       outward half until A takes it off as the gates shut on the potassium,
-       leaving as Pᵢ. Children of the pump's group, so the curve bends them
-       with the protein. y is in the head-up frame; place() flips it to the
-       cytosol. */
+       ATP docks on the flank of the foot (the N domain), its terminal
+       phosphate moves down onto the aspartate nearer the axis (the P domain)
+       as the gates shut on the sodium, the ADP leaves, and the phosphate
+       rides the outward half until it is taken off as the gates shut on the
+       potassium, leaving as Pᵢ. Children of the pump's group, so the curve
+       bends them with the protein.
+
+       ON THE SILHOUETTE, z = 0, because the cutaway removes the front half
+       of the pump and anything seated on its front face would float. Read
+       off the lathe's own outline, so a reshaped pump moves the sites. */
     const NUC = eng.nucleotide;
-    const DOCK = { x: HEAD_N.x + 0.6, y: HEAD_N.y + HEAD_N.r + 0.8, z: 0 };
-    const TERM = { x: DOCK.x - NUC.GAP, y: DOCK.y, z: 0 };
-    /* On P's face toward the camera: the domain sits behind the ATP's line. */
-    const ON_P = { x: HEAD_P.x, y: HEAD_P.y, z: HEAD_P.r * 0.92 + NUC.R_BEAD * 0.5 };
-    const PI_OFF = { x: HEAD_A.x - 9, y: HEAD_A.y + 13, z: 2 };
-    const ADP_OFF = { x: DOCK.x + 9, y: DOCK.y + 15, z: 0 };
-    const APPROACH = 26;
     const TOKENS = new THREE.Group();
     PUMP.group.add(TOKENS);
-    let side = -1, docked = false, atpObj = null, piObj = null;
-    const place = (o, a, b, t, dy) => o.position.set(a.x + (b.x - a.x) * t, side * (a.y + (b.y - a.y) * t + (dy || 0)), a.z + (b.z - a.z) * t);
+    let side = -1, docked = false, atpObj = null, piObj = null, G = null;
+    /* The outline's point at depth yy into the cytosol, on the +x flank,
+       with its outward normal. ON THE FLANK, not the underside: with the
+       cutaway on, the underside at z = 0 is only a cut edge, and a token
+       there reads as floating below the pump. */
+    function flankAt(yy, lift) {
+      const pt = v => ({ x: PUMP.outerR(side * v), y: side * v });
+      const p = pt(yy), a = pt(yy - 1), b = pt(yy + 1);
+      const tx = b.x - a.x, ty = b.y - a.y, L = Math.hypot(tx, ty) || 1;
+      let nx = ty / L, ny = -tx / L;
+      if (nx < 0) { nx = -nx; ny = -ny; }
+      return { x: p.x + nx * lift, y: p.y + ny * lift, z: 0, nx, ny };
+    }
+    const off = (p, d, along, ang) => ({ x: p.x + p.nx * d + (along ? Math.cos(ang) * along : 0),
+                                         y: p.y + p.ny * d + (along ? Math.sin(ang) * along : 0), z: 0 });
+    /* Each site read in the state it is occupied in: the ATP docks with the
+       bottom gate open, the phosphate is held with it shut. The ATP lies
+       along the flank with its terminal phosphate pointing down it, toward
+       the aspartate on the shoulder below. */
+    function sites() {
+      const H = PUMP.height, g = PUMP.gates;
+      PUMP.setGates(1, 0);
+      const ON_P = flankAt(H * 0.9, NUC.R_BEAD * 0.6);
+      PUMP.setGates(0, 1);
+      const DOCK = flankAt(H * 0.8, NUC.R_BEAD * 0.9);
+      PUMP.setGates(g.top, g.bottom);
+      DOCK.ang = Math.atan2(DOCK.y - ON_P.y, DOCK.x - ON_P.x);
+      const TERM = off(DOCK, 0, -NUC.GAP, DOCK.ang);
+      return { DOCK, TERM, ON_P, APP: off(DOCK, 26), ADP_OFF: off(DOCK, 15, 4, DOCK.ang),
+               PI_OFF: off(ON_P, 12), PI_END: off(ON_P, 20) };
+    }
+    const lerp3 = (o, a, b, t) => o.position.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
     const fadeTo = (o, a) => o.traverse(m => { if (m.material) { m.material.transparent = a < 1; m.material.opacity = Math.max(0, a); } });
     function retag(o, text, h) {
       const old = o.userData.tag;
@@ -150,7 +140,6 @@
       if (old) { eng.kit.forget(old); o.remove(old); }
       const tag = eng.kit.pill(text, h);
       tag.userData.text = text;
-      /* On the cytosol side: above the bead in the head-up frame is over the lobe it docks to. */
       tag.position.set(0, side * (NUC.R_BEAD + h * 0.8), 0);
       o.add(tag); o.userData.tag = tag;
     }
@@ -160,7 +149,9 @@
     }
     function newTokens() {
       dropTokens();
+      if (!G) G = sites();
       atpObj = NUC(3);
+      atpObj.rotation.z = G.DOCK.ang;
       atpObj.userData.tag.userData.text = 'ATP';
       atpObj.userData.tag.position.y = side * (NUC.R_BEAD + 5.2);
       piObj = new THREE.Group();
@@ -177,24 +168,24 @@
       piObj.visible = !whole && id !== 'load-na' && id !== 'release-k';
       if (id === 'load-na') {
         const t = docked ? 1 : Math.min(1, k / 0.6);
-        place(atpObj, DOCK, DOCK, 0, APPROACH * (1 - t * t * (3 - 2 * t)));
+        lerp3(atpObj, G.APP, G.DOCK, t * t * (3 - 2 * t));
         fadeTo(atpObj, docked ? 1 : Math.min(1, k * 4));
         retag(atpObj, 'ATP', 6.4);
       } else if (id === 'occlude-na') {
-        place(atpObj, DOCK, DOCK, 0); fadeTo(atpObj, 1);
+        lerp3(atpObj, G.DOCK, G.DOCK, 0); fadeTo(atpObj, 1);
         if (f >= 0.5) retag(atpObj, 'ADP', 6.4);
-        place(piObj, TERM, ON_P, f); fadeTo(piObj, 1);
+        lerp3(piObj, G.TERM, G.ON_P, f); fadeTo(piObj, 1);
         if (f > 0) retag(piObj, 'P', 5.2);
       } else if (id === 'open-out') {
         retag(atpObj, 'ADP', 6.4);
-        place(atpObj, DOCK, ADP_OFF, k * k); fadeTo(atpObj, 1 - k);
+        lerp3(atpObj, G.DOCK, G.ADP_OFF, k * k); fadeTo(atpObj, 1 - k);
       }
-      if (id === 'open-out' || id === 'release-na' || id === 'load-k') { place(piObj, ON_P, ON_P, 0); fadeTo(piObj, 1); retag(piObj, 'P', 5.2); }
+      if (id === 'open-out' || id === 'release-na' || id === 'load-k') { lerp3(piObj, G.ON_P, G.ON_P, 0); fadeTo(piObj, 1); retag(piObj, 'P', 5.2); }
       if (id === 'occlude-k') {
-        place(piObj, ON_P, PI_OFF, 1 - f); fadeTo(piObj, 1);
+        lerp3(piObj, G.ON_P, G.PI_OFF, 1 - f); fadeTo(piObj, 1);
         retag(piObj, 1 - f >= 0.5 ? 'Pᵢ' : 'P', 5.2);
       } else if (id === 'open-in') {
-        place(piObj, PI_OFF, PI_OFF, 0, 8 * k); fadeTo(piObj, 1 - k); retag(piObj, 'Pᵢ', 5.2);
+        lerp3(piObj, G.PI_OFF, G.PI_END, k); fadeTo(piObj, 1 - k); retag(piObj, 'Pᵢ', 5.2);
       }
     }
 
@@ -302,7 +293,7 @@
       /* The head hangs on the CYTOSOLIC side, the side the pump's ATP and its
          Na⁺ both come from. Positioned by sign: a negative scale would turn
          the lighting inside out. */
-      orient(d) { side = -d; for (const child of PUMPHEAD.children) child.position.y = -d * child.userData.baseY; },
+      orient(d) { if (side !== -d) { side = -d; G = null; } },
       pre(dt) {
         if (P.proteins.pump && P.pumpAuto && P.pumpOn && !running && cargo.NA.length === 0) {
           const got = recruit('NA', 3);
@@ -328,10 +319,16 @@
            of the barrel, which an ATP would have to cross the membrane to reach. */
         'pump.atp': () => {
           if (!P.proteins.pump) return null;
+          if (!G) G = sites();
           PUMP.group.updateMatrix();
-          return _dock.set(DOCK.x, side * DOCK.y, 0).applyMatrix4(PUMP.group.matrix);
+          return _dock.set(G.DOCK.x, G.DOCK.y, 0).applyMatrix4(PUMP.group.matrix);
         },
-        'pump.head': () => P.proteins.pump ? at(pumpX + HEAD_P.x, -CHEM.pumpDir(P.context) * HEAD_P.y) : null,
+        'pump.head': () => {
+          if (!P.proteins.pump) return null;
+          if (!G) G = sites();
+          PUMP.group.updateMatrix();
+          return _dock.set(G.ON_P.x, G.ON_P.y, 0).applyMatrix4(PUMP.group.matrix);
+        },
         NA: () => eng.firstOf('NA'), K: () => eng.firstOf('K'), CL: () => eng.firstOf('CL'), A: () => eng.firstOf('A'),
       },
       library: {
@@ -344,10 +341,10 @@
         aquaporin: { text: 'aquaporin', offset: [40, -30],
           card: 'A pore for water and nothing charged, in single file. Water still crosses the lipid on its own, slowly; this is why some cells move it fast.' },
         'pump.atp': { text: 'where the ATP binds', offset: [-44, 30],
-          card: 'The N domain, the lobe reaching furthest into the cytosol. An ATP reaches this pump from inside the cell — the same side the Na⁺ it carries starts on — and the pump phosphorylates itself from it before it turns, on the P domain at the foot of the head. That is why the ATP a cell makes is ATP this pump can spend.' },
+          card: 'The N domain, on the flank of the pump\'s cytoplasmic end. An ATP reaches this pump from inside the cell — the same side the Na⁺ it carries starts on — and the pump phosphorylates itself from it before it turns, on the P domain at the foot of the head. That is why the ATP a cell makes is ATP this pump can spend.' },
         /* A CALLOUT NAMES; THE CARD ARGUES. */
         'pump.head': { text: 'the cytoplasmic head', offset: [-46, 26],
-          card: 'Most of this protein is not in the membrane. Ten helices carry the ions across; the head hanging into the cytosol is three domains — one binds the ATP, one takes the phosphate, one takes it off again — and that cycle of getting phosphorylated and unphosphorylated IS the shape change that moves the cargo.' },
+          card: 'Most of this protein is not in the membrane. Ten helices carry the ions across; the head hanging into the cytosol is where the ATP docks and where its phosphate is held, and that cycle of getting phosphorylated and unphosphorylated IS the shape change that moves the cargo.' },
         pump: { text: 'Na⁺/K⁺ pump', offset: [42, -30],
           card: 'A carrier, not a pore: it binds its cargo and changes shape, so it is never open to both sides at once. One ATP buys one turn — 3 Na⁺ out and 2 K⁺ in, both uphill — and that standing cost is most of what a resting cell spends.' },
         NA: { text: 'Na⁺, with its water', offset: [34, -26],
