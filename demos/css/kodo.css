@@ -583,7 +583,7 @@ a.crumb:hover { color: var(--accent) }
   position: absolute; right: 0; top: calc(100% + .6rem); z-index: 20;
   min-width: 15rem; padding: .9rem 1rem;
   background: var(--surface-card); border: 1px solid var(--border-hair);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-panel);
+  border-radius: 12px; box-shadow: var(--shadow-panel);
   display: flex; flex-direction: column; gap: .75rem;
   font-family: var(--font-ui); color: var(--text-body); text-transform: none; letter-spacing: 0;
 }

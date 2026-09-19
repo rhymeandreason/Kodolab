@@ -78,6 +78,8 @@ body.teach {
    account menu, which hangs below the bar. */
 /* Its own stacking level, above the band: the layer stays inside the bar rather
    than falling behind the body's paper, and the open menu sits over the band. */
+/* library.css's column: 1180 wide, 2rem from the window when narrower. */
+.teach .page { max-width: none; padding-inline: max(2rem, calc((100% - 1180px) / 2)); }
 .teach .sitenav { z-index: 2; }
 .teach .sitenav::before {
   content: ''; position: absolute; top: 0; bottom: 0; left: 50%; z-index: -1;
