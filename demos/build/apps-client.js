@@ -153,7 +153,7 @@ const Apps = (() => {
           done(user);
         },
       });
-      window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' });
+      window.google.accounts.id.renderButton(el, { theme: 'filled_blue', size: 'large', shape: 'pill', text: 'signin_with' });
       return s;
     },
     /* The email door. `codeSend` answers {sent, minutes, console}; `minutes` is

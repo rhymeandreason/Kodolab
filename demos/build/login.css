@@ -42,7 +42,11 @@
 .code input:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
 .code .cta { margin: 0; flex: none; }
 
+/* Google's largest button is 40px and cannot be set taller, so the wrapper
+   is a pill in the same blue (filled_blue's #1a73e8) padded to the 49px of
+   the fields below, and the two read as one button. */
 .gbtn { min-height: 44px; }
+.gbtn:has(iframe, div[role=button]) { display: flex; justify-content: center; padding: 4.5px 0; border-radius: 999px; background: #1a73e8; }
 
 .busy {
   margin: clamp(2rem, 6vw, 4rem) 0 8rem; font-family: var(--font-display);
@@ -80,25 +84,22 @@
    two-column width and it sets to a column of text instead. */
 .doors--one { max-width: 32rem; }
 
-/* THE LAST-USED TAG. A tint of the accent, not its fill: solid accent is what a
-   .cta is, and a tag in the button's colour reads as another button. Mixed with
-   the card's paper rather than made translucent, so the Google button's outline
-   does not show through it. */
+/* THE LAST-USED TAG. A white chip, not a fill: a solid colour is what a button
+   is, and a tag in a button's colour reads as another button. The green dot is
+   the one accent on it, saying "this is the way you came in". */
 .lastused {
-  display: inline-block; padding: .2rem .55rem; border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--accent) 14%, var(--surface-card)); color: var(--accent);
-  font-family: var(--font-display); font-size: .74rem; font-weight: var(--cap-weight);
-  letter-spacing: .12em; text-transform: uppercase; line-height: 1.3; white-space: nowrap;
-  pointer-events: none;
+  display: inline-flex; align-items: center; gap: .4em; padding: .3rem .65rem;
+  border-radius: var(--radius-pill); background: #fff; color: var(--brand-ink);
+  border: 1px solid rgba(var(--brand-ink-t), .12);
+  box-shadow: 0 2px 8px -2px rgba(var(--brand-ink-t), .22);
+  font: 600 .7rem/1 'Jost', var(--font-ui); letter-spacing: .12em; text-transform: uppercase;
+  white-space: nowrap; pointer-events: none;
 }
-/* On Google's button it straddles the top edge rather than sitting inside:
-   Google draws that button itself and cannot be told to make room. The ring in
-   the card's paper cuts the tag out of the outline it crosses. */
+.lastused::before { content: ''; width: .45rem; height: .45rem; border-radius: 50%; background: var(--brand-green); }
+/* On Google's button it straddles the top edge, centred on it: Google draws
+   that button itself and cannot be told to make room. */
 .is-last { position: relative; }
-.is-last > .lastused {
-  position: absolute; top: 0; right: 1.1rem; z-index: 1; transform: translateY(-55%);
-  box-shadow: 0 0 0 2px var(--surface-card);
-}
+.is-last > .lastused { position: absolute; top: 0; right: 1.4rem; z-index: 1; transform: translateY(-50%); }
 /* For email it sits by the word, in the divider, because the thing that was
    used is "email" and not the Continue button beside the box. */
 .or .lastused { margin-left: .6rem; vertical-align: .1em; }
