@@ -264,7 +264,7 @@
     e.preventDefault();
     try {
       const r = await api({ action: 'link.new', label: $('linkLabel').value, note: $('linkNote').value });
-      const url = `https://kodolab.org/build?k=${encodeURIComponent(r.secret)}`;
+      const url = `https://www.kodolab.org/build?k=${encodeURIComponent(r.secret)}`;
       fresh(`Testing link <b>${esc(r.label)}</b>, shown once: <code>${esc(url)}</code><br>The same <code>?k=</code> on a lesson opens its tutor.`);
       $('linkLabel').value = ''; $('linkNote').value = '';
       load();

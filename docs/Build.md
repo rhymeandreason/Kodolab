@@ -14,7 +14,13 @@ Today the repo is the site: Vercel serves the working tree as committed, with no
 | The same files with comments stripped | 69 KB |
 | three.min.js, from a second origin | 149 KB |
 
-Two thirds of what we send is comments. The comments stay in the source, where the repo's reasoning lives; the build removes them from what ships. Until the build, every asset was also sent `max-age=0, must-revalidate`, so a returning student revalidated all 27 files. `vercel.json` now sets a 5-minute cache with a day of `stale-while-revalidate` on static assets (commit `e6bbf1a`), which is the most caching a URL without a content hash can safely take.
+Two thirds of what we send is comments. The comments stay in the source, where the repo's reasoning lives; the build removes them from what ships.
+
+**File count costs more than bytes.** A cold load of `/glycolysis`, measured in Chromium on 2026-09-18: the HTML arrives at 0.16 s and DOMContentLoaded fires at 1.5 s. The 28 scripts are requested a few at a time, each waiting 30 to 180 ms on the edge, so the 3.5 KB `stagekit.js` lands at 1.3 s. `kodo.css` `@import`s `annotate.css` and `brand.css`, which cannot be requested until it arrives. Warm from the browser cache, the same page is at DOMContentLoaded in 0.17 s.
+
+**Caching without a content hash runs out.** Until the build, every asset was sent `max-age=0, must-revalidate`. `vercel.json` now sets `max-age=300, stale-while-revalidate=1800` on static assets (`e6bbf1a`, `396fbc5`): the most a URL without a hash can take while a pre-class fix still lands on first load. A student returning the next day revalidates every file, in the same queue.
+
+**The apex redirects.** `kodolab.org/*` answers 308 to `www`, a round trip and a second TLS handshake. Every canonical, sitemap entry and class link is already `www`, so only a hand-typed bare link pays it. Not build work.
 
 ## 1. Decisions
 
@@ -40,7 +46,7 @@ Two thirds of what we send is comments. The comments stay in the source, where t
 
 1. **Copy** the tree, skipping what `.vercelignore` skips (the build honours that file itself, since `dist/` is what gets served), plus `*.md` and `tools/`.
 2. **Bake** every public page's HTML (section 3).
-3. **Bundle** every public page's scripts (section 4).
+3. **Bundle** every public page's scripts and stylesheets (section 4).
 4. **Manifest**: `dist/demos/_b/manifest.json`, mapping each page to its bundles, for the checks and later for `kit/app.js`.
 
 `vercel.json`: `"buildCommand": "node demos/tools/build.js"`, `"outputDirectory": "dist"`. Functions in `api/` are built by Vercel from the repo as they are now; `api/_builder.js` reads `kit/app.js` and `Components.md` from source and is unaffected.
@@ -85,11 +91,17 @@ For each page, **each unbroken run of `<script src>` tags becomes one bundle**. 
 
 A bundle is the files concatenated in the page's order, each minified by esbuild's `transform` (no `format`, so top-level names stay global and are not renamed), written to `dist/demos/_b/<name>.<hash>.js`, and the run of tags is replaced by one tag. The CDN libraries (three.js, d3, Plot, SmilesDrawer) are fetched once at build time, pinned by the version already in the URL, and bundled in with the rest: browsers partition their cache by site, so a shared CDN copy saves nothing, and a second origin costs a connection.
 
+**Stylesheets the same way.** Each run of `<link rel="stylesheet">` becomes one `_b/<name>.<hash>.css`, built by esbuild with `bundle: true`, so a local `@import` (`kodo.css` pulls in `annotate.css` and `brand.css`) is inlined instead of fetched after its parent, and a relative `url()` (`pathways.css`'s `../images/asterisk.svg`) is rewritten to resolve from `_b/`. Google Fonts `@import`s stay external and first. The Phosphor icon sheet from unpkg is vendored like the CDN scripts, font files included.
+
+**Embedded lessons.** The embed code on `/lessons` frames `https://www.kodolab.org/<lesson>`, so an embed loads the same HTML and bundles. Browsers partition the cache by top-level site, so the first open inside a school's LMS is cold even for a student who has used kodolab directly; after that `_b/` caches within that site. A cold load is the case bundling shrinks most, and the one an embed hits first.
+
+**`lib/embed.js` is inlined, not bundled.** It must run between `</head>` and `<body>` so a framed page is `bare` before first paint, and under the run rule it would become a one-file bundle: a render-blocking request for 1.3 KB. The build writes its contents into the tag instead; the source keeps the file. Audit before the switch: only the `bare: true` rows in `lib/lessons.js` load it (water, protein, membrane, glycolysis, krebs, etc, fermentation). Four embeddable lessons do not (bonds, respiration, tree, dna), so framed they show their own title under the host's, and nothing reads `bare`, so the flag and the pages can drift.
+
 **Left out of bundles:** `lib/site.js` (loaded absolutely and deferred from every page; it becomes its own hashed file) and anything a script adds at runtime (`lib/track.js`, analytics).
 
 **Shared code across lessons.** A student moving lesson to lesson re-downloads what each bundle has in common. First cut: accept that; every bundle is still smaller than today's total. If it matters, a fixed `core` list (three.js, `palette.js`, `tokens-from-palette.js`, `molecules.js`, `scene.js`) becomes its own bundle, used only by a page whose run starts with exactly that list, so load order is never changed to share it.
 
-**Caching.** `_b/*` is served `public, max-age=31536000, immutable`: its name changes when its bytes do. HTML stays uncached. Everything else keeps the 5-minute rule.
+**Caching.** `_b/*`, scripts and stylesheets, is served `public, max-age=31536000, immutable`: its name changes when its bytes do. HTML stays uncached, so a deploy reaches a student on their next load. Everything else (data, images, traces) keeps the 5-minute rule.
 
 **What changes when files are joined, and has to be checked before the switch:**
 
@@ -110,19 +122,25 @@ A bundle is the files concatenated in the page's order, each minified by esbuild
 
 ## 6. Generated apps, later
 
-Generated apps run in a sandboxed frame from the database and are disallowed in `robots.txt`, so baking does nothing for them. Their load time is the same problem as a lesson's. Once bundling works, the build also writes one bundle per `USES` entry in `kit/app.js`, and `app.js` switches from writing each file's tag to writing its components' bundle tags from the manifest. `ORDER` and `USES` stay the one table, and the build reads it.
+Generated apps run in a sandboxed frame from the database and are disallowed in `robots.txt`, so baking does nothing for them. Their load time is a lesson's problem, plus two of their own.
+
+**Bundles per component.** The build writes one bundle for `CORE` and one per `USES` entry in `kit/app.js`, in `ORDER`. `ORDER` and `USES` stay the one table, and the build reads it.
+
+**No hop through `app.js`.** Today the page loads `app.js`, which `document.write`s the library's tags, so nothing below it is requested until `app.js` has arrived and run, and the preload scanner never sees the written tags ahead of time. `build/apps-client.js`'s `framed()` already splices a `<base>` and the error relay into every page before it goes into the frame; it also replaces the `<script src="../kit/app.js" data-use=…>` tag with the bundle tags, from `plan()` and the manifest. The splice happens at mount, never in the stored HTML: a stored page holds component names, and a hashed name saved into it would 404 once a deploy retires that bundle. `app.js` stays as the fallback for a page opened any other way.
+
+**The sandbox may defeat the cache.** The frame is `srcdoc` with `sandbox="allow-scripts"`, an opaque origin. Chrome keys its HTTP cache by top-level site and frame site, and an opaque origin may count as a fresh site on every mount. If so, every app open is a cold load however long `_b/` is cached, and the shelf, which mounts a live preview per card, pays it per card. Untested: open one deployed app twice in Chrome and in Safari (which partitions by top-level site only) and read `transferSize` on the bundles. If the cache is lost, the options are `allow-same-origin` on a separate app origin (a subdomain, so the sandbox still cannot reach `www`'s storage or keys), or the parent fetching the bundles once and handing them into the frame as blob URLs.
 
 ## 7. Order of work
 
 1. `tools/build.js` copying to `dist/`, `vercel.json` pointed at it, a deploy that serves the same site. Nothing else changes, so a problem here is the build's alone.
-2. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
-3. `sitenav`: every page's top bar from one template. The priority, for search and for a consistent layout.
-4. `shelf` on `/lessons`, coming-soon cards included. `gallery` on the homepage, and `proteins.js` leaves it.
-5. The protein story template (section 9): myoglobin extracted first, then prion and ATP synthase, each checked against its own screenshot.
-6. The protein and molecule sheets as partials (section 9).
-7. Bundling, behind the smoke run, then `immutable` on `_b/`.
-8. `steps`, tree first, then glycolysis.
-9. Generated-app bundles.
+2. Bundling, scripts and stylesheets, behind the smoke run, then `immutable` on `_b/`. First because load time is what a student feels, and it depends on no bake.
+3. Generated-app bundles (section 6). The sandbox cache test first, since its answer decides whether bundles alone help; then per-component bundles and the splice in `framed()`.
+4. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
+5. `sitenav`: every page's top bar from one template. The priority for search and for a consistent layout.
+6. `shelf` on `/lessons`, coming-soon cards included. `gallery` on the homepage, and `proteins.js` leaves it.
+7. The protein story template (section 9): myoglobin extracted first, then prion and ATP synthase, each checked against its own screenshot.
+8. The protein and molecule sheets as partials (section 9).
+9. `steps`, tree first, then glycolysis.
 10. Three.js r128 to current, behind the screenshot diff (section 8).
 
 ## 8. Upgrading Three.js

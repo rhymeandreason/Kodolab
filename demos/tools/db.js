@@ -262,7 +262,7 @@ const CMDS = {
     if (sub === 'new') {
       const r = await keys.mint({ label: rest[0], note: rest.slice(1).join(' ') });
       console.log(`${r.id}  ${r.label}`);
-      console.log(`  https://kodolab.org/build?k=${r.secret}`);
+      console.log(`  https://www.kodolab.org/build?k=${r.secret}`);
       console.log('  The same ?k= on a lesson opens its tutor. Shown once; revoke and mint a new one if lost.');
       return;
     }
