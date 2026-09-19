@@ -124,7 +124,7 @@
 
   /* Every column count is FIXED, not auto-fill: the two shelves are cut to
      2 x their columns in JS, and an auto-fill track would land the cut mid-row. */
-  .grid { display: grid; gap: 1.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid { display: grid; gap: 1.1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid.prots { gap: 1.1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid.mols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
   @media (min-width: 760px) {
@@ -138,47 +138,44 @@
     .grid.mols { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   }
 
-  /* ---- a card: lessons.html's -------------------------------------------------- */
-  .card { position: relative; display: flex; flex-direction: column; background: #fff; border-radius: 16px; border: 1px solid rgba(var(--ink-t), .08); box-shadow: 0 1px 2px rgba(var(--ink-t), .06), 0 14px 40px -18px rgba(var(--ink-t), .28); overflow: hidden; color: inherit; text-decoration: none; transition: transform .3s var(--soft), box-shadow .3s var(--soft); }
-  .card:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(var(--ink-t), .06), 0 24px 50px -18px rgba(var(--ink-t), .35); }
-  /* An aspect ratio, not the still's own size: a row sized by its pictures
+  /* ---- a card: a catalogue entry, between lessons.html's and a flat tile ----
+     lessons.html's corners, a hairline instead of its deep shadow, and the
+     catalogue's text. A lesson card invites you in; this one says what a part is. */
+  .card { display: flex; flex-direction: column; background: #fff; border: 1px solid rgba(var(--ink-t), .1); border-radius: 12px; box-shadow: 0 1px 2px rgba(var(--ink-t), .04); overflow: hidden; color: inherit; text-decoration: none; transition: border-color .2s, transform .3s var(--soft), box-shadow .3s var(--soft); }
+  .card:hover { border-color: rgba(var(--ink-t), .22); transform: translateY(-3px); box-shadow: 0 16px 34px -18px rgba(var(--ink-t), .3); }
+  /* A fixed height, not the still's own size: a row sized by its pictures
      reflows as they land. A component still is a 3:2 frame drawn to its
      edges, so it covers; a protein or molecule is drawn on paper with air
      round it, so it is shown whole. */
-  .stage { position: relative; aspect-ratio: 3 / 2; background: var(--paper-2) center / contain no-repeat; overflow: hidden; }
-  .stage.shot { background-size: cover; transition: transform .6s var(--soft); }
-  .card:hover .stage.shot { transform: scale(1.03); }
-  .grid.prots .stage, .grid.mols .stage { aspect-ratio: 1; }
+  .stage { position: relative; height: 150px; background: var(--paper) center / contain no-repeat; }
+  .stage.shot { background-size: cover; }
+  .grid.prots .stage, .grid.mols .stage { height: 140px; }
   .stage > * { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; }
-  #diagram-stage, #graph-stage { background: #fff; border-bottom: 1px solid rgba(var(--ink-t), .06); }
-  .body { padding: 1rem 1.15rem 1.05rem; display: flex; flex-direction: column; gap: .45rem; flex: 1; }
-  .name { font-family: var(--display); font-size: 1.18rem; font-weight: 500; line-height: 1.2; letter-spacing: -0.015em; margin: 0; }
-  .blurb { margin: 0; font-family: var(--serif); font-style: italic; font-size: .9rem; line-height: 1.38; color: var(--ink-2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .body { padding: .95rem 1.05rem 1.05rem; display: flex; flex-direction: column; flex: 1; }
+  .name { font-family: var(--display); font-size: 1.05rem; font-weight: 500; line-height: 1.12; letter-spacing: -0.02em; margin: 0; }
+  .blurb { margin: .45rem 0 .7rem; font-size: .82rem; line-height: 1.5; color: var(--mute); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
   /* ONE TAG ON EVERY CARD. A component's features, a protein's species and
-     method, a molecule's class: words read off the data, so set as words,
-     in lessons.html's `.mark`. */
-  .feats, .facts { list-style: none; display: flex; flex-wrap: wrap; gap: .3rem; margin: .15rem 0 0; padding: 0; }
-  .facts { margin-top: auto; padding-top: .3rem; }
-  .feats li, .fact { font: 500 11px/1.25 var(--sans); letter-spacing: .03em; padding: .38em .6em; border-radius: 6px; background: var(--paper-2); color: var(--ink-2); }
-  .fact.predicted { background: var(--brand-orange); color: #fff; }
-  /* The rung, in the tag's micro-cap, with the section's dot. */
-  .rung { margin-top: auto; padding-top: .7rem; display: flex; align-items: center; gap: .5em; font: 500 10.5px/1.2 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
-  .rung::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--hue); }
-  .does { margin: 0; align-self: flex-start; font: 600 10.5px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--deep); }
+     method, a molecule's class: words read off the data, so one chip, set as
+     words: uppercase signage would make a classification out of "sperm whale". */
+  .feats, .facts { list-style: none; display: flex; flex-wrap: wrap; gap: .28rem; margin: .1rem 0 0; padding: 0; }
+  .facts { margin-top: auto; }
+  .feats li, .fact { font-size: .68rem; line-height: 1.35; color: var(--ink-2); background: var(--paper); border: 1px solid var(--brand-rule); border-radius: 999px; padding: .2rem .55rem; }
+  .fact.predicted { background: var(--brand-orange); border-color: var(--brand-orange); color: #fff; }
+  .rung { margin-top: auto; padding-top: .7rem; font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; font-weight: 600; color: var(--mute); }
+  .does { margin: .4rem 0 0; align-self: flex-start; font-size: .65rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; color: var(--deep); }
   .does.carrier { color: var(--brand-orange); }
   /* The formula in the UI face, not a mono: C27H33N9O15P2 should read as a formula, not code. */
-  .formula { margin: 0; font: 400 .85rem var(--sans); color: var(--ink-3); }
-  .grid.prots .body, .grid.mols .body { padding: .85rem .95rem .95rem; gap: .35rem; }
-  .grid.prots .name { font-size: 1.05rem; }
-  .grid.mols .name { font-size: .98rem; }
-  .grid.mols .facts { padding-top: .5rem; }
+  .formula { margin: .35rem 0 0; font-size: .8rem; color: var(--ink-3); }
+  /* `auto` only pushes the chips down where the body has room to spare; on a
+     molecule's short body the padding is the floor. */
+  .grid.mols .facts { padding-top: .75rem; }
 
   footer { padding: 2.5rem 0 3rem; border-top: 1px solid rgba(var(--ink-t), .2); font: 400 13px var(--sans); color: var(--mute); }
   footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
   footer a { text-decoration: none; }
   footer .dots i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 4px; }
 
-  @media (prefers-reduced-motion: reduce) { .card, .stage.shot { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
 </style>
 </head>
 <body>
