@@ -1,20 +1,25 @@
-/* The sign-in page's chrome. Tokens only; kodo.css owns type and paper. */
+/* The sign-in page's doors. library.css owns the bar, head and paper; the
+   doors are its cards. */
 
 [hidden] { display: none !important; }
 
 .doors {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
-  gap: clamp(1.25rem, 3vw, 2.5rem); max-width: 60rem; padding-bottom: 4rem; align-items: start;
+  gap: clamp(1.25rem, 3vw, 2.5rem); padding-bottom: 4rem; align-items: start;
 }
 .door {
-  display: flex; flex-direction: column; gap: 1.4rem;
-  background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 16px;
-  padding: clamp(1.25rem, 3vw, 1.9rem);
+  display: flex; flex-direction: column; gap: 3rem;
+  background: #fff; border: 1px solid rgba(var(--brand-ink-t), .1); border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(var(--brand-ink-t), .04);
+  padding: clamp(1.6rem, 3.2vw, 2.5rem) clamp(1.5rem, 3.4vw, 2.8rem) clamp(1.7rem, 3.4vw, 2.7rem);
 }
-.stack { display: flex; flex-direction: column; gap: 1.5rem; }
+.stack { display: flex; flex-direction: column; gap: 2.6rem; }
+/* A door's heading and the sentence under it are one thing. */
+.doorhead + .say,
+.doorhead + .stack > .say:first-child { margin-top: -2rem; }
 /* A line that answers the field above it stays with that field, not a full
    gap away: "Code sent to..." belongs to the code box. */
-.code + .sub { margin-top: -.9rem; }
+.code + .sub { margin-top: -1.8rem; }
 .door p { margin: 0; }
 /* THE DOOR'S TITLE IS A HEADING, NOT AN EYEBROW. It was a letterspaced
    uppercase micro-cap, and at the largest cap step kodo.css has (12px) it still
@@ -22,11 +27,10 @@
    below the serif sentence under it. Display face, sentence case, --text-lg in
    the strongest ink: the page's h1, then this, then the serif line. */
 .doorhead {
-  margin: 0; font-family: var(--font-display); font-size: var(--text-lg);
-  font-weight: var(--weight-semibold); line-height: var(--leading-tight);
-  letter-spacing: -.005em; color: var(--text-strong);
+  margin: 0; font-family: var(--font-display); font-size: 1.55rem;
+  font-weight: 600; line-height: 1.1; letter-spacing: -.015em; color: var(--brand-ink);
 }
-.say { font-family: var(--font-editorial); font-size: 1.05rem; line-height: 1.45; color: var(--text-body); }
+.say { font-family: var(--font-editorial); font-size: 1.1rem; line-height: 1.5; color: var(--brand-ink-2); }
 .say b, .sub b { color: var(--text-strong); }
 
 .code { display: flex; gap: .6rem; }
@@ -48,9 +52,10 @@
 @keyframes breathe { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { .busy { animation: none; } }
 .line { display: flex; gap: .6rem; flex-wrap: wrap; }
-.sub { font-size: .85rem; color: var(--text-muted); }
-.sub a { color: inherit; }
-.err { font-size: .9rem; color: var(--hue-coral); }
+.sub { font-family: 'Jost', var(--font-ui); font-size: .98rem; line-height: 1.45; color: var(--brand-ink-3); }
+.sub a { color: var(--brand-ink); text-underline-offset: 3px; text-decoration-color: rgba(var(--brand-ink-t), .35); }
+.sub a:hover { text-decoration-color: var(--brand-ink); }
+.err { font-size: 1rem; color: var(--hue-coral); }
 
 /* Two latches on one door, so the rule says they are alternatives rather than
    steps. The word sits on the line, which is why the rule is drawn either side
@@ -59,16 +64,16 @@
    read as a footnote to the first. */
 .or {
   display: flex; align-items: center; gap: .75rem;
-  font-family: var(--font-display); font-weight: var(--weight-medium);
-  font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: var(--text-body);
+  font-family: var(--font-display); font-weight: 500;
+  font-size: .86rem; letter-spacing: .14em; text-transform: uppercase; color: var(--brand-ink-3);
 }
 .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border-hair); }
 
 /* An address is read left to right; the code input's centring and tracking are
    for six digits and make an email look like a serial number. */
 .code input[type=email] {
-  text-align: left; letter-spacing: normal;
-  font-family: var(--font-editorial); font-size: 1rem;
+  text-align: left; letter-spacing: normal; padding-inline: 1.2rem;
+  font-family: 'Jost', var(--font-ui); font-size: 1.08rem;
 }
 
 /* One door has no pair to line up with, so the grid stops stretching it to the
@@ -82,7 +87,7 @@
 .lastused {
   display: inline-block; padding: .2rem .55rem; border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--accent) 14%, var(--surface-card)); color: var(--accent);
-  font-family: var(--font-display); font-size: var(--cap-sm); font-weight: var(--cap-weight);
+  font-family: var(--font-display); font-size: .74rem; font-weight: var(--cap-weight);
   letter-spacing: .12em; text-transform: uppercase; line-height: 1.3; white-space: nowrap;
   pointer-events: none;
 }

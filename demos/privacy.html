@@ -21,21 +21,45 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/library.css">
+<style>
+  /* One column of prose, in the library's serif and ink. */
+  .prose { max-width: 40rem; padding: 0 0 5rem; }
+  .prose p { margin: 0 0 1.1rem; font-family: var(--serif); font-size: 1.05rem; line-height: 1.65; color: var(--ink-2); }
+  .prose h2 { margin: 2.6rem 0 1rem; padding-bottom: .8rem; border-bottom: 1px solid rgba(var(--ink-t), .12); font-size: clamp(1.6rem, 2.6vw, 2rem); line-height: 1; letter-spacing: -.025em; }
+  .prose a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: rgba(var(--ink-t), .35); }
+  .prose a:hover { text-decoration-color: var(--ink); }
+</style>
 </head>
-<body class="kodo">
-<div class="page">
+<body>
 
-  <nav class="sitenav">
-    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-  </nav>
+<header class="bar">
+  <div class="wrap">
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The site's three places, the same words and order as lib/site.js's
+         list; site.js only adds the account here. -->
+    <nav class="links" aria-label="Site">
+      <a class="lnk" href="/lessons">Lessons</a>
+      <a class="lnk" href="/library">Library</a>
+      <a class="lnk" href="/build">Build</a>
+    </nav>
+  </div>
+</header>
 
-  <header class="pagehead">
-    <h1>privacy</h1>
-    <p class="deck">No ads, very minimal tracking.</p>
-  </header>
+<section class="head">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Kodolab</span>
+      <h1>Privacy</h1>
+    </div>
+    <div>
+      <p class="lede"><b>No ads, very minimal tracking.</b></p>
+    </div>
+  </div>
+</section>
 
-  <main>
-    <section>
+<main>
+  <section class="wrap prose">
       <p>Kodolab uses Vercel Web Analytics to count how many people visit and
       which lessons they open. It sets no cookies and does not identify you or
       follow you to any other site.</p>
@@ -86,9 +110,14 @@
 
       <p>Questions: <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank"
       rel="noopener">send feedback</a>.</p>
-    </section>
-  </main>
+  </section>
+</main>
 
-</div>
+<footer>
+  <div class="wrap">
+    <span>Kodolab · <a href="https://www.linkedin.com/in/maryhuang1/" target="_blank" rel="noopener">Mary Huang</a> · <a href="/lessons">Lessons</a> · <a href="/contribute">Contribute</a> · <a href="mailto:mary@kodolab.org">Email</a> · <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Send feedback</a> · <a href="/privacy">Privacy</a></span>
+    <span class="dots"><i style="background:var(--green)"></i><i style="background:var(--coral)"></i><i style="background:var(--blue)"></i><i style="background:var(--amber)"></i><i style="background:var(--violet)"></i></span>
+  </div>
+</footer>
 </body>
 </html>

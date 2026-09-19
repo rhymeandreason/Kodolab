@@ -468,6 +468,15 @@ body.kodo {
   background: var(--border-hair);
 }
 .sitenav .spacer { flex: 1 }
+/* lessons.html's bar, on every document page: its 1180 column (wider than the
+   text column, which sits inside `.page`'s gutters), its padding and its 132px
+   wordmark, so the mark and the links do not move from one page to the next.
+   Not the floating bar: over a lesson's scene the smaller mark covers less. */
+.sitenav:not(.floating) {
+  padding: 1rem 0 .9rem;
+  margin-inline: calc(50% - min(590px, 50vw - 2rem));
+}
+.sitenav:not(.floating) .mark img { width: 132px; height: auto; }
 
 .mark {
   line-height: 0;                  /* no descender strip under an inline image */
@@ -513,7 +522,8 @@ a.crumb:hover { color: var(--accent) }
   gap: clamp(.9rem, 2.4vw, 1.7rem);
 }
 .sitelinks a {
-  font-family: var(--font-ui);
+  font-family: 'Jost', var(--font-ui);
+  line-height: normal;
   font-size: .74rem;
   font-weight: var(--cap-weight);
   letter-spacing: .18em;
@@ -546,7 +556,7 @@ a.crumb:hover { color: var(--accent) }
 .bar .links .menu .summary {
   position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0;
   border: 0; background: none; cursor: pointer;
-  font-family: var(--font-ui); font-size: .74rem; font-weight: var(--cap-weight);
+  font-family: 'Jost', var(--font-ui); font-size: .74rem; font-weight: var(--cap-weight);
   letter-spacing: .18em; text-transform: uppercase; color: var(--text-muted);
   line-height: inherit; transition: color var(--dur-fast);
 }

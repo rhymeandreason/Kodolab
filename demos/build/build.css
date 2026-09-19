@@ -49,12 +49,18 @@ body.fresh .bar .links { display: flex; }
    backdrop inside it, so mix-blend-mode multiplies against nothing. */
 .bar .lnk,
 .bar .links .acct {
-  font-family: var(--font-ui); font-size: .74rem; font-weight: var(--cap-weight);
+  font-family: 'Jost', var(--font-ui); font-size: .74rem; font-weight: var(--cap-weight);
   letter-spacing: .18em; text-transform: uppercase;
   color: color-mix(in srgb, var(--brand-ink) 55%, var(--hue-butter));
   text-decoration: none;
 }
 .bar .lnk:hover, .bar .links a.acct:hover { color: var(--accent); }
+/* ON THE FRESH SCREEN THE BAR IS lessons.html's: the same 1180 column, the
+   same 132px wordmark and padding, so turning from a catalogue page to here
+   the bar does not move. Open on an app it is the app's bar again, on the
+   window's inset. */
+body.fresh .bar { padding: 1rem max(2rem, calc((100% - 1180px) / 2)) .9rem; }
+body.fresh .bar .mark img { width: 132px; height: auto; }
 .bar .lnk[aria-current="page"], .bar .links a.acct[aria-current="page"] { color: var(--brand-ink); }
 /* Centred on the bar, not on what is left between the mark and the tools, so
    folding the rail's button away cannot shift it. */

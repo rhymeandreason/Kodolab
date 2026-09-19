@@ -72,7 +72,8 @@ body.teach {
 
 /* ---- the site bar, on the band's ink ----
    lib/site.js writes the links; this only recolours them. The page's own
-   place moves beside the mark, so the bar's copy of it is dropped. */
+   place is named beside the mark too, but the bar keeps its own copy, so
+   the links sit where they do on every other page. */
 /* The ink is a layer behind the bar, not a clip-path on it: a clip cuts off the
    account menu, which hangs below the bar. */
 /* Its own stacking level, above the band: the layer stays inside the bar rather
@@ -90,9 +91,8 @@ body.teach {
   font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; line-height: 1; letter-spacing: -.01em; color: var(--on);
 }
 .navtitle:focus-visible { outline: var(--focus-ring); outline-offset: 4px; border-radius: 4px; }
-.teach .sitelinks a[aria-current="page"] { display: none; }
 .teach .sitelinks a, .teach .sitelinks .menu .summary { color: var(--on-dim); }
-.teach .sitelinks a:hover, .teach .sitelinks .menu .summary:hover, .teach .sitelinks .menu .summary[aria-expanded="true"] { color: var(--on); }
+.teach .sitelinks a[aria-current="page"], .teach .sitelinks a:hover, .teach .sitelinks .menu .summary:hover, .teach .sitelinks .menu .summary[aria-expanded="true"] { color: var(--on); }
 .teach .sitelinks .signin { color: var(--on); }
 .teach .sitelinks .rule { background: var(--on-line); }
 .teach .sitelinks .menu .summary:focus-visible { outline: var(--focus-ring); }
