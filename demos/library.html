@@ -20,157 +20,203 @@
 
 <!-- ===================================================================
      THE WHOLE LIBRARY ON ONE SHELF: components, then proteins, then
-     molecules. The three are what a generated app is built from, and
-     until now each lived on its own page or on none.
+     molecules, drawn in lessons.html's language (its bar, its spine, its
+     cards) because the two are the site's sibling places.
 
      TWO OF THE THREE ARE READ FROM A REGISTRY. A protein card is
      proteins.js's entry and a molecule card is MolLib's spec, so a
      fourth protein or a new mol-*.js appears here by being registered.
-     Components have no registry, so their cards are typed, the way
-     contribute.html's shelf types them, and kit/app.js's USES is the
-     list to check them against.
+     Components have no registry, so their cards are typed, and
+     kit/app.js's USES is the list to check them against. tools/seo.js
+     reads a component card's blurb and feats by regex: keep that markup.
 
      PROTEINS AND MOLECULES ARE SHELVES, TWO ROWS EACH, and the section
-     link carries the rest: /proteins and molecules.html. Every card is a
-     baked still (proteins/stills, media/components, media/molecules), so
-     this page makes no 3D context at all except Graph's live card.
+     link carries the rest: /proteins and /molecules. Every card is a
+     baked still, so this page makes no 3D context at all.
+
+     NOT body.kodo: the bar and foot are this page's own, as on lessons.html,
+     and site.js only paints the account into them. kodo.css stays linked
+     for the tokens Graph and Diagram read.
      =================================================================== -->
 
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/brand.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
 <link rel="stylesheet" href="graph/graph.css">
 <link rel="stylesheet" href="diagram/diagram.css">
 
 <style>
-  :root { --page-max: 1180px }
+  :root {
+    --paper: var(--brand-paper); --paper-t: var(--brand-paper-t); --paper-2: var(--brand-paper-2);
+    --ink: var(--brand-ink); --ink-t: var(--brand-ink-t); --ink-2: var(--brand-ink-2); --ink-3: var(--brand-ink-3);
+    --mute: var(--brand-mute); --deep: var(--brand-green);
+    --green: var(--hue-green); --coral: var(--hue-coral); --blue: var(--hue-blue);
+    --amber: var(--hue-amber); --violet: var(--hue-violet);
+    --serif: 'Literata', Georgia, serif;
+    --sans: 'Jost', -apple-system, 'Segoe UI', sans-serif;
+    --display: 'Futura', 'Jost', -apple-system, sans-serif;
+    --soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --bar-h: 4.2rem;
+  }
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  /* kodo.css sets body to 100% tall, which ends the sticky bar's run one screen down. */
+  html, body { height: auto; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 17px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 500; letter-spacing: -0.015em; margin: 0; }
+  h1 em, h2 em { font-style: normal; }
+  .wrap { width: min(1180px, calc(100% - 4rem)); margin-inline: auto; }
+  .eyebrow { display: block; font: 500 13px/1 var(--sans); letter-spacing: .22em; text-transform: uppercase; color: var(--coral); margin-bottom: .9rem; }
 
-  /* Air on both sides of the name. Measured at 1440: 72 under the rule, 40 to
-     the deck, 88 down to the first section head — the header is the one place
-     on a shelf page with nothing to read, and it should feel like it. */
-  .pagehead{padding:clamp(2.5rem,5vw,4.5rem) 0 0}
+  /* ---- the bar: lessons.html's, word for word ------------------------------ */
+  header.bar { position: sticky; top: 0; z-index: 30; background: rgba(var(--paper-t), .86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(var(--ink-t), .1); }
+  header.bar .wrap { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; flex-wrap: wrap; padding: 1rem 0 .9rem; }
+  header.bar .mk { line-height: 0; text-decoration: none; }
+  header.bar .mk img { width: 132px; height: auto; display: inline-block; vertical-align: baseline; }
+  header.bar nav.links { display: flex; flex-wrap: wrap; align-items: baseline; gap: clamp(.9rem, 2.4vw, 1.7rem); }
+  header.bar a.lnk, header.bar .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
+  header.bar a.lnk:hover, header.bar a.acct:hover { color: var(--coral); }
+  header.bar a.lnk[aria-current="page"], header.bar a.acct[aria-current="page"] { color: var(--ink); }
+  header.bar .links .signin { padding: .35em .9em; border: 1.5px solid currentColor; border-radius: 999px; }
+  header.bar .links .rule { width: 1px; height: 1.1rem; align-self: center; background: rgba(var(--ink-t), .18); }
+  header.bar .links .menu { position: relative; display: inline-block; }
+  header.bar .links .menu .summary { position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0; border: 0; background: none; cursor: pointer; font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--mute); line-height: inherit; }
+  header.bar .links .menu .summary:hover, header.bar .links .menu .summary[aria-expanded="true"] { color: var(--ink); }
+  header.bar .links .avatar { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.7rem; height: 1.7rem; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--deep); color: var(--paper); font-size: .8rem; letter-spacing: 0; }
+  header.bar .links .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  header.bar .links .menu .card { position: absolute; right: 0; top: calc(100% + .6rem); z-index: 10; min-width: 15rem; padding: .9rem 1rem; background: var(--paper); border: 1px solid rgba(var(--ink-t), .12); border-radius: 10px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t), .45); display: flex; flex-direction: column; gap: .75rem; font: 400 .9rem var(--sans); color: var(--ink-2); text-transform: none; letter-spacing: 0; transform: none; }
+  header.bar .links .menu .card[hidden] { display: none; }
+  header.bar .links .menu .who { margin: 0; display: flex; flex-direction: column; gap: .15rem; line-height: 1.3; }
+  header.bar .links .menu .who b { color: var(--ink); font-weight: 600; }
+  header.bar .links .menu .who span { color: var(--mute); font-size: .8rem; overflow-wrap: anywhere; }
+  header.bar .links .menu .card button { align-self: flex-start; cursor: pointer; padding: .4em 1em; border: 1.5px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font: 600 .8rem var(--sans); }
 
-  /* The counts read as a row under the deck, left-aligned with it. */
-  .jump{margin:0 0 clamp(3rem,5vw,4rem);display:flex;flex-wrap:wrap;gap:.5rem}
-  /* The deck sits well clear of the name: with no rule between them, space is
-     the only thing saying they are two things. */
-  .lede{margin:clamp(1.5rem,2.6vw,2.5rem) 0 1.25rem}
-  /* Room above a section that has been jumped to, so its head is not welded to
-     the top of the window. */
-  main section{scroll-margin-top:1.5rem}
+  /* ---- the head -------------------------------------------------------------- */
+  .head { padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(2rem, 4vw, 3rem); }
+  .head .wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 3rem; align-items: end; }
+  .head h1 { font-size: clamp(3rem, 7vw, 5.4rem); line-height: .95; letter-spacing: -.03em; }
+  .head h1 em { color: var(--coral); }
+  .head .lede { font-family: var(--serif); font-size: clamp(1.05rem, 1.5vw, 1.25rem); line-height: 1.5; color: var(--ink-2); margin: 0; max-width: 30em; }
+  .head .lede b { font-weight: 600; color: var(--ink); }
+  /* The counts are the way in: each one a door to its section, coloured as its spine dot. */
+  .jump { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0 0; }
+  .jump a { display: inline-flex; align-items: center; gap: .5em; font: 600 11.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; text-decoration: none; color: var(--ink-3); border: 1.5px solid rgba(var(--ink-t), .18); border-radius: 999px; padding: .5em .95em; transition: color .15s, border-color .15s; }
+  .jump a:hover { color: var(--ink); border-color: var(--ink); }
+  .jump a i { width: 8px; height: 8px; border-radius: 50%; background: var(--hue); }
+  @media (max-width: 800px) { .head .wrap { grid-template-columns: 1fr; gap: 1.5rem; } }
 
-  /* A BIGGER SECTION HEAD. `.sechead`'s micro-cap is sized for a strip on a
-     page whose masthead is the name; here the three heads ARE the page's
-     spine, and a reader jumped down to one has to land on something that
-     reads as a title. Same face, weight and case as the masthead's h1, two
-     steps down. */
-  .sechead h2{font-size:clamp(1.6rem,2.6vw,2.1rem);font-weight:500;
-    letter-spacing:-.035em;text-transform:lowercase;line-height:1}
-  .sechead{gap:1.1rem;margin-bottom:1.2rem}
-  /* The way OUT of a section, in the front door's own device (index.html's
-     `.gallery .more`): an accent micro-cap. Not a button — the accent capsule
-     is the page's ONE action, and a page with three of them has none — and not
-     kodo's muted `.more` either, which beside a title-sized head reads as a
-     caption. No rule under it: the head's own hairline runs into it. */
-  .sechead .more{font-size:.74rem;font-weight:var(--cap-weight);
-    letter-spacing:.18em;text-transform:uppercase;color:var(--accent);
-    white-space:nowrap}
-  .sechead .more:hover{color:var(--spark)}
-  @media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+  /* ---- a section: lessons.html's unit, a spine and a shelf ------------------- */
+  main { padding: 0 0 5rem; }
+  .unit { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 2.5rem; padding: 2.8rem 0 3.2rem; position: relative; scroll-margin-top: var(--bar-h); }
+  .unit::before { content: ''; position: absolute; left: 9px; top: 0; bottom: 0; width: 2px; background: rgba(var(--ink-t), .1); }
+  .unit:first-child::before { top: 3.2rem; }
+  .unit:last-child::before { bottom: auto; height: 3.2rem; }
+  .uhead { position: sticky; top: calc(var(--bar-h) + 1rem); align-self: start; padding-left: 2rem; }
+  .uhead::before { content: ''; position: absolute; left: 0; top: .55rem; width: 20px; height: 20px; border-radius: 50%; background: var(--hue); box-shadow: 0 0 0 5px var(--paper); }
+  .uhead .n { display: block; font: 500 12px/1 var(--sans); letter-spacing: .24em; text-transform: uppercase; color: var(--mute); margin-bottom: .55rem; }
+  .uhead h2 { font-size: clamp(1.4rem, 2.2vw, 1.75rem); line-height: 1.1; }
+  .uhead .why { font-family: var(--serif); font-style: italic; font-size: .95rem; line-height: 1.4; color: var(--ink-3); margin: .7rem 0 0; }
+  .uhead .go { display: inline-block; margin-top: 1rem; font: 600 11.5px var(--sans); letter-spacing: .14em; text-transform: uppercase; text-decoration: none; color: var(--ink-3); border-bottom: 1.5px solid var(--hue); padding-bottom: 2px; }
+  .uhead .go:hover { color: var(--ink); }
+  @media (max-width: 900px) {
+    .unit { grid-template-columns: 1fr; gap: 1.4rem; padding-top: 2rem; }
+    .uhead { position: static; }
+  }
 
   /* Every column count is FIXED, not auto-fill: the two shelves are cut to
-     2 x their columns in JS, and an auto-fill track would land the cut
-     mid-row. */
-  .grid{display:grid;gap:calc(var(--page-gap) * .8);
-    grid-template-columns:repeat(2,1fr)}
-  .grid.mols{grid-template-columns:repeat(3,1fr);gap:calc(var(--page-gap) * .7)}
-  @media (min-width:900px){
-    .grid{grid-template-columns:repeat(4,1fr)}
-    .grid.mols{grid-template-columns:repeat(5,1fr)}
+     2 x their columns in JS, and an auto-fill track would land the cut mid-row. */
+  .grid { display: grid; gap: 1.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid.prots { gap: 1.1rem; }
+  .grid.mols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+  @media (min-width: 900px) {
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.prots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.mols { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   }
-  /* Small cards throughout: a short stage and a tight body, so a section is
-     read as a shelf rather than a page each. */
-  .stage{height:150px}
-  .grid.prots .stage,
-  .grid.mols .stage{height:140px}
-  .body{padding:.9rem 1rem 1rem}
-  .name{font-size:1.05rem}
-  .blurb{font-size:.82rem;-webkit-line-clamp:2;margin:.45rem 0 .7rem}
-  .does{font-size:.65rem;margin-top:.4rem}
 
-  .card{background:var(--surface-card);border:1px solid var(--border-hair);border-radius:4px;
-    overflow:hidden;display:flex;flex-direction:column;color:inherit;text-decoration:none;
-    transition:border-color .18s,transform .18s,box-shadow .18s;cursor:pointer}
-  .card:hover{border-color:var(--accent);transform:translateY(-3px);
-    box-shadow:0 10px 26px rgba(20,22,26,.07)}
-  /* A fixed-height stage: a grid whose rows are sized by their picture reflows
-     as the stills land, and every card jumps. */
-  .stage{position:relative;background:var(--paper);
-    border-bottom:1px solid var(--border-hair);
-    background-size:contain;background-position:center;background-repeat:no-repeat}
-  /* A component still is a 3:2 frame drawn to its edges, not a molecule on
-     paper, so it covers. */
-  .stage.shot{background-size:cover}
-  .stage > *{position:absolute;inset:0;display:block;width:100%;height:100%;border:0}
-  .body{display:flex;flex-direction:column;flex:1}
-  .name{font-family:var(--font-display);font-weight:500;letter-spacing:-0.02em;
-    line-height:1.12;margin:0}
-  .does{display:inline-block;align-self:flex-start;
-    letter-spacing:.14em;text-transform:uppercase;
-    font-weight:600;color:var(--accent)}
-  .does.carrier{color:var(--spark)}
-  .blurb{color:var(--muted);line-height:1.5;
-    display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+  /* ---- a card: lessons.html's -------------------------------------------------- */
+  .card { position: relative; display: flex; flex-direction: column; background: #fff; border-radius: 16px; border: 1px solid rgba(var(--ink-t), .08); box-shadow: 0 1px 2px rgba(var(--ink-t), .06), 0 14px 40px -18px rgba(var(--ink-t), .28); overflow: hidden; color: inherit; text-decoration: none; transition: transform .3s var(--soft), box-shadow .3s var(--soft); }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(var(--ink-t), .06), 0 24px 50px -18px rgba(var(--ink-t), .35); }
+  /* An aspect ratio, not the still's own size: a row sized by its pictures
+     reflows as they land. A component still is a 3:2 frame drawn to its
+     edges, so it covers; a protein or molecule is drawn on paper with air
+     round it, so it is shown whole. */
+  .stage { position: relative; aspect-ratio: 3 / 2; background: var(--paper-2) center / contain no-repeat; overflow: hidden; }
+  .stage.shot { background-size: cover; transition: transform .6s var(--soft); }
+  .card:hover .stage.shot { transform: scale(1.03); }
+  .grid.prots .stage, .grid.mols .stage { aspect-ratio: 1; }
+  .stage > * { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; }
+  #diagram-stage, #graph-stage { background: #fff; border-bottom: 1px solid rgba(var(--ink-t), .06); }
+  .body { padding: 1rem 1.15rem 1.05rem; display: flex; flex-direction: column; gap: .45rem; flex: 1; }
+  .name { font-family: var(--display); font-size: 1.18rem; font-weight: 500; line-height: 1.2; letter-spacing: -0.015em; margin: 0; }
+  .blurb { margin: 0; font-family: var(--serif); font-style: italic; font-size: .9rem; line-height: 1.38; color: var(--ink-2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
   /* ONE TAG ON EVERY CARD. A component's features, a protein's species and
-     method, a molecule's class: all of them are words read off the data, so
-     they are one chip and set as words — uppercase signage would make a
-     classification out of "sperm whale". */
-  .facts{display:flex;flex-wrap:wrap;gap:.28rem;margin:auto 0 0}
-  .feats{list-style:none;display:flex;flex-wrap:wrap;gap:.28rem;margin:.1rem 0 0;padding:0}
-  .fact,
-  .feats li{font-size:.68rem;line-height:1.35;color:var(--text-body);
-    background:var(--paper);border:1px solid var(--border-hair);
-    border-radius:999px;padding:.2rem .55rem}
-  .fact.predicted{background:var(--spark);border-color:var(--spark);color:#faf8f4}
-  /* `auto` only pushes the chips down where the body has room to spare, and a
-     molecule card's body is name + formula, so on a short card the two ran
-     together. The padding is the floor. */
-  .grid.mols .facts{padding-top:.75rem}
-  .rung{margin-top:auto;padding-top:.7rem;font-size:.62rem;letter-spacing:.18em;
-    text-transform:uppercase;font-weight:600;color:var(--muted)}
-  /* The formula in the UI face, not the mono: a mono's subscripts are drawn on
-     the same fixed advance as its capitals, so C27H33N9O15P2 comes out as a
-     line of code rather than as a formula. The mono is for the recipe. */
-  .formula{font-size:.8rem;color:var(--text-muted);margin:.35rem 0 0}
+     method, a molecule's class: words read off the data, so set as words,
+     in lessons.html's `.mark`. */
+  .feats, .facts { list-style: none; display: flex; flex-wrap: wrap; gap: .3rem; margin: .15rem 0 0; padding: 0; }
+  .facts { margin-top: auto; padding-top: .3rem; }
+  .feats li, .fact { font: 500 11px/1.25 var(--sans); letter-spacing: .03em; padding: .38em .6em; border-radius: 6px; background: var(--paper-2); color: var(--ink-2); }
+  .fact.predicted { background: var(--brand-orange); color: #fff; }
+  /* The rung, in the tag's micro-cap, with the section's dot. */
+  .rung { margin-top: auto; padding-top: .7rem; display: flex; align-items: center; gap: .5em; font: 500 10.5px/1.2 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  .rung::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--hue); }
+  .does { margin: 0; align-self: flex-start; font: 600 10.5px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--deep); }
+  .does.carrier { color: var(--brand-orange); }
+  /* The formula in the UI face, not a mono: C27H33N9O15P2 should read as a formula, not code. */
+  .formula { margin: 0; font: 400 .85rem var(--sans); color: var(--ink-3); }
+  .grid.prots .body, .grid.mols .body { padding: .85rem .95rem .95rem; gap: .35rem; }
+  .grid.prots .name { font-size: 1.05rem; }
+  .grid.mols .name { font-size: .98rem; }
+  .grid.mols .facts { padding-top: .5rem; }
 
+  footer { padding: 2.5rem 0 3rem; border-top: 1px solid rgba(var(--ink-t), .2); font: 400 13px var(--sans); color: var(--mute); }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  footer a { text-decoration: none; }
+  footer .dots i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 4px; }
+
+  @media (prefers-reduced-motion: reduce) { .card, .stage.shot { transition: none; } }
 </style>
 </head>
-<body class="kodo">
-<div class="page">
-  <nav class="sitenav">
-    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-    <span class="crumb">biology</span>
-  </nav>
+<body>
 
-  <header class="pagehead open">
-    <h1>library</h1>
-  </header>
-
-  <p class="lede">Everything an app here is built from: components are whole scenes a page
-    mounts by name, proteins and molecules the structures they draw.</p>
-
-  <!-- The counts are the way in: the same three numbers, each one a door to its
-       section. Labels are written at render from the lists they count. They sit
-       under the deck, on the page's left edge with the name and the text. -->
-    <nav class="jump" id="tally" aria-label="Jump to a section">
-      <a class="cta cta--ghost cta--sm" href="#components" data-n="comp"></a>
-      <a class="cta cta--ghost cta--sm" href="#proteins" data-n="prot"></a>
-      <a class="cta cta--ghost cta--sm" href="#molecules" data-n="mol"></a>
+<header class="bar">
+  <div class="wrap">
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The site's three places, the same words and order as lib/site.js's
+         list; site.js only adds the account here. -->
+    <nav class="links" aria-label="Site">
+      <a class="lnk" href="/lessons">Lessons</a>
+      <a class="lnk" href="/library" aria-current="page">Library</a>
+      <a class="lnk" href="/build">Build</a>
     </nav>
+  </div>
+</header>
 
-  <main>
-    <section id="components">
-      <div class="sechead"><h2>Components</h2><span class="rule"></span></div>
+<section class="head">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Open source</span>
+      <h1>The <em>library</em></h1>
+    </div>
+    <div>
+      <p class="lede"><b>Everything a lesson here is built from.</b> Whole scenes a page mounts by name, and the proteins and molecules they draw.</p>
+      <!-- Labels are written at render from the lists they count. -->
+      <nav class="jump" id="tally" aria-label="Jump to a section">
+        <a href="#components" data-n="comp" style="--hue:var(--blue)"><i></i></a>
+        <a href="#proteins" data-n="prot" style="--hue:var(--coral)"><i></i></a>
+        <a href="#molecules" data-n="mol" style="--hue:var(--violet)"><i></i></a>
+      </nav>
+    </div>
+  </div>
+</section>
+
+<main>
+  <div class="wrap">
+    <section class="unit" id="components" style="--hue:var(--blue)">
+      <div class="uhead"><span class="n">Scenes</span><h2>Components</h2><p class="why">A whole 3D scene, mounted by name and driven by a few settings. Open one to try it.</p></div>
       <div class="grid" id="comp-grid">
         <a class="card" href="/library/watersim"><div class="stage shot" style="background-image:url(media/components/watersim.webp)"></div><div class="body"><h3 class="name">WaterSim</h3><p class="blurb">Liquid water, and what follows from hydrogen bonds.</p><ul class="feats"><li>temperature</li><li>phase change</li><li>ice floating</li><li>salt dissolving</li></ul><div class="rung">molecules · bulk</div></div></a>
         <a class="card" href="/library/membrane"><div class="stage shot" style="background-image:url(media/components/membrane.webp)"></div><div class="body"><h3 class="name">Membrane</h3><p class="blurb">A bilayer, its proteins, and what crosses.</p><ul class="feats"><li>diffusion</li><li>osmosis</li><li>selectivity</li><li>pumps and ATP</li><li>resting potential</li><li>chemiosmosis</li></ul><div class="rung">membrane · bulk</div></div></a>
@@ -195,17 +241,24 @@
       </div>
     </section>
 
-    <section id="proteins">
-      <div class="sechead"><h2>Proteins</h2><span class="rule"></span><a class="more" href="/proteins">The whole gallery &rarr;</a></div>
+    <section class="unit" id="proteins" style="--hue:var(--coral)">
+      <div class="uhead"><span class="n">Real coordinates</span><h2>Proteins</h2><p class="why">Built from real coordinates, measured or predicted.</p><a class="go" href="/proteins">The whole gallery &rarr;</a></div>
       <div class="grid prots" id="prot-grid"></div>
     </section>
 
-    <section id="molecules">
-      <div class="sechead"><h2>Molecules</h2><span class="rule"></span><a class="more" href="/molecules">Every molecule &rarr;</a></div>
+    <section class="unit" id="molecules" style="--hue:var(--violet)">
+      <div class="uhead"><span class="n">Checked specs</span><h2>Molecules</h2><p class="why">Every molecule the lessons draw, each held to its chemistry by a test.</p><a class="go" href="/molecules">Every molecule &rarr;</a></div>
       <div class="grid mols" id="mol-grid"></div>
     </section>
-  </main>
-</div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Kodolab · <a href="https://www.linkedin.com/in/maryhuang1/" target="_blank" rel="noopener">Mary Huang</a> · <a href="/lessons">Lessons</a> · <a href="/contribute">Contribute</a> · <a href="mailto:mary@kodolab.org">Email</a> · <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Send feedback</a> · <a href="/privacy">Privacy</a></span>
+    <span class="dots"><i style="background:var(--green)"></i><i style="background:var(--coral)"></i><i style="background:var(--blue)"></i><i style="background:var(--amber)"></i><i style="background:var(--violet)"></i></span>
+  </div>
+</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -296,10 +349,10 @@ function proteinCard(p) {
   return el;
 }
 /* ---- the two shelves ------------------------------------------------------
-   Two rows of each, and the section's link carries the rest. COLS matches the
-   fixed column counts above, so the cut lands on a row boundary. */
-const wide = matchMedia('(min-width:900px)').matches;
-const SHELF = { prots: (wide ? 4 : 2) * 2, mols: (wide ? 5 : 3) * 2 };
+   Two rows of each, and the section's link carries the rest. The cut reads the
+   grid's own column count, so it lands on a row boundary at any width. */
+const rows2 = id => 2 * getComputedStyle($(id)).gridTemplateColumns.split(' ').length;
+const SHELF = { prots: rows2('prot-grid'), mols: rows2('mol-grid') };
 
 for (const p of PROTEINS.slice(0, SHELF.prots)) $('prot-grid').appendChild(proteinCard(p));
 
@@ -318,7 +371,7 @@ const COUNTS = { comp: [nComp, 'components'],
                  mol:  [MOLS.length, 'molecules'] };
 for (const a of $('tally').children) {
   const [n, word] = COUNTS[a.dataset.n];
-  a.textContent = `${n} ${word}`;
+  a.append(`${n} ${word}`);
 }
 
 /* A BARE FRAGMENT IS NOT A FRAGMENT UNDER `<base href="/demos/">`: the browser
