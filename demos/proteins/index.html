@@ -46,81 +46,27 @@
 <link rel="stylesheet" href="../css/kodo.css">
 <link rel="stylesheet" href="../kit/proteinbox.css">
 
+<link rel="stylesheet" href="../css/library.css">
 <style>
-  /* The site sheet owns the paper, the wordmark, the masthead and the gutter.
-     What is left here is the shelf: the card, and the one number on the page
-     that is counted from the registry rather than typed. */
-  :root { --page-max: 1180px }
-
-  /* The rule under the bar is the page's only one, so the masthead gives kodo's
-     own up. NOT via `.pagehead.open`, which is what that class is for: `.open`
-     on THIS page is the green lesson pill below, and the two met on one element
-     set the page's name inside a pill. Dropped by hand instead. */
-  .pagehead{padding:clamp(2.5rem,5vw,4.5rem) 0 0;border-bottom:0;margin-bottom:0}
-  /* Only the margins: the rest of `.lede` is kodo.css's, and this page used to
-     restate its size, colour and measure — a fork nobody sees until two shelves
-     are open side by side. */
-  .lede{margin:clamp(1.5rem,2.6vw,2.5rem) 0 clamp(3rem,5vw,4rem)}
-
-  /* ---- the grid ------------------------------------------------------- */
-
-  /* 290px, not 330: three columns is the layout this page is composed for,
-     and a 330 track dropped to two at ~1150px — a laptop, not a tablet. The
-     card is legible narrower than the widest it wants to be. */
-  .grid{display:grid;gap:var(--page-gap);
-    grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
-
-  .card{background:var(--surface-card);border:1px solid var(--border-hair);border-radius:4px;
-    overflow:hidden;display:flex;flex-direction:column;
-    transition:border-color .18s,transform .18s,box-shadow .18s;cursor:pointer}
-  .card:hover{border-color:var(--accent);transform:translateY(-3px);
-    box-shadow:0 10px 26px rgba(20,22,26,.07)}
-  /* The stage is the top of the card and has a fixed height: a grid whose
-     rows are sized by their 3D box is a grid that reflows while the boxes
-     fit, and every card jumps. */
-  .stage{position:relative;height:230px;background:var(--paper);
-    border-bottom:1px solid var(--border-hair)}
-  .body{padding:1.5rem 1.4rem 1.6rem;display:flex;flex-direction:column;flex:1}
-
-  .name{font-family:var(--font-display);font-size:1.35rem;font-weight:500;letter-spacing:-0.02em;
-    line-height:1.12;margin:0}
-  /* One word, above the blurb: what KIND of thing this is, which is the
-     first question a reader has and the one a ribbon cannot answer. */
-  /* `align-self` because the card is a flex column, where a block child is
-     stretched to the full width whatever its display says — a chip that fills
-     the card reads as a banner. */
-  .does{display:inline-block;align-self:flex-start;margin:0.55rem 0 0;
-    font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
-    font-weight:600;color:var(--accent)}
-  .does.carrier{color:var(--spark)}
-
-  /* Three lines, hard. The card takes the first sentence, and this is the
-     backstop for a protein whose first sentence is a paragraph. */
-  .blurb{font-size:0.9rem;color:var(--muted);
-    line-height:1.5;margin:0.55rem 0 0.9rem;
-    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
-    overflow:hidden}
-
-  .facts{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 1rem}
-  .fact{font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;
-    font-weight:600;padding:3px 8px;border-radius:999px;
-    border:1px solid var(--border-hair);background:var(--paper);color:var(--muted)}
-  /* MEASURED AND PREDICTED MUST NOT READ ALIKE. Nothing here is predicted
-     yet, and the day one is, it says so in the loudest chip on the card
-     rather than in a field a reader has to go looking for. */
-  .fact.predicted{background:var(--spark);border-color:var(--spark);color:#faf8f4}
+  /* The gallery's card is library.css's, a size up: the whole collection is
+     four across, and a card carries its lesson where one exists. */
+  .grid.gallery { gap: 1.2rem; }
+  @media (min-width: 760px) { .grid.gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 1100px) { .grid.gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .grid.gallery .stage { height: 210px; }
+  .grid.gallery .name { font-size: 1.2rem; }
+  .grid.gallery .blurb { -webkit-line-clamp: 3; }
+  .grid.gallery .facts { margin: 0 0 1rem; }
 
   /* THE CARD ITSELF IS THE CLICK, and it opens the modal, so a pill saying so
      was the same destination twice. What stays on a card is the lesson, where
      one exists: the only thing on a card that leaves the page. The modal prints
      the rest of the routes. */
-  .links{margin-top:auto;display:flex;flex-wrap:wrap;gap:0.5rem}
-  .open{display:inline-flex;align-items:center;gap:6px;padding:0.6rem 1.2rem;
-    border:1px solid var(--accent);border-radius:999px;
-    background:var(--accent);color:#faf8f4;font-size:0.8rem;font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;
-    transition:background .18s,border-color .18s}
-  .open:hover{background:var(--spark);border-color:var(--spark)}
+  .links { margin-top: auto; display: flex; flex-wrap: wrap; gap: .5rem; }
+  .open { display: inline-flex; align-items: center; gap: 6px; padding: .55rem 1.1rem;
+    border-radius: 999px; background: var(--deep); color: #fff; font: 500 13px var(--sans);
+    letter-spacing: .04em; text-decoration: none; transition: background .15s; }
+  .open:hover { background: var(--ink); }
 
   /* ---- the modal ------------------------------------------------------
      A card opens here rather than navigating: the bigger view is the same
@@ -216,26 +162,45 @@
 
 </style>
 </head>
-<body class="kodo">
-<div class="page">
-  <nav class="sitenav">
-    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-    <span class="crumb">biology</span>
-  </nav>
+<body>
 
-  <header class="pagehead">
-    <h1>proteins</h1>
-    <!-- Counted from the registry at render, so it cannot drift from the cards
-         under it — the one number here most likely to be typed and then quietly
-         falsified by a fourth protein. -->
-    <p class="meta" id="tally">&mdash;</p>
-  </header>
+<header class="bar">
+  <div class="wrap">
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The site's three places, the same words and order as lib/site.js's
+         list; site.js only adds the account here. -->
+    <nav class="links" aria-label="Site">
+      <a class="lnk" href="/lessons">Lessons</a>
+      <a class="lnk" href="/library" aria-current="page">Library</a>
+      <a class="lnk" href="/build">Build</a>
+    </nav>
+  </div>
+</header>
 
-  <p class="lede">Proteins are what your genes are for. All of these
-    proteins were measured in a lab with x-rays. Their shape is the job they do.</p>
+<section class="head">
+  <div class="wrap">
+    <div>
+      <a class="eyebrow" href="/library">&larr; Library</a>
+      <h1>Proteins</h1>
+    </div>
+    <div>
+      <p class="lede">Proteins are what your genes are for, and their shape is the job they do. <b>Open one to turn it.</b></p>
+      <!-- Counted from the registry at render, so it cannot drift from the cards. -->
+      <p class="meta" id="tally">&mdash;</p>
+    </div>
+  </div>
+</section>
 
-  <main class="grid" id="grid"></main>
-</div>
+<main>
+  <div class="wrap"><div class="grid gallery" id="grid"></div></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Kodolab · <a href="https://www.linkedin.com/in/maryhuang1/" target="_blank" rel="noopener">Mary Huang</a> · <a href="/lessons">Lessons</a> · <a href="/contribute">Contribute</a> · <a href="mailto:mary@kodolab.org">Email</a> · <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Send feedback</a> · <a href="/privacy">Privacy</a></span>
+    <span class="dots"><i style="background:var(--green)"></i><i style="background:var(--coral)"></i><i style="background:var(--blue)"></i><i style="background:var(--amber)"></i><i style="background:var(--violet)"></i></span>
+  </div>
+</footer>
 
 <div class="pmodal" id="modal" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="m-name">

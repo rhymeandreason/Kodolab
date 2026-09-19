@@ -19,7 +19,7 @@
 <!-- /seo -->
 
 <!-- ===================================================================
-     EVERY MOLECULE, GROUPED. library.html shows a shelf of ten and sends
+     EVERY MOLECULE, GROUPED. library.html shows two rows of them and sends
      the reader here; this page is the whole of MolLib.MOLECULES.
 
      THE CARDS ARE READ FROM THE REGISTRY, so a new mol-*.js spec appears
@@ -35,58 +35,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="css/kodo.css">
 
+<link rel="stylesheet" href="css/library.css">
 <style>
-  :root { --page-max: 1180px }
-
-  /* The rule under the bar is the page's only one: `.pagehead.open` in the
-     markup gives kodo's own up, so the name is not fenced off twice. */
-  .pagehead{padding:clamp(2.5rem,5vw,4.5rem) 0 0}
-  .lede{margin:clamp(1.5rem,2.6vw,2.5rem) 0 clamp(3rem,5vw,4rem)}
-
-  /* The same track library.html's molecule shelf uses, so a card is the same
-     size on both pages. */
-  .grid{display:grid;gap:calc(var(--page-gap) * .7);
-    grid-template-columns:repeat(3,1fr)}
-  @media (min-width:900px){ .grid{grid-template-columns:repeat(5,1fr)} }
-
-  .card{background:var(--surface-card);border:1px solid var(--border-hair);border-radius:4px;
-    overflow:hidden;display:flex;flex-direction:column;color:inherit;text-decoration:none;
-    transition:border-color .18s,transform .18s,box-shadow .18s;cursor:pointer}
-  .card:hover{border-color:var(--accent);transform:translateY(-3px);
-    box-shadow:0 10px 26px rgba(20,22,26,.07)}
-  /* A fixed-height stage: a grid whose rows are sized by their picture reflows
-     as the stills land, and every card jumps. */
-  .stage{position:relative;height:140px;background:var(--paper);
-    border-bottom:1px solid var(--border-hair);
-    background-size:contain;background-position:center;background-repeat:no-repeat}
-  .body{padding:.9rem 1rem 1rem;display:flex;flex-direction:column;flex:1}
-  .name{font-family:var(--font-display);font-size:1.05rem;font-weight:500;letter-spacing:-0.02em;
-    line-height:1.12;margin:0}
-  .does{display:inline-block;align-self:flex-start;margin:.5rem 0 0;
-    font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
-    font-weight:600;color:var(--accent)}
-  /* library.html's card chip, and the same reasoning: a molecule's class is a
-     word read off the spec, so it is set as a word. */
-  /* `auto` only pushes the chips down where the body has room to spare, and a
-     molecule card's body is name + formula, so on a short card the two ran
-     together. The padding is the floor. */
-  .facts{display:flex;flex-wrap:wrap;gap:.28rem;margin:auto 0 0;padding-top:.75rem}
-  .fact{font-size:.68rem;line-height:1.35;color:var(--text-body);
-    background:var(--paper);border:1px solid var(--border-hair);
-    border-radius:999px;padding:.2rem .55rem}
-  /* The formula in the UI face, not the mono: a mono's subscripts are drawn on
-     the same fixed advance as its capitals, so C27H33N9O15P2 comes out as a
-     line of code rather than as a formula. */
-  .formula{font-size:.8rem;color:var(--text-muted);margin:.35rem 0 0}
-
-  /* One group of molecules, headed the way library.html heads a section: the
-     masthead's face and case, two steps down. These are the page's spine. */
-  .group{grid-column:1/-1;margin:1.8rem 0 .2rem;
-    font-family:var(--font-display);font-size:clamp(1.6rem,2.6vw,2.1rem);
-    font-weight:500;letter-spacing:-.035em;line-height:1;
-    text-transform:lowercase;color:var(--text-strong)}
-  .group:first-child{margin-top:0}
-
   /* ---- the molecule modal: lessons.html's embed sheet, one molecule -----
      Its navy backdrop, round corners, deep shadow and floating close.
      `.mmodal`, not `.modal`: kodo.css §10.3 owns `.modal` and its heading. */
@@ -153,25 +103,44 @@
   .x:hover{box-shadow:0 3px 14px rgba(var(--brand-ink-t),.32)}
 </style>
 </head>
-<body class="kodo">
-<div class="page">
-  <nav class="sitenav">
-    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-    <span class="crumb">biology</span>
-  </nav>
+<body>
 
-  <header class="pagehead open">
-    <h1>molecules</h1>
-    <p class="meta" id="tally">&mdash;</p>
-  </header>
+<header class="bar">
+  <div class="wrap">
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The site's three places, the same words and order as lib/site.js's
+         list; site.js only adds the account here. -->
+    <nav class="links" aria-label="Site">
+      <a class="lnk" href="/lessons">Lessons</a>
+      <a class="lnk" href="/library" aria-current="page">Library</a>
+      <a class="lnk" href="/build">Build</a>
+    </nav>
+  </div>
+</header>
 
-  <p class="lede">Every molecule the lessons and generated apps draw, grouped by where it is
-    used. Open one to turn it.</p>
+<section class="head">
+  <div class="wrap">
+    <div>
+      <a class="eyebrow" href="/library">&larr; Library</a>
+      <h1>Molecules</h1>
+    </div>
+    <div>
+      <p class="lede">Every molecule the lessons and generated apps draw, grouped by where it is used. <b>Open one to turn it.</b></p>
+      <p class="meta" id="tally">&mdash;</p>
+    </div>
+  </div>
+</section>
 
-  <main>
-    <div class="grid" id="mol-grid"></div>
-  </main>
-</div>
+<main>
+  <div class="wrap" id="mol-groups"></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Kodolab · <a href="https://www.linkedin.com/in/maryhuang1/" target="_blank" rel="noopener">Mary Huang</a> · <a href="/lessons">Lessons</a> · <a href="/contribute">Contribute</a> · <a href="mailto:mary@kodolab.org">Email</a> · <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Send feedback</a> · <a href="/privacy">Privacy</a></span>
+    <span class="dots"><i style="background:var(--green)"></i><i style="background:var(--coral)"></i><i style="background:var(--blue)"></i><i style="background:var(--amber)"></i><i style="background:var(--violet)"></i></span>
+  </div>
+</footer>
 
 <div class="mmodal" id="modal" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="m-name">
@@ -243,19 +212,22 @@ const $ = id => document.getElementById(id);
 const MOLS = MolShelf.list();
 const BY_KEY = new Map(MOLS.map(m => [m.key, m]));
 
-const molGrid = $('mol-grid');
-let lastDomain = null;
+/* One section per domain file, headed the way library.html heads one. */
+const groups = $('mol-groups');
+let grid = null, lastDomain = null;
 for (const m of MOLS) {
   if (m.spec.domain !== lastDomain) {
-    const h = document.createElement('div');
-    h.className = 'group';
-    h.textContent = MolShelf.groupOf(m.spec.domain);
-    molGrid.appendChild(h);
+    const sec = document.createElement('section');
+    sec.className = 'unit';
+    sec.innerHTML = '<div class="uhead"><h2></h2></div><div class="grid mols"></div>';
+    sec.querySelector('h2').textContent = MolShelf.groupOf(m.spec.domain);
+    groups.appendChild(sec);
+    grid = sec.querySelector('.grid');
     lastDomain = m.spec.domain;
   }
   const el = MolShelf.card(m, document.createElement('article'));
   el.addEventListener('click', () => openModal(m));
-  molGrid.appendChild(el);
+  grid.appendChild(el);
 }
 $('tally').textContent = `${MOLS.length} molecules`;
 
