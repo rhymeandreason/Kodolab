@@ -51,8 +51,8 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'GET or POST only' });
   }
 
-  res.status(204).end();
-
+  /* Answer only after the writes: Vercel freezes a function once it has
+     responded, so a write left running lands on the next call, or never. */
   try {
     const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
     const db = log.sql();
@@ -89,6 +89,8 @@ module.exports = async function handler(req, res) {
       FROM jsonb_array_elements(${JSON.stringify(evs)}::jsonb) AS e`;
   } catch (err) {
     console.error('[event] ' + ((err && err.message) || err));
+  } finally {
+    res.status(204).end();
   }
 };
 
