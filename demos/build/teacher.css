@@ -223,7 +223,10 @@ th {
   padding: .55rem .6rem; border-bottom: 1px solid color-mix(in srgb, var(--text-strong) 30%, transparent);
 }
 td { padding: .7rem .6rem; border-bottom: 1px solid var(--border-hair); vertical-align: middle; color: var(--text-body); }
-tbody tr:hover td { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+/* Every other row a shade of the ink, so a long roster reads across. Hover
+   comes after it and wins. */
+tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--text-strong) 3.5%, transparent); }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .ctr { text-align: center; }
 td code { font-family: var(--font-mono); font-size: 1rem; letter-spacing: .06em; color: var(--text-strong); }

@@ -441,7 +441,7 @@
     $('exportCsv').hidden = !rows.length;
     $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
       <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${esc(shortId(r.visitor_id))}</code></button></td>
-      <td class="dim">${esc((r.pages || []).map(pageName).join(', '))}</td>
+      <td class="dim">${esc([...new Set((r.pages || []).map(pageName))].join(', '))}</td>
       <td class="dim">${esc(ago(r.first_seen))}</td>
       <td class="dim">${esc(ago(r.last_seen))}</td>
       <td class="num">${mins(r.active_s || 0)}</td>
