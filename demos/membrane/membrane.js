@@ -124,7 +124,7 @@
 
     /* ---- the pump's cargo is REAL IONS ----
        A spend recruits travellers out of the solution, so setting them down
-       on the far side changes the counts and moves the voltage. pump.js owns
+       on the far side changes the counts and moves the voltage. parts.js's Pump owns
        the choreography; this only decides WHICH ions ride. */
     let pumpT = 0, running = false, atpSpent = 0, lastPhase = '', phase = null;
     const lastGates = { top: NaN, bottom: NaN };
@@ -286,7 +286,7 @@
 
   let warnedCircuit = false;
   function create(THREE, root, camera, opts = {}) {
-    if (!global.Sheet || !global.Pump) throw new Error('membrane.js: load membrane/parts.js, membrane/pump.js, membrane/chemiosmosis.js and membrane/sheet.js first');
+    if (!global.Sheet || !global.Pump) throw new Error('membrane.js: load membrane/parts.js, membrane/chemiosmosis.js and membrane/sheet.js first');
     const usesCircuit = (opts.context && opts.context !== 'plasma') || opts.fuel ||
       (opts.proteins && CIRCUIT_KEYS.some(k => opts.proteins[k]));
     if (usesCircuit && !warnedCircuit) {

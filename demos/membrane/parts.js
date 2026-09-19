@@ -86,7 +86,8 @@
  *    this  ·  the geometry, the materials, and setGates() being continuous so
  *             a page can drive it from any easing curve it likes
  *
- *  Loaded after scene.js (it honours Stage.toon). Exposes window.Parts.
+ *  Loaded after scene.js (it honours Stage.toon). Exposes window.Parts, and
+ *  window.Pump: the sodium pump's cycle, at the bottom of this file.
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -318,7 +319,7 @@
 
     return {
       group, mesh, setGates, geometry: geo, outerR: Ro,
-      /* Half-height, so a caller working in pump.js's normalised u (-1 at
+      /* Half-height, so a caller working in Pump's normalised u (-1 at
          the inner mouth, +1 at the outer) can place an ion without knowing
          how this shape was built or hard-coding an angstrom. */
       height: H,
@@ -736,4 +737,195 @@
 
   global.Parts = { transporter, membrane, ion, ION, ionBadge, flat };
   if (typeof module !== 'undefined' && module.exports) module.exports = global.Parts;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* =============================================================================
+ *  Pump — the Post-Albers cycle as a function of time.
+ * =============================================================================
+ *  No THREE, no DOM, no geometry: the pump's BEHAVIOUR. Given a time, what
+ *  are the gates doing, where is each ion, and has the phosphate moved. The
+ *  transporter above turns that into a shape and the page into a picture;
+ *  neither decides anything about the mechanism.
+ *
+ * -----------------------------------------------------------------------------
+ *  THE CYCLE, AND WHAT IS SIMPLIFIED
+ * -----------------------------------------------------------------------------
+ *  Eight phases, in a loop:
+ *
+ *    1 load-Na       inward-open. Three Na+ come in from the cytoplasm.
+ *    2 occlude-Na    ATP's terminal phosphate moves ONTO the pump. Gates shut.
+ *    3 open-out      outward-open, carrying the phosphate.
+ *    4 release-Na    three Na+ leave, to the outside.
+ *    5 load-K        two K+ come in from the outside.
+ *    6 occlude-K     the phosphate leaves. Gates shut.
+ *    7 open-in       inward-open again.
+ *    8 release-K     two K+ leave, into the cytoplasm.
+ *
+ *  THE STOICHIOMETRY IS REAL: 3 Na+ out, 2 K+ in, 1 ATP. Three charges out
+ *  against two in is why the pump is electrogenic and why the cell interior
+ *  sits negative — a fact this lesson will want later and must not contradict
+ *  now, so the counts are not roundable.
+ *
+ *  WHAT IS COMPRESSED. The real cycle distinguishes E1P from E2P and has ADP
+ *  leave between them; here phosphorylation and the conformational change are
+ *  one beat, because "the phosphate arrives and the pump turns inside out" is
+ *  the causal story and the intermediate is not a Bio 101 fact. The 2022
+ *  structures we baked (7E1Z, 7E20) are the two ENDS of this and there is no
+ *  E2P among them, so nothing here is claiming structural support for the
+ *  middle — see proteins/napump/tools/prep.js on the same gap.
+ *
+ *  WHAT IS NOT COMPRESSED, because it is the point:
+ *
+ *    · GATES NEVER BOTH OPEN. Every transition between an open state and its
+ *      opposite passes through a shut one. This is enforced by the phase table
+ *      having occlusion phases at all.
+ *    · THE ION IS COMMITTED BEFORE THE PUMP TURNS. Loading finishes before
+ *      occlusion starts, so the student never sees an ion drift in while the
+ *      far side is open — which would be a leak, and would silently teach that
+ *      the pump is a hole with a preference.
+ *
+ * -----------------------------------------------------------------------------
+ *  COORDINATES
+ * -----------------------------------------------------------------------------
+ *  Ion position is `u`, normalised: -1 at the cytoplasmic mouth, 0 at the
+ *  binding site, +1 at the outer mouth. The page multiplies by the
+ *  transporter's half-height. Nothing here knows an angstrom, which is why
+ *  changing the protein's size cannot break the choreography.
+ *
+ *  Exposes window.Pump.
+ * ========================================================================== */
+(function (global) {
+  'use strict';
+
+  const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  const smooth = t => { t = clamp01(t); return t * t * (3 - 2 * t); };
+  const mix = (a, b, t) => a + (b - a) * t;
+
+  /* Phase table. `w` is relative duration — the loop is normalised by their
+     sum, so retiming one beat cannot silently shorten another. */
+  const PHASES = [
+    { id:'load-na',    w:1.4, label:'3 Na⁺ bind',
+      caption:'The pump is open to the inside. Three sodium ions step in.' },
+    { id:'occlude-na', w:1.0, label:'ATP → phosphate on the pump',
+      caption:'ATP snaps off its end phosphate and sticks it on the pump. ' +
+              'Both doors shut, so the sodium is locked in — it cannot slip back.' },
+    { id:'open-out',   w:0.9, label:'turns outward',
+      caption:'Holding that phosphate makes the pump change shape: it turns ' +
+              'over and opens to the outside instead.' },
+    { id:'release-na', w:1.1, label:'3 Na⁺ leave',
+      caption:'In the new shape the grip is loose. The three sodiums drift out ' +
+              'of the cell.' },
+    { id:'load-k',     w:1.1, label:'2 K⁺ bind',
+      caption:'That same pocket now fits potassium better. Two K⁺ step in from ' +
+              'outside.' },
+    { id:'occlude-k',  w:1.0, label:'phosphate leaves',
+      caption:'The phosphate falls off. Both doors shut again, with the ' +
+              'potassium locked in this time.' },
+    { id:'open-in',    w:0.9, label:'turns inward',
+      caption:'Without the phosphate the pump relaxes back to its first shape, ' +
+              'facing inside again.' },
+    { id:'release-k',  w:1.1, label:'2 K⁺ enter the cell',
+      caption:'The two potassiums are let go inside the cell. That whole trip ' +
+              'cost exactly one ATP.' },
+  ];
+
+  const TOTAL = PHASES.reduce((s, p) => s + p.w, 0);
+
+  /* Cumulative bounds, so at() can locate a time without scanning. */
+  const BOUNDS = (() => {
+    const b = []; let acc = 0;
+    for (const p of PHASES) { b.push([acc / TOTAL, (acc + p.w) / TOTAL, p]); acc += p.w; }
+    return b;
+  })();
+
+  function locate(t) {
+    const p = ((t % 1) + 1) % 1;
+    for (const [lo, hi, ph] of BOUNDS)
+      if (p >= lo && p < hi) return { phase: ph, k: (p - lo) / (hi - lo), p };
+    const last = BOUNDS[BOUNDS.length - 1];
+    return { phase: last[2], k: 1, p };
+  }
+
+  /* Gate values per phase. Written as explicit endpoints rather than derived,
+     because the ONE invariant worth protecting is easier to read than to
+     infer: no row here has both gates open, and no row interpolates between
+     two open states. */
+  function gatesOf(id, k) {
+    switch (id) {
+      case 'load-na':    return { top:0, bottom:1 };
+      case 'occlude-na': return { top:0, bottom:1 - smooth(k) };
+      case 'open-out':   return { top:smooth(k), bottom:0 };
+      case 'release-na': return { top:1, bottom:0 };
+      case 'load-k':     return { top:1, bottom:0 };
+      case 'occlude-k':  return { top:1 - smooth(k), bottom:0 };
+      case 'open-in':    return { top:0, bottom:smooth(k) };
+      case 'release-k':  return { top:0, bottom:1 };
+    }
+    throw new Error('pump: unknown phase ' + id);
+  }
+
+  /* Where the ions are. Each returns a list of { species, u, alpha }.
+     `alpha` is how present the ion is — ions fade in at a mouth rather than
+     appearing, because an ion that pops into existence at the pump's lip
+     reads as being MADE there. */
+  function cargoOf(id, k) {
+    const out = [];
+    const NA = 3, K = 2;
+    /* Ions are spread slightly around the site so three of them are three
+       objects rather than one lump. Purely cosmetic, and the spread is in
+       `u` so it stays proportional if the protein resizes. */
+    const spread = i => (i - 1) * 0.06;
+
+    const na = (u, a) => { for (let i = 0; i < NA; i++) out.push({ species:'NA', u:u + spread(i), alpha:a }); };
+    const k2 = (u, a) => { for (let i = 0; i < K;  i++) out.push({ species:'K',  u:u + (i - .5) * 0.09, alpha:a }); };
+
+    switch (id) {
+      /* Loading: in from the mouth to the site, fading up over the first
+         third so they arrive rather than materialise. */
+      case 'load-na':    na(mix(-1, 0, smooth(k)), clamp01(k * 3)); break;
+      case 'occlude-na': na(0, 1); break;
+      case 'open-out':   na(0, 1); break;
+      case 'release-na': na(mix(0, 1, smooth(k)), clamp01((1 - k) * 2.2)); break;
+      case 'load-k':     k2(mix(1, 0, smooth(k)), clamp01(k * 3)); break;
+      case 'occlude-k':  k2(0, 1); break;
+      case 'open-in':    k2(0, 1); break;
+      case 'release-k':  k2(mix(0, -1, smooth(k)), clamp01((1 - k) * 2.2)); break;
+    }
+    return out;
+  }
+
+  /* The phosphate. `transfer` runs 0→1 across occlude-na (ATP → pump) and
+     1→0 across occlude-k (pump → Pi, released). `on` is whether the pump is
+     carrying it, which is what makes the outward-facing half of the cycle
+     the PHOSPHORYLATED half — the causal link the lesson is making. */
+  function phosphoOf(id, k) {
+    switch (id) {
+      case 'load-na':    return { transfer:0, on:false, atp:'charged' };
+      case 'occlude-na': return { transfer:smooth(k), on:smooth(k) > .5, atp:smooth(k) > .5 ? 'discharged' : 'charged' };
+      case 'open-out':
+      case 'release-na':
+      case 'load-k':     return { transfer:1, on:true, atp:'discharged' };
+      case 'occlude-k':  return { transfer:1 - smooth(k), on:smooth(k) < .5, atp:'discharged' };
+      case 'open-in':
+      case 'release-k':  return { transfer:0, on:false, atp:'discharged' };
+    }
+    throw new Error('pump: unknown phase ' + id);
+  }
+
+  /* at(t) — t counts CYCLES, not seconds. A page divides by whatever period
+     it wants, which is also how a scrubber and an autoplay share one path. */
+  function at(t) {
+    const { phase, k, p } = locate(t);
+    return {
+      t: p, phase: phase.id, label: phase.label, caption: phase.caption,
+      gates: gatesOf(phase.id, k),
+      cargo: cargoOf(phase.id, k),
+      phosphate: phosphoOf(phase.id, k),
+      /* Whole ATP spent per completed cycle — the ledger the lesson closes
+         on, and the number that connects this page to glycolysis. */
+      atpPerCycle: 1, naPerCycle: 3, kPerCycle: 2,
+    };
+  }
+
+  global.Pump = { at, PHASES, TOTAL };
 })(typeof window !== 'undefined' ? window : globalThis);

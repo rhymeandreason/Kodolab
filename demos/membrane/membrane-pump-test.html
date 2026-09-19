@@ -62,7 +62,6 @@
 <script src="../kit/fit.js"></script>
 <script src="../kit/stagekit.js"></script>
 <script src="parts.js"></script>
-<script src="pump.js"></script>
 <script>
 'use strict';
 /* =============================================================================
@@ -81,7 +80,7 @@
  *  something the animation had, this is where to look for it.
  *
  *  NOT pump-test.html, its neighbour, which is a different thing — that one is a dev
- *  bench for membrane/pump.js with a scrubber and sliders, aimed at the cycle's numbers.
+ *  bench for the pump cycle with a scrubber and sliders, aimed at the cycle's numbers.
  *  This is the LESSON's rendering of it, aimed at what a student saw.
  *
  *  Everything below is lifted from membrane-lab.html unchanged apart from the
@@ -160,7 +159,7 @@ function pumpIon(species, i) {
   const p = pumpPool[species];
   while (p.length <= i) {
     const m = Parts.ion(species);
-    /* transparent ONCE, at build. membrane/pump.js fades cargo in and out at
+    /* transparent ONCE, at build. Pump fades cargo in and out at
        the mouths, and flipping material.transparent per frame recompiles the
        shader — a dropped frame exactly at a phase boundary, i.e. a flicker.
        depthWrite stays on: these are solid spheres that are briefly faint,
@@ -231,7 +230,7 @@ function tick(dt) {
 
   /* FAN THE CARGO ROUND THE AXIS, don't stack it up one.
 
-     membrane/pump.js spreads ions by 0.06-0.09 in normalised units — about 2 A —
+     Pump spreads ions by 0.06-0.09 in normalised units — about 2 A —
      because it works in units and has no idea how big an ion is drawn. At
      this page's exaggeration a K⁺ is 4.5 A across, so the site's two ions
      fused into one blob. The page knows the drawn radius, so the page is

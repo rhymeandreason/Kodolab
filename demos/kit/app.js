@@ -85,7 +85,6 @@
     'water/watersim.js',
     'water/watersim-mount.js',
     'membrane/parts.js',
-    'membrane/pump.js',
     'membrane/chemiosmosis.js',
     'membrane/sheet.js',
     'chemiosmosis/circuit.js',  // the kit both circuit components build on
@@ -151,13 +150,13 @@
      with molecule-lab.html, its last page. */
   const USES = {
     WaterSim:   ['water/watersim.js', 'water/watersim-mount.js'],
-    Membrane:   ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
+    Membrane:   ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js',
                  'membrane/chemiosmosis.js', 'membrane/sheet.js', 'membrane/membrane.js'],
     /* The two proton circuits share circuit.js and nothing of each other.
-       pump.js and membrane.js are for ElectronTransport's span:'cell', where
+       parts.js's Pump and membrane.js are for ElectronTransport's span:'cell', where
        the ATP is spent by a Na⁺/K⁺ pump in a plasma membrane stacked above
        the mitochondrion. */
-    ElectronTransport: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js', 'membrane/pump.js',
+    ElectronTransport: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js',
                  'membrane/chemiosmosis.js', 'membrane/sheet.js', 'chemiosmosis/circuit.js',
                  'chemiosmosis/electron-transport.js', 'membrane/membrane.js'],
     LightReactions: ['lib/mol-small.js', 'lib/atomkit.js', 'membrane/parts.js',

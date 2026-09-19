@@ -687,7 +687,7 @@
   const STACK = { INNER_Y: -85, PLASMA_Y: 150, OUTER_GAP: 115 };
   const CELL_CONTENTS = { inside: { water: 18, NA: 9, K: 12, A: 5 }, outside: { water: 16, NA: 14, K: 4, CL: 8 } };
   function stackMount(el, params) {
-    if (!global.Membrane) throw new Error("ElectronTransport: span:'cell' needs membrane/pump.js and membrane/membrane.js");
+    if (!global.Membrane) throw new Error("ElectronTransport: span:'cell' needs membrane/parts.js and membrane/membrane.js");
     const { INNER_Y, PLASMA_Y, OUTER_GAP } = STACK;
     const OUTER_Y = INNER_Y + OUTER_GAP, CYTOSOL = PLASMA_Y - OUTER_Y;
     let mito = null, cell = null, nb = null, last = null, vw = null;

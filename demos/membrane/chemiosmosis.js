@@ -1,7 +1,7 @@
 /* =============================================================================
  *  membrane/chemiosmosis.js — the proton circuit, as arithmetic.
  * =============================================================================
- *  NO THREE, NO DOM. Same split as pump.js: this file decides what the proton
+ *  NO THREE, NO DOM: this file decides what the proton
  *  gradient IS and what the synthase is allowed to do with it, membrane.js
  *  draws the result, and check-chemiosmosis.js runs this in node.
  *
@@ -150,7 +150,7 @@
   }
 
   /* =====================================================================
-     THE COMPLEX'S CYCLE, on pump.js's shape and for pump.js's reason.
+     THE COMPLEX'S CYCLE, on Pump's shape (membrane/parts.js) and for its reason.
      ---------------------------------------------------------------------
      A pump that snaps between an inward-open and an outward-open state has
      drawn a hole with a preference. The pump got a phase table so the
@@ -177,7 +177,7 @@
      site can hold and still read as two objects. Declared here, counted by
      the checker out of the cargo list rather than from this sentence.
 
-     Same coordinates as pump.js: `u` is −1 at the inner mouth, 0 at the
+     Same coordinates as Pump: `u` is −1 at the inner mouth, 0 at the
      site, +1 at the outer, and nothing here knows an ångström.
      ===================================================================== */
   const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -212,7 +212,7 @@
     const last = CPX_BOUNDS[CPX_BOUNDS.length - 1];
     return { phase: last[2], k: 1, p };
   }
-  /* Explicit endpoints rather than derived, for pump.js's reason: no row
+  /* Explicit endpoints rather than derived, for Pump's reason: no row
      here has both gates open, and no row interpolates between two open
      states. That is easier to read than to infer. */
   function cpxGatesOf(id, k) {
@@ -228,7 +228,7 @@
   }
   const CPX_PROTONS = 2;
   /* Spread in `u`, so two protons are two objects rather than one lump and
-     the spread stays proportional if the protein resizes. pump.js's trick.
+     the spread stays proportional if the protein resizes. Pump's trick.
      `n` is how many the site holds: the lumped complex's CPX_PROTONS, or one
      complex of the split chain's CHAIN[k].pumps. */
   const cpxH = (u, a, n) => { const out = [], s = n > 2 ? 0.07 : 0.10;

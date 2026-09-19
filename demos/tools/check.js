@@ -2,7 +2,7 @@
 /* =====================================================================
  *  check.js — run the offline checkers by hand.
  *
- *    node tools/check.js membrane/pump.js   the checkers that read that file
+ *    node tools/check.js membrane/chemiosmosis.js   the checkers that read that file
  *    node tools/check.js molecules          everything that loads the specs
  *    node tools/check.js deploy             before a deploy
  *    node tools/check.js                    all but the slow ones
@@ -31,7 +31,7 @@ const CHECKERS = [
   'tools/check-pages.js', 'tools/seo.js --check', 'ask/check-ask.js',
   'check-molecules.js', 'kit/check-kit.js', 'lobes/check-lobes.js', 'macromolecule/check-macromolecule.js',
   'molecule-builder/check-molecule-builder.js', 'dna/check-dna.js', 'massaction/check-massaction.js',
-  'membrane/check-pump.js', 'membrane/check-chemiosmosis.js', 'chemiosmosis/check-electron-transport.js',
+  'membrane/check-chemiosmosis.js', 'chemiosmosis/check-electron-transport.js',
   'chemiosmosis/check-light-reactions.js', 'cell/check-mitochondrion.js',
   'reaction/check-reaction.js', 'energy/check-energy.js', 'coupling/check-coupling.js',
   'tools/check-water.js', 'dna/check-codon.js', 'proteins/check-nucleic-acids.js', 'kit/check-nucleic.js',

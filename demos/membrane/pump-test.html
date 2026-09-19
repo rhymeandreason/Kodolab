@@ -32,7 +32,7 @@
     <h1 style="font-size:17px">the sodium pump, running</h1>
     <p class="note">
       Outside the cell is up. The cycle is
-      <code>membrane/pump.js</code>; the shape is <code>parts.js</code>.
+      <code>Pump</code>; the shape is <code>Parts</code>, both in <code>parts.js</code>.
       The gates come from the cycle — the picture cannot disagree with it.
     </p>
 
@@ -66,15 +66,14 @@
 <script src="../lib/molecules.js"></script>
 <script src="../lib/scene.js"></script>
 <script src="parts.js"></script>
-<script src="pump.js"></script>
 <script>
 'use strict';
 /* =====================================================================
  *  pump-test.html — does the mechanism read when it runs?
  *
  *  Three separate things meet here and each owns exactly one job:
- *    pump.js    what is happening, as a function of time
- *    parts.js   what that looks like
+ *    Pump       what is happening, as a function of time
+ *    Parts      what that looks like
  *    this page  the clock, the camera, and the words
  *
  *  Nothing on this page decides when a gate opens. If the caption and

@@ -391,7 +391,6 @@
 <script src="kit/molbox.js"></script>
 <script src="kit/stagekit.js"></script>
 <script src="membrane/parts.js"></script>
-<script src="membrane/pump.js"></script>
 <script>
 'use strict';
 /* =====================================================================
@@ -876,7 +875,7 @@ shellsBox.addEventListener('change', () => setShells(shellsBox.checked));
 pumpBox.addEventListener('change', () => {
   pumpOn = pumpBox.checked;
   /* A turn under way finishes: freezing mid-conformation leaves the pump
-     open at both ends, the one thing membrane/pump.js forbids. */
+     open at both ends, the one thing Pump (membrane/parts.js) forbids. */
 });
 
 voltBox.addEventListener('change', () => {
@@ -2214,7 +2213,7 @@ const STEPS = [
    A spend RECRUITS travellers out of the solution, the same objects the rest
    of the page walks around, so setting them down on the far side changes the
    counts and moves the voltage. A private cargo pool makes "3 Na⁺ out, 2 K⁺
-   in" an animation instead of a result. membrane/pump.js owns the
+   in" an animation instead of a result. Pump owns the
    choreography; this only decides WHICH ions ride. */
 let pumpT = 0, running = false, atpSpent = 0;
 /* THE PUMP RUNS ITSELF at rest, because a resting cell's does: here the
@@ -2241,7 +2240,7 @@ function recruit(kind, n) {
   return took;
 }
 
-/* Where a rider sits this frame. `u` is membrane/pump.js's coordinate, mapped
+/* Where a rider sits this frame. `u` is Pump's coordinate, mapped
    to the PROTEIN and not the frame: these ions arrive under their own steam,
    so the path ends at the two mouths. */
 function seatRider(t, c, i, n) {
@@ -2312,7 +2311,7 @@ function runPumpCycle(dt) {
 
   /* THE HANDOVER, ON THE CYCLE'S OWN BOUNDARY: sodium is outside by the time
      load-k begins, so it is set down there and the potassium called then —
-     one cargo at a time. Read off the phase name, so membrane/pump.js decides
+     one cargo at a time. Read off the phase name, so Pump decides
      when and this only decides who. */
   if (running && st.phase !== lastPhase) {
     if (st.phase === 'load-k') {
@@ -2322,7 +2321,7 @@ function runPumpCycle(dt) {
     lastPhase = st.phase;
   }
 
-  /* FAN THE CARGO ROUND THE AXIS: membrane/pump.js spreads ions in normalised
+  /* FAN THE CARGO ROUND THE AXIS: Pump spreads ions in normalised
      units and cannot know how big one is drawn, so at this exaggeration they
      fuse. Sideways, not further along the path — the site is a pocket. */
   const used = { NA:0, K:0 };
@@ -2487,7 +2486,7 @@ function paintVolt() {
     : '<span>ions crossed</span><b>' + chargeOut + '</b> · ' +
       'K⁺ ↑ ' + crossed.K + ' · Cl⁻ ↓ ' + crossed.CL);
 
-  /* THE VOLTAGE SITS INSIDE, the BOTTOM half — membrane/pump.js's u = −1 is
+  /* THE VOLTAGE SITS INSIDE, the BOTTOM half — Pump's u = −1 is
      the cytoplasmic mouth and every step follows it. THE PAIR ON THE LEFT, THE
      TALLY ON THE RIGHT: reading and reference are one measurement across the
      membrane, so they face each other, and the running total sits clear

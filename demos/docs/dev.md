@@ -29,7 +29,7 @@ A checker is `node <path>`, offline and dependency-free.
 **Checkers run by hand when a piece of work is done**, not on every commit, which is mostly interim work. There is no commit hook and no CI.
 
 ```bash
-node tools/check.js membrane/pump.js   # the checkers that read that file
+node tools/check.js membrane/chemiosmosis.js   # the checkers that read that file
 node tools/check.js molecules          # everything that loads the specs
 node tools/check.js deploy             # pages, seo, the tutor: before a deploy
 node tools/check.js                    # all but the slow two
