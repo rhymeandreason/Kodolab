@@ -36,19 +36,19 @@
     --c-co2: var(--text-dim);
     --c-nad: var(--energy-nad);
   }
-  /* The panel is the left half of the window, a page beside the scene rather
+  /* The panel is the right half of the window, a page beside the scene rather
      than glass over it: the chart wants a reading width, and the membrane
-     stack wants a frame nothing covers. The stage is the right half, so the
+     stack wants a frame nothing covers. The stage is the left half, so the
      mounts centre in it with no offset. */
   .lshell .lshell-panel {
-    left: 0; top: 0; bottom: 0; width: 50vw; max-width: none;
-    border-radius: 0; border: 0; border-right: 1px solid var(--border-hair);
+    left: auto; right: 0; top: 0; bottom: 0; width: 50vw; max-width: none;
+    border-radius: 0; border: 0; border-left: 1px solid var(--border-hair);
     background: var(--surface-page); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
   }
   .lshell .lshell-topbar { display: none; }
   .lshell .lshell-scroll { padding: 48px 40px 40vh; }
   .lshell-panel .eyebrow, .lshell-panel .title { text-align: center; }
-  .lshell .lshell-stage { left: 50vw; }
+  .lshell .lshell-stage { left: 0; right: 50vw; }
   .lshell-panel .body { font-family: var(--font-ui); }
   .lshell-panel .title { font-size: 26px; line-height: 1.1; letter-spacing: -.02em; }
 
@@ -105,8 +105,8 @@
   .etc-note { max-width: 46ch; margin: 0; font-size: var(--text-base); color: var(--text-muted); }
   .etc { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); text-align: center; }
   .etc[hidden] { display: none; }
-  .reset-chain { position: absolute; bottom: var(--space-5); z-index: 2; }
-  .reset-view { position: absolute; right: var(--space-5); bottom: var(--space-5); z-index: 2; }
+  .reset-chain { position: absolute; right: var(--space-5); bottom: var(--space-5); z-index: 2; }
+  .reset-view { position: absolute; bottom: var(--space-5); z-index: 2; }
   .etc-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
   .tally { display: flex; gap: var(--space-5); font-family: var(--font-ui); color: var(--text-muted); }
   .tally b { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--text-strong); font-variant-numeric: tabular-nums; }
@@ -173,6 +173,9 @@
 </style>
 </head>
 <body>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+</nav>
 
 <div id="synthmodal" class="modal" hidden>
   <div class="mback"></div>
@@ -512,10 +515,12 @@
     r.className = 'btn reset-chain'; r.type = 'button'; r.textContent = 'Reset';
     r.addEventListener('click', () => resetChain());
     chemi.box.canvas.parentElement.appendChild(r);
-    /* Clear of the panel, wherever the shell has put the scene's box. */
+    /* Clear of the panel, wherever the shell has put the scene's box: only a
+       panel that covers the box's left edge pushes the button in. */
     const place = () => {
-      const host = r.parentElement.getBoundingClientRect(), panel = shell.el.querySelector('.lshell-panel').getBoundingClientRect();
-      r.style.left = Math.max(0, panel.right - host.left) + 20 + 'px';
+      const host = b.parentElement.getBoundingClientRect(), panel = shell.el.querySelector('.lshell-panel').getBoundingClientRect();
+      const over = panel.left <= host.left ? Math.max(0, panel.right - host.left) : 0;
+      b.style.left = over + 20 + 'px';
     };
     place(); window.addEventListener('resize', place);
   }

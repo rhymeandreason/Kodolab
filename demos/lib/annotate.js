@@ -315,17 +315,19 @@ window.Annot = (function () {
        one side, say a readout column — calls note.setOffset and pays for the
        trig on that change alone. */
     /* ---- the keep-out ----
-       A stage is rarely all free: the lesson shell parks a panel down the
-       left, and a label whose dot sits behind it typesets straight under the
-       glass. The panel's rect comes from `opts.keepOut` or, failing that,
+       A stage is rarely all free: the lesson shell parks a panel down one
+       side, and a label whose dot sits behind it typesets straight under the
+       glass. Which side is read from the rect, not assumed: respiration-lab
+       puts its panel on the right, and a left-only rule flipped every label
+       into it. The panel's rect comes from `opts.keepOut` or, failing that,
        from the stage element itself — kit/lesson-shell.js hangs `keepOut` on
        its stage the same way it hangs `viewOffset`, so a component gets this
        without being handed anything. A note whose LABEL would land over the
        region flips it to the free side; the DOT DOES NOT MOVE, because the
        dot is the anchor and only the typesetting changes.
 
-       It is the label's box that has to clear, not the dot: a dot well right
-       of the panel still hangs its label leftward across it, which is what
+       It is the label's box that has to clear, not the dot: a dot well clear
+       of the panel still hangs its label back across it, which is what
        shipped looking fixed. So the width is measured — cached per note, and
        re-read only when the text or the side changes, because offsetWidth in
        the frame loop is a forced reflow per label per frame. */
@@ -335,7 +337,8 @@ window.Annot = (function () {
       const r = keepOutFn();
       if (!r) return null;
       const lr = layer.getBoundingClientRect();
-      return { left: r.left - lr.left, right: r.right - lr.left };
+      const left = r.left - lr.left, right = r.right - lr.left;
+      return { left, right, side: left >= lr.width / 2 ? 'right' : 'left' };
     }
 
     function applyOffset(el, off) {
@@ -734,11 +737,14 @@ window.Annot = (function () {
         if (ko) {
           if (n._lw == null) n._lw = n.label.offsetWidth;
           const dx = (n.offset[0] || 0) + (n.offset[0] < 0 ? -SIDE_GAP : SIDE_GAP);
-          const natural = x + dx - (dx < 0 ? n._lw : 0);       // where it wants to sit
-          const want = natural < ko.right + (n.flipped ? 8 : 0);
+          const natural = x + dx - (dx < 0 ? n._lw : 0);       // the label's own left edge
+          const want = ko.side === 'right'
+            ? natural + n._lw > ko.left - (n.flipped ? 8 : 0)
+            : natural < ko.right + (n.flipped ? 8 : 0);
           if (want !== n.flipped) {
             n.flipped = want;
-            applyOffset(n.el, want ? [Math.abs(n.offset[0] || 0) || 1, n.offset[1] || 0] : n.offset);
+            const free = (Math.abs(n.offset[0] || 0) || 1) * (ko.side === 'right' ? -1 : 1);
+            applyOffset(n.el, want ? [free, n.offset[1] || 0] : n.offset);
           }
         }
 
