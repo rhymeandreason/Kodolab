@@ -316,6 +316,11 @@
       },
     };
   }
-  for (const f of out.css) document.write(`<link rel="stylesheet" href="${url(f)}">`);
+  /* A sheet the page linked in its own head is left alone: this script runs
+     from the body, so re-writing it here would fetch it twice, and a page that
+     draws chrome above the script (a wordmark) needs it linked early or it
+     flashes unstyled. */
+  const linked = new Set([...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.getAttribute('href')));
+  for (const f of out.css) if (!linked.has(url(f)) && !linked.has(f)) document.write(`<link rel="stylesheet" href="${url(f)}">`);
   for (const f of out.scripts) document.write(`<scr` + `ipt src="${url(f)}"></scr` + `ipt>`);
 })();
