@@ -2587,6 +2587,8 @@ STEPS.forEach((s, i) => {
 function go(i) {
   cur = i;
   const s = STEPS[i];
+  // The step just reached, for the class dashboard (lib/track.js).
+  if (window.Track) Track.step(i, STEPS.length, s.tab);
   s.enter();
   setHTML(capEl, s.cap);
   [...stepsEl.children].forEach((b, j) =>

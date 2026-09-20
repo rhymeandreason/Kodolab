@@ -435,7 +435,12 @@ let intro=true;
 const steps=()=>STEPS[branch];
 const nSteps=()=>steps().length;
 const done=()=>progress[branch];
-const setDone=v=>{ progress[branch]=v; };
+const setDone=v=>{ progress[branch]=v;
+  // The step just reached, for the class dashboard (lib/track.js). A branch is
+  // its own run, so the name carries the branch: two tabs are not one ladder.
+  const st=steps()[v-1];
+  if(window.Track && st) Track.step(v-1, nSteps(), branchOf(branch).tab+' · '+(st.enz||st.hook));
+};
 const stepAt=i=>steps()[i];
 const branchOf=k=>BRANCHES.find(b=>b.key===k);
 

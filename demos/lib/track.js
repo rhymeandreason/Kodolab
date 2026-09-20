@@ -7,9 +7,15 @@
  *  page it was. Everything here posts to api/event.js by beacon and never
  *  waits on an answer, so its worst failure is a row that does not land.
  *
- *      Track.event('phase', { phase: 'mito', i: 2 });   // a page's hooks
+ *      Track.step(2, 5, 'Link step & Krebs');           // the step a page reached
  *      Track.event('complete');
  *      Track.event('quiz', { score, total, answers });
+ *
+ *  EVERY LESSON DRIVES ITS OWN STEPS — there is no one shell to hook, so the
+ *  page calls `step` from wherever it commits a step, handing the name the
+ *  student just read and how many there are. The dashboard prints that name
+ *  and sizes its pips from that count, so a lesson's steps are never a second
+ *  copy on the dashboard that a re-cut of the lesson silently falsifies.
  *
  *  A page guards the call (`window.Track && Track.event(...)`): this file is
  *  absent for most visitors, and a page must not depend on it.
@@ -68,6 +74,15 @@
   function event(kind, payload) {
     queue.push({ kind: kind, payload: payload || {} });
     if (kind !== 'beat') send();
+  }
+
+  /* `i` orders the steps and is what the furthest-reached roll-up sorts on;
+     `n` is how many the lesson has. A page with no name for a step gets a
+     number, which is worse for a teacher but still ordered. */
+  function step(i, n, title) {
+    i = Number(i) || 0;
+    var name = String(title == null ? '' : title).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    event('phase', { phase: (name || 'Step ' + (i + 1)).slice(0, 80), i: i, n: Number(n) || 0 });
   }
 
   /* ---- time on task ---- */
@@ -173,5 +188,5 @@
     .then(function (k) { if (k && k.name) className = k.name; })
     .catch(function () {});
 
-  window.Track = { event: event, settings: openCard, class: CLASS, visitor: VISITOR, page: PAGE };
+  window.Track = { event: event, step: step, settings: openCard, class: CLASS, visitor: VISITOR, page: PAGE };
 })();

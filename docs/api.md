@@ -49,7 +49,7 @@ A class in the teacher dashboard (`/teach`) has a lesson code, shown on its Less
 **What a lesson does to report progress.** Views and time come free from track.js. Progress, completion, quiz and survey are the page's to send, guarded because track.js is absent for most visitors:
 
 ```js
-window.Track && Track.event('phase',    { phase: 'mito', i: 2 });      // i orders the phases; the roster shows the furthest
+window.Track && Track.step(2, 5, 'Link step & Krebs');                   // step index, how many, what the student just read
 window.Track && Track.event('complete');                                // once
 window.Track && Track.event('quiz',     { score, total, answers: [{ q, answer, correct }] });
 window.Track && Track.event('survey',   { answers: { clear: 4, confusing: '…', again: 'Maybe' } });
@@ -59,7 +59,9 @@ The kinds are a closed set in `api/event.js`. The shapes above are what `/teach`
 
 **The tutor.** `ask/chat.js` sends the code as `X-Class-Code`, and `_keys.cohort` turns it into the cohort `class:<id>`, so a class's threads and its events join on the visitor id: the session dialog on `/teach` shows what that browser asked. `_access.js` uses `_keys.linkCohort` instead: a class code admits to a lesson and its tutor, never to the builder.
 
-**Reading it.** `sessionsOf` in `api/teacher.js` is the roll-up: one row per browser, on-screen seconds summed from beats, the furthest phase, completion, latest quiz and survey, questions asked. CSV from the same tab. **New code** on a class cuts the old link off and keeps every row.
+**Every lesson drives its own steps** — there is no one shell to hook, so each page calls `Track.step` where it commits a step. It sends the step's own name and the lesson's own length, so the dashboard holds no second copy of either.
+
+**Reading it.** `sessionsOf` in `api/teacher.js` is the roll-up: one row per browser, on-screen seconds summed from beats, **progress per page** with completion, latest quiz and survey, questions asked. Progress is per page because one furthest step across every lesson a student opened is not a fact about any of them; the dashboard shows one lesson and reads its own key. CSV from the same tab. **New code** on a class cuts the old link off and keeps every row.
 
 **Deploying it.** The schema adds `classes.code`, `events` and `class_sessions`: `node demos/tools/db.js init` once against the database, as `docs/deploy.md` says. Applied to production on 2026-09-17.
 

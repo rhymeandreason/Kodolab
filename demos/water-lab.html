@@ -628,6 +628,9 @@ let cur=-1;
 const stepR=[8,18,20,24,20];
 function applyStep(n){
   S.step=n;
+  // The step just reached, for the class dashboard (lib/track.js). Named, not
+  // numbered, for the same reason the buttons below are.
+  if(window.Track) Track.step(n, stepMeta.length, stepMeta[n] && stepMeta[n].tab);
   if(n===0){ while(sim.mols.length>1) sim.remove();
     // the surviving molecule may have drifted while part of a larger cluster on
     // other steps — recentre it so it rotates in place instead of off-axis

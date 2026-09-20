@@ -123,8 +123,22 @@
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
   // The same words /teach uses for respiration-lab.html's phases and survey ids.
-  const PHASES = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
-  const N_PHASES = Object.keys(PHASES).length;
+  /* Rows written before a lesson reported a step's NAME sent a key instead;
+     a name that is not a key here is already a name. */
+  const LEGACY = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
+  /* This table is every page a browser touched, not one lesson (that is
+     /teach's job), so the step shown is the furthest reached on any of them.
+     api/teacher.js keys progress by page; these flatten it back. */
+  function far(r) {
+    let best = null;
+    for (const page of Object.keys(r.progress || {})) {
+      const p = r.progress[page];
+      if (p && (!best || (p.i || 0) > (best.i || 0))) best = p;
+    }
+    return best;
+  }
+  const stepName = p => esc(LEGACY[p.phase] || p.phase || '');
+  const finished = r => !!(r.completed || []).length;
   const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?' };
   const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
   const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
@@ -169,8 +183,8 @@
       <td class="dim">${esc(ago(r.first_seen))}</td>
       <td class="dim">${esc(ago(r.last_seen))}</td>
       <td class="num">${mins(r.active_s || 0)}</td>
-      <td>${r.phase ? `${esc(PHASES[r.phase] || r.phase)} <span class="dim">${(r.phase_i || 0) + 1}/${N_PHASES}</span>` : '—'}</td>
-      <td>${r.complete ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td>${(p => p ? `${stepName(p)} <span class="dim">${(p.i || 0) + 1}/${Math.max(Number(p.n) || 0, (p.i || 0) + 1)}</span>` : '—')(far(r))}</td>
+      <td>${finished(r) ? '<i class="ph-bold ph-check"></i>' : ''}</td>
       <td class="num">${r.quiz ? score(r.quiz) : ''}</td>
       <td>${r.survey ? '<i class="ph-bold ph-check"></i>' : ''}</td>
       <td class="num">${r.questions || 0}</td></tr>`).join('');
@@ -191,8 +205,9 @@
     $('sessionName').textContent = (r.name ? r.name + ' · ' : '') + shortId(r.visitor_id);
     $('sessionClass').textContent = `${current.class.teacher} · ${current.class.name}`;
     const parts = [];
-    parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', r.phase ? esc(PHASES[r.phase] || r.phase) : '—')
-      + dl('Completed', r.complete ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
+    const p = far(r);
+    parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', p ? stepName(p) : '—')
+      + dl('Completed', finished(r) ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
     if (r.quiz) {
       const s = score(r.quiz);
       parts.push(`<h3 class="cap">Quiz${s ? ' · ' + s : ''}</h3>`

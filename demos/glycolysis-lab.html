@@ -1161,6 +1161,8 @@ function runStep(){
 
   const land=respawn=>()=>{
     done=to; reviewing=true; carrierGone.clear();
+    // The step just reached, for the class dashboard (lib/track.js).
+    if(window.Track) Track.step(to-1, nSteps, st.enz||st.hook);
     if(respawn) renderLanes(to);
     // renderLanes gives the names back; the branch that skips it must not.
     else { platesOff=false; platesEl.classList.remove('mute'); }

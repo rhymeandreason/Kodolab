@@ -643,6 +643,8 @@ let current = null;
 function show(part){
   if(current === part) return;
   current = part;
+  // The part just reached, for the class dashboard (lib/track.js).
+  if(window.Track) Track.step(PARTS.indexOf(part), PARTS.length, part.title);
   const to = frameFor(part);
   paint(part, to.u === 1);
   const from = { box:{ ...VIEW.box }, u:VIEW.u };

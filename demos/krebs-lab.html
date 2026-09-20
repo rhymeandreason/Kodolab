@@ -1237,6 +1237,8 @@ function runStep(){
 
   const land=respawn=>()=>{
     done=to; reviewing=!autoplay; carrierGone.clear();
+    // The step just reached, for the class dashboard (lib/track.js).
+    if(window.Track) Track.step(to-1, nSteps, st.enz||st.hook);
     if(respawn){ const keys=laneKeys(st);
       renderKeys(keys, keys.length>lanes.length
         ? partingFrom(lanes.map(l=>l.g.position.x)) : null); }

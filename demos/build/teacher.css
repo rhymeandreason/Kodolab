@@ -261,6 +261,9 @@ code.bid { font-size: .82rem; letter-spacing: .04em; color: var(--text-dim); fon
 .pips { display: inline-flex; gap: 3px; }
 .pips span { width: 14px; height: 6px; border-radius: 3px; background: var(--border-hair); }
 .pips span.on { background: var(--accent); }
+/* A long lesson counts rather than drawing ten pips: the column is narrower
+   than the step name beside it. */
+.pips-n { font-variant-numeric: tabular-nums; color: var(--text-dim); white-space: nowrap; }
 .pname { font-size: .85rem; color: var(--text-dim); white-space: nowrap; }
 
 /* ---- one session ---- */

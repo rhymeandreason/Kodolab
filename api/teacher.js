@@ -183,8 +183,13 @@ module.exports = async function handler(req, res) {
 /* One row per browser that opened a lesson on the class code. Each column is
  * the roll-up the dashboard shows, read from the events the browser sent:
  * `active_s` sums the heartbeats, so it is time the tab was VISIBLE and not
- * time it was open; `phase` is the furthest stage by its order `i`; quiz and
- * survey are the latest submission. `questions` joins the tutor's threads on
+ * time it was open; quiz and survey are the latest submission.
+ *
+ * PROGRESS IS PER PAGE, and `completed` is the pages that finished. One
+ * furthest step across every lesson a student opened is not a fact about any
+ * of them: the dashboard shows one lesson at a time and reads its own key out
+ * of the map. Each entry is {phase, i, n} as lib/track.js's `step` sent it,
+ * so the step's name and the lesson's length both come from the lesson. `questions` joins the tutor's threads on
  * the same visitor id under this class's cohort, which is the join the two
  * anonymous logs were built to allow only here, for the class's own teacher. */
 async function sessionsOf(db, cid) {
@@ -192,13 +197,16 @@ async function sessionsOf(db, cid) {
     SELECT s.visitor_id, s.name, s.first_seen, s.last_seen,
       coalesce((SELECT sum((e.payload->>'s')::int) FROM events e
                 WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'beat'), 0)::int AS active_s,
-      (SELECT e.payload->>'phase' FROM events e
-       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'phase'
-       ORDER BY (e.payload->>'i')::int DESC NULLS LAST, e.id DESC LIMIT 1) AS phase,
-      (SELECT max((e.payload->>'i')::int) FROM events e
-       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'phase') AS phase_i,
-      EXISTS (SELECT 1 FROM events e
-              WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'complete') AS complete,
+      (SELECT jsonb_object_agg(p.page, jsonb_build_object('phase', p.phase, 'i', p.i, 'n', p.n)) FROM (
+         SELECT e.page,
+           (array_agg(e.payload->>'phase' ORDER BY (e.payload->>'i')::int DESC NULLS LAST, e.id DESC))[1] AS phase,
+           max((e.payload->>'i')::int) AS i,
+           max((e.payload->>'n')::int) AS n
+         FROM events e
+         WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'phase'
+         GROUP BY e.page) p) AS progress,
+      (SELECT array_agg(DISTINCT e.page) FROM events e
+       WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'complete') AS completed,
       (SELECT e.payload FROM events e
        WHERE e.class_id = s.class_id AND e.visitor_id = s.visitor_id AND e.kind = 'quiz' ORDER BY e.id DESC LIMIT 1) AS quiz,
       (SELECT e.payload FROM events e

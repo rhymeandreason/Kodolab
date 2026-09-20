@@ -384,6 +384,8 @@
       if (opts.onStep) opts.onStep(step, i, ctx);
       if (step.onEnter) step.onEnter(ctx);
       document.dispatchEvent(new CustomEvent('lessonshell:step', { detail: { i, n: steps.length } }));
+      /* Guarded: lib/track.js loads only for a browser holding a class code. */
+      if (window.Track) Track.step(i, steps.length, step.title);
     }
     els.next.addEventListener('click', () => goTo(current + 1));
     els.back.addEventListener('click', () => goTo(current - 1));

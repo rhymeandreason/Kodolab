@@ -644,13 +644,17 @@
   const ORDER = ['cell', 'fly', 'mito', 'chemi', 'etc'];
   const SAID  = { cell: 'glycolysis in the cytoplasm', fly: 'pyruvate flying to a mitochondrion', mito: 'the link step and Krebs cycle inside the mitochondrion',
                   chemi: 'the carriers arriving at the inner membrane', etc: 'the electron transport chain, driven by hand' };
+  /* The same phases said for a teacher, which is what the class dashboard
+     prints. SAID is for the tutor and reads mid-sentence; these are headings. */
+  const NAMED = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs',
+                  chemi: 'Carriers', etc: 'Electron transport' };
   let phase = null;
   function go(p, snap) {
     if (p === phase) return;
     phase = p;
     PHASES[p](snap);
     for (const z of chart.querySelectorAll('.zone')) z.classList.toggle('is-here', z.matches(ZONE[p]));
-    if (window.Track) Track.event('phase', { phase: p, i: ORDER.indexOf(p) });
+    if (window.Track) Track.step(ORDER.indexOf(p), ORDER.length, NAMED[p]);
   }
 
   /* ---- three buttons, then the scroll ----
@@ -881,6 +885,15 @@
     const answers = [];
     const survey = {};
     let i = 0;
+    /* THE QUIZ IS SENT WHEN THE QUIZ ENDS, not when the survey does. A student
+       who answered five questions and closed the survey had taken the quiz,
+       and the score went out with the modal. */
+    let quizSent = false;
+    function sendQuiz() {
+      if (quizSent) return;
+      quizSent = true;
+      if (window.Track) Track.event('quiz', { score: answers.filter(a => a && a.correct).length, total: QUIZ.length, answers });
+    }
     const foot = (n, label, on) => `<div class="foot"><span class="n">${n}</span><span class="spacer"></span><button class="cta cta--sm" type="button" data-next ${on ? '' : 'disabled'}>${label}</button></div>`;
     function ask() {
       const item = QUIZ[i];
@@ -900,7 +913,12 @@
         quizBody.querySelector('.why').textContent = item.why;
         quizBody.querySelector('[data-next]').disabled = false;
       });
-      quizBody.querySelector('[data-next]').addEventListener('click', () => { i++; i < QUIZ.length ? ask() : askSurvey(0); });
+      quizBody.querySelector('[data-next]').addEventListener('click', () => {
+        i++;
+        if (i < QUIZ.length) return ask();
+        sendQuiz();
+        askSurvey(0);
+      });
     }
     function askSurvey(j) {
       const item = SURVEY[j];
@@ -926,10 +944,8 @@
     }
     function finish() {
       const score = answers.filter(a => a && a.correct).length;
-      if (window.Track) {
-        Track.event('quiz', { score, total: QUIZ.length, answers });
-        Track.event('survey', { answers: survey });
-      }
+      sendQuiz();
+      if (window.Track) Track.event('survey', { answers: survey });
       quizKick.textContent = 'Done';
       quizTitle.textContent = score === QUIZ.length ? 'All five.' : score >= 3 ? 'Most of it.' : 'Worth another pass.';
       quizBody.innerHTML = `<p class="score">${score} / ${QUIZ.length}</p><p class="why">${score === QUIZ.length ? 'Thanks for the answers, too.' : 'Scroll back to the stage you missed, or ask the tutor. Thanks for the answers.'}</p>`

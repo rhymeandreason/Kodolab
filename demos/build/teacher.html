@@ -118,8 +118,8 @@
           </div>
           <div class="emptystate" id="noSessions" hidden>
             <i class="ph-bold ph-users-three" aria-hidden="true"></i>
-            <h4>No one has opened the link yet</h4>
-            <p>Share the class link above. Each student's browser shows up here the moment the lesson loads.</p>
+            <h4 id="noSessionsHead">No one has opened the link yet</h4>
+            <p id="noSessionsSay">Share the class link above. Each student's browser shows up here the moment the lesson loads.</p>
           </div>
         </section>
 
@@ -389,9 +389,10 @@
     const l = LESSONS.find(l => l.key === lessonKey) || {};
     return `${location.origin}${fileForm ? l.file : l.url}?class=${current.class.code}`;
   };
-  // The phases respiration-lab.html reports, in its scroll order, said for a teacher.
-  const PHASES = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
-  const N_PHASES = Object.keys(PHASES).length;
+  /* Rows written before lessons reported a step's NAME: respiration-lab.html
+     sent a key. It sends the name now (its NAMED map), so this is only the old
+     rows, and a name that is not a key here is already a name. */
+  const LEGACY = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
   // The survey's ids, as respiration-lab.html's SURVEY names them.
   const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?' };
   const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
@@ -404,17 +405,52 @@
   const pageName = p => TITLE[p] || p;
 
   const YES = '<i class="ph-bold ph-check-circle yes" aria-hidden="true"></i><span class="vh">yes</span>';
-  // One pip per phase, filled through the one reached.
+
+  /* ONE LESSON AT A TIME. A browser reports a page, and one lesson answers to
+     several spellings of it: the short URL when deployed, the file on the dev
+     server, with or without .html. Everything below reads the picked lesson's
+     rows out of the per-page map api/teacher.js returns, so a student's
+     furthest step in Glycolysis is never shown against the Membrane. */
+  const keysOf = l => new Set([l.url, l.file, l.file && l.file.replace(/\.html$/, ''),
+    l.file && l.file.replace(/^\/demos/, '').replace(/\.html$/, '')].filter(Boolean));
+  let keyCache = null, keyCacheFor = null;
+  function lessonKeys() {
+    if (keyCacheFor !== lessonKey) { keyCacheFor = lessonKey; keyCache = keysOf(LESSONS.find(l => l.key === lessonKey) || {}); }
+    return keyCache;
+  }
+  const onLesson = r => (r.pages || []).some(p => lessonKeys().has(p));
+  const finished = r => (r.completed || []).some(p => lessonKeys().has(p));
+  // The furthest step reported for this lesson, over every spelling of its page.
+  function progressOf(r) {
+    const K = lessonKeys();
+    let best = null;
+    for (const page of Object.keys(r.progress || {})) {
+      const p = r.progress[page];
+      if (K.has(page) && p && (!best || (p.i || 0) > (best.i || 0))) best = p;
+    }
+    return best;
+  }
+  const stepName = p => esc(LEGACY[p.phase] || p.phase || '');
+  // One pip per step, filled through the one reached. A long lesson counts
+  // instead: ten pips is a column wider than the name beside it.
   function progress(r) {
-    if (!r.phase) return '<span class="dim">Not started</span>';
-    const at = r.complete ? N_PHASES : (r.phase_i || 0) + 1, name = esc(PHASES[r.phase] || r.phase);
-    const pips = Array.from({ length: N_PHASES }, (_, k) => `<span class="${k < at ? 'on' : ''}"></span>`).join('');
-    return `<span class="prog"><span class="pips" role="img" aria-label="${at} of ${N_PHASES}">${pips}</span><span class="pname">${name}</span></span>`;
+    const p = progressOf(r);
+    if (!p) return onLesson(r)
+      ? '<span class="dim" title="This lesson does not report its steps">&mdash;</span>'
+      : '<span class="dim">Not started</span>';
+    const n = Math.max(Number(p.n) || 0, (p.i || 0) + 1);
+    const at = finished(r) ? n : (p.i || 0) + 1;
+    const meter = n > 6
+      ? `<span class="pips-n">${at} / ${n}</span>`
+      : `<span class="pips" role="img" aria-label="${at} of ${n}">`
+        + Array.from({ length: n }, (_, k) => `<span class="${k < at ? 'on' : ''}"></span>`).join('') + '</span>';
+    return `<span class="prog">${meter}<span class="pname">${stepName(p)}</span></span>`;
   }
 
-  // The class at a glance, over every session the table lists.
+  // The class at a glance, over every session the table lists — which is the
+  // picked lesson's, so "Finished 1 of 5" counts students who could finish it.
   function paintStats(rows) {
-    const done = rows.filter(r => r.complete).length;
+    const done = rows.filter(finished).length;
     const quizzes = rows.map(r => r.quiz && Number(r.quiz.score) / Number(r.quiz.total)).filter(Number.isFinite);
     const avg = quizzes.length ? Math.round(100 * quizzes.reduce((a, b) => a + b, 0) / quizzes.length) + '%' : '—';
     const asked = rows.reduce((a, r) => a + (r.questions || 0), 0);
@@ -430,11 +466,20 @@
 
   function paintSessions() {
     const c = current;
-    const rows = c.sessions || [];
+    // Everyone who opened THIS lesson. A class roster across every lesson made
+    // each tile an average of things that never happened together.
+    const rows = (c.sessions || []).filter(onLesson);
     $('classLink').value = c.class.code ? classLink() : '';
     $('classCode').textContent = c.class.code || '';
     $('sessionCount').textContent = rows.length || '';
     $('noSessions').hidden = !!rows.length;
+    // The roster is one lesson's, so an empty one means something different in
+    // a class that has been somewhere else.
+    const elsewhere = !rows.length && (c.sessions || []).length;
+    $('noSessionsHead').textContent = elsewhere ? 'No one has opened this lesson yet' : 'No one has opened the link yet';
+    $('noSessionsSay').textContent = elsewhere
+      ? 'This class has been on other lessons. Send the link above to put them on this one.'
+      : "Share the class link above. Each student's browser shows up here the moment the lesson loads.";
     $('sessionsWrap').hidden = !rows.length;
     $('stats').hidden = !rows.length;
     paintStats(rows);
@@ -446,7 +491,7 @@
       <td class="dim">${esc(ago(r.last_seen))}</td>
       <td class="num">${mins(r.active_s || 0)}</td>
       <td>${progress(r)}</td>
-      <td class="ctr">${r.complete ? YES : ''}</td>
+      <td class="ctr">${finished(r) ? YES : ''}</td>
       <td class="num">${r.quiz ? score(r.quiz) : ''}</td>
       <td class="ctr">${r.survey ? YES : ''}</td>
       <td class="num">${r.questions || 0}</td></tr>`).join('');
@@ -474,8 +519,9 @@
     $('sessionName').textContent = (r.name ? r.name + ' · ' : '') + shortId(r.visitor_id);
     $('sessionClass').textContent = current.class.name;
     const parts = [];
-    parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', r.phase ? esc(PHASES[r.phase] || r.phase) : '—')
-      + dl('Completed', r.complete ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
+    const p = progressOf(r);
+    parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', p ? stepName(p) : '—')
+      + dl('Completed', finished(r) ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
     if (r.quiz) {
       const s = score(r.quiz);
       parts.push(`<h3 class="bodyhead">Quiz${s ? ' · ' + s : ''}</h3>`
@@ -512,8 +558,8 @@
       return `"${s.replace(/"/g, '""')}"`;
     };
     const head = ['name', 'browser', 'lessons', 'first_seen', 'last_seen', 'on_screen_s', 'phase', 'phase_i', 'complete', 'quiz_score', 'quiz_total', 'survey', 'questions'];
-    const lines = [head.join(',')].concat(rows.map(r => [r.name, shortId(r.visitor_id), (r.pages || []).join(' '), r.first_seen, r.last_seen, r.active_s, r.phase, r.phase_i,
-      r.complete, r.quiz && r.quiz.score, r.quiz && r.quiz.total, r.survey ? JSON.stringify(r.survey.answers) : '', r.questions].map(cell).join(',')));
+    const lines = [head.join(',')].concat(rows.map(r => [r.name, shortId(r.visitor_id), (r.pages || []).join(' '), r.first_seen, r.last_seen, r.active_s, (progressOf(r) || {}).phase, (progressOf(r) || {}).i,
+      finished(r), r.quiz && r.quiz.score, r.quiz && r.quiz.total, r.survey ? JSON.stringify(r.survey.answers) : '', r.questions].map(cell).join(',')));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
     a.download = `${current.class.name.replace(/[^\w-]+/g, '_')}-sessions.csv`;
