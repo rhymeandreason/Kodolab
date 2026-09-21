@@ -378,6 +378,7 @@
        the same body the pump seats. */
     const ROT = CHEM.rotor(ring);
     const ATP_MAX = 12, ATP_SNAP = 0.35, ATP_SPEED = 52, ATP_FADE = 0.8;
+    const ATP_EMERGE = 20, ATP_LINGER = 0.9, ATP_ARC = 6;   // speed out of the head; s held beside it; legs in the turn under it
     /* Seconds a delivered ATP waits at a busy receiver: about one pump turn. */
     const ATP_WAIT = 14;
     /* ATP the receiver cannot take yet drifts in the compartment it arrived
@@ -475,8 +476,21 @@
       if (!P.showATP || !SYNTH.group.visible || atpChips.filter(c => c.kind === 'ATP').length >= ATP_MAX) return;
       const g = buildNucleotide(3);
       root.add(g);
+      /* OUT OF THE HEAD'S FREE FLANK, away from the peripheral stalk and
+         from where ADP and Pᵢ come in: it starts inside the head, where a β
+         site made it, eases out, and holds a beat beside it. A way out on the far side goes round under the head,
+         not through it. */
+      const d = pumpDir(), sx = synthX || 0, cy = -d * (F1_BASE + F1_H * 0.5);
+      const route = atpRoute(), legs = [{ x: sx - F1_R - 10, y: cy, speed: ATP_EMERGE, pause: ATP_LINGER }];
+      if (route[0].x > sx) {
+        const rx = F1_R + 10, ry = F1_H * 0.5 + 16;
+        for (let i = 1; i <= ATP_ARC; i++) {
+          const a = Math.PI * 0.8 * i / ATP_ARC;   // short of the far flank, where ADP and Pᵢ come in
+          legs.push({ x: sx - Math.cos(a) * rx, y: cy - d * Math.sin(a) * ry });
+        }
+      }
       atpChips.push({ obj:g, kind:'ATP', snap:true, t:0, phase:Math.random() * 6.28, fade:1,
-                      x:(synthX || 0) - F1_R * 0.8, y:-pumpDir() * (F1_BASE + 4), legs:atpRoute(), leg:0 });
+                      x:sx - F1_R * 0.55, y:cy, legs:legs.concat(route), leg:0 });
     }
     /* A lone phosphate: the bead the pump took off, named Pᵢ once free. */
     function buildPi() {
@@ -565,11 +579,13 @@
           }
         }
         /* WALKED, not integrated: the route is the claim. */
+        else if (c.linger > 0) c.linger -= dt;
         else if (!c.parked) {
         const dx = leg.x - c.x, dy = leg.y - c.y, dist = Math.hypot(dx, dy);
-        const move = ATP_SPEED * dt;
+        const move = (leg.speed || ATP_SPEED) * dt;
         if (dist <= move) {
           c.x = leg.x; c.y = leg.y;
+          if (leg.pause && !c.done) c.linger = leg.pause;
           /* ARRIVING IS AN EVENT, BEING THERE IS NOT. */
           if (!c.done) {
             c.done = true;
