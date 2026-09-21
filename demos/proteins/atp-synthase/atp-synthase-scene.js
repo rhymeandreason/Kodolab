@@ -89,6 +89,7 @@ const HOP = 0.9;                    // s, out of a half-channel
 const APPROACH = 3.2;               // s, a proton's wander in from beside the ring
 const DROP = 45;                    // Å above the entry mouth a hurried proton starts
 const REACH = 130;                  // Å out from subunit a a proton starts
+const AWAY = 280, AWAY_S = 7;       // Å and s a proton drifts from the exit mouth: past the canvas edge, so it is never faded
 const WOBBLE = 14;                  // Å of sideways drift on the way in
 const DRIFT = 150;                  // Å a nucleotide travels from its site: out toward the canvas edge
 const OUT_S = 5.2, IN_S = 5, IN_DELAY = 0.6;
@@ -317,7 +318,13 @@ function attach(box){
     /* The ring finished a step: every rider moved one c-subunit. */
     function stepped(c){
       for(const x of live) if(x.kind === 'H' && x.phase === 'ride' && ++x.steps >= c - 1){
+        /* Out of the exit mouth, then off into the F1 side: along the
+           membrane past subunit a and away from it, clear of the head. */
+        const R = () => Math.random() * 2 - 1;
         x.phase = 'out'; x.clock = 0; x.start = x.m.position.clone();
+        x.end = geo.to.clone().addScaledVector(geo.u, AWAY * (0.8 + 0.4 * Math.random()))
+          .addScaledVector(geo.A, AWAY * (0.35 + 0.3 * Math.random())).addScaledVector(geo.w, 60 * R());
+        x.waves = [0, 1].map(() => ({ f: 1.5 + 1.5 * Math.random(), ph: Math.random() * 6.28 }));
       }
     }
     /* Rotor angle that puts a Glu58 exactly at the entry. */
@@ -361,8 +368,15 @@ function attach(box){
           } else {
             const k = Math.min(1, x.clock / HOP);
             x.m.position.copy(x.start).lerp(geo.to, ease(k));
-            x.m.scale.setScalar(k < .7 ? 1 : 1 - (k - .7) / .3 + 1e-3);
-            done = k >= 1;
+            if(k >= 1){
+              /* The wobble grows from nothing at the mouth, as the way in dies out on arrival. */
+              const d = Math.min(1, (x.clock - HOP) / AWAY_S), e = d * (0.35 + 0.65 * d), grow = Math.min(1, d * 4);
+              const [a, b] = x.waves;
+              x.m.position.lerp(x.end, e)
+                .addScaledVector(geo.w, WOBBLE * grow * Math.sin(6.28 * a.f * d + a.ph))
+                .addScaledVector(geo.A, WOBBLE * grow * Math.sin(6.28 * b.f * d + b.ph));
+              done = d >= 1;
+            }
           }
         } else {
           const k = Math.max(0, Math.min(1, (x.clock - x.delay) / x.dur));
