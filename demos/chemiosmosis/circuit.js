@@ -328,13 +328,20 @@
       const sp = Math.hypot(f.vx, f.vy) || 1;
       f.vx *= FLOAT_SPEED / sp; f.vy *= FLOAT_SPEED / sp;
       c.x += f.vx * dt; c.y += f.vy * dt; c.z += Math.sin(c.t * 0.7 + c.phase) * 3 * dt;
-      if (c.x < b.x0 || c.x > b.x1) { f.vx = -f.vx; c.x = Math.max(b.x0, Math.min(b.x1, c.x)); }
-      if (c.y < b.y0 || c.y > b.y1) { f.vy = -f.vy; c.y = Math.max(b.y0, Math.min(b.y1, c.y)); }
+      /* Steered back, never clamped: one that starts outside the band, at
+         the door it came out of, glides in rather than jumping. */
+      if (c.x < b.x0) f.vx = Math.abs(f.vx); else if (c.x > b.x1) f.vx = -Math.abs(f.vx);
+      if (c.y < b.y0) f.vy = Math.abs(f.vy); else if (c.y > b.y1) f.vy = -Math.abs(f.vy);
     }
+    /* Whether an ATP is already waiting at the receiver or out and on its
+       way there. Like a carrier's queue: only the next one goes to the
+       machine, and the rest wait where they are. */
+    const claimed = self => atpChips.some(c => c !== self && !c.dying && (c.waiting != null ||
+      (!c.floating && c.left && c.legs[c.legs.length - 1].land)));
     /* The receiver has no ATP waiting and none on its way: the oldest
        floater sets off for it. */
     function recall() {
-      if (!P.atpLand || atpChips.some(c => !c.dying && (c.waiting != null || (!c.floating && c.legs[c.legs.length - 1].land)))) return;
+      if (!P.atpLand || claimed(null)) return;
       const fl = atpChips.filter(c => c.floating && !c.dying);
       if (!fl.length) return;
       const c = fl.reduce((a, b) => (a.floating.since < b.floating.since ? a : b));
@@ -397,7 +404,12 @@
           if (!c.done) {
             c.done = true;
             if (leg.on) leg.on();
-            if (leg.out && !c.left) { c.left = true; eng.emit('atpOut', ROT.atp); }
+            if (leg.out && !c.left) {
+              c.left = true; eng.emit('atpOut', ROT.atp);
+              /* Out of the last door with another already bound for the
+                 receiver: this one floats from here. */
+              if (P.atpLand && c.legs[c.legs.length - 1].land && c.leg < c.legs.length - 1 && claimed(c)) float(c);
+            }
             let taken = false;
             if (leg.land) { taken = !!(P.atpLand && P.atpLand()); if (!c.delivered) { c.delivered = true; eng.emit('atpDelivered', ROT.atp); } }
             if (taken) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); continue; }
@@ -406,7 +418,7 @@
             if (leg.land && P.atpLand) { if (!atpChips.some(d => d.waiting != null)) c.waiting = 0; else float(c); }
             else if (leg.fade) c.dying = true;
           }
-          if (c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
+          if (!c.floating && c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
         } else { c.x += dx / dist * move; c.y += dy / dist * move; }
         }
         if (c.waiting != null && !c.dying) {
