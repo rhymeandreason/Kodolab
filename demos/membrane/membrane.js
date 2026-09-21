@@ -294,7 +294,7 @@
           holes.push([pr.CL.x, CL_HOLE]); PORES.push({ x:pr.CL.x, R:CL_R, lumen:8.0, kind:'CL' }); }
         NACHAN.group.visible = !!pr.NA;
         if (pr.NA) { NACHAN.group.position.x = pr.NA.x; NACHAN.setGates(1, 1);
-          holes.push([pr.NA.x, NA_HOLE]); PORES.push({ x:pr.NA.x, R:NA_R, lumen:8.4, kind:'NA' }); }
+          holes.push([pr.NA.x, NA_HOLE]); PORES.push({ x:pr.NA.x, R:NA_R, lumen:8.4, kind:'NA', capture:pr.NA.capture, pull:pr.NA.pull }); }
         AQP.group.visible = !!pr.AQP;
         if (pr.AQP) { AQP.group.position.x = pr.AQP.x; AQP.setGates(1, 1);
           holes.push([pr.AQP.x, AQP_HOLE]); PORES.push({ x:pr.AQP.x, R:AQP_R, lumen:8.4, kind:'water' }); }

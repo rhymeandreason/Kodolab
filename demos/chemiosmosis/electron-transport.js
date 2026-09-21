@@ -685,7 +685,7 @@
      perhaps a hundred times too thin. Which side is which, and which way each
      machine carries, is to scale with itself. */
   const STACK = { INNER_Y: -85, PLASMA_Y: 150, OUTER_GAP: 115 };
-  const CELL_CONTENTS = { inside: { water: 18, NA: 9, K: 12, A: 5 }, outside: { water: 16, NA: 14, K: 4, CL: 8 } };
+  const CELL_CONTENTS = { inside: { water: 18, NA: 24, K: 18, A: 5 }, outside: { water: 16, NA: 48, K: 12, CL: 8 } };
   /* The pump and its two leaks run on Na⁺ and K⁺ on both sides, so a page
      that leaves one unnamed gets the default: an ATP is only ever spent on a
      pump with ions to carry. */
@@ -725,8 +725,11 @@
        ATP at the pump standing in it: 'pump.approach', just off the nucleotide site on the
        cytosolic face, not 'pump', which is the outside of the cell. */
     cell = global.Membrane.create(THREE, gCell, box.camera, {
-      proteins: { pump: { x: -36 }, K: { x: 36 }, NA: { x: 108 } }, contents: cellContentsOf(params.cellContents),
-      potential: 'nernst', pumpAuto: false, extent: 240, bounds: { up: 78, down: CYTOSOL - 8 },
+      /* The leak's mouth is widened so it refills what the pump throws out: a
+         cell's pump and leaks run at the same rate, and one drawn channel
+         stands for many. */
+      proteins: { pump: { x: -36 }, K: { x: 36 }, NA: { x: 108, capture: 24, pull: 3 } }, contents: cellContentsOf(params.cellContents),
+      potential: 'nernst', pumpAuto: false, turnSeconds: 6, extent: 240, bounds: { up: 78, down: CYTOSOL - 8 },
     });
     const mitoOpts = Object.assign({}, params, { span: 'mitochondrion', extent: 240, bounds: { down: 95 },
       curve: params.curve != null ? params.curve : 12, atpTo: worldOf(cell, gCell, 'pump.approach'),
