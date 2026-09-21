@@ -301,6 +301,8 @@
        the same body the pump seats. */
     const ROT = CHEM.rotor(ring);
     const ATP_MAX = 8, ATP_SNAP = 0.35, ATP_SPEED = 52, ATP_FADE = 0.8;
+    /* Seconds a delivered ATP waits at a busy receiver: about one pump turn. */
+    const ATP_WAIT = 14;
     const atpChips = [];
     const buildNucleotide = eng.nucleotide;
     const _atp = new THREE.Vector3();
@@ -360,10 +362,17 @@
             let taken = false;
             if (leg.land) { taken = !!(P.atpLand && P.atpLand()); eng.emit('atpDelivered', ROT.atp); }
             if (taken) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); continue; }
-            if (leg.fade) c.dying = true;
+            /* A busy receiver: ONE ATP waits at it and retries, so the next
+               turn is the one the student watched arrive. */
+            if (leg.land && P.atpLand && !atpChips.some(d => d.waiting != null)) c.waiting = 0;
+            else if (leg.fade) c.dying = true;
           }
           if (c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
         } else { c.x += dx / dist * move; c.y += dy / dist * move; }
+        if (c.waiting != null && !c.dying) {
+          if (P.atpLand()) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); continue; }
+          if ((c.waiting += dt) > ATP_WAIT) c.dying = true;
+        }
         seat(o, c.x, c.y, 0);
         o.rotation.z = Math.sin(c.t * 1.1 + c.phase) * 0.16;
         const k = Math.min(1, c.t / ATP_SNAP);

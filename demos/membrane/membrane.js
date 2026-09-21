@@ -129,7 +129,7 @@
       PUMP.setGates(g.top, g.bottom);
       DOCK.ang = Math.atan2(DOCK.y - ON_P.y, DOCK.x - ON_P.x);
       const TERM = off(DOCK, 0, -NUC.GAP, DOCK.ang);
-      return { DOCK, TERM, ON_P, APP: off(DOCK, 26), ADP_OFF: off(DOCK, 15, 4, DOCK.ang),
+      return { DOCK, TERM, ON_P, APP: off(DOCK, 26), HAND: off(DOCK, 9), ADP_OFF: off(DOCK, 15, 4, DOCK.ang),
                PI_OFF: off(ON_P, 12), PI_END: off(ON_P, 20) };
     }
     const lerp3 = (o, a, b, t) => o.position.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
@@ -168,7 +168,7 @@
       piObj.visible = !whole && id !== 'load-na' && id !== 'release-k';
       if (id === 'load-na') {
         const t = Math.min(1, k / 0.6), e = t * t * (3 - 2 * t);
-        lerp3(atpObj, G.APP, G.DOCK, e);
+        lerp3(atpObj, handed ? G.HAND : G.APP, G.DOCK, e);
         fadeTo(atpObj, handed ? 1 : Math.min(1, k * 4));
         /* A handed ATP arrives level with its label up, as the caller walked
            it, and turns onto the flank as it seats. */
@@ -313,6 +313,13 @@
       state: () => ({ atpSpent, pumpRunning:running, pumpPhase:phase, pumpT }),
       reset() { pumpT = 0; running = false; atpSpent = 0; lastPhase = ''; cargo.NA.length = 0; cargo.K.length = 0; dropTokens(); },
       clear() { cargo.NA.length = 0; cargo.K.length = 0; },
+      /* A pump turns on Na⁺ from inside and K⁺ from outside; a page that
+         leaves a kind unnamed still gets enough of it for the pump to run. */
+      withContents(c) {
+        if (!P.proteins.pump) return c;
+        const side = (s, k, n) => Object.assign({}, (c && c[s]) || {}, (c && c[s] && k in c[s]) ? {} : { [k]: n });
+        return { inside: side('inside', 'NA', 9), outside: side('outside', 'K', 4) };
+      },
       api: { spend },
       anchors: {
         'channel.K':  () => { const x = eng.poreX('K');  return x == null ? null : at(x, H_() * 0.95); },
@@ -337,7 +344,7 @@
           if (!P.proteins.pump) return null;
           if (!G) G = sites();
           PUMP.group.updateMatrix();
-          return _dock.set(G.APP.x, G.APP.y, 0).applyMatrix4(PUMP.group.matrix);
+          return _dock.set(G.HAND.x, G.HAND.y, 0).applyMatrix4(PUMP.group.matrix);
         },
         'pump.head': () => {
           if (!P.proteins.pump) return null;

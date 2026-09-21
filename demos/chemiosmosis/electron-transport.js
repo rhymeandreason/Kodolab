@@ -686,6 +686,16 @@
      machine carries, is to scale with itself. */
   const STACK = { INNER_Y: -85, PLASMA_Y: 150, OUTER_GAP: 115 };
   const CELL_CONTENTS = { inside: { water: 18, NA: 9, K: 12, A: 5 }, outside: { water: 16, NA: 14, K: 4, CL: 8 } };
+  /* The pump and its two leaks run on Na⁺ and K⁺ on both sides, so a page
+     that leaves one unnamed gets the default: an ATP is only ever spent on a
+     pump with ions to carry. */
+  function cellContentsOf(c) {
+    if (!c) return CELL_CONTENTS;
+    const side = s => { const o = Object.assign({}, c[s] || {});
+      for (const k of ['NA', 'K']) if (!(k in o)) o[k] = CELL_CONTENTS[s][k];
+      return o; };
+    return { inside: side('inside'), outside: side('outside') };
+  }
   function stackMount(el, params) {
     if (!global.Membrane) throw new Error("ElectronTransport: span:'cell' needs membrane/parts.js and membrane/membrane.js");
     const { INNER_Y, PLASMA_Y, OUTER_GAP } = STACK;
@@ -715,7 +725,7 @@
        ATP at the pump standing in it: 'pump.approach', just off the nucleotide site on the
        cytosolic face, not 'pump', which is the outside of the cell. */
     cell = global.Membrane.create(THREE, gCell, box.camera, {
-      proteins: { pump: { x: -36 }, K: { x: 36 } }, contents: params.cellContents || CELL_CONTENTS,
+      proteins: { pump: { x: -36 }, K: { x: 36 }, NA: { x: 108 } }, contents: cellContentsOf(params.cellContents),
       potential: 'nernst', pumpAuto: false, extent: 240, bounds: { up: 78, down: CYTOSOL - 8 },
     });
     const mitoOpts = Object.assign({}, params, { span: 'mitochondrion', extent: 240, bounds: { down: 95 },
@@ -755,7 +765,7 @@
        `cell.outside`. */
     const anchors = {}, library = {};
     for (const k of Object.keys(mito.anchors)) { anchors[k] = worldOf(mito, gMito, k); library[k] = mito.library[k]; }
-    for (const k of ['pump', 'pump.atp', 'pump.head', 'channel.K', 'NA', 'K']) { anchors[k] = worldOf(cell, gCell, k); library[k] = cell.library[k]; }
+    for (const k of ['pump', 'pump.atp', 'pump.head', 'channel.K', 'channel.NA', 'NA', 'K']) { anchors[k] = worldOf(cell, gCell, k); library[k] = cell.library[k]; }
     anchors['cell.outside'] = worldOf(cell, gCell, 'outside'); library['cell.outside'] = cell.library.outside;
     nb = global.Notebook ? global.Notebook.create({ box, anchors, library }) : null;
     vw.frame();
@@ -783,7 +793,7 @@
       },
       feed: mito.feed, spend: cell.spend,
       add: mito.add, scatter: mito.scatter, clear: mito.clear,
-      reset() { spent = 0; mito.reset(); cell.reset(); cell.set({ contents: params.cellContents || CELL_CONTENTS }); },
+      reset() { spent = 0; mito.reset(); cell.reset(); cell.set({ contents: cellContentsOf(params.cellContents) }); },
       start: box.start, stop: box.stop, pump: box.pump,
       destroy() { if (nb) nb.clear(); vw.destroy(); box.destroy(); },
     };
