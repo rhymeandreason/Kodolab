@@ -101,7 +101,7 @@
     const NUC = eng.nucleotide;
     const TOKENS = new THREE.Group();
     PUMP.group.add(TOKENS);
-    let side = -1, docked = false, atpObj = null, piObj = null, G = null;
+    let side = -1, handed = false, atpObj = null, piObj = null, G = null;
     /* The outline's point at depth yy into the cytosol, on the +x flank,
        with its outward normal. ON THE FLANK, not the underside: with the
        cutaway on, the underside at z = 0 is only a cut edge, and a token
@@ -167,9 +167,16 @@
       atpObj.visible = id === 'load-na' || id === 'occlude-na' || id === 'open-out';
       piObj.visible = !whole && id !== 'load-na' && id !== 'release-k';
       if (id === 'load-na') {
-        const t = docked ? 1 : Math.min(1, k / 0.6);
-        lerp3(atpObj, G.APP, G.DOCK, t * t * (3 - 2 * t));
-        fadeTo(atpObj, docked ? 1 : Math.min(1, k * 4));
+        const t = Math.min(1, k / 0.6), e = t * t * (3 - 2 * t);
+        lerp3(atpObj, G.APP, G.DOCK, e);
+        fadeTo(atpObj, handed ? 1 : Math.min(1, k * 4));
+        /* A handed ATP arrives level with its label up, as the caller walked
+           it, and turns onto the flank as it seats. */
+        if (handed) {
+          const up = NUC.R_BEAD + 5.2;
+          atpObj.rotation.z = G.DOCK.ang * e;
+          atpObj.userData.tag.position.y = up + (side * up - up) * e;
+        }
         retag(atpObj, 'ATP', 6.4);
       } else if (id === 'occlude-na') {
         lerp3(atpObj, G.DOCK, G.DOCK, 0); fadeTo(atpObj, 1);
@@ -223,16 +230,17 @@
       cargo[kind].length = 0;
     }
     /* Paid up front: a real pump phosphorylates itself at the START. */
-    function startTurn(fromDock) { pumpT = 0; running = true; lastPhase = ''; atpSpent++; docked = !!fromDock; newTokens(); eng.emit('turn', atpSpent); }
+    function startTurn(fromCaller) { pumpT = 0; running = true; lastPhase = ''; atpSpent++; handed = !!fromCaller; newTokens(); eng.emit('turn', atpSpent); }
     function finishCycle() { eng.chargeOut += 1; eng.mV = Math.max(-95, P.mvPerIon * eng.chargeOut); }
     /* One press buys one turn. False if a turn is under way or nothing to carry.
-       The ATP comes up out of the cytosol to dock, unless `docked`: a caller
-       that walked its own ATP to 'pump.atp' hands it over already bound. */
+       The ATP fades up out of the cytosol to dock, unless `handed`: a caller
+       that walked its own ATP to 'pump.approach' hands it over there, and
+       the pump draws the last stretch onto the flank. */
     function spend(opts) {
       if (!P.proteins.pump || running) return false;
       cargo.NA = recruit('NA', 3);
       if (!cargo.NA.length) return false;
-      startTurn(opts && opts.docked);
+      startTurn(opts && opts.handed);
       return true;
     }
     function runPumpCycle(dt) {
@@ -322,6 +330,14 @@
           if (!G) G = sites();
           PUMP.group.updateMatrix();
           return _dock.set(G.DOCK.x, G.DOCK.y, 0).applyMatrix4(PUMP.group.matrix);
+        },
+        /* Where a caller walking its own ATP in hands it over: off the
+           flank along its normal, so the pump draws the seating. */
+        'pump.approach': () => {
+          if (!P.proteins.pump) return null;
+          if (!G) G = sites();
+          PUMP.group.updateMatrix();
+          return _dock.set(G.APP.x, G.APP.y, 0).applyMatrix4(PUMP.group.matrix);
         },
         'pump.head': () => {
           if (!P.proteins.pump) return null;

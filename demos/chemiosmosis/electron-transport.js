@@ -712,15 +712,15 @@
       return p ? group.localToWorld(_w.copy(p)) : null;
     };
     /* The plasma membrane is built first so the mitochondrion can aim its
-       ATP at the pump standing in it: 'pump.atp', the nucleotide site on the
+       ATP at the pump standing in it: 'pump.approach', just off the nucleotide site on the
        cytosolic face, not 'pump', which is the outside of the cell. */
     cell = global.Membrane.create(THREE, gCell, box.camera, {
       proteins: { pump: { x: -36 }, K: { x: 36 } }, contents: params.cellContents || CELL_CONTENTS,
       potential: 'nernst', pumpAuto: false, extent: 240, bounds: { up: 78, down: CYTOSOL - 8 },
     });
     const mitoOpts = Object.assign({}, params, { span: 'mitochondrion', extent: 240, bounds: { down: 95 },
-      curve: params.curve != null ? params.curve : 12, atpTo: worldOf(cell, gCell, 'pump.atp'),
-      atpLand: () => { if (!cell.spend({ docked: true })) return false; spent++; emit('spent', spent); return true; } });
+      curve: params.curve != null ? params.curve : 12, atpTo: worldOf(cell, gCell, 'pump.approach'),
+      atpLand: () => { if (!cell.spend({ handed: true })) return false; spent++; emit('spent', spent); return true; } });
     delete mitoOpts.cam; delete mitoOpts.stage; delete mitoOpts.viewOffset;
     mito = create(THREE, gMito, box.camera, mitoOpts);
     if (params.cut !== false) { mito.set({ cut: true }); cell.set({ cut: true }); }
