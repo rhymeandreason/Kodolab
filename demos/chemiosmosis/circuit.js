@@ -68,6 +68,9 @@
     /* Called on arrival; true means the receiver took the molecule and now
        draws it, so this one goes at once instead of fading over the top. */
     atpLand: null,
+    /* True when atpLand would take one now. With it, the next ATP waits
+       back along its path and walks in only when it will be taken. */
+    atpReady: null,
   };
   /* How close the chain may pack. Tuned against the default camera. */
   const CHAIN_GAP = 50;
@@ -307,14 +310,14 @@
        in, and the oldest goes back when the receiver is free. Past
        FLOAT_MAX the oldest is spent elsewhere, which is where most of a
        cell's ATP goes. */
-    const FLOAT_MAX = 6, FLOAT_SPEED = 9;
+    const FLOAT_MAX = 6, FLOAT_SPEED = 9, QUEUE_BACK = 30;
     function float(c) {
       const land = c.legs[c.legs.length - 1];
       const outI = c.legs.findIndex(l => l.out);
       const from = c.legs[outI >= 0 && outI < c.legs.length - 1 ? outI : Math.max(0, c.legs.length - 2)];
       const d = Math.sign(land.y - from.y) || 1, X = P.spread == null ? P.reach * 0.55 : P.spread;
-      c.waiting = null; c.done = true;
-      c.home = land;
+      c.waiting = null; c.hold = false; c.done = true;
+      c.home = land; c.queue = c.legs.find(l => l.hold);
       c.box = { x0: -X, x1: X, y0: Math.min(from.y + d * 10, land.y - d * 6), y1: Math.max(from.y + d * 10, land.y - d * 6) };
       const a = rnd(0, 6.28);
       c.floating = { vx: Math.cos(a) * FLOAT_SPEED, vy: Math.sin(a) * FLOAT_SPEED, since: c.t };
@@ -345,7 +348,7 @@
       const fl = atpChips.filter(c => c.floating && !c.dying);
       if (!fl.length) return;
       const c = fl.reduce((a, b) => (a.floating.since < b.floating.since ? a : b));
-      c.floating = null; c.legs = [c.home]; c.leg = 0; c.done = false;
+      c.floating = null; c.legs = c.queue ? [c.queue, c.home] : [c.home]; c.leg = 0; c.done = false;
     }
     const atpChips = [];
     const buildNucleotide = eng.nucleotide;
@@ -364,6 +367,12 @@
           if (BOW) {
             const th = Math.atan2(_atp.x, _atp.y + BOW), rad = Math.hypot(_atp.x, _atp.y + BOW);
             _atp.set(th * BOW, rad - BOW, 0);
+          }
+          /* The queue spot: back along the way in, clear of the one bound
+             at the receiver and of its label. */
+          if (P.atpReady && legs.length) {
+            const f = legs[legs.length - 1], L = Math.hypot(_atp.x - f.x, _atp.y - f.y) || 1, back = Math.min(QUEUE_BACK, L * 0.6);
+            legs.push({ x:_atp.x - (_atp.x - f.x) / L * back, y:_atp.y - (_atp.y - f.y) / L * back, hold:true });
           }
           legs.push({ x:_atp.x, y:_atp.y, fade:true, land:true, out:!legs.some(l => l.out) });
           return legs;
@@ -404,6 +413,7 @@
           if (!c.done) {
             c.done = true;
             if (leg.on) leg.on();
+            if (leg.hold && !P.atpReady()) { c.hold = true; c.waiting = 0; }
             if (leg.out && !c.left) {
               c.left = true; eng.emit('atpOut', ROT.atp);
               /* Out of the last door with another already bound for the
@@ -418,10 +428,13 @@
             if (leg.land && P.atpLand) { if (!atpChips.some(d => d.waiting != null)) c.waiting = 0; else float(c); }
             else if (leg.fade) c.dying = true;
           }
-          if (!c.floating && c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
+          if (!c.floating && !c.hold && c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
         } else { c.x += dx / dist * move; c.y += dy / dist * move; }
         }
-        if (c.waiting != null && !c.dying) {
+        if (c.hold && !c.dying) {
+          if (P.atpReady()) { c.hold = false; c.waiting = null; c.leg++; c.done = false; }
+          else if ((c.waiting += dt) > ATP_WAIT) float(c);
+        } else if (c.waiting != null && !c.dying) {
           if (P.atpLand()) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); continue; }
           if ((c.waiting += dt) > ATP_WAIT) float(c);
         }

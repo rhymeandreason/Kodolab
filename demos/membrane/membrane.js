@@ -243,6 +243,11 @@
       startTurn(opts && opts.handed);
       return true;
     }
+    /* Whether spend() would start a turn now, without starting one. */
+    function canSpend() {
+      return !!P.proteins.pump && !running &&
+        travellers.filter(t => t.kind === 'NA' && !t.aboard && Math.sign(t.y) === PUMP_LOAD.NA).length >= 3;
+    }
     function runPumpCycle(dt) {
       if (!P.proteins.pump) return null;
       if (running) {
@@ -320,7 +325,7 @@
         const side = (s, k, n) => Object.assign({}, (c && c[s]) || {}, (c && c[s] && k in c[s]) ? {} : { [k]: n });
         return { inside: side('inside', 'NA', 9), outside: side('outside', 'K', 4) };
       },
-      api: { spend },
+      api: { spend, canSpend },
       anchors: {
         'channel.K':  () => { const x = eng.poreX('K');  return x == null ? null : at(x, H_() * 0.95); },
         'channel.CL': () => { const x = eng.poreX('CL'); return x == null ? null : at(x, H_() * 0.95); },

@@ -730,6 +730,7 @@
     });
     const mitoOpts = Object.assign({}, params, { span: 'mitochondrion', extent: 240, bounds: { down: 95 },
       curve: params.curve != null ? params.curve : 12, atpTo: worldOf(cell, gCell, 'pump.approach'),
+      atpReady: () => cell.canSpend(),
       atpLand: () => { if (!cell.spend({ handed: true })) return false; spent++; emit('spent', spent); return true; } });
     delete mitoOpts.cam; delete mitoOpts.stage; delete mitoOpts.viewOffset;
     mito = create(THREE, gMito, box.camera, mitoOpts);
