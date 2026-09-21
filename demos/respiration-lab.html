@@ -73,10 +73,10 @@
     letter-spacing: var(--cap-track); text-transform: uppercase;
   }
   .chart .ttl    { font-size: 15px; letter-spacing: .04em; fill: var(--text-strong) }
-  .chart .tiny   { font-size: var(--cap-sm); fill: var(--text-muted) }
+  .chart .tiny   { font-size: 12px; letter-spacing: .1em; fill: var(--text-muted) }
   .chart .zone-l { font-size: 18px; fill: var(--text-dim) }
   .chart .big    { font-family: var(--font-display); font-weight: 500; font-size: 36px; letter-spacing: -.02em }
-  .chart .sub    { font-size: 14px; fill: var(--text-dim) }
+  .chart .sub    { font-size: 15px; fill: var(--text-dim) }
   .chart .box  { fill: var(--surface-card); stroke: var(--border-hair); stroke-width: 1; filter: url(#lift) }
   .chart .rule { stroke: var(--border-hair); stroke-width: 1 }
   .chart .sub .n { fill: var(--text-strong); font-weight: 600; font-variant-numeric: tabular-nums }
@@ -110,10 +110,10 @@
   .etc-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
   .tally { display: flex; gap: var(--space-5); font-family: var(--font-ui); color: var(--text-muted); }
   .tally b { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--text-strong); font-variant-numeric: tabular-nums; }
-  .step-mol { width: 280px; height: auto; }
+  .step-mol { width: min(440px, 80%); height: auto; }
   .lshell .lshell-panel .legend { opacity: 0; transition: opacity .5s ease; }
   .lshell .lshell-panel .legend.is-in { opacity: 1; }
-  .step-mol-cap { margin-top: -12px; }
+  :root .step .step-mol-cap { margin-top: -16px; font-size: 16px; color: var(--text-strong); }
   .step-mol-cap[hidden] { display: none; }
   .step-mol-cap:not([hidden]) + .cta { margin-top: var(--space-6); }
   .step.is-done { opacity: 0; pointer-events: none }
@@ -426,7 +426,7 @@
       <image href="media/molecules/nadhSkel.webp" x="96" y="580" width="180" height="126"></image>
       <image href="media/molecules/fadh2.webp" x="300" y="580" width="180" height="126"></image>
       <text class="ttl" x="186" y="720" text-anchor="middle">10 NADH</text>
-      <text class="tiny" x="186" y="738" text-anchor="middle">*2 enter as FADH₂</text>
+      <text class="tiny" x="186" y="738" text-anchor="middle">*2 from glycolysis</text>
       <text class="ttl" x="390" y="720" text-anchor="middle">2 FADH₂</text>
       <line class="flow" x1="288" y1="728" x2="288" y2="764" marker-end="url(#m)"></line>
 
@@ -725,7 +725,7 @@
      over to the scroll, which reads the same marks the buttons did. */
   const cta = document.createElement('div');
   cta.className = 'step';
-  cta.innerHTML = '<img class="step-mol" src="media/molecules/glucose.webp" alt="A glucose molecule"><span class="step-mol-cap cap-sm">1 glucose</span><button class="cta" type="button"></button>';
+  cta.innerHTML = '<img class="step-mol" src="media/molecules/glucose.webp" alt="A glucose molecule"><span class="step-mol-cap cap-lg">1 glucose</span><button class="cta" type="button"></button>';
   const figure = chart.parentElement;
 
   /* See-more badges on chart cards, each opening that step's lesson (or `open`). A card
@@ -757,7 +757,26 @@
       .reduce((a, b) => (b.getBoundingClientRect().top < a.getBoundingClientRect().top ? b : a));
     cta.style.top = Math.round(first.getBoundingClientRect().top - figure.getBoundingClientRect().top + (step ? 10 : 0)) + 'px';
   };
+  /* The chart is laid out whole but drawn in by stage, so until the last step
+     the figure ends just under the next button: nothing to scroll to below it.
+     Set on click, before the stage's scroll, so the scroll is not cut short.
+     The shell's tall bottom padding, there so the last section can reach the
+     top, shrinks to what reveal()'s scroll for the stage just drawn needs. */
+  const clampFigure = () => {
+    if (step >= STEPS.length) { figure.style.height = figure.style.overflowY = scroller.style.paddingBottom = ''; return; }
+    scroller.style.paddingBottom = '0px';
+    const first = [...chart.querySelectorAll('.s' + (step + 1))].reduce((a, b) => Math.min(a, b.getBoundingClientRect().top), Infinity);
+    const top = first - chart.getBoundingClientRect().top;
+    figure.style.height = Math.round(top + (step ? 10 + btn.offsetHeight : cta.offsetHeight) + 48) + 'px';
+    figure.style.overflowY = 'clip';
+    if (step > 1) {
+      const want = Math.min(...[...chart.querySelectorAll('.s' + step)].map(topOf)) - 72;
+      const short = want + scroller.clientHeight - scroller.scrollHeight;
+      if (short > 0) scroller.style.paddingBottom = Math.ceil(short) + 'px';
+    }
+  };
   window.addEventListener('resize', placeCta);
+  window.addEventListener('resize', () => clampFigure());
   const btn = cta.querySelector('button');
   const STEPS = [
     { label: 'Enter the cell', hold: 2200, run() { go('fly'); reveal(1); } },
@@ -785,12 +804,17 @@
   };
   btn.addEventListener('click', () => {
     const s = STEPS[step++];
+    clampFigure();
     scroller.querySelector('.legend').classList.add('is-in');
     btn.disabled = true;
     s.run();
     setTimeout(() => { btn.disabled = false; arm(); }, s.hold);
   });
   arm();
+  clampFigure();
+  if (document.fonts) document.fonts.ready.then(clampFigure);
+  chart.querySelector('image').addEventListener('load', clampFigure);
+  cta.querySelector('img').addEventListener('load', clampFigure);
 
   /* ---- the chain, driven by hand ----
      The supply is off when the chain arrives, so nothing moves until the
