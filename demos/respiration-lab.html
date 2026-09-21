@@ -147,6 +147,7 @@
 <style>
   /* The quiz door, at the panel's foot, shown once the chain is done. */
   .quiz-open[hidden] { display: none; }
+  .quiz-open.is-done { background: var(--accent); border-color: var(--accent); color: var(--text-inverse); }
   .panel-foot { position: absolute; right: 24px; bottom: 16px; z-index: 5; display: flex; align-items: center; gap: 10px; }
   #classslot:empty { display: none; }
 
@@ -829,7 +830,7 @@
     const doneEl = etc.querySelector('.etc-done');
     if (doneEl.hidden === done) doneEl.hidden = !done;
     if (done && !completed) {
-      completed = true; quizBtn.hidden = false;
+      completed = true; quizBtn.hidden = fbBtn.hidden = false;
       try { localStorage.setItem(DONE_KEY, '1'); } catch (e) { /* the button lasts this load */ }
       if (window.Track) Track.event('complete');
     }
@@ -891,8 +892,9 @@
   setTimeout(() => { for (const n of ['mito', 'chemi']) if (n !== onStage) { SCENES[n].state(); SCENES[n].stop(); } }, 1500);
 
   /* ---- the quiz ----
-     Five questions, one at a time, each answered before the next and told why;
-     then three survey questions; then the score. Reported to the class log as
+     Five questions, one at a time, each answered before the next and told why,
+     then the score. App feedback is its own door on the same modal. Both are
+     reported to the class log as
      `quiz` and `survey` when there is one (lib/track.js), else it is just a
      quiz. Every answer here is a claim the chart makes; keep them in step. */
   const QUIZ = [
@@ -930,28 +932,26 @@
   const quizKick = document.getElementById('quizkick');
   let quizModal = null;
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  function runQuiz() {
+  /* What this browser has done, so the buttons and a reopened modal can say so. */
+  const QUIZ_KEY = 'ss.respiration.quiz', FEEDBACK_KEY = 'ss.respiration.feedback';
+  const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* lasts this load */ } };
+  const nOf = (k, of) => `<span class="n">${k} of ${of}</span>`;
+  const markDots = marks => `<span class="dots" aria-hidden="true">${marks.map(m => `<i class="${m === true ? 'right' : m === false ? 'wrong' : m === 'now' ? 'now' : ''}"></i>`).join('')}</span>`;
+  function runQuiz(mode) {
+    if (mode === 'feedback') return askSurvey(0, { ...(load(FEEDBACK_KEY) || {}) });
+    const prev = load(QUIZ_KEY);
+    if (prev) return result(prev);
     const answers = [];
-    const survey = {};
     let i = 0;
-    /* THE QUIZ IS SENT WHEN THE QUIZ ENDS, not when the survey does. A student
-       who answered five questions and closed the survey had taken the quiz,
-       and the score went out with the modal. */
-    let quizSent = false;
-    function sendQuiz() {
-      if (quizSent) return;
-      quizSent = true;
-      if (window.Track) Track.event('quiz', { score: answers.filter(a => a && a.correct).length, total: QUIZ.length, answers });
-    }
     const foot = (n, label, on) => `<div class="foot">${n}<span class="spacer"></span><button class="cta cta--sm" type="button" data-next ${on ? '' : 'disabled'}>${label}</button></div>`;
-    const count = (k, of) => `<span class="n">${k} of ${of}</span>`;
-    const dots = () => `<span class="dots" aria-hidden="true">${QUIZ.map((_, k) => `<i class="${answers[k] ? (answers[k].correct ? 'right' : 'wrong') : k === i ? 'now' : ''}"></i>`).join('')}</span>`;
+    const dots = () => markDots(QUIZ.map((_, k) => answers[k] ? answers[k].correct : k === i ? 'now' : null));
     function ask() {
       const item = QUIZ[i];
       quizKick.textContent = 'Quick check';
       quizTitle.textContent = item.q;
       quizBody.innerHTML = `<div class="main"><div class="choices">${item.choices.map((c, k) => `<button type="button" data-k="${k}" aria-pressed="false"><span class="txt">${esc(c)}</span><span class="tag"></span></button>`).join('')}</div>`
-        + `<p class="verdict" role="status" hidden></p></div>` + foot(dots() + count(i + 1, QUIZ.length), i + 1 < QUIZ.length ? 'Next' : 'Continue', false);
+        + `<p class="verdict" role="status" hidden></p></div>` + foot(dots() + nOf(i + 1, QUIZ.length), i + 1 < QUIZ.length ? 'Next' : 'See score', false);
       quizBody.querySelector('.choices').addEventListener('click', ev => {
         const b = ev.target.closest('button[data-k]'); if (!b || answers[i]) return;
         const k = Number(b.dataset.k), correct = k === item.a;
@@ -974,65 +974,97 @@
       quizBody.querySelector('[data-next]').addEventListener('click', () => {
         i++;
         if (i < QUIZ.length) return ask();
-        sendQuiz();
-        askSurvey(0);
+        const score = answers.filter(a => a.correct).length;
+        if (window.Track) Track.event('quiz', { score, total: QUIZ.length, answers });
+        const r = { score, total: QUIZ.length, marks: answers.map(a => a.correct) };
+        save(QUIZ_KEY, r);
+        paintButtons();
+        result(r);
       });
-    }
-    function askSurvey(j) {
-      const page = SURVEY[j];
-      quizKick.textContent = 'App Feedback';
-      quizTitle.textContent = page.title;
-      const opts = (item, vals, labels) => vals.map((v, k) => `<button type="button" data-id="${item.id}" data-v="${esc(v)}" aria-pressed="${survey[item.id] === v}">${esc(labels[k])}</button>`).join('');
-      const html = item => {
-        if (item.kind === 'scale') return `<div class="scale">${opts(item, item.labels.map((_, k) => k + 1), item.labels)}</div>`;
-        if (item.kind === 'yesno') return `<div class="yn"><p>${esc(item.q)}</p><div class="seg">${opts(item, ['Yes', 'No'], ['Yes', 'No'])}</div></div>`;
-        return `<p class="q">${esc(item.q)}</p><textarea data-id="${item.id}" rows="3" maxlength="500" placeholder="Optional">${esc(survey[item.id] || '')}</textarea>`;
-      };
-      const ready = () => page.items.every(it => !it.need || survey[it.id] != null);
-      const last = j + 1 === SURVEY.length;
-      /* Listener on this page's own wrapper, which innerHTML replaces: one on
-         quizBody would outlive the page and answer the next one too. */
-      quizBody.innerHTML = `<div class="main sq">${page.items.map(html).join('')}</div>`
-        + `<div class="foot">${count(j + 1, SURVEY.length)}<span class="spacer"></span>`
-        + (j ? `<button class="cta cta--ghost cta--sm" type="button" data-back>Back</button>` : '')
-        + `<button class="cta cta--sm" type="button" data-next ${ready() ? '' : 'disabled'}>${last ? 'Finish' : 'Next'}</button></div>`;
-      const next = quizBody.querySelector('[data-next]');
-      const sq = quizBody.querySelector('.sq');
-      sq.addEventListener('click', ev => {
-        const b = ev.target.closest('button[data-v]'); if (!b) return;
-        const item = page.items.find(it => it.id === b.dataset.id);
-        for (const c of sq.querySelectorAll(`button[data-id="${item.id}"]`)) c.setAttribute('aria-pressed', c === b);
-        survey[item.id] = item.kind === 'scale' ? Number(b.dataset.v) : b.dataset.v;
-        next.disabled = !ready();
-      });
-      sq.addEventListener('input', ev => { if (ev.target.dataset.id) survey[ev.target.dataset.id] = ev.target.value.trim().slice(0, 500); });
-      const back = quizBody.querySelector('[data-back]');
-      if (back) back.addEventListener('click', () => askSurvey(j - 1));
-      next.addEventListener('click', () => last ? finish() : askSurvey(j + 1));
-    }
-    function finish() {
-      const score = answers.filter(a => a && a.correct).length;
-      sendQuiz();
-      if (window.Track) Track.event('survey', { answers: survey });
-      quizKick.textContent = 'Done';
-      quizTitle.textContent = score === QUIZ.length ? 'All five.' : score >= 3 ? 'Most of it.' : 'Worth another pass.';
-      quizBody.innerHTML = `<div class="donebox"><p class="score">${score} / ${QUIZ.length}</p><p class="why">${score === QUIZ.length ? 'Thanks for the answers, too.' : 'Scroll back to the stage you missed, or ask the tutor. Thanks for the answers.'}</p></div>`
-        + `<div class="foot">${dots()}<span class="spacer"></span><button class="cta cta--sm" type="button" data-close>Close</button></div>`;
-      quizBody.querySelector('[data-close]').addEventListener('click', () => quizModal.hide());
     }
     ask();
   }
+  function result(r) {
+    const all = r.score === r.total;
+    quizKick.textContent = 'Quiz done';
+    quizTitle.textContent = all ? 'All five.' : r.score >= 3 ? 'Most of it.' : 'Worth another pass.';
+    const fb = !load(FEEDBACK_KEY);
+    quizBody.innerHTML = `<div class="donebox"><p class="score">${r.score} / ${r.total}</p><p class="why">${all ? 'Every one right.' : 'Go back to the stage you missed, or ask the tutor.'}</p></div>`
+      + `<div class="foot">${markDots(r.marks || [])}<span class="spacer"></span>`
+      + `<button class="cta cta--ghost cta--sm" type="button" data-retake>Retake</button>`
+      + (fb ? `<button class="cta cta--sm" type="button" data-fb>Give feedback</button>` : `<button class="cta cta--sm" type="button" data-close>Close</button>`) + `</div>`;
+    quizBody.querySelector('[data-retake]').addEventListener('click', () => { try { localStorage.removeItem(QUIZ_KEY); } catch (e) {} runQuiz('quiz'); });
+    const f = quizBody.querySelector('[data-fb]');
+    if (f) f.addEventListener('click', () => askSurvey(0, {}));
+    const c = quizBody.querySelector('[data-close]');
+    if (c) c.addEventListener('click', () => quizModal.hide());
+  }
+  function askSurvey(j, survey) {
+    const page = SURVEY[j];
+    quizKick.textContent = 'App Feedback';
+    quizTitle.textContent = page.title;
+    const opts = (item, vals, labels) => vals.map((v, k) => `<button type="button" data-id="${item.id}" data-v="${esc(v)}" aria-pressed="${survey[item.id] === v}">${esc(labels[k])}</button>`).join('');
+    const html = item => {
+      if (item.kind === 'scale') return `<div class="scale">${opts(item, item.labels.map((_, k) => k + 1), item.labels)}</div>`;
+      if (item.kind === 'yesno') return `<div class="yn"><p>${esc(item.q)}</p><div class="seg">${opts(item, ['Yes', 'No'], ['Yes', 'No'])}</div></div>`;
+      return `<p class="q">${esc(item.q)}</p><textarea data-id="${item.id}" rows="3" maxlength="500" placeholder="Optional">${esc(survey[item.id] || '')}</textarea>`;
+    };
+    const ready = () => page.items.every(it => !it.need || survey[it.id] != null);
+    const last = j + 1 === SURVEY.length;
+    /* Listener on this page's own wrapper, which innerHTML replaces: one on
+       quizBody would outlive the page and answer the next one too. */
+    quizBody.innerHTML = `<div class="main sq">${page.items.map(html).join('')}</div>`
+      + `<div class="foot">${nOf(j + 1, SURVEY.length)}<span class="spacer"></span>`
+      + (j ? `<button class="cta cta--ghost cta--sm" type="button" data-back>Back</button>` : '')
+      + `<button class="cta cta--sm" type="button" data-next ${ready() ? '' : 'disabled'}>${last ? 'Send' : 'Next'}</button></div>`;
+    const next = quizBody.querySelector('[data-next]');
+    const sq = quizBody.querySelector('.sq');
+    sq.addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-v]'); if (!b) return;
+      const item = page.items.find(it => it.id === b.dataset.id);
+      for (const c of sq.querySelectorAll(`button[data-id="${item.id}"]`)) c.setAttribute('aria-pressed', c === b);
+      survey[item.id] = item.kind === 'scale' ? Number(b.dataset.v) : b.dataset.v;
+      next.disabled = !ready();
+    });
+    sq.addEventListener('input', ev => { if (ev.target.dataset.id) survey[ev.target.dataset.id] = ev.target.value.trim().slice(0, 500); });
+    const back = quizBody.querySelector('[data-back]');
+    if (back) back.addEventListener('click', () => askSurvey(j - 1, survey));
+    next.addEventListener('click', () => last ? thanks(survey) : askSurvey(j + 1, survey));
+  }
+  function thanks(survey) {
+    if (window.Track) Track.event('survey', { answers: survey });
+    save(FEEDBACK_KEY, survey);
+    paintButtons();
+    quizKick.textContent = 'App Feedback';
+    quizTitle.textContent = 'Thank you.';
+    quizBody.innerHTML = `<div class="donebox"><p class="why">Your feedback is in. Open it again any time to change an answer.</p></div>`
+      + `<div class="foot"><span class="spacer"></span><button class="cta cta--sm" type="button" data-close>Close</button></div>`;
+    quizBody.querySelector('[data-close]').addEventListener('click', () => quizModal.hide());
+  }
   quizModal = Modal.create({ el: 'quizmodal', onShow: runQuiz });
   const quizBtn = document.createElement('button');
-  quizBtn.type = 'button'; quizBtn.className = 'cta cta--ghost cta--sm quiz-open'; quizBtn.textContent = 'Quiz';
+  const fbBtn = document.createElement('button');
+  quizBtn.type = fbBtn.type = 'button';
+  quizBtn.className = fbBtn.className = 'cta cta--ghost cta--sm quiz-open';
+  /* A finished one is filled and checked, so it reads as done without colour. */
+  function paintButtons() {
+    const q = load(QUIZ_KEY), f = load(FEEDBACK_KEY);
+    quizBtn.textContent = q ? `✓ Quiz ${q.score}/${q.total}` : 'Quiz';
+    quizBtn.classList.toggle('is-done', !!q);
+    fbBtn.textContent = f ? '✓ Feedback' : 'Feedback';
+    fbBtn.classList.toggle('is-done', !!f);
+  }
+  paintButtons();
   // Until the chain has made a glucose's worth of ATP, once, on this browser.
   const DONE_KEY = 'ss.respiration.done';
-  quizBtn.hidden = !(() => { try { return localStorage.getItem(DONE_KEY); } catch (e) { return false; } })();
-  quizBtn.addEventListener('click', () => quizModal.show());
+  quizBtn.hidden = fbBtn.hidden = !(() => { try { return localStorage.getItem(DONE_KEY); } catch (e) { return false; } })();
+  quizBtn.addEventListener('click', () => quizModal.show('quiz'));
+  fbBtn.addEventListener('click', () => quizModal.show('feedback'));
   /* Beside it, a slot lib/track.js fills with the class gear when this browser is in a class. */
   const foot = document.createElement('div');
   foot.className = 'panel-foot';
   foot.appendChild(quizBtn);
+  foot.appendChild(fbBtn);
   const classslot = document.createElement('div');
   classslot.id = 'classslot';
   foot.appendChild(classslot);
