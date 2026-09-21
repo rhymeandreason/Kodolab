@@ -496,11 +496,13 @@
   const cell  = shell.scene('cell',  el => AnimalCell.mount(el, { motion: 1, flows: { glucose: 1, o2: 1, co2: 1 }, detail: 'auto', clickToFly: false, viewOffset: centred }));
   const mito  = shell.scene('mito',  el => Mitochondrion.mount(el, { flow: 0.6, cam: { theta: 2.6, phi: 0.7, r: 46 }, viewOffset: centred }));
   const PROTONS = { inside: { H: 50 }, outside: { H: 50 } };
-  /* The real enzyme, mounted per open and destroyed on close: a second WebGL box left running behind the lesson costs every frame. */
+  /* The real enzyme, mounted per open and destroyed on close: a second WebGL
+     box left running behind the lesson costs every frame, and so does the
+     lesson running behind it, so the stage holds while the door is open. */
   let synth = null;
   const synthModal = Modal.create({ el: 'synthmodal',
-    onShow: () => { synth = ATPSynthase.mount(document.getElementById('synthstage'), { context: 'mitochondrion' }); },
-    onHide: () => { if (synth) synth.destroy(); synth = null; } });
+    onShow: () => { SCENES[onStage].stop(); synth = ATPSynthase.mount(document.getElementById('synthstage'), { context: 'mitochondrion' }); },
+    onHide: () => { if (synth) synth.destroy(); synth = null; SCENES[onStage].start(); } });
   /* Another lesson, framed per open and dropped on close: a second WebGL
      page left running behind this one costs every frame. show({ src, title }). */
   const frame = document.getElementById('lessonframe');

@@ -66,8 +66,8 @@ function siteOnly(site, keep){
    Glu58 at subunit a's entry half-channel advances the ring one c-subunit,
    360/c degrees, and a proton that has ridden c−1 steps round leaves by the
    exit half-channel. Protons arrive one every PERIOD. */
-const PERIOD = 1.5;    // s between protons, so between steps
-const MOVE_S = 0.45;   // s a step takes
+const PERIOD = 1.15;   // s between protons, so between steps
+const MOVE_S = 0.36;   // s a step takes
 const FIRST = 0.8;     // s until the first proton lands
 
 /* ---- the flow ------------------------------------------------------------- *
@@ -86,13 +86,13 @@ const GLU = 58, PLOOP = [160, 167];
 const BOARD = 20;                   // degrees past subunit a: the entry half-channel
 const FACE = 24;                    // Å either side of the ring's middle a proton is drawn from and to
 const HOP = 0.9;                    // s, out of a half-channel
-const APPROACH = 3.2;               // s, a proton's wander in from beside the ring
+const APPROACH = 2.6;               // s, a proton's wander in from beside the ring
 const DROP = 45;                    // Å above the entry mouth a hurried proton starts
 const REACH = 130;                  // Å out from subunit a a proton starts
 const AWAY = 280, AWAY_S = 7;       // Å and s a proton drifts from the exit mouth: past the canvas edge, so it is never faded
 const WOBBLE = 14;                  // Å of sideways drift on the way in
 const DRIFT = 150;                  // Å a nucleotide travels from its site: out toward the canvas edge
-const OUT_S = 5.2, IN_S = 5, IN_DELAY = 0.6;
+const OUT_S = 4.2, IN_S = 4, IN_DELAY = 0.6;
 /* Glu58 sits mid-membrane, buried between c-subunits, so a proton riding it
    is drawn through the ribbon or it cannot be seen at all. */
 /* EXAGGERATED: every drawn particle, badge and name pill is EXAG times its
