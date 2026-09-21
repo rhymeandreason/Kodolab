@@ -63,15 +63,21 @@
        snug site — a channel conducts millions a second BECAUSE its pore does
        not grip. Radii feed the hole and the solid-wall test, so retuning a
        lobe cannot leave either behind. */
-    const K_R = 14.5, K_LOBE = 0.11, CL_R = 15.6, CL_LOBE = 0.17;
+    const K_R = 12.8, K_LOBE = 0.11, CL_R = 15.6, CL_LOBE = 0.17;
     const K_HOLE = K_R * (1 + K_LOBE) + 0.5, CL_HOLE = CL_R * (1 + CL_LOBE) + 0.5;
-    const CHANNEL = rgb.transporter({ half:HALF, site:7.2, mouth:8.8, radius:K_R, lobes:4, lobeDepth:K_LOBE });
+    const CHANNEL = rgb.transporter({ half:HALF, over:8, site:7.2, mouth:8.8, radius:K_R, lobes:4, lobeDepth:K_LOBE });
     const CLCHAN  = rgb.transporter({ half:HALF, site:7.2, mouth:8.0, radius:CL_R, lobes:2, lobeDepth:CL_LOBE, color:0xb58a4f });
     /* A Na⁺ LEAK: the epithelial sodium channel is a TRIMER, and it is what
        lets sodium in down its gradient, which is the whole reason the pump
-       has work to do. Violet, the sodium family's colour. */
-    const NA_R = 13.5, NA_LOBE = 0.12, NA_HOLE = NA_R * (1 + NA_LOBE) + 0.5;
-    const NACHAN  = rgb.transporter({ half:HALF, site:7.0, mouth:8.4, radius:NA_R, lobes:3, lobeDepth:NA_LOBE, color:0x9b6fd8 });
+       has work to do. Violet, the sodium family's colour. SLIMMER THAN THE
+       K⁺ CHANNEL: ENaC crosses the membrane on six helices, two a subunit,
+       the same count as the ADP/ATP translocase, and most of its bulk stands
+       outside the cell, undrawn, so what is drawn ends just past the heads.
+       The pore narrows with the ion: Na⁺ is drawn at 0.82 of K⁺. Still three
+       lobes and still open through, because it is a channel and the
+       translocase is a carrier. */
+    const NA_R = 10.5, NA_LOBE = 0.12, NA_HOLE = NA_R * (1 + NA_LOBE) + 0.5;
+    const NACHAN  = rgb.transporter({ half:HALF, over:5, site:5.9, mouth:7.3, radius:NA_R, lobes:3, lobeDepth:NA_LOBE, color:0x9b6fd8 });
     /* An AQUAPORIN: a TETRAMER whose pore passes water in single file and
        nothing charged. Slimmer than the ion channels; teal, so it reads as a
        different kind of door. */
@@ -85,7 +91,8 @@
        separate lobes, which read as parts bolted on, and nothing coaxial
        hanging off it, which reads as an axle. The foot is −y because this
        component is always a plasma membrane. */
-    const PUMP    = rgb.transporter({ half:HALF, over:20, flare:[0.5, 0.2], color:0x4f9e78 });
+    const PUMP_R = 13.0;
+    const PUMP    = rgb.transporter({ half:HALF, over:15, radius:PUMP_R, flare:[0.5, 0.2], color:0x4f9e78 });
     eng.root.add(CHANNEL.group, CLCHAN.group, NACHAN.group, AQP.group, PUMP.group);
     let pumpX = 0;
 
@@ -321,7 +328,7 @@
         PUMP.group.visible = !!pr.pump;
         if (pr.pump) { pumpX = pr.pump.x; PUMP.group.position.x = pumpX;
           /* MOUTH rather than site — the site is narrowest and would seat an ion in the wall. */
-          holes.push([pumpX, 15.0]); PORES.push({ x:pumpX, R:14.5, lumen:7.6, kind:null }); }
+          holes.push([pumpX, PUMP_R + 0.5]); PORES.push({ x:pumpX, R:PUMP_R, lumen:7.6, kind:null }); }
       },
       /* The head hangs on the CYTOSOLIC side, the side the pump's ATP and its
          Na⁺ both come from. Positioned by sign: a negative scale would turn

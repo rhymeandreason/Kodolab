@@ -192,7 +192,10 @@
        mvPerIon is a timing knob rather than a measurement. */
     const holeOf = (R, lobe) => R * (1 + lobe) + 0.5;
     const ANT_R = 10.0, ANT_LOBE = 0.08;
-    const ANT = Parts.transporter({ half:HALF, site:5.4, mouth:7.0, radius:ANT_R, lobes:0, color:RESP.translocase });
+    /* Both carriers are the SLC25 fold: a six-helix basket that sits almost
+       wholly in the bilayer, with short loops and no domain outside it. */
+    const CARRIER_OVER = 5;
+    const ANT = Parts.transporter({ half:HALF, over:CARRIER_OVER, site:5.4, mouth:7.0, radius:ANT_R, lobes:0, color:RESP.translocase });
     root.add(ANT.group);
     let antX = null;
     /* THE PHOSPHATE CARRIER, beside it: Pᵢ comes back into the matrix with
@@ -200,7 +203,7 @@
        translocase because the two are the export: one returns the ADP, the
        other the phosphate, and the synthase joins them again. */
     const PIC_R = 7.6, PIC_GAP = 30;
-    const PIC = Parts.transporter({ half:HALF, site:4.8, mouth:6.2, radius:PIC_R, lobes:0, color:RESP.phosphateCarrier });
+    const PIC = Parts.transporter({ half:HALF, over:CARRIER_OVER, site:4.8, mouth:6.2, radius:PIC_R, lobes:0, color:RESP.phosphateCarrier });
     root.add(PIC.group);
     let picX = null;
 
