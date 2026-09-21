@@ -81,8 +81,8 @@
     steps: [{
       eyebrow: 'Cellular respiration',
       title: 'The electron transport chain',
-      body: '<p>Send one glucose\'s carriers into the chain. NADH and FADH₂ hand their electrons down the complexes, and each hand-off pumps protons out of the matrix.</p>'
-          + '<p>The protons can only get back in through ATP synthase, and they turn it on the way.</p>',
+      body: '<p>NADH and FADH₂ hand their electrons down the complexes, and each hand-off pumps protons out of the matrix.</p>'
+          + '<p>The protons flow back in through ATP synthase, turning the rotor to create ATP.</p>',
       onEnter(ctx) {
         ctx.ui.controls('<div id="hand"></div>');
         ctx.q('#hand').appendChild(hand.el);
