@@ -147,7 +147,6 @@
 <style>
   /* The quiz door, at the panel's foot, shown once the chain is done. */
   .quiz-open[hidden] { display: none; }
-  .quiz-open.is-done { background: var(--accent); border-color: var(--accent); color: var(--text-inverse); }
   .panel-foot { position: absolute; right: 24px; bottom: 16px; z-index: 5; display: flex; align-items: center; gap: 10px; }
   #classslot:empty { display: none; }
 
@@ -183,6 +182,27 @@
   .quiz .dots i.right { background: var(--right); }
   .quiz .dots i.wrong { background: var(--wrong); }
   .quiz .donebox { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .quiz .donebox .why { font-size: 18px; color: var(--text-strong); }
+  .quiz .thanks .lead { display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-4); font-size: 18px; line-height: 1.4; color: var(--text-strong); }
+  .quiz .thanks .tick { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--text-inverse); font-size: 18px; font-weight: 700; }
+  .quiz .thanks .lead .score { flex: none; font-size: 44px; line-height: 1; }
+  .quiz .thanks .lead .score small { font-size: 24px; color: var(--text-muted); }
+  .quiz .thanks .lead p:not(.score) { margin: 0; }
+  .quiz .review { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border-hair); }
+  .quiz .review li { display: flex; gap: var(--space-3); padding: 7px 0; border-bottom: 1px solid var(--border-hair); }
+  .quiz .review .mk { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; background: var(--text-muted); color: var(--text-inverse); font-size: 12px; font-weight: 700; }
+  .quiz .review li.right .mk { background: var(--right); }
+  .quiz .review li.wrong .mk { background: var(--wrong); }
+  .quiz .review .qq { margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.35; }
+  .quiz .review .ans { margin: 1px 0 0; font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .quiz .review .mine { color: var(--text-strong); }
+  .quiz .review s.mine { font-weight: 400; color: var(--text-muted); text-decoration-color: var(--wrong); text-decoration-thickness: 2px; }
+  .quiz .review .fix { color: var(--right); }
+  .quiz .recap { margin: 0; border-top: 1px solid var(--border-hair); }
+  .quiz .recap div { display: flex; align-items: baseline; gap: var(--space-4); padding: 9px 0; border-bottom: 1px solid var(--border-hair); }
+  .quiz .recap dt { flex: 1; color: var(--text-muted); font-size: 15px; line-height: 1.35; }
+  .quiz .recap dd { margin: 0; font-weight: 600; color: var(--text-strong); text-align: right; }
+  .quiz .recap dd.long { flex: 1; font-weight: 400; font-style: italic; text-align: right; overflow-wrap: anywhere; }
   .quiz .why { min-height: 3.2em; margin: 0 0 var(--space-4); color: var(--text-muted); font-size: 15px; line-height: 1.45; }
   .quiz .foot { display: flex; align-items: center; gap: var(--space-3); margin-top: auto; padding-top: var(--space-3); }
   .quiz .foot .n { color: var(--text-muted); font-variant-numeric: tabular-nums; }
@@ -955,7 +975,7 @@
       quizBody.querySelector('.choices').addEventListener('click', ev => {
         const b = ev.target.closest('button[data-k]'); if (!b || answers[i]) return;
         const k = Number(b.dataset.k), correct = k === item.a;
-        answers[i] = { q: item.q, answer: item.choices[k], correct };
+        answers[i] = { q: item.q, answer: item.choices[k], correct, k };
         quizBody.querySelector('.choices').classList.add('answered');
         for (const c of quizBody.querySelectorAll('.choices button')) {
           const right = Number(c.dataset.k) === item.a;
@@ -976,7 +996,7 @@
         if (i < QUIZ.length) return ask();
         const score = answers.filter(a => a.correct).length;
         if (window.Track) Track.event('quiz', { score, total: QUIZ.length, answers });
-        const r = { score, total: QUIZ.length, marks: answers.map(a => a.correct) };
+        const r = { score, total: QUIZ.length, marks: answers.map(a => a.correct), picks: answers.map(a => a.k) };
         save(QUIZ_KEY, r);
         paintButtons();
         result(r);
@@ -989,8 +1009,17 @@
     quizKick.textContent = 'Quiz done';
     quizTitle.textContent = all ? 'All five.' : r.score >= 3 ? 'Most of it.' : 'Worth another pass.';
     const fb = !load(FEEDBACK_KEY);
-    quizBody.innerHTML = `<div class="donebox"><p class="score">${r.score} / ${r.total}</p><p class="why">${all ? 'Every one right.' : 'Go back to the stage you missed, or ask the tutor.'}</p></div>`
-      + `<div class="foot">${markDots(r.marks || [])}<span class="spacer"></span>`
+    // A result saved before picks were kept shows its marks without the answers.
+    const row = (item, k) => {
+      const ok = (r.marks || [])[k], pick = (r.picks || [])[k];
+      const mine = pick != null ? `<s class="mine">${esc(item.choices[pick])}</s> ` : '';
+      const ans = ok ? `<span class="mine">${esc(item.choices[item.a])}</span>` : `${mine}<span class="fix">→ ${esc(item.choices[item.a])}</span>`;
+      return `<li class="${ok ? 'right' : ok === false ? 'wrong' : ''}"><span class="mk" aria-label="${ok ? 'right' : 'wrong'}">${ok ? '✓' : '✗'}</span><div><p class="qq">${esc(item.q)}</p><p class="ans">${ans}</p></div></li>`;
+    };
+    quizBody.innerHTML = `<div class="main thanks"><div class="lead"><p class="score">${r.score}<small> / ${r.total}</small></p>`
+      + `<p>${all ? 'Every one right. You can follow the carbon and the electrons all the way through.' : `Go back to the ${r.total - r.score > 1 ? 'stages' : 'stage'} you missed, then retake the quiz.`}</p></div>`
+      + `<ol class="review">${QUIZ.map(row).join('')}</ol></div>`
+      + `<div class="foot"><span class="spacer"></span>`
       + `<button class="cta cta--ghost cta--sm" type="button" data-retake>Retake</button>`
       + (fb ? `<button class="cta cta--sm" type="button" data-fb>Give feedback</button>` : `<button class="cta cta--sm" type="button" data-close>Close</button>`) + `</div>`;
     quizBody.querySelector('[data-retake]').addEventListener('click', () => { try { localStorage.removeItem(QUIZ_KEY); } catch (e) {} runQuiz('quiz'); });
@@ -1037,8 +1066,13 @@
     paintButtons();
     quizKick.textContent = 'App Feedback';
     quizTitle.textContent = 'Thank you.';
-    quizBody.innerHTML = `<div class="donebox"><p class="why">Your feedback is in. Open it again any time to change an answer.</p></div>`
-      + `<div class="foot"><span class="spacer"></span><button class="cta cta--sm" type="button" data-close>Close</button></div>`;
+    const items = SURVEY.flatMap(pg => pg.items);
+    const val = it => it.kind === 'scale' ? (survey[it.id] ? `${survey[it.id]} of 5` : '—') : survey[it.id] || '—';
+    const label = it => it.kind === 'scale' ? SURVEY[0].title : it.q;
+    quizBody.innerHTML = `<div class="main thanks"><p class="lead"><span class="tick" aria-hidden="true">✓</span>Your feedback is saved. It helps decide what gets built next.</p>`
+      + `<dl class="recap">${items.map(it => `<div><dt>${esc(label(it))}</dt><dd${it.kind === 'text' ? ' class="long"' : ''}>${esc(val(it))}</dd></div>`).join('')}</dl></div>`
+      + `<div class="foot"><span class="spacer"></span><button class="cta cta--ghost cta--sm" type="button" data-edit>Edit answers</button><button class="cta cta--sm" type="button" data-close>Close</button></div>`;
+    quizBody.querySelector('[data-edit]').addEventListener('click', () => askSurvey(0, { ...survey }));
     quizBody.querySelector('[data-close]').addEventListener('click', () => quizModal.hide());
   }
   quizModal = Modal.create({ el: 'quizmodal', onShow: runQuiz });
@@ -1046,13 +1080,11 @@
   const fbBtn = document.createElement('button');
   quizBtn.type = fbBtn.type = 'button';
   quizBtn.className = fbBtn.className = 'cta cta--ghost cta--sm quiz-open';
-  /* A finished one is filled and checked, so it reads as done without colour. */
+  /* A finished one carries a check, so it reads as done without colour. */
   function paintButtons() {
     const q = load(QUIZ_KEY), f = load(FEEDBACK_KEY);
     quizBtn.textContent = q ? `✓ Quiz ${q.score}/${q.total}` : 'Quiz';
-    quizBtn.classList.toggle('is-done', !!q);
     fbBtn.textContent = f ? '✓ Feedback' : 'Feedback';
-    fbBtn.classList.toggle('is-done', !!f);
   }
   paintButtons();
   // Until the chain has made a glucose's worth of ATP, once, on this browser.
