@@ -42,6 +42,9 @@
  *                         shuttle, dock: () => {from, at, away}, y0, band }
  *      atpLegs()          legs the ATP walks before it leaves; a leg's `on` fires on arrival
  *      onATP()            after each ATP is made (an export cost)
+ *      returnLegs(kind, i) the way an ADP or Pᵢ handed back by the receiver
+ *                         walks home, ending at the i-th place in line at
+ *                         its door; null when there is no way home
  *      cSeat(key)         where the one-electron shuttle sits on a knob
  *      resetChain()       the component's own tokens, on every chain reset
  *
@@ -311,18 +314,23 @@
        FLOAT_MAX the oldest is spent elsewhere, which is where most of a
        cell's ATP goes. */
     const FLOAT_MAX = 6, FLOAT_SPEED = 9, QUEUE_BACK = 30;
-    function float(c) {
-      const land = c.legs[c.legs.length - 1];
-      const outI = c.legs.findIndex(l => l.out);
-      const from = c.legs[outI >= 0 && outI < c.legs.length - 1 ? outI : Math.max(0, c.legs.length - 2)];
+    /* The band between the last door out and the receiver: the compartment
+       a delivered ATP arrives in. */
+    function boxOf(legs) {
+      const land = legs[legs.length - 1];
+      const outI = legs.findIndex(l => l.out);
+      const from = legs[outI >= 0 && outI < legs.length - 1 ? outI : Math.max(0, legs.length - 2)];
       const d = Math.sign(land.y - from.y) || 1, X = P.spread == null ? P.reach * 0.55 : P.spread;
+      return { x0: -X, x1: X, y0: Math.min(from.y + d * 10, land.y - d * 6), y1: Math.max(from.y + d * 10, land.y - d * 6) };
+    }
+    function float(c, dir) {
+      const land = c.legs[c.legs.length - 1];
       c.waiting = null; c.hold = false; c.done = true;
-      c.home = land; c.queue = c.legs.find(l => l.hold);
-      c.box = { x0: -X, x1: X, y0: Math.min(from.y + d * 10, land.y - d * 6), y1: Math.max(from.y + d * 10, land.y - d * 6) };
+      if (c.kind === 'ATP') { c.home = land; c.queue = c.legs.find(l => l.hold); c.box = boxOf(c.legs); }
       const a = rnd(0, 6.28);
-      c.floating = { vx: Math.cos(a) * FLOAT_SPEED, vy: Math.sin(a) * FLOAT_SPEED, since: c.t };
+      c.floating = { vx: (dir ? dir.x : Math.cos(a)) * FLOAT_SPEED, vy: (dir ? dir.y : Math.sin(a)) * FLOAT_SPEED, since: c.t };
       c.z = c.z || 0;
-      const floaters = atpChips.filter(e => e.floating && !e.dying);
+      const floaters = atpChips.filter(e => e.floating && !e.dying && e.kind === c.kind);
       if (floaters.length > FLOAT_MAX) floaters.reduce((a, b) => (a.floating.since < b.floating.since ? a : b)).dying = true;
     }
     function drift(c, dt) {
@@ -339,13 +347,13 @@
     /* Whether an ATP is already waiting at the receiver or out and on its
        way there. Like a carrier's queue: only the next one goes to the
        machine, and the rest wait where they are. */
-    const claimed = self => atpChips.some(c => c !== self && !c.dying && (c.waiting != null ||
+    const claimed = self => atpChips.some(c => c !== self && !c.dying && c.kind === 'ATP' && (c.waiting != null ||
       (!c.floating && c.left && c.legs[c.legs.length - 1].land)));
     /* The receiver has no ATP waiting and none on its way: the oldest
        floater sets off for it. */
     function recall() {
       if (!P.atpLand || claimed(null)) return;
-      const fl = atpChips.filter(c => c.floating && !c.dying);
+      const fl = atpChips.filter(c => c.floating && !c.dying && c.kind === 'ATP');
       if (!fl.length) return;
       const c = fl.reduce((a, b) => (a.floating.since < b.floating.since ? a : b));
       c.floating = null; c.legs = c.queue ? [c.queue, c.home] : [c.home]; c.leg = 0; c.done = false;
@@ -385,24 +393,82 @@
       return legs;
     }
     function releaseATP() {
-      if (!P.showATP || !SYNTH.group.visible || atpChips.length >= ATP_MAX) return;
+      if (!P.showATP || !SYNTH.group.visible || atpChips.filter(c => c.kind === 'ATP').length >= ATP_MAX) return;
       const g = buildNucleotide(3);
       root.add(g);
-      atpChips.push({ obj:g, t:0, phase:Math.random() * 6.28, fade:1,
+      atpChips.push({ obj:g, kind:'ATP', snap:true, t:0, phase:Math.random() * 6.28, fade:1,
                       x:(synthX || 0) - F1_R * 0.8, y:-pumpDir() * (F1_BASE + 4), legs:atpRoute(), leg:0 });
     }
+    /* A lone phosphate: the bead the pump took off, named Pᵢ once free. */
+    function buildPi() {
+      const g = buildNucleotide(1);
+      kit.forget(g.userData.tag); g.remove(g.userData.tag);
+      const tag = kit.pill('Pᵢ', 5.2);
+      tag.position.set(0, buildNucleotide.R_BEAD + 4.2, 0);
+      g.add(tag); g.userData.tag = tag;
+      return g;
+    }
+    const buildOf = kind => kind === 'Pi' ? buildPi() : buildNucleotide(kind === 'ATP' ? 3 : 2);
     /* A nucleotide of n phosphates set walking from (x, y) along legs: the ADP going the other way at a swap. */
-    function launchNucleotide(n, x, y, legs) {
-      const g = buildNucleotide(n);
+    function launchNucleotide(n, x, y, legs) { launch(n === 3 ? 'ATP' : 'ADP', x, y, legs); }
+    function launch(kind, x, y, legs) {
+      const g = buildOf(kind);
       root.add(g);
-      atpChips.push({ obj:g, t:0, phase:Math.random() * 6.28, fade:1, x, y, legs, leg:0 });
+      atpChips.push({ obj:g, kind, t:0, phase:Math.random() * 6.28, fade:1, x, y, legs, leg:0 });
+    }
+
+    /* ---- what the receiver hands back ----
+       A spent ATP is ADP and Pᵢ, and neither is used up. Each drifts in the
+       compartment it was freed in, then walks home by hooks.returnLegs and
+       waits in line at its door until take() sends it through. DRAWN ONLY:
+       nothing waits on one, so no count or rate reads from any of this. */
+    const RETURN_LINE = 2;
+    const _ret = new THREE.Vector3();
+    function unbend(w) {
+      _ret.copy(w); root.worldToLocal(_ret);
+      if (BOW) {
+        const th = Math.atan2(_ret.x, _ret.y + BOW), rad = Math.hypot(_ret.x, _ret.y + BOW);
+        _ret.set(th * BOW, rad - BOW, _ret.z);
+      }
+      return _ret;
+    }
+    /* In line or on the way to it, per kind. */
+    const inLine = kind => atpChips.filter(c => c.kind === kind && c.returning && !c.floating && !c.dying).length;
+    function launchReturn(kind, info) {
+      if (!hooks.returnLegs || !hooks.returnLegs(kind, 0)) return false;
+      const route = atpRoute();
+      if (!route.length || !route[route.length - 1].land) return false;
+      const p = unbend(info.pos);
+      const g = buildOf(kind);
+      root.add(g);
+      const c = { obj:g, kind, returning:true, t:0, phase:Math.random() * 6.28, fade:1, x:p.x, y:p.y, z:0,
+                  legs:[{ x:p.x, y:p.y }], leg:0, done:true, box:boxOf(route), goAt:rnd(2.5, 5),
+                  rot0:info.rot || 0, tag0:info.tagY, tagY:g.userData.tag.position.y };
+      atpChips.push(c);
+      float(c, info.away);
+      return true;
+    }
+    /* The first in line at its door goes through along legs; false if none is there. */
+    function take(kind, legs) {
+      const c = atpChips.find(e => e.kind === kind && e.returning && e.parked && !e.dying);
+      if (!c) return false;
+      c.returning = c.parked = false;
+      c.legs = legs; c.leg = 0; c.done = false;
+      return true;
     }
     function tickATP(dt) {
       for (let i = atpChips.length - 1; i >= 0; i--) {
         const c = atpChips[i];
         c.t += dt;
         const o = c.obj, leg = c.legs[c.leg];
-        if (c.floating) drift(c, dt);
+        if (c.floating) {
+          drift(c, dt);
+          if (c.returning && c.t > c.goAt) {
+            const n = inLine(c.kind), legs = n < RETURN_LINE && hooks.returnLegs(c.kind, n);
+            if (legs) { c.floating = null; c.legs = legs; c.leg = 0; c.done = false; }
+            else c.goAt = c.t + 2;
+          }
+        }
         /* WALKED, not integrated: the route is the claim. */
         else {
         const dx = leg.x - c.x, dy = leg.y - c.y, dist = Math.hypot(dx, dy);
@@ -413,6 +479,7 @@
           if (!c.done) {
             c.done = true;
             if (leg.on) leg.on();
+            if (leg.park) c.parked = true;
             if (leg.hold && !P.atpReady()) { c.hold = true; c.waiting = 0; }
             if (leg.out && !c.left) {
               c.left = true; eng.emit('atpOut', ROT.atp);
@@ -439,9 +506,19 @@
           if ((c.waiting += dt) > ATP_WAIT) float(c);
         }
         seat(o, c.x, c.y, c.z || 0);
-        o.rotation.z = Math.sin(c.t * 1.1 + c.phase) * 0.16;
-        const k = Math.min(1, c.t / ATP_SNAP);
-        o.userData.newest.scale.setScalar(1 + 1.4 * (1 - k) * (1 - k));
+        const wob = Math.sin(c.t * 1.1 + c.phase) * 0.16;
+        /* Taken over from another sim: starts as it was drawn there, and
+           settles into this one's pose. */
+        if (c.rot0 != null) {
+          const e = Math.min(1, c.t / 0.8), s = e * e * (3 - 2 * e);
+          o.rotation.z = c.rot0 + (wob - c.rot0) * s;
+          if (c.tag0 != null) o.userData.tag.position.y = c.tag0 + (c.tagY - c.tag0) * s;
+          if (e >= 1) c.rot0 = c.tag0 = null;
+        } else o.rotation.z = wob;
+        if (c.snap) {
+          const k = Math.min(1, c.t / ATP_SNAP);
+          o.userData.newest.scale.setScalar(1 + 1.4 * (1 - k) * (1 - k));
+        }
         if (c.dying) {
           c.fade -= dt / ATP_FADE;
           fade(o, c.fade);
@@ -1217,7 +1294,7 @@
       parts: { SYNTH, LEAK, CX, ROTOR, HEAD },
       geom: { F1_BASE, F1_H, F1_R, RING_R, LANE_DX, H_, xs, synthX: () => synthX },
       chips, pulse, waiting, leaving, carrierArrive, fuelSpend, clearFuel,
-      atp: { ROT, launchNucleotide, chips: atpChips },
+      atp: { ROT, launchNucleotide, launch, launchReturn, take, chips: atpChips },
       electrons: { sendE, handOff, clearE, E_PER_TURN },
       shuttles: { qTokens, cTokens, qDock, qHome, cHome, cDock, protonateQ, ePill, counts: shuttleCounts, freeQ, reserveQ, releaseQ },
       doors: { pmfNow, backPressure, reMV, protonPool, get protonRef() { return protonRef; }, set protonRef(v) { protonRef = v; } },

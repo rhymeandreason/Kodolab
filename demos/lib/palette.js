@@ -377,6 +377,10 @@
          porin takes the leak's own grey: it is the same statement, a hole
          that does not choose. */
       translocase:0x9a5f8c,
+      /* The phosphate carrier stands beside it in the same membrane and is the
+         same kind of machine, one thing carried with another, so the same
+         plum a step lighter. */
+      phosphateCarrier:0xb888ab,
       /* THE FUEL CARRIER, and one colour for both of its states: NADH and
          NAD⁺ are the same molecule holding different cargo, and giving the
          spent one its own colour would draw two substances where there is

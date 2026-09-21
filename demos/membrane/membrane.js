@@ -47,6 +47,9 @@
     pumpAuto: false,
     pumpOn: true,
     turnSeconds: 11,
+    /* (kind, { pos, rot, tagY, away }) → true when a caller takes the pump's
+       ADP ('ADP') or phosphate ('Pi') as it leaves, and draws it from there. */
+    release: null,
   };
   const CIRCUIT_KEYS = ['complex', 'synthase', 'leak', 'translocase'];
 
@@ -101,7 +104,7 @@
     const NUC = eng.nucleotide;
     const TOKENS = new THREE.Group();
     PUMP.group.add(TOKENS);
-    let side = -1, handed = false, atpObj = null, piObj = null, G = null;
+    let side = -1, handed = false, relADP = false, relPi = false, atpObj = null, piObj = null, G = null;
     /* The outline's point at depth yy into the cytosol, on the +x flank,
        with its outward normal. ON THE FLANK, not the underside: with the
        cutaway on, the underside at z = 0 is only a cut edge, and a token
@@ -147,8 +150,20 @@
       for (const o of [atpObj, piObj]) if (o) { o.traverse(m => { if (m.isSprite) eng.kit.forget(m); }); TOKENS.remove(o); }
       atpObj = piObj = null;
     }
+    /* The token as it leaves, in world terms, for P.release to carry on. */
+    const _w = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
+    function handOff(o, kind, site) {
+      if (!P.release) return false;
+      o.updateWorldMatrix(true, false);
+      o.getWorldQuaternion(_q); _e.setFromQuaternion(_q);
+      PUMP.group.getWorldQuaternion(_q);
+      const away = new THREE.Vector3(site.nx, site.ny, 0).applyQuaternion(_q);
+      return !!P.release(kind, { pos: o.getWorldPosition(_w).clone(), rot: _e.z,
+        tagY: o.userData.tag ? o.userData.tag.position.y : 0, away: { x: away.x, y: away.y } });
+    }
     function newTokens() {
       dropTokens();
+      relADP = relPi = false;
       if (!G) G = sites();
       atpObj = NUC(3);
       atpObj.rotation.z = G.DOCK.ang;
@@ -193,7 +208,12 @@
         retag(piObj, 1 - f >= 0.5 ? 'Pᵢ' : 'P', 5.2);
       } else if (id === 'open-in') {
         lerp3(piObj, G.PI_OFF, G.PI_END, k); fadeTo(piObj, 1 - k); retag(piObj, 'Pᵢ', 5.2);
+        if (relPi === false) relPi = handOff(piObj, 'Pi', G.ON_P) || null;
       }
+      if (id === 'open-out' && relADP === false) relADP = handOff(atpObj, 'ADP', G.DOCK) || null;
+      /* Taken: the caller draws it from here. null is declined, and it fades. */
+      if (relADP) atpObj.visible = false;
+      if (relPi) piObj.visible = false;
     }
 
     /* ---- the pump's cargo is REAL IONS ----

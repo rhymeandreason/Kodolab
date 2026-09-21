@@ -195,6 +195,14 @@
     const ANT = Parts.transporter({ half:HALF, site:5.4, mouth:7.0, radius:ANT_R, lobes:0, color:RESP.translocase });
     root.add(ANT.group);
     let antX = null;
+    /* THE PHOSPHATE CARRIER, beside it: Pᵢ comes back into the matrix with
+       a proton, and that proton is PROTONS_PER_EXPORT. It stands with the
+       translocase because the two are the export: one returns the ADP, the
+       other the phosphate, and the synthase joins them again. */
+    const PIC_R = 7.6, PIC_GAP = 30;
+    const PIC = Parts.transporter({ half:HALF, site:4.8, mouth:6.2, radius:PIC_R, lobes:0, color:RESP.phosphateCarrier });
+    root.add(PIC.group);
+    let picX = null;
 
     /* ---- the outer membrane, and the porin in it ----
        A SECOND SHEET AND NO SECOND PHYSICS. The porin passes anything small,
@@ -259,18 +267,44 @@
       for (let i = 0; i < PROTONS_PER_EXPORT; i++) {
         const pool = travellers.filter(t => t.kind === 'H' && !t.aboard && t.lane == null && Math.sign(t.y) === d);
         if (!pool.length) return;
-        const t = pool.reduce((a, b) => (Math.abs(a.x - antX) < Math.abs(b.x - antX) ? a : b));
-        t.x = antX + rnd(-10, 10); t.y = -d * (HALF + 12); t.z = rnd(-8, 8);
+        const t = pool.reduce((a, b) => (Math.abs(a.x - picX) < Math.abs(b.x - picX) ? a : b));
+        t.x = picX + rnd(-6, 6); t.y = -d * (HALF + 12); t.z = rnd(-8, 8);
         t.obj.position.set(t.x, t.y, t.z);
         t.bounded = true; eng.repick(t); t.vy = Math.abs(t.vy) * -d;
         protonsForExport++; eng.crossed.H -= d; eng.chargeOut -= d;
         K.doors.reMV();
       }
     };
-    function releaseADP(atX) {
-      const d = pumpDir();
-      K.atp.launchNucleotide(2, atX, d * (HALF + 15), [{ x:atX, y:-d * (HALF + 15) }, { x:atX - 44, y:-d * (HALF + 34), fade:true }]);
+    /* At each swap an ADP comes in by the translocase and a Pᵢ by the
+       carrier, and both go to the synthase's head to be joined again. The
+       first in line at each door if one has walked home from the cytosol,
+       else one from off stage: the swap never waits on a drawn one. */
+    function rejoin() {
+      const d = pumpDir(), sx = K.geom.synthX();
+      return sx == null ? null : { x: sx + K.geom.F1_R * 0.8, y: -d * (K.geom.F1_BASE + 4), fade: true };
     }
+    function swapIn(kind, doorX) {
+      const d = pumpDir(), head = rejoin();
+      const legs = [{ x:doorX, y:d * (HALF + 15) }, { x:doorX, y:-d * (HALF + 15) }];
+      legs.push(head || { x:doorX - 44, y:-d * (HALF + 34), fade:true });
+      if (!K.atp.take(kind, legs)) K.atp.launch(kind, doorX, d * (HALF + 15), legs.slice(1));
+    }
+    function releaseADP(atX) {
+      swapIn('ADP', atX);
+      if (picX != null) swapIn('Pi', picX);
+    }
+    /* Home from the cytosol: in through the porin, then to a place in line
+       beside its door, clear of the path the ATP takes out. */
+    K.hooks.returnLegs = (kind, i) => {
+      if (!outerOn() || antX == null) return null;
+      const d = pumpDir(), door = kind === 'Pi' ? picX : antX;
+      if (door == null) return null;
+      return [
+        { x:porinX, y:d * (OUTER_GAP + HALF * 0.62 + 9) },
+        { x:porinX, y:d * (OUTER_GAP - HALF * 0.62 - 7) },
+        { x:door + (kind === 'Pi' ? 8 : 12), y:d * (HALF + 24 + i * 14), park:true },
+      ];
+    };
 
     /* ---- the carriers ----
        AT COMPLEX II THE TOKEN IS SUCCINATE. The FAD there is bound inside the
@@ -543,7 +577,7 @@
     return K.plugin({
       runners: RUN, feed, cards,
       keys: { translocase: null },
-      parts: [ANT],
+      parts: [ANT, PIC],
       /* PORIN stands in the other sheet, and a barrel setCut leaves shut is
          the one solid object in a cutaway. */
       cutParts: [PORIN],
@@ -553,6 +587,10 @@
         antX = pr.translocase ? pr.translocase.x : null;
         if (pr.translocase) { ANT.group.position.x = antX; ANT.setGates(1, 1);
           holes.push([antX, holeOf(ANT_R, ANT_LOBE)]); PORES.push({ x:antX, R:ANT_R, lumen:7.0, kind:null }); }
+        PIC.group.visible = !!pr.translocase;
+        picX = pr.translocase ? antX + PIC_GAP : null;
+        if (picX != null) { PIC.group.position.x = picX; PIC.setGates(1, 1);
+          holes.push([picX, holeOf(PIC_R, 0)]); PORES.push({ x:picX, R:PIC_R, lumen:6.2, kind:null }); }
       },
       /* Complex I's arm and complex II's head hang into the matrix, the
          pear's belly on the loading side: positioned by sign. */
@@ -603,7 +641,9 @@
          out drift straight through the outer sheet. */
       bandCap: () => outerOn() ? OUTER_GAP - 8 : Infinity,
       clearXs: () => outerOn() && porinX != null ? [porinX] : [],
-      api: { get outer() { return OUTER; }, doors: { translocase: ANT, porin: PORIN } },
+      api: { get outer() { return OUTER; }, doors: { translocase: ANT, porin: PORIN, phosphate: PIC },
+        /* The pump's ADP or Pᵢ, handed over as it leaves: see Membrane's `release`. */
+        returnHome: (kind, info) => K.atp.launchReturn(kind, info) },
       layers: {
         outer: { label: 'the outer membrane', get: () => outerOn(), set: v => eng.set({ outerMembrane: !!v }) },
       },
@@ -615,6 +655,7 @@
         quinone:  () => K.shuttles.qTokens.length ? K.shuttles.qTokens[0].obj.position : null,
         cytc:     () => K.shuttles.cTokens.length ? K.shuttles.cTokens[0].obj.position : null,
         translocase: () => antX == null ? null : K.at(antX, ANT.height * 0.98),
+        phosphate: () => picX == null ? null : K.at(picX, PIC.height * 0.98),
         porin:    () => !outerOn() ? null : K.at(porinX, outerY() + pumpDir() * HALF * 0.9),
         cytosol:  () => !outerOn() ? null : K.at(eng.clearX(), outerY() + pumpDir() * 34),
         oxygen:   () => o2 ? o2.obj.position : null,
@@ -636,6 +677,8 @@
           card: 'The last stop for the electrons. Each O₂ takes four, and four protons from the matrix, and leaves as two waters. With no oxygen the electrons have nowhere to go and the whole chain stops.' },
         translocase: { text: 'ADP/ATP translocase', offset: [-44, 30],
           card: 'ATP is made in the matrix and a charged nucleotide cannot cross a bilayer, so this carries it: one ATP out for one ADP in, a strict swap. It trades a −4 for a −3, so the membrane voltage drives it: the gradient pays once to make the ATP and again to get it out, about a quarter of the whole proton budget.' },
+        phosphate: { text: 'phosphate carrier', offset: [44, 30],
+          card: 'Brings phosphate back into the matrix, one proton with each. That proton is part of what an ATP costs: about 3 to turn the synthase, and 1 here to fetch the phosphate the next ATP is built from.' },
         porin: { text: 'porin', offset: [42, -30],
           card: 'A hole in the outer membrane, wide and unselective. Anything this small passes, which is why the space between the two membranes is nearly the same solution as the cytosol, and why the ATP is home once it is through.' },
         cytosol: { text: 'the cytosol', offset: [-38, -26],
@@ -729,7 +772,9 @@
          cell's pump and leaks run at the same rate, and one drawn channel
          stands for many. */
       proteins: { pump: { x: -36 }, K: { x: 36 }, NA: { x: 108, capture: 24, pull: 3 } }, contents: cellContentsOf(params.cellContents),
-      potential: 'nernst', pumpAuto: false, turnSeconds: 6, extent: 240, bounds: { up: 78, down: CYTOSOL - 8 },
+      potential: 'nernst', pumpAuto: false, turnSeconds: 6,
+      /* mito is built next; its cytosol is where the pump's ADP and Pᵢ go. */
+      release: (kind, info) => !!(mito && mito.returnHome && mito.returnHome(kind, info)), extent: 240, bounds: { up: 78, down: CYTOSOL - 8 },
     });
     const mitoOpts = Object.assign({}, params, { span: 'mitochondrion', extent: 240, bounds: { down: 95 },
       curve: params.curve != null ? params.curve : 12, atpTo: worldOf(cell, gCell, 'pump.approach'),
@@ -745,7 +790,8 @@
        four bands down the right, and neither sheet ever ends on screen. */
     const PROTEIN_NAME = { complex: 'Electron transport chain', I: 'Complex I', II: 'Complex II', III: 'Complex III', IV: 'Complex IV',
       synthase: 'ATP synthase', leak: 'Uncoupler',
-      translocase: 'ADP/ATP translocase', porin: 'Porin', pump: 'Na⁺/K⁺ pump', K: 'K⁺ channel', CL: 'Cl⁻ channel' };
+      translocase: 'ADP/ATP translocase', phosphate: 'Phosphate carrier', porin: 'Porin', pump: 'Na⁺/K⁺ pump',
+      K: 'K⁺ channel', NA: 'Na⁺ leak channel', CL: 'Cl⁻ channel' };
     vw = global.Sheet.view(el, box, {
       sheets: () => [
         ...Object.entries(Object.assign({}, cell.proteins, mito.proteins, mito.doors))
