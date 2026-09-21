@@ -139,7 +139,8 @@
   }
   const stepName = p => esc(LEGACY[p.phase] || p.phase || '');
   const finished = r => !!(r.completed || []).length;
-  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?' };
+  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?',
+    textbook: 'Helpful compared to a textbook diagram?', video: 'Helpful compared to a video?', useAgain: 'Would use this app again?', share: 'Would share with a friend learning Biology?' };
   const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
   const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
   const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p] || p);

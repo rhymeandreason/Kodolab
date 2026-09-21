@@ -394,7 +394,8 @@
      rows, and a name that is not a key here is already a name. */
   const LEGACY = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
   // The survey's ids, as respiration-lab.html's SURVEY names them.
-  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?' };
+  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?',
+    textbook: 'Helpful compared to a textbook diagram?', video: 'Helpful compared to a video?', useAgain: 'Would use this app again?', share: 'Would share with a friend learning Biology?' };
   const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
   // Deployed a lesson is its short URL; on the dev server it is the file. Same lesson.
   // The browser's code, as lib/track.js shows it in the class card: first eight hex of the visitor id.

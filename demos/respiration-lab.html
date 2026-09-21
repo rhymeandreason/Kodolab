@@ -189,8 +189,19 @@
   .quiz textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-page); color: var(--text-strong); resize: vertical; }
   .quiz .scale { display: flex; gap: var(--space-2); margin: 0 0 var(--space-4); }
   .quiz .scale button { flex: 1; padding: 8px 0; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-page); color: var(--text-strong); font: inherit; cursor: pointer; }
-  .quiz .scale button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  /* Picked = solid fill and inverse text, plus a check where it fits: a
+     lightness change, readable without telling green from white. */
+  .quiz .scale button[aria-pressed="true"],
+  .quiz .seg button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--text-inverse); font-weight: 600; }
+  .quiz .seg button[aria-pressed="true"]::before { content: '✓ '; }
   .quiz .q { font-weight: 600; color: var(--text-strong); margin: 0 0 var(--space-2); }
+  .quiz .scale + .q { margin-top: var(--space-5); }
+  .quiz .yn { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--border-hair); }
+  .quiz .yn:last-child { border-bottom: 0; }
+  .quiz .yn p { flex: 1; margin: 0; color: var(--text-strong); line-height: 1.35; }
+  .quiz .seg { display: flex; gap: var(--space-2); }
+  .quiz .seg button { width: 72px; padding: 7px 0; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-page); color: var(--text-strong); font: inherit; cursor: pointer; }
+  .quiz .seg button:hover { border-color: var(--accent); }
   .quiz .score { font-family: var(--font-display); font-size: 44px; font-weight: 500; color: var(--text-strong); margin: 0; }
 </style>
 <!-- kodo.css is linked at the head's end, not left to kit/app.js: the wordmark sits above that
@@ -901,10 +912,18 @@
       choices: ['NAD⁺', 'Oxygen', 'Glucose', 'ATP'], a: 1,
       why: 'Oxygen takes the electrons and picks up protons to become water. Without it the chain backs up and stops.' },
   ];
+  /* Pages of the survey; ids are what /teach and beta.html label. `again` was
+     "Would you use a lesson like this to study?" and is retired, so older
+     rows keep their meaning. */
   const SURVEY = [
-    { id: 'clear', q: 'How clear was this lesson?', kind: 'scale', labels: ['1 confusing', '2', '3', '4', '5 very clear'] },
-    { id: 'confusing', q: 'What was confusing, if anything?', kind: 'text' },
-    { id: 'again', q: 'Would you use a lesson like this to study?', kind: 'choice', choices: ['Yes', 'Maybe', 'No'] },
+    { title: 'How clear was this lesson?', items: [
+      { id: 'clear', kind: 'scale', need: true, labels: ['1 confusing', '2', '3', '4', '5 very clear'] },
+      { id: 'confusing', q: 'What was confusing, if anything?', kind: 'text' } ] },
+    { title: 'A few yes-or-no questions', items: [
+      { id: 'textbook', q: 'Is this helpful compared to a textbook diagram?', kind: 'yesno', need: true },
+      { id: 'video', q: 'Is this helpful compared to a video?', kind: 'yesno', need: true },
+      { id: 'useAgain', q: 'Would you want to use this app again?', kind: 'yesno', need: true },
+      { id: 'share', q: 'Would you share this app with a friend who is learning Biology?', kind: 'yesno', need: true } ] },
   ];
   const quizBody = document.getElementById('quizbody');
   const quizTitle = document.getElementById('quiztitle');
@@ -960,26 +979,36 @@
       });
     }
     function askSurvey(j) {
-      const item = SURVEY[j];
-      quizKick.textContent = 'Three quick questions';
-      quizTitle.textContent = item.q;
-      let inner = '';
-      if (item.kind === 'scale') inner = `<div class="scale">${item.labels.map((l, k) => `<button type="button" data-v="${k + 1}" aria-pressed="false">${esc(l)}</button>`).join('')}</div>`;
-      if (item.kind === 'choice') inner = `<div class="choices">${item.choices.map(c => `<button type="button" data-v="${esc(c)}" aria-pressed="false">${esc(c)}</button>`).join('')}</div>`;
-      if (item.kind === 'text') inner = `<textarea rows="3" maxlength="500" placeholder="Optional"></textarea><p class="why"></p>`;
-      /* Listener on this step's own wrapper, which innerHTML replaces: one on
-         quizBody would outlive the step and answer the next question too. */
-      quizBody.innerHTML = `<div class="main sq">${inner}</div>` + foot(count(j + 1, SURVEY.length), j + 1 < SURVEY.length ? 'Next' : 'Finish', item.kind === 'text');
-      quizBody.querySelector('.sq').addEventListener('click', ev => {
+      const page = SURVEY[j];
+      quizKick.textContent = 'App Feedback';
+      quizTitle.textContent = page.title;
+      const opts = (item, vals, labels) => vals.map((v, k) => `<button type="button" data-id="${item.id}" data-v="${esc(v)}" aria-pressed="${survey[item.id] === v}">${esc(labels[k])}</button>`).join('');
+      const html = item => {
+        if (item.kind === 'scale') return `<div class="scale">${opts(item, item.labels.map((_, k) => k + 1), item.labels)}</div>`;
+        if (item.kind === 'yesno') return `<div class="yn"><p>${esc(item.q)}</p><div class="seg">${opts(item, ['Yes', 'No'], ['Yes', 'No'])}</div></div>`;
+        return `<p class="q">${esc(item.q)}</p><textarea data-id="${item.id}" rows="3" maxlength="500" placeholder="Optional">${esc(survey[item.id] || '')}</textarea>`;
+      };
+      const ready = () => page.items.every(it => !it.need || survey[it.id] != null);
+      const last = j + 1 === SURVEY.length;
+      /* Listener on this page's own wrapper, which innerHTML replaces: one on
+         quizBody would outlive the page and answer the next one too. */
+      quizBody.innerHTML = `<div class="main sq">${page.items.map(html).join('')}</div>`
+        + `<div class="foot">${count(j + 1, SURVEY.length)}<span class="spacer"></span>`
+        + (j ? `<button class="cta cta--ghost cta--sm" type="button" data-back>Back</button>` : '')
+        + `<button class="cta cta--sm" type="button" data-next ${ready() ? '' : 'disabled'}>${last ? 'Finish' : 'Next'}</button></div>`;
+      const next = quizBody.querySelector('[data-next]');
+      const sq = quizBody.querySelector('.sq');
+      sq.addEventListener('click', ev => {
         const b = ev.target.closest('button[data-v]'); if (!b) return;
-        for (const c of quizBody.querySelectorAll('button[data-v]')) c.setAttribute('aria-pressed', c === b);
+        const item = page.items.find(it => it.id === b.dataset.id);
+        for (const c of sq.querySelectorAll(`button[data-id="${item.id}"]`)) c.setAttribute('aria-pressed', c === b);
         survey[item.id] = item.kind === 'scale' ? Number(b.dataset.v) : b.dataset.v;
-        quizBody.querySelector('[data-next]').disabled = false;
+        next.disabled = !ready();
       });
-      quizBody.querySelector('[data-next]').addEventListener('click', () => {
-        if (item.kind === 'text') survey[item.id] = quizBody.querySelector('textarea').value.trim().slice(0, 500);
-        j + 1 < SURVEY.length ? askSurvey(j + 1) : finish();
-      });
+      sq.addEventListener('input', ev => { if (ev.target.dataset.id) survey[ev.target.dataset.id] = ev.target.value.trim().slice(0, 500); });
+      const back = quizBody.querySelector('[data-back]');
+      if (back) back.addEventListener('click', () => askSurvey(j - 1));
+      next.addEventListener('click', () => last ? finish() : askSurvey(j + 1));
     }
     function finish() {
       const score = answers.filter(a => a && a.correct).length;

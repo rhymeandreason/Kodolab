@@ -52,7 +52,7 @@ A class in the teacher dashboard (`/teach`) has a lesson code, shown on its Less
 window.Track && Track.step(2, 5, 'Link step & Krebs');                   // step index, how many, what the student just read
 window.Track && Track.event('complete');                                // once
 window.Track && Track.event('quiz',     { score, total, answers: [{ q, answer, correct }] });
-window.Track && Track.event('survey',   { answers: { clear: 4, confusing: '…', again: 'Maybe' } });
+window.Track && Track.event('survey',   { answers: { clear: 4, confusing: '…', share: 'Yes' } });
 ```
 
 The kinds are a closed set in `api/event.js`. The shapes above are what `/teach` renders and what respiration-lab sends; a second lesson keeps them. A page may offer an empty `#classslot` for the class gear (respiration puts it beside its Quiz button); otherwise the gear pins to the window's corner. The gear opens the class card: the class name, an optional name or initials, the browser's short code (first eight hex of the visitor id, shown the same way on `/teach`), and Leave.
