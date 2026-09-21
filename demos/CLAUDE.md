@@ -47,6 +47,7 @@ Every doc lives in `demos/docs/` except the node graph's two and the clipper's, 
 | A new step-through pathway lesson | `AddingAPage.md`, `Modules.md`'s load order, `SCIENCE.md` §5, `glycolysis-lab.html`'s `STEPS` table and what reads it |
 | The chemistry a molecule has to obey | `SCIENCE.md` §§2-3, plus the target `mol-*.js` |
 | Changing geometry, or what a motion implies happened at the molecule scale | `SCIENCE.md` §§2-5 |
+| Animating a machine, or improving an animation (a rotor, a pump, a particle's route, a queue, tempo) | `Animation.md` — what a motion claims, staging, and checking where rAF does not run |
 | Adding or converting a molecule | `AddingAMolecule.md` — the eight steps, two of which catch failures that render correctly. `MolecularGeometry.md` §1 is the rulebook behind it, §1.4 for the fidelity tier it owes |
 | Add a protein | `AddingAProtein.md` — say what the protein IS first, then pull the data that summary asked for, then build a bench to look at. Ends before the lesson does |
 | Drawing a protein, DNA or RNA, or anything from deposited coordinates | `rendering-modules.md` — which of tube / ribbon / nucleic / surface, and why no outside viewer is loaded. A nucleic acid is a ladder whose rungs are JOINED, which no published viewer does; its index is `proteins/nucleic-acids.js`. **A protein is not a molecule spec**: real ångströms, secondary structure from the file's own records, and `MolecularGeometry.md` §1.5's scale families are what keep it in one frame with anything built from a spec |

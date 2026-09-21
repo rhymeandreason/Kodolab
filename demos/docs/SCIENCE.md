@@ -101,6 +101,8 @@ bond drawn breaking is a claim that a bond broke. HOW the effect is drawn —
 a page convention rather than a chemical rule, and lives in `Modules.md`
 under "Effects (`fx.js`)".
 
+A machine's motion (a rotor, a pump, a particle's route) is `Animation.md`.
+
 **Intensity tracks the chemistry.** Bonds breaking or forming get the full
 shockwave-and-sparks; **hydration** (no bonds broken, identity unchanged) gets a
 soft shimmer; a solute where **nothing happens** stays silent. Never dramatize a
