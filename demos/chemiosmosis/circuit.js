@@ -175,6 +175,75 @@
        one that still takes the synthase; a staging choice, declared here. */
     const LEAK_PREFERENCE = 3;
     const ROTOR = buildRotor(), HEAD = buildHead();
+
+    /* ---- protons riding the ring ----
+       A proton comes down a's inlet half-channel to mid-membrane, binds the
+       c subunit standing there (its Glu, on the ring's outer face), and that
+       BINDING is the notch. It rides the long way round through the lipid
+       and leaves by the outlet half-channel when its rod reaches a again, so
+       a turning ring carries c − 1 protons. Every arrival pushes one out.
+       THE RING STARTS LOADED, as a real one always is: its riders are taken
+       from the pumped-into side, where they go on counting, so seating them
+       moves no pH.
+       THE DRAWN RING TURNS ONE ROD PER PROTON, 2π/c. The ATP ledger's
+       protonsPerTurn may be rounded for the classroom (9 for the c8); the
+       ring a student can count rods on is not. Riders count on the side they
+       came from until they leave: their charge has not crossed yet. */
+    const SLOT = Math.PI * 2 / ring.c, RIDE_R = RING_R + C_R + 0.9;
+    const riders = new Array(ring.c).fill(null);
+    let seeded = false;
+    function seedRing() {
+      seeded = true;
+      const d = pumpDir(), pool = protonPool(d, synthX, Infinity);
+      for (let k = 1; k < ring.c && pool.length; k++) {
+        const t = pool.shift(), a = (k + 0.5) * SLOT;
+        t.aboard = true; t.y = d * 0.01;
+        t.x = synthX + Math.cos(a) * RIDE_R; t.z = Math.sin(a) * RIDE_R;
+        riders[rodAt(k)] = t;
+      }
+    }
+    const rodAt = k => (((k - ROT.protons) % ring.c) + ring.c) % ring.c;   // the rod k slots past the inlet
+    function boardRing() {
+      if (synthX == null || !SYNTH.group.visible) { dropRiders(-pumpDir()); return; }
+      if (!seeded) seedRing();
+      const d = pumpDir(), lane = synthX + LANE_DX;
+      for (const t of travellers) {
+        if (t.kind !== 'H' || t.aboard || t.rode || t.lane !== lane || Math.sign(t.vy) !== -d || t.y * d > 0) continue;
+        const out = rodAt(-1), left = riders[out];
+        if (left) {
+          riders[out] = null;
+          left.aboard = false; left.rode = true; left.lane = lane; left.hop = null; left.inPore = true;
+          left.x = lane; left.y = -d * 0.5; left.vy = -d * Math.abs(left.vy || 1);
+        }
+        t.aboard = true; t.lane = null; t.hop = null; t.y = d * 0.01;
+        riders[rodAt(0)] = t;
+        protonsThroughSynthase++;
+        if (ROT.pass(1)) { releaseATP(); if (hooks.onATP) hooks.onATP(); eng.emit('atp', ROT.atp); }
+        return;   // one notch a frame
+      }
+    }
+    function tickRiders() {
+      for (let i = 0; i < ring.c; i++) {
+        const t = riders[i];
+        if (!t) continue;
+        const a = (i + 0.5) * SLOT - ROTOR.rotation.y;
+        const tx = synthX + Math.cos(a) * RIDE_R, tz = Math.sin(a) * RIDE_R;
+        t.x += (tx - t.x) * 0.3; t.z += (tz - t.z) * 0.3;
+        t.obj.position.set(t.x, t.y, t.z);
+      }
+    }
+    /* The ring is gone or the scene resets: riders are set down on side `to`. */
+    function dropRiders(to) {
+      seeded = false;
+      for (let i = 0; i < ring.c; i++) {
+        const t = riders[i];
+        if (!t) continue;
+        riders[i] = null;
+        t.aboard = false; t.rode = false; t.lane = null; t.bounded = true;
+        t.y = to * (HALF + 8); t.obj.position.set(t.x, t.y, t.z);
+        eng.repick(t); t.vy = Math.abs(t.vy) * to;
+      }
+    }
     SYNTH.group.add(ROTOR, HEAD);
     root.add(SYNTH.group, LEAK.group, ...ALL.map(k => CX[k].group));
     const xs = Object.fromEntries(ALL.map(k => [k, 0]));
@@ -190,7 +259,9 @@
       const stalkMat = Parts.flat(RESP.stalk), gold = Parts.flat(RESP.synthase);
       for (let i = 0; i < ring.c; i++) {
         const c = new THREE.Mesh(new THREE.CylinderGeometry(C_R, C_R, 2 * HALF + 2, 12), gold);
-        const th = (i / ring.c) * Math.PI * 2;
+        /* Half a slot off a's axis, so two rods straddle a: the one at the
+           inlet half-channel and the one at the outlet. */
+        const th = ((i + 0.5) / ring.c) * Math.PI * 2;
         c.position.set(Math.cos(th) * RING_R, 0, Math.sin(th) * RING_R);
         c.userData.baseY = 0; g.add(c);
       }
@@ -1268,12 +1339,12 @@
         },
         setCut(on) { if (e.setCut) e.setCut(on); },
         admits(t) { if (t.kind === 'H') return protonDir() === -pumpDir() && Math.sign(t.y) === pumpDir(); },
-        /* ONE PROTON, ONE NOTCH: the rotor's angle and the ATP count come out
-           of the same pass(). A proton down the uncoupler's hole turns nothing. */
+        /* The synthase's protons were counted when they bound the ring. A
+           proton down the uncoupler's hole turns nothing. */
         onConduct(t, dir) {
           if (t.kind !== 'H' || dir !== -pumpDir()) return;
-          if (synthX != null && t.lane === synthX + LANE_DX) { protonsThroughSynthase++; if (ROT.pass(1)) { releaseATP(); if (hooks.onATP) hooks.onATP(); eng.emit('atp', ROT.atp); } }
-          else protonsLeaked++;
+          if (t.rode) { t.rode = false; return; }
+          if (!(synthX != null && t.lane === synthX + LANE_DX)) protonsLeaked++;
         },
         withContents: withProtons,
         /* Where pH is measured FROM. Protons are conserved, so this stays the
@@ -1282,9 +1353,10 @@
           if (c && ((c.inside && c.inside.H) || (c.outside && c.outside.H)))
             protonRef = (((c.inside && c.inside.H) | 0) + ((c.outside && c.outside.H) | 0)) / 2;
         },
-        pre(dt) { for (const r of runners()) r.run(dt); },
+        pre(dt) { for (const r of runners()) r.run(dt); boardRing(); },
         post(dt) {
-          ROTOR.rotation.y += (ROT.angle - ROTOR.rotation.y) * Math.min(1, dt * 6);
+          ROTOR.rotation.y += (-ROT.protons * SLOT - ROTOR.rotation.y) * Math.min(1, dt * 6);
+          tickRiders();
           tickATP(dt); tickFuel(dt); tickWaiting(dt);
           if (e.post) e.post(dt);
           if (qTokens.length) tickShuttles(dt);
@@ -1295,11 +1367,11 @@
         },
         state(base) { const s = baseState(base); return e.state ? Object.assign(s, e.state(base, s)) : s; },
         reset() {
-          ROT.reset(); pumpedTotal = 0; protonsLeaked = 0; protonsThroughSynthase = 0;
+          dropRiders(pumpDir()); ROT.reset(); ROTOR.rotation.y = 0; pumpedTotal = 0; protonsLeaked = 0; protonsThroughSynthase = 0;
           clearATP(); resetChain();
           if (e.reset) e.reset();
         },
-        clear() { for (const k of ALL) RUN[k].cargo.length = 0; },
+        clear() { for (const k of ALL) RUN[k].cargo.length = 0; riders.fill(null); seeded = false; },
         lid: e.lid || (() => false),
         bandCap: e.bandCap || (() => Infinity),
         clearXs: e.clearXs || (() => []),
