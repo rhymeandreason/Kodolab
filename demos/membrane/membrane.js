@@ -87,12 +87,12 @@
        bilayer carries the ions; the cytoplasmic head, where the ATP binds and
        the phosphate is held, is a big domain hanging into the cytosol. Drawn
        the way figures of this pump draw it: ONE BODY, waisted in the
-       membrane and flared at both ends, the cytosolic end the bigger. Not
+       membrane and flared at the cytosolic end only. Not
        separate lobes, which read as parts bolted on, and nothing coaxial
        hanging off it, which reads as an axle. The foot is −y because this
        component is always a plasma membrane. */
     const PUMP_R = 13.0;
-    const PUMP    = rgb.transporter({ half:HALF, over:15, radius:PUMP_R, flare:[0.5, 0.2], color:0x4f9e78 });
+    const PUMP    = rgb.transporter({ half:HALF, over:15, radius:PUMP_R, flare:[0.5, 0], color:0x4f9e78 });
     eng.root.add(CHANNEL.group, CLCHAN.group, NACHAN.group, AQP.group, PUMP.group);
     let pumpX = 0;
 
