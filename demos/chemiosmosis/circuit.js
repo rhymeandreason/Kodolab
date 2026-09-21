@@ -300,9 +300,46 @@
        thylakoid's is spent where it is made. Drawn by sheet.js's nucleotide(),
        the same body the pump seats. */
     const ROT = CHEM.rotor(ring);
-    const ATP_MAX = 8, ATP_SNAP = 0.35, ATP_SPEED = 52, ATP_FADE = 0.8;
+    const ATP_MAX = 12, ATP_SNAP = 0.35, ATP_SPEED = 52, ATP_FADE = 0.8;
     /* Seconds a delivered ATP waits at a busy receiver: about one pump turn. */
     const ATP_WAIT = 14;
+    /* ATP the receiver cannot take yet drifts in the compartment it arrived
+       in, and the oldest goes back when the receiver is free. Past
+       FLOAT_MAX the oldest is spent elsewhere, which is where most of a
+       cell's ATP goes. */
+    const FLOAT_MAX = 6, FLOAT_SPEED = 9;
+    function float(c) {
+      const land = c.legs[c.legs.length - 1];
+      const outI = c.legs.findIndex(l => l.out);
+      const from = c.legs[outI >= 0 && outI < c.legs.length - 1 ? outI : Math.max(0, c.legs.length - 2)];
+      const d = Math.sign(land.y - from.y) || 1, X = P.spread == null ? P.reach * 0.55 : P.spread;
+      c.waiting = null; c.done = true;
+      c.home = land;
+      c.box = { x0: -X, x1: X, y0: Math.min(from.y + d * 10, land.y - d * 6), y1: Math.max(from.y + d * 10, land.y - d * 6) };
+      const a = rnd(0, 6.28);
+      c.floating = { vx: Math.cos(a) * FLOAT_SPEED, vy: Math.sin(a) * FLOAT_SPEED, since: c.t };
+      c.z = c.z || 0;
+      const floaters = atpChips.filter(e => e.floating && !e.dying);
+      if (floaters.length > FLOAT_MAX) floaters.reduce((a, b) => (a.floating.since < b.floating.since ? a : b)).dying = true;
+    }
+    function drift(c, dt) {
+      const f = c.floating, b = c.box;
+      f.vx += rnd(-1, 1) * FLOAT_SPEED * 2 * dt; f.vy += rnd(-1, 1) * FLOAT_SPEED * 2 * dt;
+      const sp = Math.hypot(f.vx, f.vy) || 1;
+      f.vx *= FLOAT_SPEED / sp; f.vy *= FLOAT_SPEED / sp;
+      c.x += f.vx * dt; c.y += f.vy * dt; c.z += Math.sin(c.t * 0.7 + c.phase) * 3 * dt;
+      if (c.x < b.x0 || c.x > b.x1) { f.vx = -f.vx; c.x = Math.max(b.x0, Math.min(b.x1, c.x)); }
+      if (c.y < b.y0 || c.y > b.y1) { f.vy = -f.vy; c.y = Math.max(b.y0, Math.min(b.y1, c.y)); }
+    }
+    /* The receiver has no ATP waiting and none on its way: the oldest
+       floater sets off for it. */
+    function recall() {
+      if (!P.atpLand || atpChips.some(c => !c.dying && (c.waiting != null || (!c.floating && c.legs[c.legs.length - 1].land)))) return;
+      const fl = atpChips.filter(c => c.floating && !c.dying);
+      if (!fl.length) return;
+      const c = fl.reduce((a, b) => (a.floating.since < b.floating.since ? a : b));
+      c.floating = null; c.legs = [c.home]; c.leg = 0; c.done = false;
+    }
     const atpChips = [];
     const buildNucleotide = eng.nucleotide;
     const _atp = new THREE.Vector3();
@@ -349,7 +386,9 @@
         const c = atpChips[i];
         c.t += dt;
         const o = c.obj, leg = c.legs[c.leg];
+        if (c.floating) drift(c, dt);
         /* WALKED, not integrated: the route is the claim. */
+        else {
         const dx = leg.x - c.x, dy = leg.y - c.y, dist = Math.hypot(dx, dy);
         const move = ATP_SPEED * dt;
         if (dist <= move) {
@@ -360,20 +399,21 @@
             if (leg.on) leg.on();
             if (leg.out && !c.left) { c.left = true; eng.emit('atpOut', ROT.atp); }
             let taken = false;
-            if (leg.land) { taken = !!(P.atpLand && P.atpLand()); eng.emit('atpDelivered', ROT.atp); }
+            if (leg.land) { taken = !!(P.atpLand && P.atpLand()); if (!c.delivered) { c.delivered = true; eng.emit('atpDelivered', ROT.atp); } }
             if (taken) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); continue; }
             /* A busy receiver: ONE ATP waits at it and retries, so the next
                turn is the one the student watched arrive. */
-            if (leg.land && P.atpLand && !atpChips.some(d => d.waiting != null)) c.waiting = 0;
+            if (leg.land && P.atpLand) { if (!atpChips.some(d => d.waiting != null)) c.waiting = 0; else float(c); }
             else if (leg.fade) c.dying = true;
           }
           if (c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
         } else { c.x += dx / dist * move; c.y += dy / dist * move; }
+        }
         if (c.waiting != null && !c.dying) {
           if (P.atpLand()) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); continue; }
-          if ((c.waiting += dt) > ATP_WAIT) c.dying = true;
+          if ((c.waiting += dt) > ATP_WAIT) float(c);
         }
-        seat(o, c.x, c.y, 0);
+        seat(o, c.x, c.y, c.z || 0);
         o.rotation.z = Math.sin(c.t * 1.1 + c.phase) * 0.16;
         const k = Math.min(1, c.t / ATP_SNAP);
         o.userData.newest.scale.setScalar(1 + 1.4 * (1 - k) * (1 - k));
@@ -383,6 +423,7 @@
           if (c.fade <= 0) { kit.forget(o.userData.tag); root.remove(o); atpChips.splice(i, 1); }
         }
       }
+      recall();
     }
     function clearATP() {
       for (const c of atpChips) { kit.forget(c.obj.userData.tag); root.remove(c.obj); }
