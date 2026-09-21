@@ -313,7 +313,7 @@
        in, and the oldest goes back when the receiver is free. Past
        FLOAT_MAX the oldest is spent elsewhere, which is where most of a
        cell's ATP goes. */
-    const FLOAT_MAX = 6, FLOAT_SPEED = 9, QUEUE_BACK = 30;
+    const FLOAT_MAX = 6, FLOAT_SPEED = 9, QUEUE_BACK = 30, FLOAT_APART = 16;
     /* The band between the last door out and the receiver: the compartment
        a delivered ATP arrives in. */
     function boxOf(legs) {
@@ -331,11 +331,19 @@
       c.floating = { vx: (dir ? dir.x : Math.cos(a)) * FLOAT_SPEED, vy: (dir ? dir.y : Math.sin(a)) * FLOAT_SPEED, since: c.t };
       c.z = c.z || 0;
       const floaters = atpChips.filter(e => e.floating && !e.dying && e.kind === c.kind);
-      if (floaters.length > FLOAT_MAX) floaters.reduce((a, b) => (a.floating.since < b.floating.since ? a : b)).dying = true;
+      /* ATP only: an ADP or Pᵢ is never spent, so it never fades. */
+      if (c.kind === 'ATP' && floaters.length > FLOAT_MAX) floaters.reduce((a, b) => (a.floating.since < b.floating.since ? a : b)).dying = true;
     }
     function drift(c, dt) {
       const f = c.floating, b = c.box;
       f.vx += rnd(-1, 1) * FLOAT_SPEED * 2 * dt; f.vy += rnd(-1, 1) * FLOAT_SPEED * 2 * dt;
+      /* Kept apart, as molecules in solution are: two drifting the same
+         way would otherwise sit one on the other with their labels. */
+      for (const e of atpChips) {
+        if (e === c || e.dying) continue;
+        const dx = c.x - e.x, dy = c.y - e.y, dd = Math.hypot(dx, dy);
+        if (dd < FLOAT_APART && dd > 1e-3) { const k = FLOAT_SPEED * 8 * dt * (1 - dd / FLOAT_APART); f.vx += dx / dd * k; f.vy += dy / dd * k; }
+      }
       const sp = Math.hypot(f.vx, f.vy) || 1;
       f.vx *= FLOAT_SPEED / sp; f.vy *= FLOAT_SPEED / sp;
       c.x += f.vx * dt; c.y += f.vy * dt; c.z += Math.sin(c.t * 0.7 + c.phase) * 3 * dt;
@@ -448,10 +456,25 @@
       float(c, info.away);
       return true;
     }
-    /* The first in line at its door goes through along legs; false if none is there. */
+    /* One already on the door's side, drifting in `box`: a starting stock,
+       so the first swaps take a molecule the student could see waiting. */
+    function launchStock(kind, x, y, box) {
+      const g = buildOf(kind);
+      root.add(g);
+      const c = { obj:g, kind, returning:true, near:true, t:0, t0:performance.now() / 1000, phase:Math.random() * 6.28, fade:1,
+                  x, y, z:rnd(-6, 6), legs:[{ x, y }], leg:0, done:true, box, goAt:rnd(1, 6) };
+      atpChips.push(c);
+      float(c);
+    }
+    /* Through the door along legs: the first in line, else the nearest of
+       its kind drifting on the door's side; false if neither is there. */
     function take(kind, legs) {
-      const c = atpChips.find(e => e.kind === kind && e.returning && e.parked && !e.dying);
+      const mine = e => e.kind === kind && e.returning && !e.dying;
+      const d0 = e => Math.hypot(e.x - legs[0].x, e.y - legs[0].y);
+      const c = atpChips.find(e => mine(e) && e.parked) ||
+        atpChips.filter(e => mine(e) && e.near && e.floating).sort((a, b) => d0(a) - d0(b))[0];
       if (!c) return false;
+      c.floating = null;
       c.returning = c.parked = false;
       c.legs = legs; c.leg = 0; c.done = false;
       return true;
@@ -465,7 +488,8 @@
           drift(c, dt);
           if (c.returning && c.t > c.goAt) {
             const n = inLine(c.kind), legs = n < RETURN_LINE && hooks.returnLegs(c.kind, n);
-            if (legs) { c.floating = null; c.legs = legs; c.leg = 0; c.done = false; }
+            /* Already on the door's side: straight to its place in line. */
+            if (legs) { c.floating = null; c.legs = c.near ? legs.slice(-1) : legs; c.leg = 0; c.done = false; }
             else c.goAt = c.t + 2;
           }
         }
@@ -1304,7 +1328,7 @@
       parts: { SYNTH, LEAK, CX, ROTOR, HEAD },
       geom: { F1_BASE, F1_H, F1_R, RING_R, LANE_DX, H_, xs, synthX: () => synthX },
       chips, pulse, waiting, leaving, carrierArrive, fuelSpend, clearFuel,
-      atp: { ROT, launchNucleotide, launch, launchReturn, take, chips: atpChips },
+      atp: { ROT, launchNucleotide, launch, launchReturn, launchStock, take, chips: atpChips },
       electrons: { sendE, handOff, clearE, E_PER_TURN },
       shuttles: { qTokens, cTokens, qDock, qHome, cHome, cDock, protonateQ, ePill, counts: shuttleCounts, freeQ, reserveQ, releaseQ },
       doors: { pmfNow, backPressure, reMV, protonPool, get protonRef() { return protonRef; }, set protonRef(v) { protonRef = v; } },

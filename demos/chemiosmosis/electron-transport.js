@@ -287,7 +287,43 @@
       const d = pumpDir(), head = rejoin();
       const legs = [{ x:doorX, y:d * (HALF + 15) }, { x:doorX, y:-d * (HALF + 15) }];
       legs.push(head || { x:doorX - 44, y:-d * (HALF + 34), fade:true });
-      if (!K.atp.take(kind, legs)) K.atp.launch(kind, doorX, d * (HALF + 15), legs.slice(1));
+      if (K.atp.take(kind, legs)) return;
+      /* None on this side: one comes in from past the frame's edge, never out of the door. */
+      const b = imsBox();
+      if (b) K.atp.launch(kind, Math.sign(doorX || 1) * b.x1 * 1.15, kind === 'Pi' ? b.y1 - 6 : b.y0 + 6, legs);
+      else K.atp.launch(kind, doorX, d * (HALF + 15), legs.slice(1));
+    }
+    /* The intermembrane space, where the ADP and Pᵢ the swap takes in are
+       drifting before it does: a few there from the start. */
+    const IMS_STOCK = 3;
+    let imsStocked = false;
+    function imsBox() {
+      if (!outerOn()) return null;
+      const d = pumpDir(), X = P.spread == null ? P.reach * 0.55 : P.spread;
+      const a = d * (HALF + 12), b = d * (OUTER_GAP - HALF * 0.62 - 12);
+      return { x0: -X, x1: X, y0: Math.min(a, b), y1: Math.max(a, b) };
+    }
+    /* Kept topped up from past the frame's edges, one at a time: the rest
+       of the cell's spent ATP coming home, so a swap finds one waiting. */
+    const onThisSide = kind => K.atp.chips.filter(c => c.kind === kind && c.returning && !c.dying && (c.near || !c.floating)).length;
+    const nextFeed = { ADP: 0, Pi: 0 };
+    let feedT = 0, feedSide = 1;
+    function stock(dt) {
+      const b = imsBox();
+      if (!b || antX == null || !P.showATP) return;
+      feedT += dt;
+      if (!imsStocked) {
+        imsStocked = true; feedT = 0;
+        for (const kind of ['ADP', 'Pi']) { nextFeed[kind] = 0; for (let i = 0; i < IMS_STOCK; i++)
+          K.atp.launchStock(kind, rnd(b.x0, b.x1) * 0.8, rnd(b.y0, b.y1), b); }
+        return;
+      }
+      for (const kind of ['ADP', 'Pi']) {
+        if (feedT < nextFeed[kind] || onThisSide(kind) >= IMS_STOCK) continue;
+        nextFeed[kind] = feedT + 1.5;
+        feedSide = -feedSide;
+        K.atp.launchStock(kind, feedSide * b.x1 * 1.15, rnd(b.y0, b.y1), b);
+      }
     }
     function releaseADP(atX) {
       swapIn('ADP', atX);
@@ -602,7 +638,7 @@
       },
       afterSheet: buildOuter,
       setCut(on) { if (OUTER) OUTER.cut.enable(on); },
-      post: tickO2,
+      post(dt) { stock(dt); tickO2(dt); },
       set(next) {
         let relay = false;
         if ('o2Stock' in next) { P.o2Stock = next.o2Stock; o2Stockpile(P.o2Stock); }
@@ -635,7 +671,7 @@
           stoichiometry: Object.assign(s.stoichiometry, { protonsPerExport: antX == null ? 0 : PROTONS_PER_EXPORT }),
         };
       },
-      reset() { protonsForExport = 0; o2Stockpile(P.o2Stock); },
+      reset() { protonsForExport = 0; imsStocked = false; o2Stockpile(P.o2Stock); },
       lid: outerOn,
       /* THE CEILING ON THE COMPARTMENT BELOW IT, or the protons just pumped
          out drift straight through the outer sheet. */
