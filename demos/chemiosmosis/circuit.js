@@ -441,7 +441,7 @@
       const p = unbend(info.pos);
       const g = buildOf(kind);
       root.add(g);
-      const c = { obj:g, kind, returning:true, t:0, phase:Math.random() * 6.28, fade:1, x:p.x, y:p.y, z:0,
+      const c = { obj:g, kind, returning:true, t:0, t0:performance.now() / 1000, phase:Math.random() * 6.28, fade:1, x:p.x, y:p.y, z:0,
                   legs:[{ x:p.x, y:p.y }], leg:0, done:true, box:boxOf(route), goAt:rnd(2.5, 5),
                   rot0:info.rot || 0, tag0:info.tagY, tagY:g.userData.tag.position.y };
       atpChips.push(c);
@@ -470,7 +470,7 @@
           }
         }
         /* WALKED, not integrated: the route is the claim. */
-        else {
+        else if (!c.parked) {
         const dx = leg.x - c.x, dy = leg.y - c.y, dist = Math.hypot(dx, dy);
         const move = ATP_SPEED * dt;
         if (dist <= move) {
@@ -479,7 +479,7 @@
           if (!c.done) {
             c.done = true;
             if (leg.on) leg.on();
-            if (leg.park) c.parked = true;
+            if (leg.park) { c.parked = true; c.parkedAt = c.t0 + c.t; }
             if (leg.hold && !P.atpReady()) { c.hold = true; c.waiting = 0; }
             if (leg.out && !c.left) {
               c.left = true; eng.emit('atpOut', ROT.atp);
@@ -497,6 +497,16 @@
           }
           if (!c.floating && !c.hold && c.leg < c.legs.length - 1) { c.leg++; c.done = false; }
         } else { c.x += dx / dist * move; c.y += dy / dist * move; }
+        }
+        /* In line by rank, like carriers at a complex: the line moves up
+           when the first goes through, so no two hold one place. */
+        if (c.parked && !c.dying) {
+          const line = atpChips.filter(e => e.kind === c.kind && e.parked && !e.dying).sort((a, b) => a.parkedAt - b.parkedAt);
+          const legs = hooks.returnLegs(c.kind, line.indexOf(c)), spot = legs && legs[legs.length - 1];
+          if (spot) {
+            const dx = spot.x - c.x, dy = spot.y - c.y, dd = Math.hypot(dx, dy), mv = ATP_SPEED * 0.5 * dt;
+            if (dd > mv) { c.x += dx / dd * mv; c.y += dy / dd * mv; } else { c.x = spot.x; c.y = spot.y; }
+          }
         }
         if (c.hold && !c.dying) {
           if (P.atpReady()) { c.hold = false; c.waiting = null; c.leg++; c.done = false; }

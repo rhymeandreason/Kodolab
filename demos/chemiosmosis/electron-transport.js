@@ -302,7 +302,7 @@
       return [
         { x:porinX, y:d * (OUTER_GAP + HALF * 0.62 + 9) },
         { x:porinX, y:d * (OUTER_GAP - HALF * 0.62 - 7) },
-        { x:door + (kind === 'Pi' ? 8 : 12), y:d * (HALF + 24 + i * 14), park:true },
+        { x:door + (kind === 'Pi' ? 8 : 12), y:d * (HALF + 16 + i * 15), park:true },
       ];
     };
 
