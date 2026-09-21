@@ -100,16 +100,8 @@
      draw: under the heading first, then in the blank the stage will fill. */
   figure { position: relative }
   .step { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; align-items: center; transition: opacity .5s }
-  .etc-btns [hidden] { display: none }
-  .etc-done { margin: 0; padding: var(--space-3) var(--space-6); border-radius: 999px; background: var(--surface-card); font-family: var(--font-display); font-size: var(--text-lg); color: var(--text-strong); }
-  .etc-note { max-width: 46ch; margin: 0; font-size: var(--text-base); color: var(--text-muted); }
-  .etc { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); text-align: center; }
-  .etc[hidden] { display: none; }
   .reset-chain { position: absolute; right: var(--space-5); bottom: var(--space-5); z-index: 2; }
   .reset-view { position: absolute; bottom: var(--space-5); z-index: 2; }
-  .etc-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
-  .tally { display: flex; gap: var(--space-5); font-family: var(--font-ui); color: var(--text-muted); }
-  .tally b { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--text-strong); font-variant-numeric: tabular-nums; }
   .step-mol { width: min(440px, 80%); height: auto; }
   .lshell .lshell-panel .legend { opacity: 0; transition: opacity .5s ease; }
   .lshell .lshell-panel .legend.is-in { opacity: 1; }
@@ -144,6 +136,7 @@
   :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
 </style>
 <link rel="stylesheet" href="kit/badge.css">
+<link rel="stylesheet" href="respiration/etc-by-hand.css">
 <style>
   /* The quiz door, at the panel's foot, shown once the chain is done. */
   .quiz-open[hidden] { display: none; }
@@ -479,6 +472,7 @@
 <script src="proteins/atp-synthase/atp-synthase-scene.js"></script>
 <script src="kit/modal.js"></script>
 <script src="kit/badge.js"></script>
+<script src="respiration/etc-by-hand.js"></script>
 <script>
 (function () {
   'use strict';
@@ -572,7 +566,7 @@
     chemi.box.canvas.parentElement.appendChild(b);
     const r = document.createElement('button');
     r.className = 'btn reset-chain'; r.type = 'button'; r.textContent = 'Reset';
-    r.addEventListener('click', () => resetChain());
+    r.addEventListener('click', () => hand.reset());
     chemi.box.canvas.parentElement.appendChild(r);
     /* Clear of the panel, wherever the shell has put the scene's box: only a
        panel that covers the box's left edge pushes the button in. */
@@ -791,7 +785,7 @@
     { label: 'Electron transport chain', hold: 2600, run() {
       mito.box.flyTo(CRISTA_VIEW, 1.8); reveal(3);
       /* Lands on the chain's framing, no flight. A clean slate for the count: the chain ran before, and its leftover gradient would add ATP no carrier paid for. */
-      setTimeout(() => { go('etc', true); chemi.set({ fuel: null }); chemi.reset(); chemi.set({ contents: PROTONS }); }, 2000);
+      setTimeout(() => { go('etc', true); hand.reset(); }, 2000);
     } },
   ];
   let step = 0;
@@ -818,102 +812,18 @@
   chart.querySelector('image').addEventListener('load', clampFigure);
   cta.querySelector('img').addEventListener('load', clampFigure);
 
-  /* ---- the chain, driven by hand ----
-     The supply is off when the chain arrives, so nothing moves until the
-     student sends a carrier. A button comes back when the sim says the beat
-     is over, read off state(), never on a timer that could drift from it. */
-  const etc = document.createElement('div');
-  etc.className = 'etc';
-  etc.hidden = true;
-  etc.innerHTML = '<div class="tally"><span><b data-k="NADH">0</b> NADH used</span><span><b data-k="FADH2">0</b> FADH₂ used</span><span><b data-k="ATP">0</b> ATP made</span></div>'
-    + '<div class="etc-btns"><button class="cta" type="button" data-fuel="NADH"></button><button class="cta" type="button" data-fuel="FADH2"></button><p class="etc-done" hidden>Completed!</p></div>'
-    + '<p class="etc-note">* The last two NADH are from glycolysis, made in the cytosol.</p>';
+  /* ---- the chain, driven by hand: respiration/etc-by-hand.js ---- */
+  const hand = EtcByHand.create(chemi, { protons: PROTONS, onDone() {
+    quizBtn.hidden = fbBtn.hidden = false;
+    try { localStorage.setItem(DONE_KEY, '1'); } catch (e) { /* the button lasts this load */ }
+    if (window.Track) Track.event('complete');
+  } });
+  const etc = hand.el;
   figure.after(etc);
 
-  /* One glucose's carriers into the chain, 2 from the link step and 6 from Krebs at complex I; then glycolysis's 2 NADH last, which reach ubiquinone by the glycerol-phosphate shuttle (feed's `shuttle`, a turn of II); 2 FADH₂ from Krebs. 8×10 + 4×6 = 104 H⁺, 26 ATP. The chart says the same. */
-  const GLUCOSE = { NADH: 10, FADH2: 2 }, SHUTTLED = 2;
-  const NAME = { NADH: 'NADH', FADH2: 'FADH₂' };
-  const shuttleNext = () => sent.NADH >= GLUCOSE.NADH - SHUTTLED;
-  const doorOf = f => f === 'FADH2' || shuttleNext() ? 'II' : 'I';
-
-  /* Counted from when the controls appear. A complex's turns reset whenever
-     the chain is reset, so the tally adds deltas and
-     treats a drop as a fresh start. One turn of I is one NADH; a turn of II is
-     a Krebs FADH₂ or a shuttled glycolysis NADH*, told apart only for display. */
-  const tally = { I: 0, II: 0, ATP: 0 };
-  let seen = null;
-  let completed = false;   // reported once: the chain reset does not un-complete a lesson
-  /* Carriers put on stage. Each click is one molecule the student sees rise
-     out of the matrix; the component queues it at its complex, and refuses
-     one when the queue is full, which is when the button goes grey. */
-  const sent = { NADH: 0, FADH2: 0 };
-  function count() {
-    const st = chemi.state();
-    const now = { I: st.complexes ? st.complexes.I.turns : null, II: st.complexes ? st.complexes.II.turns : null, ATP: st.atpMade };
-    if (seen) for (const k in tally) {
-      if (now[k] == null) continue;
-      const was = seen[k] == null || now[k] < seen[k] ? now[k] : seen[k];
-      tally[k] += now[k] - was;
-    }
-    seen = now;
-    /* II's turns beyond the FADH₂ sent were shuttled NADH* */
-    const star = Math.min(Math.max(0, sent.NADH - (GLUCOSE.NADH - SHUTTLED)), Math.max(0, tally.II - sent.FADH2));
-    const shown = { NADH: tally.I + star, FADH2: tally.II - star, ATP: tally.ATP };
-    for (const b of etc.querySelectorAll('.tally b')) if (b.textContent !== String(shown[b.dataset.k])) b.textContent = shown[b.dataset.k];
-    buttons(st, shown);
-  }
-  /* A glucose's ATP, read off the chain: protons from the carriers, over what one ATP costs to make and export. */
-  function glucoseATP(st) {
-    const pf = st.protonsPerFuel, so = st.stoichiometry;
-    if (!pf || !so) return null;
-    const protons = (GLUCOSE.NADH - SHUTTLED) * pf.NADH + (SHUTTLED + GLUCOSE.FADH2) * pf.FADH2;
-    return Math.floor(protons / (so.protonsPerATP + so.protonsPerExport));
-  }
-  function buttons(st = chemi.state(), shown) {
-    const w = st.waiting || {};
-    const goal = glucoseATP(st);
-    const done = !!shown && goal != null && shown.ATP >= goal && sent.NADH >= GLUCOSE.NADH && sent.FADH2 >= GLUCOSE.FADH2;
-    const doneEl = etc.querySelector('.etc-done');
-    if (doneEl.hidden === done) doneEl.hidden = !done;
-    if (done && !completed) {
-      completed = true; quizBtn.hidden = fbBtn.hidden = false;
-      try { localStorage.setItem(DONE_KEY, '1'); } catch (e) { /* the button lasts this load */ }
-      if (window.Track) Track.event('complete');
-    }
-    const note = etc.querySelector('.etc-note');
-    if (note.hidden !== done) note.hidden = done;
-    for (const b of etc.querySelectorAll('button[data-fuel]')) {
-      const f = b.dataset.fuel, left = GLUCOSE[f] - sent[f];
-      /* Written only on change: Safari drops a click whose button was rewritten between press and release, and count() runs every 250 ms. */
-      const star = f === 'NADH' && shuttleNext() ? '*' : '';
-      const text = `Send ${NAME[f]}${star} (${left} left)`, off = left <= 0 || (w[doorOf(f)] || 0) >= w.max;
-      if (b.textContent !== text) b.textContent = text;
-      if (b.disabled !== off) b.disabled = off;
-      if (b.hidden !== done) b.hidden = done;
-    }
-  }
-  /* Back to one glucose's worth: an empty chain, no gradient, nothing sent. */
-  function resetChain() {
-    chemi.set({ fuel: null }); chemi.reset(); chemi.set({ contents: PROTONS });
-    for (const k in tally) tally[k] = 0;
-    for (const k in sent) sent[k] = 0;
-    seen = null;
-    count();
-  }
-  etc.addEventListener('click', ev => {
-    const b = ev.target.closest('button[data-fuel]');
-    if (!b || b.disabled) return;
-    const f = b.dataset.fuel;
-    chemi.set({ fuel: null });
-    if (!chemi.feed(f, { shuttle: f === 'NADH' && shuttleNext() })) return;
-    sent[f]++;
-    buttons();
-  });
   function etcArm() {
-    etc.hidden = false;
     chemi.clearNotes(); chemi.note('synthase', { offset: [-70, 84] });
-    count();
-    setInterval(count, 250);
+    hand.start();
     const top = etc.offsetTop + etc.offsetHeight + 40 - scroller.clientHeight;
     scroller.scrollTo({ top: Math.max(scroller.scrollTop, top), behavior: 'smooth' });
   }

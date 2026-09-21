@@ -1,0 +1,9 @@
+/* respiration/etc-by-hand.js's controls: the tally, the send buttons, the note. */
+.etc { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); text-align: center; }
+.etc[hidden] { display: none; }
+.etc-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
+.etc-btns [hidden] { display: none }
+.etc-done { margin: 0; padding: var(--space-3) var(--space-6); border-radius: 999px; background: var(--surface-card); font-family: var(--font-display); font-size: var(--text-lg); color: var(--text-strong); }
+.etc-note { max-width: 46ch; margin: 0; font-size: var(--text-base); color: var(--text-muted); }
+.tally { display: flex; gap: var(--space-5); font-family: var(--font-ui); color: var(--text-muted); }
+.tally b { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--text-strong); font-variant-numeric: tabular-nums; }

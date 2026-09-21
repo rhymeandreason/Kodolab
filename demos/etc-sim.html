@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base href="/demos/">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Electron transport simulation · Kodolab</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="The electron transport chain as a live simulation: send one glucose's NADH and FADH2 into the inner membrane, watch protons pumped out and back through ATP synthase, and count the ATP.">
+<link rel="canonical" href="https://www.kodolab.org/etc-sim">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/etc-sim">
+<meta property="og:title" content="Electron transport simulation · Kodolab">
+<meta property="og:description" content="The electron transport chain as a live simulation: send one glucose's NADH and FADH2 into the inner membrane, watch protons pumped out and back through ATP synthase, and count the ATP.">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
+<script defer src="/demos/lib/site.js"></script>
+<!-- respiration-lab.html's last scene on its own page, full window, to link to
+     and to frame. The chain and its controls are the same code:
+     ElectronTransport and respiration/etc-by-hand.js. -->
+<link rel="stylesheet" href="kit/badge.css">
+<link rel="stylesheet" href="respiration/etc-by-hand.css">
+<style>
+  .etc-view { position: absolute; right: var(--space-5); bottom: var(--space-5); z-index: 2; display: flex; gap: var(--space-3); }
+
+  /* The synthase door, opened by the badge. kit/modal.js needs only [hidden]. */
+  .modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal[hidden] { display: none; }
+  .modal .mback { position: absolute; inset: 0; background: rgba(20, 22, 26, .45); }
+  .modal .mcard { position: relative; width: fit-content; max-width: 100%; padding: 28px; }
+  .modal .mclose { position: absolute; top: 10px; right: 12px; border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: var(--text-muted); }
+  .synth { display: grid; grid-template-columns: min(760px, 80vh) minmax(0, 300px); gap: var(--space-6); align-items: center; }
+  .synth-stage { position: relative; aspect-ratio: 1; background: var(--surface-stage); border-radius: 14px; overflow: hidden; }
+  :root .modal .synth-text h2 { font-size: 34px; }
+  :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
+</style>
+<!-- kodo.css is linked at the head's end, not left to kit/app.js: the wordmark sits above that
+     script in the body and would draw at its natural size first. -->
+<link rel="stylesheet" href="css/kodo.css">
+</head>
+<script src="lib/embed.js"></script>
+<body>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+</nav>
+
+<div id="synthmodal" class="modal" hidden>
+  <div class="mback"></div>
+  <div class="mcard" role="dialog" aria-modal="true" aria-labelledby="synthtitle">
+    <button class="mclose" aria-label="Close">&times;</button>
+    <div class="synth">
+      <div class="synth-stage" id="synthstage"></div>
+      <div class="synth-text">
+        <p class="mkick">The real protein</p>
+        <h2 id="synthtitle">ATP synthase</h2>
+        <p class="msub">Protons flowing back into the matrix turn the rotor. Each full turn makes 3 ATP in the head. The real enzyme spins over a hundred times a second</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="kit/app.js" data-shell="steps" data-use="ElectronTransport,Proteinbox"></script>
+<!-- ATPSynthase names ATP, ADP and Pᵢ from their specs; app.js loads molecules only for Molecule and Diagram. -->
+<script src="lib/skel.js"></script>
+<script src="lib/mol-carriers.js"></script>
+<script src="proteins/atp-synthase/atp-synthase-scene.js"></script>
+<script src="kit/modal.js"></script>
+<script src="kit/badge.js"></script>
+<script src="respiration/etc-by-hand.js"></script>
+<script>
+(function () {
+  'use strict';
+  /* Equal on both sides, so the gradient starts at zero; denser than the
+     default 30 a side, so complex I loads from protons already in frame. */
+  const PROTONS = { inside: { H: 50 }, outside: { H: 50 } };
+  let chemi, hand;
+  const shell = LessonShell.create({
+    chrome: 'none',
+    steps: [{
+      eyebrow: 'Cellular respiration',
+      title: 'The electron transport chain',
+      body: '<p>Send one glucose\'s carriers into the chain. NADH and FADH₂ hand their electrons down the complexes, and each hand-off pumps protons out of the matrix.</p>'
+          + '<p>The protons can only get back in through ATP synthase, and they turn it on the way.</p>',
+      onEnter(ctx) {
+        ctx.ui.controls('<div id="hand"></div>');
+        ctx.q('#hand').appendChild(hand.el);
+        hand.start();
+      },
+    }],
+  });
+
+  chemi = ElectronTransport.mount(shell.stage, {
+    fuel: null, span: 'cell', names: 'intro', o2Stock: 6, viewOffset: shell.viewOffset,
+    /* Only what the chain moves: protons, carriers, O₂, ATP. The cytosol's ions and all the water are scenery here. */
+    cellContents: { inside: {}, outside: {} },
+    contents: PROTONS,
+  }).show('water', false);
+  hand = EtcByHand.create(chemi, { protons: PROTONS, onDone() { if (window.Track) Track.event('complete'); } });
+
+  /* The real enzyme, mounted per open and destroyed on close: a second WebGL
+     box left running behind the chain costs every frame, so the chain holds
+     while the door is open. */
+  let synth = null;
+  const synthModal = Modal.create({ el: 'synthmodal',
+    onShow: () => { chemi.stop(); synth = ATPSynthase.mount(document.getElementById('synthstage'), { context: 'mitochondrion' }); },
+    onHide: () => { if (synth) synth.destroy(); synth = null; chemi.start(); } });
+  const badge = Badge.create({ host: shell.stage, camera: chemi.box.camera, canvas: chemi.box.canvas, at: () => chemi.at('synthase'),
+    icon: 'more', label: 'See the real ATP synthase', offset: [34, 0], onClick: () => synthModal.show() });
+  chemi.on('frame', badge.update);
+
+  /* ElectronTransport's box orbits the origin, and with span:'cell' the inner
+     membrane sits below it, so the target moves down to it. */
+  const INNER_Y = -85;
+  function frame() {
+    Object.assign(chemi.box.cam, { r: 460, phi: Math.PI / 2 - 0.12 });
+    chemi.box.cam.target.y = INNER_Y - 8; chemi.box.cam.target.x = -50;
+    chemi.box.applyCam();
+  }
+
+  const btns = document.createElement('div');
+  btns.className = 'etc-view';
+  btns.innerHTML = '<button class="btn" type="button">Reset view</button><button class="btn" type="button">Reset</button>';
+  btns.children[0].addEventListener('click', frame);
+  btns.children[1].addEventListener('click', () => hand.reset());
+  chemi.box.canvas.parentElement.appendChild(btns);
+
+  shell.goTo(0);
+  frame();
+  chemi.clearNotes(); chemi.note('synthase', { offset: [-70, 84] });
+})();
+</script>
+</body>
+</html>

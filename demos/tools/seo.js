@@ -71,6 +71,8 @@ const PAGES = {
     description: 'The Krebs cycle in 3D: pyruvate oxidation, then eight steps round the ring drawn as the real molecules, and where each carbon goes.' },
   '/electron-transport': {
     description: 'The electron transport chain in 3D: NADH and FADH2 hand electrons to the complexes, protons are pumped, and the ledger counts what the gradient is worth.' },
+  '/etc-sim': {
+    description: 'The electron transport chain as a live simulation: send one glucose\'s NADH and FADH2 into the inner membrane, watch protons pumped out and back through ATP synthase, and count the ATP.' },
   '/fermentation': {
     description: 'Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.' },
   '/sickle-cell': {
