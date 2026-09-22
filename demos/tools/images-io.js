@@ -73,7 +73,7 @@ function orphans(rows) {
 
 /* Wikimedia serves a 403 to a bare fetch, and it is the single biggest
    source this will ever pull from, so every request identifies itself. */
-const UA = 'ScienceSandbox-clipper/1.0 (educational curation; local only)';
+const UA = 'Kodolab-clipper/1.0 (educational curation; local only)';
 
 const TYPES = {
   'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg',

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ScienceSandbox clipper",
+  "name": "Kodolab clipper",
   "version": "1.0",
   "description": "Right-click a science image and file it into nodegraph/images.js with its source, credit and licence.",
   "permissions": ["contextMenus", "scripting", "storage", "activeTab"],

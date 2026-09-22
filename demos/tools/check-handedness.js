@@ -185,7 +185,7 @@ function molblock(key, m) {
   const map = new Map(keep.map((i, n) => [i, n]));
   const bonds = (m.bonds || []).filter(b => map.has(b[0]) && map.has(b[1]))
     .map(b => [map.get(b[0]), map.get(b[1]), b[2] || 1]);
-  let s = `${key}\n  ScienceSandbox\n\n`
+  let s = `${key}\n  Kodolab\n\n`
     + `${pad(keep.length, 3)}${pad(bonds.length, 3)}  0  0  1  0  0  0  0  0999 V2000\n`;
   keep.forEach(i => { const a = m.atoms[i];
     s += `${pad(a.pos[0].toFixed(4), 10)}${pad(a.pos[1].toFixed(4), 10)}`

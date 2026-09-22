@@ -14,7 +14,7 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'clip',
-    title: 'Clip to ScienceSandbox',
+    title: 'Clip to Kodolab',
     contexts: ['image'],
   });
 });

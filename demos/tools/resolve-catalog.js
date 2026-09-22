@@ -113,7 +113,7 @@ async function get(url, tries = 4) {
     if (wait > 0) await sleep(wait);
     last = Date.now();
     let res;
-    try { res = await fetch(url, { headers: { 'User-Agent': 'ScienceSandbox/catalog-resolver' } }); }
+    try { res = await fetch(url, { headers: { 'User-Agent': 'Kodolab/catalog-resolver' } }); }
     catch (e) { if (n === tries - 1) return { status: 0, body: e.message }; await sleep(1500 * (n + 1)); continue; }
     if (res.status === 429 || res.status === 503) { await sleep(2000 * (n + 1)); continue; }
     return { status: res.status, body: await res.text() };
