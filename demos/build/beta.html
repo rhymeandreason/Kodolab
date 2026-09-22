@@ -24,55 +24,80 @@
      page can take its own styling without dragging the teacher's along.
      ========================================================================= -->
 <style>
-  /* This page's own styling goes here. teacher.css gives it the teacher's
-     tables and dialog to start from. */
-  .pagehead .deck { margin: .2rem 0 0; }
-  .classbar .segmented button .dim { font-weight: 400; }
-  .classbar .chip { display: inline-block; margin-left: .5em; padding: 0 .5em; border-radius: 999px; font-size: .85em; line-height: 1.5; font-variant-numeric: tabular-nums; background: color-mix(in srgb, currentColor 14%, transparent); }
+  /* teacher.css draws /teach; this page only adds the teacher picker. */
+  .dh-top .selectwrap select { min-width: 12rem; }
 </style>
 </head>
-<body class="kodo">
+<body class="kodo teach">
 <div class="page">
   <nav class="sitenav">
     <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <a class="navtitle" href="/beta" aria-current="page">Beta</a>
   </nav>
 
-  <header class="pagehead">
-    <h1>beta</h1>
-    <p class="deck">Every class, as its teacher sees it. Local only.</p>
+  <header class="dashhead">
+    <div class="dh-top">
+      <div class="classbar" id="classBar" hidden>
+        <label class="vh" for="teacherPick">Teacher</label>
+        <span class="selectwrap"><select id="teacherPick"></select><i class="ph-bold ph-caret-down" aria-hidden="true"></i></span>
+        <span class="vh" id="classesLabel">Classes</span>
+        <div class="classtabs" id="classTabs" role="group" aria-labelledby="classesLabel"></div>
+      </div>
+    </div>
+
+    <div id="classTop" hidden>
+      <div class="dh-main">
+        <div class="classhead">
+          <h1 id="className"></h1>
+          <p class="classmeta" id="classMeta"></p>
+        </div>
+        <div class="share">
+          <div class="share-text">
+            <label for="lessonPick">Class link to</label>
+            <span class="selectwrap"><select id="lessonPick"></select><i class="ph-bold ph-caret-down" aria-hidden="true"></i></span>
+          </div>
+          <div class="share-link">
+            <label class="vh" for="classLink">Class link</label>
+            <input id="classLink" readonly>
+            <button class="btn btn--light" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy link</button>
+          </div>
+          <p class="share-foot">Code <code class="bigcode" id="classCode"></code> Read-only. Local only.</p>
+        </div>
+      </div>
+      <div class="viewtabs" role="group" aria-label="View">
+        <button type="button" aria-pressed="true"><i class="ph-bold ph-book-open-text" aria-hidden="true"></i>Lessons<span class="chip" id="sessionCount"></span></button>
+      </div>
+    </div>
   </header>
 
   <main>
     <p class="err" id="err" hidden></p>
     <section id="dash" hidden>
-      <div class="classbar">
-        <div class="segmented" id="classTabs" role="tablist"></div>
+      <div class="emptystate" id="noClass" hidden>
+        <i class="ph-bold ph-chalkboard-teacher" aria-hidden="true"></i>
+        <h4>No classes yet</h4>
       </div>
-      <p class="empty" id="noClass" hidden>No classes yet.</p>
 
       <div id="classView" hidden>
         <section class="lessons">
-          <div class="card linkcard">
-            <label for="classLink">Class link</label>
-            <div class="line">
-              <input id="classLink" readonly>
-              <button class="btn" type="button" id="copyLink"><i class="ph-bold ph-copy"></i>Copy</button>
-            </div>
-            <p class="sub">The code is <code id="classCode"></code>; it works on any lesson URL as <code>?class=…</code>.</p>
-          </div>
-
-          <div class="line sesshead">
-            <h3 class="cap">Sessions</h3>
+          <dl class="stats" id="stats"></dl>
+          <div class="sechead2">
+            <h3>Sessions</h3>
             <span class="spacer"></span>
-            <button class="btn" type="button" id="exportCsv"><i class="ph-bold ph-download-simple"></i>CSV</button>
+            <button class="btn btn--solid" type="button" id="refreshSessions"><i class="ph-bold ph-arrow-clockwise"></i>Refresh</button>
+            <button class="btn" type="button" id="exportCsv"><i class="ph-bold ph-download-simple"></i>Download CSV</button>
           </div>
-          <div class="tablewrap">
+          <div class="tablewrap" id="sessionsWrap">
             <table class="sessions">
-              <thead><tr><th>Name · browser</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th>Done</th><th class="num">Quiz</th><th>Survey</th><th class="num">Asked</th></tr></thead>
+              <thead><tr><th>Name · browser</th><th>Lesson</th><th>First seen</th><th>Last seen</th><th class="num">On screen</th><th>Progress</th><th class="ctr">Done</th><th class="num">Quiz</th><th class="ctr">Survey</th><th class="num">Asked</th></tr></thead>
               <tbody id="sessions"></tbody>
             </table>
           </div>
-          <p class="empty" id="noSessions" hidden>Nobody has opened the link yet.</p>
+          <div class="emptystate" id="noSessions" hidden>
+            <i class="ph-bold ph-users-three" aria-hidden="true"></i>
+            <h4 id="noSessionsHead">No one has opened the link yet</h4>
+            <p id="noSessionsSay"></p>
+          </div>
         </section>
       </div>
     </section>
@@ -89,6 +114,7 @@
   <div class="sessionbody" id="sessionBody"></div>
 </dialog>
 
+<script src="/demos/lib/lessons.js"></script>
 <script>
 (() => {
   'use strict';
@@ -102,7 +128,6 @@
   const score = q => { const s = Number(q.score), t = Number(q.total);
     return Number.isFinite(s) && Number.isFinite(t) ? `${s}/${t}` : ''; };
   const fileForm = /\.html$/.test(location.pathname);
-  const LESSON_PATH = fileForm ? '/demos/respiration-lab.html' : '/respiration';
 
   async function api(q) {
     const r = await fetch('../../api/log' + q, { cache: 'no-store' });
@@ -122,104 +147,191 @@
     if (s < 86400 && d.getDate() === new Date().getDate()) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
-  // The same words /teach uses for respiration-lab.html's phases and survey ids.
-  /* Rows written before a lesson reported a step's NAME sent a key instead;
-     a name that is not a key here is already a name. */
-  const LEGACY = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
-  /* This table is every page a browser touched, not one lesson (that is
-     /teach's job), so the step shown is the furthest reached on any of them.
-     api/teacher.js keys progress by page; these flatten it back. */
-  function far(r) {
-    let best = null;
-    for (const page of Object.keys(r.progress || {})) {
-      const p = r.progress[page];
-      if (p && (!best || (p.i || 0) > (best.i || 0))) best = p;
-    }
-    return best;
-  }
-  const stepName = p => esc(LEGACY[p.phase] || p.phase || '');
-  const finished = r => !!(r.completed || []).length;
-  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?',
-    textbook: 'Helpful compared to a textbook diagram?', video: 'Helpful compared to a video?', useAgain: 'Would use this app again?', share: 'Would share with a friend learning Biology?' };
-  const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
-  const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
-  const pageName = p => ({ '/respiration': 'Respiration', '/respiration-lab': 'Respiration' }[p] || p);
-  const classLink = () => `${location.origin}${LESSON_PATH}?class=${current.class.code}`;
 
   async function load() {
     try { data = await api('?classes=1'); }
     catch (err) { $('err').textContent = err.message + ' (this page reads only from localhost)'; $('err').hidden = false; return; }
     $('dash').hidden = false;
+    const teachers = [...new Set(data.classes.map(c => c.teacher))];
+    $('teacherPick').innerHTML = teachers.map(t => {
+      const n = data.classes.filter(c => c.teacher === t).length;
+      return `<option value="${esc(t)}">${esc(t)} (${n})</option>`;
+    }).join('');
     const want = new URLSearchParams(location.hash.slice(1)).get('class');
     classId = (data.classes.find(c => c.id === want) || data.classes[0] || {}).id || null;
     paintClasses();
     if (classId) await openClass(classId);
   }
+  const teacherOf = id => (data.classes.find(c => c.id === id) || {}).teacher;
   function paintClasses() {
-    $('classTabs').innerHTML = data.classes.map(c =>
-      `<button type="button" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}"><span class="dim">${esc(c.teacher)} · </span>${esc(c.name)}${c.sessions ? `<span class="chip">${c.sessions}</span>` : ''}</button>`).join('');
+    const t = teacherOf(classId);
+    $('teacherPick').value = t || '';
+    $('classTabs').innerHTML = data.classes.filter(c => c.teacher === t).map(c =>
+      `<button type="button" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
+    $('classBar').hidden = !data.classes.length;
     $('noClass').hidden = !!data.classes.length;
-    $('classView').hidden = !classId;
+    $('classView').hidden = $('classTop').hidden = !classId;
   }
+  $('teacherPick').addEventListener('change', () => {
+    const c = data.classes.find(c => c.teacher === $('teacherPick').value);
+    if (c) openClass(c.id);
+  });
   $('classTabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-id]'); if (b) openClass(b.dataset.id);
   });
   async function openClass(id) {
     classId = id;
+    // Absolute: a bare '#…' resolves against <base>, which is /demos/build/, not /beta.
     history.replaceState(null, '', location.pathname + location.search + '#class=' + id);
     paintClasses();
     if ($('session').open) $('session').close();
-    current = await api('?class=' + encodeURIComponent(id));
-    paint();
+    const fresh = await api('?class=' + encodeURIComponent(id));
+    if (classId === id) { current = fresh; paintClass(); }
   }
 
-  function paint() {
-    const c = current, rows = c.sessions || [];
+  function paintClass() {
+    const c = current, k = (c.sessions || []).length;
+    $('className').textContent = c.class.name;
+    $('classMeta').textContent = `${c.class.teacher} · ${k ? `${k} lesson ${k === 1 ? 'session' : 'sessions'}` : 'No lesson sessions yet'}`;
+    paintSessions();
+  }
+
+  /* ---- lessons: the link, the sessions, the questions ------------------- */
+  // Copied from teacher.html, which is the reference: keep the two in step.
+  const LESSONS = (window.Lessons || []).filter(l => l.file && !l.soon);
+  const LESSON_KEY = 'ss.teach.lesson';
+  let lessonKey = null;
+  try { lessonKey = localStorage.getItem(LESSON_KEY); } catch (e) {}
+  if (!LESSONS.some(l => l.key === lessonKey)) lessonKey = (LESSONS.find(l => l.key === 'respiration') || LESSONS[0] || {}).key;
+  $('lessonPick').innerHTML = LESSONS.map(l => `<option value="${esc(l.key)}">${esc(l.title)}</option>`).join('');
+  $('lessonPick').value = lessonKey;
+  $('lessonPick').addEventListener('change', () => {
+    lessonKey = $('lessonPick').value;
+    try { localStorage.setItem(LESSON_KEY, lessonKey); } catch (e) {}
+    paintSessions();
+  });
+  const classLink = () => {
+    const l = LESSONS.find(l => l.key === lessonKey) || {};
+    return `${location.origin}${fileForm ? l.file : l.url}?class=${current.class.code}`;
+  };
+  const LEGACY = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
+  const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?',
+    textbook: 'Helpful compared to a textbook diagram?', video: 'Helpful compared to a video?', useAgain: 'Would use this app again?', share: 'Would share with a friend learning Biology?' };
+  const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
+  const shortId = v => { const h = String(v).replace(/-/g, '').slice(0, 8); return h.slice(0, 4) + '-' + h.slice(4); };
+  const TITLE = {};
+  for (const l of window.Lessons || []) for (const p of [l.url, l.file, l.file && l.file.replace(/\.html$/, ''), l.file && l.file.replace(/^\/demos/, '').replace(/\.html$/, '')]) if (p) TITLE[p] = l.title;
+  const pageName = p => TITLE[p] || p;
+  const YES = '<i class="ph-bold ph-check-circle yes" aria-hidden="true"></i><span class="vh">yes</span>';
+
+  const keysOf = l => new Set([l.url, l.file, l.file && l.file.replace(/\.html$/, ''),
+    l.file && l.file.replace(/^\/demos/, '').replace(/\.html$/, '')].filter(Boolean));
+  let keyCache = null, keyCacheFor = null;
+  function lessonKeys() {
+    if (keyCacheFor !== lessonKey) { keyCacheFor = lessonKey; keyCache = keysOf(LESSONS.find(l => l.key === lessonKey) || {}); }
+    return keyCache;
+  }
+  const onLesson = r => (r.pages || []).some(p => lessonKeys().has(p));
+  const finished = r => (r.completed || []).some(p => lessonKeys().has(p));
+  function progressOf(r) {
+    const K = lessonKeys();
+    let best = null;
+    for (const page of Object.keys(r.progress || {})) {
+      const p = r.progress[page];
+      if (K.has(page) && p && (!best || (p.i || 0) > (best.i || 0))) best = p;
+    }
+    return best;
+  }
+  const stepName = p => esc(LEGACY[p.phase] || p.phase || '');
+  function progress(r) {
+    const p = progressOf(r);
+    if (!p) return onLesson(r)
+      ? '<span class="dim" title="This lesson does not report its steps">&mdash;</span>'
+      : '<span class="dim">Not started</span>';
+    const n = Math.max(Number(p.n) || 0, (p.i || 0) + 1);
+    const at = finished(r) ? n : (p.i || 0) + 1;
+    const meter = n > 6
+      ? `<span class="pips-n">${at} / ${n}</span>`
+      : `<span class="pips" role="img" aria-label="${at} of ${n}">`
+        + Array.from({ length: n }, (_, k) => `<span class="${k < at ? 'on' : ''}"></span>`).join('') + '</span>';
+    return `<span class="prog">${meter}<span class="pname">${stepName(p)}</span></span>`;
+  }
+
+  function paintStats(rows) {
+    const done = rows.filter(finished).length;
+    const quizzes = rows.map(r => r.quiz && Number(r.quiz.score) / Number(r.quiz.total)).filter(Number.isFinite);
+    const avg = quizzes.length ? Math.round(100 * quizzes.reduce((a, b) => a + b, 0) / quizzes.length) + '%' : '—';
+    const asked = rows.reduce((a, r) => a + (r.questions || 0), 0);
+    const time = rows.map(r => r.active_s || 0).sort((a, b) => a - b);
+    const median = time.length ? mins(time[time.length >> 1]) : '—';
+    const tile = (k, v, note) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}${note ? `<span>${esc(note)}</span>` : ''}</dd></div>`;
+    $('stats').innerHTML = tile('Opened the lesson', rows.length)
+      + tile('Finished', done, rows.length ? `of ${rows.length}` : '')
+      + tile('Quiz average', avg, quizzes.length ? `${quizzes.length} taken` : 'none taken')
+      + tile('Typical time on screen', median)
+      + tile('Questions to the tutor', asked);
+  }
+
+  function paintSessions() {
+    const c = current; if (!c) return;
+    const rows = (c.sessions || []).filter(onLesson);
     $('classLink').value = c.class.code ? classLink() : '';
     $('classCode').textContent = c.class.code || '';
+    $('sessionCount').textContent = rows.length || '';
     $('noSessions').hidden = !!rows.length;
-    $('sessions').innerHTML = rows.map((r, i) => `<tr data-i="${i}">
+    const elsewhere = !rows.length && (c.sessions || []).length;
+    $('noSessionsHead').textContent = elsewhere ? 'No one has opened this lesson yet' : 'No one has opened the link yet';
+    $('noSessionsSay').textContent = elsewhere ? 'This class has been on other lessons. Pick one above.' : '';
+    $('sessionsWrap').hidden = !rows.length;
+    $('stats').hidden = !rows.length;
+    paintStats(rows);
+    $('exportCsv').hidden = !rows.length;
+    $('sessions').innerHTML = rows.map(r => `<tr data-v="${esc(r.visitor_id)}">
       <td><button class="textbtn name" data-act="session" type="button">${esc(r.name || '')}${r.name ? ' ' : ''}<code class="bid">${esc(shortId(r.visitor_id))}</code></button></td>
-      <td class="dim">${esc((r.pages || []).map(pageName).join(', '))}</td>
+      <td class="dim">${esc([...new Set((r.pages || []).map(pageName))].join(', '))}</td>
       <td class="dim">${esc(ago(r.first_seen))}</td>
       <td class="dim">${esc(ago(r.last_seen))}</td>
       <td class="num">${mins(r.active_s || 0)}</td>
-      <td>${(p => p ? `${stepName(p)} <span class="dim">${(p.i || 0) + 1}/${Math.max(Number(p.n) || 0, (p.i || 0) + 1)}</span>` : '—')(far(r))}</td>
-      <td>${finished(r) ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td>${progress(r)}</td>
+      <td class="ctr">${finished(r) ? YES : ''}</td>
       <td class="num">${r.quiz ? score(r.quiz) : ''}</td>
-      <td>${r.survey ? '<i class="ph-bold ph-check"></i>' : ''}</td>
+      <td class="ctr">${r.survey ? YES : ''}</td>
       <td class="num">${r.questions || 0}</td></tr>`).join('');
   }
 
   $('copyLink').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('classLink').value); $('copyLink').textContent = 'Copied'; }
+    try { await navigator.clipboard.writeText($('classLink').value); $('copyLink').innerHTML = '<i class="ph-bold ph-check"></i>Copied'; }
     catch { $('classLink').select(); }
-    setTimeout(() => { $('copyLink').innerHTML = '<i class="ph-bold ph-copy"></i>Copy'; }, 1500);
+    setTimeout(() => { $('copyLink').innerHTML = '<i class="ph-bold ph-copy"></i>Copy link'; }, 1500);
+  });
+  $('refreshSessions').addEventListener('click', async () => {
+    const b = $('refreshSessions'); b.disabled = true;
+    try { await openClass(classId); } catch (e) {} finally { b.disabled = false; }
   });
 
   $('sessions').addEventListener('click', e => {
     const b = e.target.closest('button[data-act="session"]'); if (!b) return;
-    openSession(current.sessions[Number(b.closest('tr').dataset.i)]);
+    openSession(current.sessions.find(r => r.visitor_id === b.closest('tr').dataset.v));
   });
   const dl = (k, v) => `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`;
   function openSession(r) {
     $('sessionName').textContent = (r.name ? r.name + ' · ' : '') + shortId(r.visitor_id);
     $('sessionClass').textContent = `${current.class.teacher} · ${current.class.name}`;
     const parts = [];
-    const p = far(r);
+    const p = progressOf(r);
     parts.push(dl('On screen', esc(mins(r.active_s || 0))) + dl('Progress', p ? stepName(p) : '—')
       + dl('Completed', finished(r) ? 'yes' : 'no') + dl('Questions asked', String(r.questions || 0)));
     if (r.quiz) {
       const s = score(r.quiz);
-      parts.push(`<h3 class="cap">Quiz${s ? ' · ' + s : ''}</h3>`
+      parts.push(`<h3 class="bodyhead">Quiz${s ? ' · ' + s : ''}</h3>`
         + (Array.isArray(r.quiz.answers) ? r.quiz.answers : []).map(a => `<p class="qa ${a.correct ? 'ok' : 'bad'}"><i class="ph-bold ${a.correct ? 'ph-check' : 'ph-x'}"></i> ${esc(a.q)}<br><span class="dim">${esc(a.answer)}</span></p>`).join(''));
     }
     if (r.survey) {
-      parts.push('<h3 class="cap">Survey</h3>'
+      parts.push('<h3 class="bodyhead">Survey</h3>'
         + Object.entries(r.survey.answers || {}).map(([k, v]) => `<p class="qa">${esc(SURVEY_Q[k] || k)}<br><span class="dim">${esc(v == null || v === '' ? '—' : String(v))}</span></p>`).join(''));
     }
     const qs = (current.questions || []).filter(q => q.visitor_id === r.visitor_id);
-    if (qs.length) parts.push('<h3 class="cap">Asked the tutor</h3>' + qs.map(q => `<p class="qa">${esc(q.q)}${q.answer ? `<br><span class="dim">${esc(q.answer)}</span>` : ''}</p>`).join(''));
+    if (qs.length) parts.push('<h3 class="bodyhead">Asked the tutor</h3>' + qs.map(q => `<p class="qa">${esc(q.q)}${q.answer ? `<br><span class="dim">${esc(q.answer)}</span>` : ''}</p>`).join(''));
     $('sessionBody').innerHTML = parts.join('');
     if (!$('session').open) $('session').showModal();
   }
@@ -227,7 +339,7 @@
   $('session').addEventListener('click', e => { if (e.target === $('session')) $('session').close(); });
 
   $('exportCsv').addEventListener('click', () => {
-    const rows = current.sessions || [];
+    const rows = (current.sessions || []).filter(onLesson);
     /* A cell opening with = + - @ or a control character is a formula to a
        spreadsheet, and a nickname is student-typed. Quoting is not a defence:
        the reader unquotes first. A number keeps its sign; anything else gets
