@@ -161,6 +161,24 @@
   :is(.mast, .hero) .links .menu .card button { align-self: flex-start; cursor: pointer; padding: .4em 1em; border: 1.5px solid var(--ink); border-radius: 999px;
     background: transparent; color: var(--ink); font: 600 .8rem var(--sans); }
   :is(.mast, .hero) .links .menu .card button:hover { background: var(--ink); color: var(--paper); }
+  .mast .burger { display: none; }
+  @media (max-width: 560px) {
+    .field .mast { width: calc(100% - 2rem); }
+    .mast .brand { flex-wrap: wrap; align-items: center; gap: 0; padding-bottom: 1rem; }
+    .mast .brand img { width: 112px; }
+    .mast .burger { display: grid; place-items: center; gap: 5px; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .mast .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .25s var(--soft), opacity .2s; }
+    .mast .brand.open .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .mast .brand.open .burger i:nth-child(2) { opacity: 0; }
+    .mast .brand.open .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mast .links { display: none; flex-basis: 100%; flex-direction: column; align-items: flex-start; gap: 0; padding-top: .6rem; }
+    .mast .brand.open .links { display: flex; }
+    .mast .links > * { padding: .8rem 0; }
+    .mast .links .rule { display: none; }
+    /* the intro's corner keeps only the avatar; the menu still says who */
+    .hero .links .menu .summary { font-size: 0; padding-left: 1.7rem; height: 1.7rem; vertical-align: middle; }
+    .mast .links .menu .card { left: 0; right: auto; }
+  }
   .mast .sechead { display: flex; align-items: baseline; gap: 1.2rem; margin-top: 2.6rem; }
   .mast .sechead h2 { font: 500 1.3rem/1 var(--display); letter-spacing: -0.01em; }
   .mast .sechead .rule { display: none; }
@@ -358,7 +376,8 @@
            this row on every document-shell page and cannot write it here. The
            words and the order are that list's. Lessons is where you are. -->
       <div class="brand"><a class="mk" href="#field"><img src="kodolab-wordmark.svg" alt="kodolab"></a>
-        <nav class="links" aria-label="Site">
+        <button class="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="sitenav"><i></i><i></i><i></i></button>
+        <nav class="links" id="sitenav" aria-label="Site">
           <a class="lnk" href="/lessons" aria-current="page">Lessons</a>
           <a class="lnk" href="/library">Library</a>
           <a class="lnk" href="/build">Build</a>
@@ -787,6 +806,10 @@ const lenis = new Lenis({ autoRaf: true, duration: 1.1 });
   }
 })();
 });
+</script>
+<script>
+{ const brand = document.querySelector('.mast .brand'), b = brand.querySelector('.burger');
+  b.addEventListener('click', () => b.setAttribute('aria-expanded', brand.classList.toggle('open'))); }
 </script>
 </body>
 </html>
