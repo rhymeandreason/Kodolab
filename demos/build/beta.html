@@ -65,7 +65,8 @@
         </div>
       </div>
       <div class="viewtabs" role="group" aria-label="View">
-        <button type="button" aria-pressed="true"><i class="ph-bold ph-book-open-text" aria-hidden="true"></i>Lessons<span class="chip" id="sessionCount"></span></button>
+        <button type="button" aria-pressed="true" id="lessonsTab"><i class="ph-bold ph-book-open-text" aria-hidden="true"></i>Lessons<span class="chip" id="sessionCount"></span></button>
+        <button type="button" aria-pressed="false" id="appsTab"><i class="ph-bold ph-cube" aria-hidden="true"></i>Apps<span class="chip" id="appCount"></span></button>
       </div>
     </div>
   </header>
@@ -77,6 +78,20 @@
         <i class="ph-bold ph-chalkboard-teacher" aria-hidden="true"></i>
         <h4>No classes yet</h4>
       </div>
+
+      <section id="appsView" hidden>
+        <div class="sechead2">
+          <h3>Every app built</h3>
+          <span class="spacer"></span>
+          <button class="btn btn--solid" type="button" id="refreshApps"><i class="ph-bold ph-arrow-clockwise"></i>Refresh</button>
+        </div>
+        <div class="tablewrap">
+          <table class="sessions">
+            <thead><tr><th>App</th><th>Owner</th><th>Cohort</th><th>Created</th><th>Last edit</th><th class="num">Versions</th><th class="num">Turns</th><th class="num">Cost</th></tr></thead>
+            <tbody id="apps"></tbody>
+          </table>
+        </div>
+      </section>
 
       <div id="classView" hidden>
         <section class="lessons">
@@ -168,9 +183,11 @@
     $('teacherPick').value = t || '';
     $('classTabs').innerHTML = data.classes.filter(c => c.teacher === t).map(c =>
       `<button type="button" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
-    $('classBar').hidden = !data.classes.length;
-    $('noClass').hidden = !!data.classes.length;
-    $('classView').hidden = $('classTop').hidden = !classId;
+    $('classBar').hidden = view === 'apps' || !data.classes.length;
+    $('noClass').hidden = view === 'apps' || !!data.classes.length;
+    $('classTop').hidden = false;
+    document.querySelector('.dh-main').hidden = view === 'apps' || !classId;
+    $('classView').hidden = view === 'apps' || !classId;
   }
   $('teacherPick').addEventListener('change', () => {
     const c = data.classes.find(c => c.teacher === $('teacherPick').value);
@@ -359,7 +376,38 @@
     URL.revokeObjectURL(a.href);
   });
 
-  load();
+  /* ---- apps: every one anyone built ------------------------------------- */
+  let view = 'lessons';
+  async function loadApps() {
+    const { apps } = await api('?apps=1');
+    $('appCount').textContent = apps.length || '';
+    const who = a => a.owner ? esc(a.owner) + (a.class_name ? ` <span class="dim">· ${esc(a.class_name)}</span>` : '')
+      : `<span class="dim">${esc(a.owner_id || 'anonymous')}</span>`;
+    $('apps').innerHTML = apps.map(a => `<tr>
+      <td><a href="/app/${encodeURIComponent(a.id)}" target="_blank" rel="noopener">${esc(a.title || 'Untitled')}</a>${a.parent_id ? ' <span class="dim" title="Remixed">remix</span>' : ''}${a.is_local ? ' <span class="dim">local</span>' : ''}</td>
+      <td>${who(a)}</td>
+      <td class="dim">${esc(a.cohort || '')}</td>
+      <td class="dim">${esc(ago(a.created_at))}</td>
+      <td class="dim">${esc(ago(a.edited))}</td>
+      <td class="num">${a.versions || 0}</td>
+      <td class="num">${a.turns || 0}</td>
+      <td class="num">${a.usd != null ? '$' + Number(a.usd).toFixed(2) : ''}</td></tr>`).join('');
+  }
+  function setView(v) {
+    view = v;
+    $('lessonsTab').setAttribute('aria-pressed', v === 'lessons');
+    $('appsTab').setAttribute('aria-pressed', v === 'apps');
+    $('appsView').hidden = v !== 'apps';
+    paintClasses();
+  }
+  $('lessonsTab').addEventListener('click', () => setView('lessons'));
+  $('appsTab').addEventListener('click', () => setView('apps'));
+  $('refreshApps').addEventListener('click', async () => {
+    const b = $('refreshApps'); b.disabled = true;
+    try { await loadApps(); } catch (e) {} finally { b.disabled = false; }
+  });
+
+  load().then(() => loadApps()).catch(err => { $('err').textContent = err.message; $('err').hidden = false; });
 })();
 </script>
 </body>

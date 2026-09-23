@@ -4,6 +4,7 @@
  *  GET /api/log?limit=&offset=&lesson=&cohort=&aimed=none  → {stats, turns}
  *  GET /api/log?classes=1     → every teacher's classes, for /beta (build/beta.html)
  *  GET /api/log?class=ID      → that class as api/teacher.js answers its teacher
+ *  GET /api/log?apps=1        → every app built, with owner, for /beta
  *
  *  A LOCAL TOOL. `.vercelignore` keeps this out of production, and this answers
  *  only to a request from the machine it runs on, so the two would both have to
@@ -31,6 +32,35 @@ module.exports = async function handler(req, res) {
   if (!local(req)) return res.status(403).json({ error: 'the log reads only from localhost' });
 
   if (!log.enabled()) return res.status(503).json({ error: 'DATABASE_URL is not set: nothing is logged' });
+
+  /* Every app anyone built, newest edit first, with its owner resolved to a
+     name: build/beta.html's Apps tab. */
+  if (q.apps) {
+    const db = log.sql();
+    try {
+      const apps = await db`
+        SELECT a.id, a.title, a.cohort, a.owner_id, a.parent_id, a.is_local, a.created_at,
+               v.edited, v.versions, v.turns, v.usd,
+               COALESCE(u.name, u.email, t.name, s.label) AS owner,
+               c.name AS class_name
+        FROM apps a
+        LEFT JOIN LATERAL (
+          SELECT max(created_at) AS edited, max(n) AS versions,
+                 count(*) FILTER (WHERE kind IN ('build','edit'))::int AS turns,
+                 round(sum((usage->>'cost_usd')::numeric), 3) AS usd
+          FROM app_versions WHERE app_id = a.id) v ON true
+        LEFT JOIN users u    ON a.owner_id = 'user:' || u.id
+        LEFT JOIN teachers t ON a.owner_id = 'teacher:' || t.id
+        LEFT JOIN seats s    ON a.owner_id = 'seat:' || s.id
+        LEFT JOIN classes c  ON c.id = s.class_id
+        ORDER BY COALESCE(v.edited, a.created_at) DESC
+        LIMIT ${Math.min(Math.max(Number(q.limit) || 500, 1), 2000)}`;
+      return res.status(200).json({ apps });
+    } catch (err) {
+      console.error('[log] apps failed:', err.message);
+      return res.status(502).json({ error: err.message });
+    }
+  }
 
   /* Every class, as its teacher sees it: build/beta.html paints these the way
      /teach's Lessons tab does. */
