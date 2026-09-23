@@ -233,9 +233,21 @@
      links itself, in its own ink, and is only given the account. */
   var OWN = 'header.bar nav.links, .mast nav.links, .hero nav.links';
   function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
+  // Below 560px a bar's links fold behind a menu button (kodo.css `.navfold`).
+  function fold(links) {
+    var row = links.parentNode;
+    if (row.querySelector(':scope > .burger')) return;
+    var bg = document.createElement('button');
+    bg.type = 'button'; bg.className = 'burger';
+    bg.setAttribute('aria-label', 'Menu'); bg.setAttribute('aria-expanded', 'false');
+    bg.innerHTML = '<i></i><i></i><i></i>';
+    bg.addEventListener('click', function () { bg.setAttribute('aria-expanded', String(row.classList.toggle('open'))); });
+    row.classList.add('navfold');
+    row.insertBefore(bg, links);
+  }
   function nav() {
     var own = document.querySelectorAll(OWN);
-    if (own.length) { each(OWN, function (n) { paintAccount(n, stored()); }); reconcile(); return; }
+    if (own.length) { each(OWN, function (n) { paintAccount(n, stored()); }); each('header.bar nav.links', fold); reconcile(); return; }
     if (!document.body.classList.contains('kodo')) return;
     var bar = document.querySelector('.sitenav');
     if (!bar || bar.querySelector('.sitelinks')) return;
@@ -260,6 +272,7 @@
       bar.appendChild(sp);
     }
     bar.appendChild(links);
+    fold(links);
     paintAccount(links, stored());
     reconcile();
   }

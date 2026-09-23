@@ -580,3 +580,8 @@ body.work .tab .count:not(:empty) { background: var(--hue-coral); }
 body.work .history li.bad .what, body.work .history li.bad .what b, body.work .history li.bad .meta { color: var(--hue-coral); }
 body.work .errs { color: var(--hue-coral); }
 body.work .notice.bad { color: var(--hue-coral); }
+/* The site links are the fresh screen's only; an open app's bar has no menu. */
+body:not(.fresh) .bar > .burger { display: none }
+@media (max-width: 560px) {
+  body.fresh .bar.open { background: var(--surface-page); box-shadow: var(--shadow-panel); z-index: 50; }
+}

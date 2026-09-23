@@ -61,6 +61,22 @@
   header.bar a.lnk[aria-current="page"], header.bar a.acct[aria-current="page"] { color: var(--ink); }
   /* The account, as lib/site.js paints it. Same shapes as the front door's mast. */
   header.bar .links .signin { padding: .35em .9em; border: 1.5px solid currentColor; border-radius: 999px; }
+  /* The phone menu lib/site.js adds, restated from kodo.css's `.navfold`. */
+  .navfold > .burger { display: none; }
+  @media (max-width: 560px) {
+    header.bar .wrap.navfold { align-items: center; gap: 0; }
+    .navfold > .mk { display: flex; align-self: center; }
+    .navfold > .burger { display: grid; place-content: center; gap: 5px; width: 44px; height: 44px; margin: 0 -10px 0 auto; padding: 0; border: 0; background: none; cursor: pointer; }
+    .navfold > .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .2s, opacity .2s; }
+    .navfold.open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .navfold.open > .burger i:nth-child(2) { opacity: 0; }
+    .navfold.open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    header.bar .navfold > nav.links { display: none; flex-basis: 100%; flex-direction: column; align-items: flex-start; gap: 0; padding-top: .4rem; }
+    header.bar .navfold.open > nav.links { display: flex; }
+    .navfold > nav > * { padding: .8rem 0; }
+    .navfold > nav .rule { display: none; }
+    .navfold > nav .menu .card { left: 0; right: auto; }
+  }
   header.bar .links .rule { width: 1px; height: 1.1rem; align-self: center; background: rgba(var(--ink-t), .18); }
   header.bar .links .menu { position: relative; display: inline-block; }
   header.bar .links .menu .summary { position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0; border: 0; background: none; cursor: pointer; font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--mute); line-height: inherit; }

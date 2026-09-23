@@ -122,9 +122,9 @@
   .mast .brand .mk { line-height: 0; text-decoration: none; }
   .mast .brand img { width: 148px; height: auto; display: inline-block; vertical-align: baseline; }
   .mast .links { display: flex; flex-wrap: wrap; align-items: baseline; gap: clamp(.9rem,2.4vw,1.7rem); }
-  .mast a.lnk { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase;
+  :is(.mast, .hero) a.lnk { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase;
     text-decoration: none; color: var(--mute); }
-  .mast a.lnk:hover { color: var(--coral); }
+  :is(.mast, .hero) a.lnk:hover { color: var(--coral); }
   .mast a.lnk[aria-current="page"] { color: var(--ink); }
   /* The account, as lib/site.js paints it, in this page's ink: kodo.css's
      `.sitelinks` rules are not loaded here, so the same shapes are restated.
@@ -136,6 +136,22 @@
 #acct-card, #acct-card-2 { z-index: 40; }
   .hero.said .links { opacity: 1; }
   .hero .links .rule { display: none; }
+  .hero .links .lnk, .hero > .burger { display: none; }
+  @media (max-width: 560px) {
+    .hero > .burger { position: absolute; top: .9rem; right: .6rem; z-index: 21; display: grid; place-content: center; gap: 5px;
+      width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; opacity: 0; transition: opacity .9s var(--soft); }
+    .hero.said > .burger { opacity: 1; }
+    .hero > .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .25s var(--soft), opacity .2s; }
+    .hero.open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hero.open > .burger i:nth-child(2) { opacity: 0; }
+    .hero.open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .hero .links { display: none; top: 4rem; right: 1rem; flex-direction: column; align-items: flex-start; gap: 0; min-width: 12rem; padding: .4rem 1.1rem;
+      background: var(--paper); border: 1px solid rgba(var(--ink-t),.12); border-radius: 12px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t),.45); }
+    .hero.open .links { display: flex; }
+    .hero .links > * { padding: .8rem 0; }
+    .hero .links .lnk { display: inline; }
+    .hero .links .menu .card { left: 0; right: auto; }
+  }
   :is(.mast, .hero) .links .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
   :is(.mast, .hero) .links a.acct:hover { color: var(--coral); }
   :is(.mast, .hero) .links a.acct[aria-current="page"] { color: var(--ink); }
@@ -166,7 +182,8 @@
     .field .mast { width: calc(100% - 2rem); }
     .mast .brand { flex-wrap: wrap; align-items: center; gap: 0; padding-bottom: 1rem; }
     .mast .brand img { width: 112px; }
-    .mast .burger { display: grid; place-items: center; gap: 5px; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .mast .brand .mk { display: flex; }
+    .mast .burger { display: grid; place-content: center; gap: 5px; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; background: none; cursor: pointer; }
     .mast .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .25s var(--soft), opacity .2s; }
     .mast .brand.open .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
     .mast .brand.open .burger i:nth-child(2) { opacity: 0; }
@@ -175,8 +192,6 @@
     .mast .brand.open .links { display: flex; }
     .mast .links > * { padding: .8rem 0; }
     .mast .links .rule { display: none; }
-    /* the intro's corner keeps only the avatar; the menu still says who */
-    .hero .links .menu .summary { font-size: 0; padding-left: 1.7rem; height: 1.7rem; vertical-align: middle; }
     .mast .links .menu .card { left: 0; right: auto; }
   }
   .mast .sechead { display: flex; align-items: baseline; gap: 1.2rem; margin-top: 2.6rem; }
@@ -369,7 +384,14 @@
   <p class="tag"><b>Seeing it beats reading it.</b> Learn biology in 3D.</p>
   <div class="cue"><span>scroll</span><i></i></div>
   <!-- Only the account: lib/site.js paints Sign in, or the person's links and menu. -->
-  <nav class="links" aria-label="Account"></nav>
+  <button class="burger" type="button" aria-label="Menu" aria-expanded="false"><i></i><i></i><i></i></button>
+  <!-- The account, painted by lib/site.js. The three places are here for the
+       phone menu only; above 560px the mast carries them. -->
+  <nav class="links" aria-label="Account">
+    <a class="lnk" href="/lessons">Lessons</a>
+    <a class="lnk" href="/library">Library</a>
+    <a class="lnk" href="/build">Build</a>
+  </nav>
 </div>
     <div class="mast">
       <!-- The site's three places, in this page's own ink: lib/site.js writes
@@ -808,8 +830,8 @@ const lenis = new Lenis({ autoRaf: true, duration: 1.1 });
 });
 </script>
 <script>
-{ const brand = document.querySelector('.mast .brand'), b = brand.querySelector('.burger');
-  b.addEventListener('click', () => b.setAttribute('aria-expanded', brand.classList.toggle('open'))); }
+for (const [row, b] of [['.mast .brand', '.mast .burger'], ['.hero', '.hero > .burger']].map(q => q.map(s => document.querySelector(s))))
+  b.addEventListener('click', () => b.setAttribute('aria-expanded', row.classList.toggle('open')));
 </script>
 </body>
 </html>
