@@ -207,11 +207,22 @@
     transition: opacity .35s var(--soft), max-height .45s var(--soft), padding .45s var(--soft), transform .4s var(--soft);
     transition-delay: var(--in, 0s);
   }
+  /* grid stretches the li; carry that height down so a row's cards match */
+  .card, .card .drift { display: flex; flex-direction: column; }
+  .card .drift, .card a, .card .text { flex: 1 1 auto; }
   .field.told .card .text { opacity: 1; max-height: 12rem; padding: 1rem 1.15rem 1.15rem; transform: none; }
   .card .text h3 { margin: 0; font-size: 1.2rem; line-height: 1.2; }
   .card .text p { margin: .4rem 0 0; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: .88rem; line-height: 1.35; color: var(--ink-2); }
   @media (max-width: 900px) { .cards { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; gap: .8rem; } .card .stage { aspect-ratio: 16/9; } }
+  @media (max-width: 560px) {
+    .cards { width: calc(100% - 2rem); gap: .6rem; }
+    .card a { border-radius: 12px; }
+    .card .stage { aspect-ratio: 1; }
+    .card .stage .num { left: 8px; top: 8px; font-size: 9px; padding: 4px 6px; }
+    .field.told .card .text { padding: .6rem .7rem .75rem; }
+    .card .text h3 { font-size: .95rem; }
+    .card .text p { font-size: .78rem; }
+  }
 
   /* ---- the builder ----------------------------------------------------- */
   .gen { background: var(--butter); color: var(--ink); padding: 8rem 0 7rem; position: relative; overflow: hidden; }
