@@ -25,11 +25,15 @@
 
   // Vercel Web Analytics. Cookieless and no personal data, so no consent
   // banner. The path is served by Vercel's edge, so it 404s under the local
-  // dev server and that console line is expected.
-  var s = document.createElement('script');
-  s.defer = true;
-  s.src = '/_vercel/insights/script.js';
-  document.head.appendChild(s);
+  // dev server and that console line is expected. Skipped inside a frame: a
+  // lesson previewed in lessons.html or the node graph, or an app on the
+  // builder's shelf, would count as a second pageview of one visit.
+  if (window.top === window) {
+    var s = document.createElement('script');
+    s.defer = true;
+    s.src = '/_vercel/insights/script.js';
+    document.head.appendChild(s);
+  }
 
   /* THE CLASS. A teacher's lesson link carries `?class=abcd-efgh`; it is kept
      here once, stripped from the address bar the way the tutor's `?k=` is, and
