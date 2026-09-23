@@ -191,6 +191,7 @@
   .path .arrow::after { content: ''; position: absolute; right: -1px; top: -4px; border: 5px solid transparent; border-left: 7px solid var(--hue); border-right: 0; }
   .path .arrow span { position: absolute; left: 50%; top: -1.4rem; transform: translateX(-50%); font: 500 10.5px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; background: var(--paper); padding: 0 .3em; }
   .path .branch { grid-column: 1; position: relative; }
+  .path .sim { grid-column: 3; }   /* under the chain it simulates */
   .path .branch::before { content: ''; position: absolute; left: 50%; top: -2.6rem; height: 2.6rem; border-left: 2px dashed var(--hue); }
   .path .branch::after { content: 'no O\2082'; position: absolute; left: calc(50% + .6rem); top: -1.9rem; font: 500 10.5px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); background: var(--paper); padding: .2em .45em; }
   @media (max-width: 760px) {
@@ -201,6 +202,7 @@
     .path .arrow::after { right: -4px; top: auto; bottom: -1px; border: 5px solid transparent; border-top: 7px solid var(--hue); border-bottom: 0; }
     .path .arrow span { left: 1rem; top: 50%; transform: translateY(-50%); }
     .path .branch { grid-column: auto; order: 9; }
+    .path .sim { grid-column: auto; order: 8; }
     .path .branch::before { display: none; }
     .path .branch::after { top: -1.3rem; }
   }
@@ -509,8 +511,8 @@ function card(l, extra = '') {
     const ls = LESSONS.filter(l => l.unit === u.key);
     let shelf;
     if (u.key === 'energy') {
-      const hub = ls.find(l => l.hub), path = ls.filter(l => l.path).sort((a, b) => a.path - b.path), branch = ls.find(l => l.branch);
-      shelf = card(hub, 'hub') + `<div class="path">${path.map(l => card(l)).join('')}${card(branch, 'branch')}</div>`;
+      const hub = ls.find(l => l.hub), path = ls.filter(l => l.path).sort((a, b) => a.path - b.path), branch = ls.find(l => l.branch), sim = ls.find(l => l.sim);
+      shelf = card(hub, 'hub') + `<div class="path">${path.map(l => card(l)).join('')}${card(branch, 'branch')}${sim ? card(sim, 'sim') : ''}</div>`;
     } else shelf = ls.map(l => card(l)).join('');
     return `<section class="unit ${u.key}" id="${u.key}" style="--hue:${u.hue}">
       <div class="uhead"><span class="n">Unit ${u.n}</span><h2>${esc(u.title)}</h2><p class="why">${esc(u.why)}</p></div>
