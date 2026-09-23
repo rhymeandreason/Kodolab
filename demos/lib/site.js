@@ -80,6 +80,12 @@
     { text: 'Library',    href: '/library',    at: /^\/(library|molecules|proteins)(\/|$)/ },
     { text: 'Build',      href: '/build',      at: /^\/build(\/build)?$/ },
   ];
+  // The library's two shelves, under its link: hover or the caret opens them,
+  // and the folded phone menu lists them indented beneath it.
+  var SHELVES = [
+    { text: 'Proteins',  href: '/proteins',  at: /^\/proteins$/ },
+    { text: 'Molecules', href: '/molecules', at: /^\/molecules$/ },
+  ];
 
   /* THE ACCOUNT. Storage is what the builder's pages last saw (`ss.account`,
      the user as /api/auth describes it), painted at once so the bar does not
@@ -249,9 +255,62 @@
     row.classList.add('navfold');
     row.insertBefore(bg, links);
   }
+  /* Each bar sets its links in its own ink, so a shelf link takes the Library
+     link's classes for font and case; the panel's colours are set here, since
+     a dark bar's link ink would vanish on it. */
+  var DROP_CSS =
+    '.navdrop{position:relative;display:inline-flex;align-items:baseline;gap:.25em}' +
+    '.navdrop .caret{padding:0 .15em;border:0;background:none;cursor:pointer;color:inherit;font:inherit;line-height:1;opacity:.6}' +
+    '.navdrop .caret::before{content:"";display:inline-block;width:.38em;height:.38em;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-.2em) rotate(45deg)}' +
+    '.navdrop .caret:hover,.navdrop.open .caret{opacity:1}' +
+    '.navdrop .navdrop-list{display:none;position:absolute;left:-1rem;top:100%;z-index:30;padding-top:.6rem}' +
+    '.navdrop:hover .navdrop-list,.navdrop:focus-within .navdrop-list,.navdrop.open .navdrop-list{display:block}' +
+    '.navdrop .navdrop-list>div{display:flex;flex-direction:column;gap:.1rem;min-width:9rem;padding:.5rem 0;background:var(--surface-card,var(--paper,#fff));border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:var(--shadow-panel,0 6px 24px -12px rgba(0,0,0,.45))}' +
+    '.navdrop .navdrop-list a.navshelf{padding:.55rem 1rem;color:var(--text-muted,var(--mute,#6b6b6b))}' +
+    '.navdrop .navdrop-list a.navshelf:hover{color:var(--accent,var(--coral,#c55))}' +
+    '.navdrop .navdrop-list a.navshelf[aria-current="page"]{color:var(--text-strong,var(--ink,#222))}' +
+    '@media (max-width:560px){.navdrop{flex-direction:column;align-items:flex-start}.navdrop .caret{display:none}' +
+    '.navdrop .navdrop-list{display:block;position:static;padding:0}.navdrop .navdrop-list>div{background:none;border:0;box-shadow:none;min-width:0;padding:.3rem 0 0 1rem}' +
+    '.navdrop .navdrop-list a.navshelf{padding:.5rem 0}}';
+  function drop(links) {
+    var lib = links.querySelector(':scope > a[href="/library"]');
+    if (!lib) return;
+    if (!document.getElementById('navdrop-css')) {
+      var st = document.createElement('style');
+      st.id = 'navdrop-css'; st.textContent = DROP_CSS;
+      document.head.appendChild(st);
+    }
+    var here = place();
+    var wrap = document.createElement('span');
+    wrap.className = 'navdrop';
+    links.insertBefore(wrap, lib);
+    wrap.appendChild(lib);
+    var caret = document.createElement('button');
+    caret.type = 'button'; caret.className = 'caret';
+    caret.setAttribute('aria-label', 'Library shelves'); caret.setAttribute('aria-expanded', 'false');
+    wrap.appendChild(caret);
+    var panel = document.createElement('div');
+    panel.className = 'navdrop-list';
+    var list = document.createElement('div');
+    SHELVES.forEach(function (n) {
+      var a = document.createElement('a');
+      a.href = n.href; a.textContent = n.text;
+      a.className = (lib.className + ' navshelf').trim();
+      if (n.at.test(here)) a.setAttribute('aria-current', 'page');
+      list.appendChild(a);
+    });
+    panel.appendChild(list);
+    wrap.appendChild(panel);
+    function open(on) { wrap.classList.toggle('open', on); caret.setAttribute('aria-expanded', String(on)); }
+    caret.addEventListener('click', function () { open(!wrap.classList.contains('open')); });
+    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) open(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') open(false); });
+  }
+
   function nav() {
+    each('.sitenav nav.links', drop);   // contribute.html's own bar, which takes no account
     var own = document.querySelectorAll(OWN);
-    if (own.length) { each(OWN, function (n) { paintAccount(n, stored()); }); each('header.bar nav.links', fold); reconcile(); return; }
+    if (own.length) { each(OWN, function (n) { drop(n); paintAccount(n, stored()); }); each('header.bar nav.links', fold); reconcile(); return; }
     if (!document.body.classList.contains('kodo')) return;
     var bar = document.querySelector('.sitenav');
     if (!bar || bar.querySelector('.sitelinks')) return;
@@ -276,6 +335,7 @@
       bar.appendChild(sp);
     }
     bar.appendChild(links);
+    drop(links);
     fold(links);
     paintAccount(links, stored());
     reconcile();

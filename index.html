@@ -136,7 +136,7 @@
 #acct-card, #acct-card-2 { z-index: 40; }
   .hero.said .links { opacity: 1; }
   .hero .links .rule { display: none; }
-  .hero .links .lnk, .hero > .burger { display: none; }
+  .hero .links .lnk, .hero .links .navdrop, .hero > .burger { display: none; }
   @media (max-width: 560px) {
     .hero > .burger { position: absolute; top: .9rem; right: .6rem; z-index: 21; display: grid; place-content: center; gap: 5px;
       width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; opacity: 0; transition: opacity .9s var(--soft); }
@@ -150,6 +150,7 @@
     .hero.open .links { display: flex; }
     .hero .links > * { padding: .8rem 0; }
     .hero .links .lnk { display: inline; }
+    .hero .links .navdrop { display: flex; }
     .hero .links .menu .card { left: 0; right: auto; }
   }
   :is(.mast, .hero) .links .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
