@@ -74,7 +74,9 @@
 #read .tail{height:52vh}
 
 @media (max-width:900px){
-  #stage{width:100%;height:52vh;border-right:0;
+  /* Stacked, the stage stays pinned on top and the text scrolls up under it;
+     under #read's paper it would draw and never be seen. */
+  #stage{width:100%;height:52vh;border-right:0;z-index:3;
     border-bottom:1px solid var(--border-hair)}
   #read{margin-left:0;padding-top:52vh}
   #read section:first-of-type{padding-top:8vh}

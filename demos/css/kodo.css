@@ -734,19 +734,19 @@ body.kodo main > section { margin-bottom: clamp(3rem, 6vw, 4.5rem) }
     padding: 0; border: 0; background: none; cursor: pointer;
   }
   .navfold > .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--text-strong); transition: transform var(--dur-fast), opacity var(--dur-fast); }
-  .navfold.open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg) }
-  .navfold.open > .burger i:nth-child(2) { opacity: 0 }
-  .navfold.open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg) }
+  .navfold.nav-open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg) }
+  .navfold.nav-open > .burger i:nth-child(2) { opacity: 0 }
+  .navfold.nav-open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg) }
   /* the mark's line-height:0 box is not the image's; a flex box is, so it centres */
   .navfold > :is(.mark, .mk), .navfold > .burger { display: flex; align-self: center }
   .navfold > .burger { display: grid }
   .navfold > .crumb { order: 1; flex-basis: 100% }
   .navfold > nav { order: 2; display: none !important; flex-basis: 100%; flex-direction: column; align-items: flex-start; gap: 0; padding-top: .4rem }
-  .navfold.open > nav { display: flex !important }
+  .navfold.nav-open > nav { display: flex !important }
   .navfold > nav > * { padding: .8rem 0 }
   .navfold > nav .rule { display: none }
   .navfold > nav .menu .card { left: 0; right: auto }
-  .sitenav.floating.open .sitelinks { background: var(--surface-card); border-radius: 12px; padding: .4rem 1rem; box-shadow: var(--shadow-panel) }
+  .sitenav.floating.nav-open .sitelinks { background: var(--surface-card); border-radius: 12px; padding: .4rem 1rem; box-shadow: var(--shadow-panel) }
 }
 
 /* ---- the app variant -----------------------------------------------------

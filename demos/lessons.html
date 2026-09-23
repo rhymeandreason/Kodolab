@@ -68,11 +68,11 @@
     .navfold > .mk { display: flex; align-self: center; }
     .navfold > .burger { display: grid; place-content: center; gap: 5px; width: 44px; height: 44px; margin: 0 -10px 0 auto; padding: 0; border: 0; background: none; cursor: pointer; }
     .navfold > .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .2s, opacity .2s; }
-    .navfold.open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-    .navfold.open > .burger i:nth-child(2) { opacity: 0; }
-    .navfold.open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .navfold.nav-open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .navfold.nav-open > .burger i:nth-child(2) { opacity: 0; }
+    .navfold.nav-open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
     header.bar .navfold > nav.links { display: none; flex-basis: 100%; flex-direction: column; align-items: flex-start; gap: 0; padding-top: .4rem; }
-    header.bar .navfold.open > nav.links { display: flex; }
+    header.bar .navfold.nav-open > nav.links { display: flex; }
     .navfold > nav > * { padding: .8rem 0; }
     .navfold > nav .rule { display: none; }
     .navfold > nav .menu .card { left: 0; right: auto; }
@@ -156,6 +156,23 @@
   .emb { position: relative; z-index: 1; cursor: pointer; font: 600 11.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); background: none; border: 1.5px solid rgba(var(--ink-t), .18); border-radius: 999px; padding: .42em .8em; transition: color .15s, border-color .15s; display: inline-flex; align-items: center; gap: .35em; white-space: nowrap; }
   .emb:hover { color: var(--ink); border-color: var(--ink); }
   .emb svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+  /* Phones: two across, as the homepage does. Embedding is a teacher's desk
+     job, so the button goes and a card is picture, name and line. */
+  @media (max-width: 560px) {
+    .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+    .card { border-radius: 12px; }
+    .card .pic { aspect-ratio: 1; }
+    .card.teaser .pic { aspect-ratio: 2 / 1; }
+    .path .card .pic { aspect-ratio: 2 / 1; }   /* the energy path stays one column, joined by arrows */
+    .card .pic .tag { left: 8px; top: 8px; font-size: 9px; padding: 4px 6px; gap: 4px; }
+    .card .body { padding: .65rem .7rem .8rem; gap: .3rem; }
+    .card h3 { font-size: .95rem; }
+    .card p { font-size: .78rem; }
+    .card .foot { display: none; }
+    .hub h3 { font-size: 1.3rem; }
+    .hub .body { padding: 1rem 1.1rem; }
+  }
 
   /* ---- energy: one hub, and the four it opens onto -------------------------- */
   .energy .shelf { display: block; }

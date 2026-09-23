@@ -241,7 +241,7 @@
     bg.type = 'button'; bg.className = 'burger';
     bg.setAttribute('aria-label', 'Menu'); bg.setAttribute('aria-expanded', 'false');
     bg.innerHTML = '<i></i><i></i><i></i>';
-    bg.addEventListener('click', function () { bg.setAttribute('aria-expanded', String(row.classList.toggle('open'))); });
+    bg.addEventListener('click', function () { bg.setAttribute('aria-expanded', String(row.classList.toggle('nav-open'))); });
     row.classList.add('navfold');
     row.insertBefore(bg, links);
   }

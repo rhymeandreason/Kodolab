@@ -583,5 +583,5 @@ body.work .notice.bad { color: var(--hue-coral); }
 /* The site links are the fresh screen's only; an open app's bar has no menu. */
 body:not(.fresh) .bar > .burger { display: none }
 @media (max-width: 560px) {
-  body.fresh .bar.open { background: var(--surface-page); box-shadow: var(--shadow-panel); z-index: 50; }
+  body.fresh .bar.nav-open { background: var(--surface-page); box-shadow: var(--shadow-panel); z-index: 50; }
 }

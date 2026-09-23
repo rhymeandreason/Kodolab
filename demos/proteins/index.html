@@ -67,6 +67,18 @@
     border-radius: 999px; background: var(--deep); color: #fff; font: 500 13px var(--sans);
     letter-spacing: .04em; text-decoration: none; transition: background .15s; }
   .open:hover { background: var(--ink); }
+  /* Phones: library.css's two narrow columns, so the card's button spans the
+     card on one line instead of wrapping inside a pill. */
+  @media (max-width: 560px) {
+    .grid.gallery { gap: .7rem; }
+    .grid.gallery .stage { height: 140px; }
+    .grid.gallery .name { font-size: 1rem; }
+    .grid.gallery .blurb { -webkit-line-clamp: 2; }
+    .grid.gallery .facts { margin: 0 0 .7rem; }
+    .links { gap: .35rem; }
+    .open { flex: 1 1 100%; justify-content: center; padding: .45rem .6rem; font-size: 12px; white-space: nowrap; }
+    .pmodal { padding: .6rem; }
+  }
 
   /* ---- the modal ------------------------------------------------------
      A card opens here rather than navigating: the bigger view is the same
@@ -105,7 +117,10 @@
      side by side there is a column to fill, stacked there is not. */
   @media (max-width:800px){
     .sheet{grid-template-columns:1fr;height:auto;max-height:100%;overflow:auto}
-    .mstage{height:320px;border-right:0;border-bottom:1px solid var(--border-hair)}
+    .mstage{border-right:0;border-bottom:1px solid var(--border-hair)}
+    /* the box stops above the caption, so the molecule never runs under it */
+    .mstage .mbox{position:relative;inset:auto;height:320px}
+    .mstage .cap{position:static}
     .mbody{overflow:visible}
   }
   /* The kicker sits ABOVE the name here, the way a lesson section does: the

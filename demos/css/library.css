@@ -133,6 +133,25 @@ main { padding: 0 0 5rem; }
    molecule's short body the padding is the floor. */
 .grid.mols .facts { padding-top: .75rem; }
 
+/* Phones: two narrow columns, so each card keeps its picture, name, blurb and
+   one chip; the rest is a tap away on its own page. */
+@media (max-width: 560px) {
+  .grid, .grid.prots { gap: .7rem; }
+  .grid.mols { gap: .5rem; }
+  .stage, .grid.prots .stage { height: 116px; }
+  .grid.mols .stage { height: 84px; }
+  .body { padding: .7rem .75rem .8rem; }
+  .name { font-size: .95rem; overflow-wrap: anywhere; }
+  .blurb { font-size: .78rem; margin: .35rem 0 .55rem; }
+  .feats li:nth-child(n+2), .fact:nth-child(n+2) { display: none; }
+  .rung, .does { letter-spacing: .1em; font-size: .58rem; }
+  .grid.mols .body { padding: .55rem .55rem .65rem; }
+  .grid.mols .name { font-size: .82rem; overflow-wrap: anywhere; }
+  .grid.mols .formula { font-size: .72rem; margin-top: .2rem; }
+  .grid.mols .facts { padding-top: .45rem; }
+  .grid.mols .fact { font-size: .62rem; padding: .15rem .45rem; }
+}
+
 footer { padding: 2.5rem 0 3rem; border-top: 1px solid rgba(var(--ink-t), .2); font: 400 13px var(--sans); color: var(--mute); }
 footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
 footer a { text-decoration: none; }
