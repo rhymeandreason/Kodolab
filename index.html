@@ -227,6 +227,9 @@
   }
   .field.set .card a:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(var(--ink-t),.06), 0 24px 50px -14px rgba(var(--ink-t),.35); }
   .card .stage { position: relative; aspect-ratio: 3 / 2; background: var(--stage-bg, #fff); }
+  /* A card is a link, not a scene to turn: no drag, so a finger on it scrolls
+     the page. !important beats the touch-action scene.js writes inline. */
+  .card .stage canvas { pointer-events: none; touch-action: auto !important; }
   .card .stage > canvas, .card .stage > img { display: block; width: 100%; height: 100%; object-fit: contain; border: 0; }
   .card .stage .num {
     position: absolute; left: 14px; top: 12px; font: 600 11px/1 var(--sans); letter-spacing: .2em;
@@ -333,7 +336,13 @@
   @media (max-width: 560px) {
     .gallery { padding: 4rem 0 5rem; }
     .gallery .wrap { flex-direction: column; align-items: flex-start; gap: 1.2rem; margin-bottom: 1.8rem; }
-    .marquee { gap: .8rem; }
+    /* a swipe instead of the loop: the reader drives, one card a stop */
+    .marquee { gap: .8rem; width: auto; animation: none; padding: 0 1rem; overflow-x: auto; scroll-snap-type: x mandatory;
+      scroll-padding-inline: 1rem; overscroll-behavior-x: contain; scrollbar-width: none; }
+    .marquee::-webkit-scrollbar { display: none; }
+    .marquee::after { content: ''; flex: none; width: .2rem; }   /* the end gutter a flex row's padding drops */
+    .marquee a { scroll-snap-align: start; }
+    .marquee a[aria-hidden] { display: none; }
     .marquee a { width: 160px; }
     .marquee .pic { border-radius: 12px; }
     .marquee .name { font-size: .95rem; }
@@ -421,8 +430,8 @@
       </li>
       <li class="card" style="--sx:13vw; --sy:-2vh; --rot:-4deg; --sc:1.02; --dd:10s; --ds:-5s; --dot:var(--coral); --in:.24s">
         <div class="drift"><a href="/protein">
-          <div class="stage" style="--stage-bg:#FFF0EC"><img src="demos/proteins/stills/hemoglobin.webp" alt="haemoglobin, four folded chains" loading="lazy"><span class="num"><i></i>03</span></div>
-          <div class="text"><h3>Levels of Protein Structure</h3><p>Haemoglobin, from a chain of amino acids to four folded chains.</p></div>
+          <div class="stage" style="--stage-bg:#FFF0EC"><img src="demos/proteins/stills/hemoglobin.webp" alt="hemoglobin, four folded chains" loading="lazy"><span class="num"><i></i>03</span></div>
+          <div class="text"><h3>Levels of Protein Structure</h3><p>Hemoglobin, from a chain of amino acids to four folded chains.</p></div>
         </a></div>
       </li>
       <li class="card" style="--sx:-14vw; --sy:10vh; --rot:5deg; --sc:.92; --dd:9s; --ds:-2s; --dot:var(--amber); --in:.18s">
