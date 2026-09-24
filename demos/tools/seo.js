@@ -96,11 +96,11 @@ const PAGES = {
     description: 'The DNA double helix in 3D, built from real coordinates and taken apart piece by piece: the backbone, the bases, and how they pair.' },
   '/nodes': {
     description: 'All of Bio 101 as one interactive map: how the concepts connect, from molecules to cells to organisms and ecosystems.' },
-  '/library': {
+  '/library': { image: 'library',
     description: "Everything in Kodolab's open library: the 3D components a generated app can mount, every protein, and every molecule." },
-  '/molecules': {
+  '/molecules': { image: 'molecules',
     description: "Every molecule in Kodolab's lessons, in 3D and as a diagram. Open one to turn it and show its hydrogens and lone pairs." },
-  '/proteins': {
+  '/proteins': { image: 'proteins',
     description: "Real protein structures in 3D, from deposited PDB data. See how a protein's shape does its job, from hemoglobin and collagen to ATP synthase." },
   '/proteins/reactions': {
     description: 'Biochemical reactions mapped by what happens to the bonds and what pays for it, including the ones that need no enzyme.' },
