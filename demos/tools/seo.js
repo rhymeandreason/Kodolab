@@ -28,7 +28,7 @@ const CHECK = process.argv.includes('--check');
 
 // Share images are 1200x630 crops of media/screenshots/.
 const PAGES = {
-  '/': { file: 'index.html', image: 'water',
+  '/': { file: 'index.html', image: 'lessons',
     description: 'Interactive 3D biology lessons for college Bio 101: water, bonding, proteins, membranes, glycolysis and DNA, drawn from real molecular structures.' },
   '/water': { image: 'water',
     description: 'The structure of water in 3D: hydrogen bonds, why ice floats, what temperature does to the liquid, and why salt dissolves in it.',
