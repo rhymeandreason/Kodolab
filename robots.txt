@@ -10,6 +10,8 @@ Disallow: /demos/admin.html
 Disallow: /demos/attic/
 Disallow: /demos/build/
 Disallow: /demos/tests/
+Disallow: /embed/molecule/
+Disallow: /embed/protein/
 Disallow: /join
 Disallow: /login
 Disallow: /proteins/atp-synthase/bench

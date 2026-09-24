@@ -132,6 +132,8 @@
     { "source": "/library/diagram", "destination": "/demos/diagram/diagram-test.html" },
     { "source": "/library/graph", "destination": "/demos/graph/graph-test.html" },
     { "source": "/molecules",  "destination": "/demos/molecules.html" },
+    { "source": "/embed/protein/:key",  "destination": "/demos/embed/protein.html" },
+    { "source": "/embed/molecule/:key", "destination": "/demos/embed/molecule.html" },
     { "source": "/admin",      "destination": "/demos/admin.html" },
     { "source": "/privacy",    "destination": "/demos/privacy.html" },
     { "source": "/contribute", "destination": "/contribute.html" },

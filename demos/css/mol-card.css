@@ -1,0 +1,80 @@
+/* =============================================================================
+   mol-card.css — lib/mol-card.js's card: molecules.html's modal and the
+   embed's whole frame. The page sets the card's size and its frame.
+   `.mcard`, not `.modal`: kodo.css §10.3 owns `.modal` and its heading.
+   ========================================================================== */
+.mcard{position:relative;background:var(--surface-card);overflow:hidden;
+  display:grid;grid-template-columns:1.1fr 1fr}
+.mcard.solo{grid-template-columns:1fr;background:var(--paper)}
+.mcard .mstage{position:relative;background:var(--paper);
+  border-right:1px solid rgba(var(--brand-ink-t),.1);min-height:0}
+.mcard.solo .mstage{border-right:0}
+.mcard .mstage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mcard .stagebar{position:absolute;z-index:2;left:0;right:0;bottom:1rem;
+  display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;align-items:center}
+.mcard .stagebar:empty,.mcard .stagebar[hidden]{display:none}
+/* Both instruments stand on the model's paper, so the ghost capsule carries
+   the card's own surface: over a molecule, a transparent chip is a floating
+   outline. */
+.mcard .pill--check,
+.mcard .pill--check:hover:not([disabled]){background:var(--surface-card)}
+.mcard .mbody{padding:clamp(1.4rem,3vw,2.2rem);display:flex;flex-direction:column;
+  min-height:0;overflow-y:auto}
+@media (max-width:800px){
+  .mcard:not(.solo){grid-template-columns:1fr;overflow:auto}
+  .mcard:not(.solo) .mstage{height:300px;border-right:0;border-bottom:1px solid var(--border-hair)}
+  .mcard .mbody{overflow:visible}
+}
+/* lessons.html's eyebrow over its Futura heading. */
+.mcard .does{margin:0 0 .5rem;font-size:13px;font-weight:500;letter-spacing:.22em;color:var(--brand-orange)}
+.mcard .name{margin:0;font-weight:500;font-size:clamp(26px,3vw,36px);line-height:1.1;letter-spacing:-.02em;color:var(--brand-ink)}
+.mcard .formula{font-size:1rem;margin:.5rem 0 0}
+.mcard .measure{display:flex;gap:1.1rem 1.9rem;flex-wrap:wrap;margin:1.3rem 0 1.4rem;
+  padding:1.1rem 0 0;border-top:1px solid var(--border-hair)}
+.mcard .measure div{min-width:6.5rem}
+.mcard .measure b{display:block;font-family:var(--font-display);font-weight:500;
+  font-size:1.35rem;line-height:1.1;letter-spacing:-0.02em;color:var(--ink)}
+.mcard .measure span{display:block;margin-top:.3rem;font-size:.76rem;color:var(--muted)}
+.mcard .hint{font-family:var(--font-editorial);font-style:italic;font-size:.9rem;line-height:1.4;
+  color:var(--brand-ink-2);margin:0 0 1rem}
+/* Pushed to the foot of the column, so the reader meets the molecule's name
+   and measurements before its drawing. */
+.mcard .dwrap{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border-hair)}
+.mcard .dwrap[hidden]{display:none}
+/* The strip the pill stands in. The column is nearly full at this height, so
+   the diagram gives up the room rather than the column growing a scrollbar
+   that would slide content under a pinned control. */
+.mcard .mbody.haspairs .dwrap{padding-bottom:2.1rem}
+.mcard .pairs{position:absolute;z-index:2;bottom:1rem;right:clamp(1.4rem,3vw,2.2rem)}
+.mcard .pairs[hidden]{display:none}
+/* One column: the card itself scrolls, so a pinned corner would float over
+   whatever happened to be under it. It goes back in the flow. Must sit after
+   the rule it overrides — same specificity, so source order decides. */
+@media (max-width:800px){
+  .mcard .pairs{position:static;display:block;width:max-content;margin:0 auto 1.4rem}
+  .mcard .mbody.haspairs .dwrap{padding-bottom:0}
+}
+.mcard .mdiagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+
+/* The gallery's close, top right. */
+.mcard .x{position:absolute;top:12px;right:14px;z-index:3;width:36px;height:36px;border-radius:50%;
+  cursor:pointer;border:0;background:#fff;color:var(--brand-ink);font-size:22px;line-height:1;
+  box-shadow:0 2px 10px rgba(var(--brand-ink-t),.2);transition:box-shadow .15s}
+.mcard .x:hover{box-shadow:0 3px 14px rgba(var(--brand-ink-t),.32)}
+
+/* The embed code, as lessons.html's shelf offers it: a small outlined pill. */
+.mcard .emb{cursor:pointer;font:600 11.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);background:none;border:1.5px solid rgba(var(--ink-t),.18);border-radius:999px;
+  padding:.42em .8em;display:inline-flex;align-items:center;gap:.35em;white-space:nowrap;
+  transition:color .15s,border-color .15s}
+.mcard .emb:hover{color:var(--ink);border-color:var(--ink)}
+.mcard .emb svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2}
+.mcard .embrow{margin:0 0 1rem;display:flex;gap:.5rem}
+
+/* The gate: a still, and one button over it that makes it live. */
+.mcard .gate{position:absolute;inset:0;z-index:2;display:flex;align-items:center;
+  justify-content:center;border:0;background:transparent;cursor:pointer}
+.mcard .gate span{padding:.6rem 1.2rem;border-radius:999px;background:var(--brand-ink);
+  color:#fff;font:500 14px var(--sans);letter-spacing:.04em;
+  box-shadow:0 8px 20px -8px rgba(var(--brand-ink-t),.5);transition:transform .15s}
+.mcard .gate:hover span{transform:translateY(-2px)}

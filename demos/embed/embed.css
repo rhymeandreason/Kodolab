@@ -1,0 +1,12 @@
+/* =============================================================================
+   embed.css — the frame around a card that someone else's page holds:
+   embed/protein.html and embed/molecule.html. The card fills the window; the
+   host's own box is the frame, so there is no radius or shadow here.
+   ========================================================================== */
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--paper); }
+#host { position: fixed; inset: 0; }
+#host > .pcard, #host > .mcard { width: 100%; height: 100%; }
+
+.missing { position: fixed; inset: 0; display: grid; place-content: center; gap: .6rem;
+  text-align: center; font: 400 16px var(--sans); color: var(--brand-ink-2); padding: 1rem; }
+.missing a { color: var(--brand-ink); }

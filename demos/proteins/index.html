@@ -48,6 +48,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../css/kodo.css">
 <link rel="stylesheet" href="../kit/proteinbox.css">
+<link rel="stylesheet" href="protein-card.css">
+<link rel="stylesheet" href="../css/embed-sheet.css">
 
 <link rel="stylesheet" href="../css/library.css">
 <style>
@@ -84,99 +86,18 @@
   }
 
   /* ---- the modal ------------------------------------------------------
-     A card opens here rather than navigating: the bigger view is the same
-     box under a bigger frame, taken out of the SAME pool, so the modal costs
-     one context and the card it evicted keeps its last frame. Its own page is
-     a link inside, not the click.
-
-     `.pmodal`, NOT `.modal`: kodo.css §10.3 already owns `.modal`, and its
-     `:root .modal h2` outranks anything a page states about its own heading.
-     A title that quietly comes back as 17px semibold is the symptom.
+     A card opens here rather than navigating: the bigger view is
+     proteins/protein-card.js, the same card an embed code frames, on the one
+     context this page makes. Its own page is a link inside, not the click.
      The frame is lessons.html's embed sheet: navy backdrop, round corners,
      deep shadow, floating close. */
   .pmodal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
     justify-content:center;padding:clamp(1rem,4vw,3rem);
     background:rgba(var(--brand-ink-t),.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
   .pmodal[hidden]{display:none}
-  /* THE SHEET IS BOUNDED AND THE DETAILS SCROLL INSIDE IT, which is a framing
-     rule and not a taste: let the sheet grow to its content and the stage grows
-     with the grid row, so a protein with seven depositions hands the box a
-     column twice as tall as the frame it solved for and the molecule sits low
-     and left in it. A bounded sheet is a stage whose size is settled before the
-     box is built and does not move afterwards. */
-  .sheet{position:relative;background:var(--surface-card);
-    border:0;border-radius:20px;
-    box-shadow:0 40px 100px -30px rgba(var(--brand-ink-t),.6);
-    width:min(980px,100%);height:min(100%,660px);overflow:hidden;
-    display:grid;grid-template-columns:1.05fr 1fr}
-  /* `min-height:0` on both: a grid item's default `auto` minimum refuses to
-     shrink below its content, which is how a bounded sheet still overflows. */
-  .mstage{position:relative;background:var(--paper);
-    border-right:1px solid rgba(var(--brand-ink-t),.1);min-height:0}
-  .mbox{position:absolute;inset:0}
-  .mbody{padding:clamp(1.4rem,3vw,2.2rem);display:flex;flex-direction:column;
-    min-height:0;overflow-y:auto}
-  /* Stacked, the sheet scrolls as one and the stage takes a fixed slice of it:
-     side by side there is a column to fill, stacked there is not. */
-  @media (max-width:800px){
-    .sheet{grid-template-columns:1fr;height:auto;max-height:100%;overflow:auto}
-    .mstage{border-right:0;border-bottom:1px solid var(--border-hair)}
-    /* the box stops above the caption, so the molecule never runs under it */
-    .mstage .mbox{position:relative;inset:auto;height:320px}
-    .mstage .cap{position:static}
-    .mbody{overflow:visible}
-  }
-  /* The kicker sits ABOVE the name here, the way a lesson section does: the
-     reader wants what kind of thing this is before its name. */
-  /* lessons.html's eyebrow; its colour stays the card's, enzyme or carrier. */
-  .mbody .does{margin:0 0 0.5rem;font-size:13px;font-weight:500;letter-spacing:.22em}
-  /* dna-structure.html's reading typography, which is the site's: the display
-     face for the name, an italic editorial gloss under it, and editorial serif
-     for the prose. A card is a shelf label in the UI face; this is the page's
-     one paragraph and it is set to be read. */
-  .mbody .name{font-family:var(--font-display);font-weight:500;
-    font-size:clamp(28px,3vw,40px);line-height:1.1;letter-spacing:-.02em;
-    color:var(--brand-ink)}
-  /* THE CLASS NAME, GLOSSED. On a card "hydrolase" is a word a reader
-     recognizes or does not, and the definition hides in a title attribute
-     where a touch screen never reaches it. Here it is the gloss under the
-     name, which is where this site already puts the short form of a term. */
-  .def{margin:6px 0 0;font-family:var(--font-editorial);font-style:italic;
-    font-size:15px;color:var(--text-muted)}
-  .mblurb{margin:20px 0 1.4rem;font-family:var(--font-editorial);font-size:17px;
-    line-height:1.6;color:var(--text-body)}
-
-  /* WHAT IS UNDER THE PICTURE IS ABOUT THE PICTURE. One line: which
-     deposition is on screen, what it was chosen for, and the way out to it.
-     The rest of the collection's files are the bench's subject, not this
-     modal's: a reader here is meeting the protein, and a table of seven
-     depositions is the answer to a question they have not asked yet. */
-  .cap{position:absolute;left:0;right:0;bottom:0;margin:0;
-    display:flex;flex-wrap:wrap;align-items:baseline;gap:0.55rem;
-    padding:0.7rem 1rem;font-size:0.78rem;color:var(--muted);
-    background:linear-gradient(to top,var(--paper),rgba(0,0,0,0))}
-  .cap .pdb{font-family:var(--font-mono,ui-monospace,monospace);font-weight:600;
-    letter-spacing:0.04em;color:var(--ink)}
-  .cap a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
-  .cap a:hover{color:var(--spark)}
-
-  /* WHAT WAS MEASURED OFF THE FILE ON SCREEN. Every figure is read from the
-     bake at render, never typed: a typed number is a claim nothing checks and
-     a re-bake silently falsifies. */
-  .measure{display:flex;gap:1.1rem 1.9rem;flex-wrap:wrap;margin:0 0 1.4rem;
-    padding:1.1rem 0 0;border-top:1px solid var(--border-hair)}
-  .measure div{min-width:7rem}
-  .measure b{display:block;font-family:var(--font-display);font-weight:500;
-    font-size:1.35rem;line-height:1.1;letter-spacing:-0.02em;color:var(--ink)}
-  .measure span{display:block;margin-top:0.3rem;font-size:0.76rem;color:var(--muted)}
-
-  /* The close is the only chrome the sheet has; escape and the backdrop do
-     the same thing. */
-  .x{position:absolute;top:12px;right:14px;z-index:2;
-    width:36px;height:36px;border-radius:50%;cursor:pointer;
-    border:0;background:#fff;color:var(--brand-ink);font-size:22px;line-height:1;
-    box-shadow:0 2px 10px rgba(var(--brand-ink-t),.2);transition:box-shadow .15s}
-  .x:hover{box-shadow:0 3px 14px rgba(var(--brand-ink-t),.32)}
+  .pmodal .pcard{width:min(980px,100%);height:min(100%,660px);border-radius:20px;
+    box-shadow:0 40px 100px -30px rgba(var(--brand-ink-t),.6)}
+  @media (max-width:800px){ .pmodal .pcard{height:auto;max-height:100%} }
 
 </style>
 </head>
@@ -220,23 +141,7 @@
   </div>
 </footer>
 
-<div class="pmodal" id="modal" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="m-name">
-    <button class="x" id="m-close" aria-label="Close">&times;</button>
-    <div class="mstage">
-      <div class="mbox" id="m-stage"></div>
-      <p class="cap" id="m-cap"></p>
-    </div>
-    <div class="mbody">
-      <p class="does" id="m-does"></p>
-      <h2 class="name" id="m-name"></h2>
-      <p class="def" id="m-def" hidden></p>
-      <p class="mblurb" id="m-blurb"></p>
-      <div class="measure" id="m-measure"></div>
-      <div class="links" id="m-links"></div>
-    </div>
-  </div>
-</div>
+<div class="pmodal" id="modal" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../lib/palette.js"></script>
@@ -250,97 +155,20 @@
 <script src="../kit/nucleic.js"></script>
 <script src="proteins.js"></script>
 <script src="nucleic-acids.js"></script>
+<script src="protein-card.js"></script>
+<script src="../lib/embed-sheet.js"></script>
 <script>
 'use strict';
 
 const $ = id => document.getElementById(id);
+const { ENTRIES, defaultOf, stillSrc, lessonOf, storyOf, fillDoes } = ProteinCard;
 
-/* WHERE A CARD LEADS. The bench, derived as `<dir>/<key>-test.html` — a second
-   copy of a filename is a second thing to rename — with `page` naming it for a
-   protein whose bench is somewhere else. `lesson` is the optional second link,
-   for the one protein here that has already become one. Paths are relative to
-   `demos/`, one level up from this page. */
-/* EVERY PROTEIN IN THE REGISTRY HAS `/proteins/<key>`, whatever folder its
-   files sit in — `vercel.json` rewrites the short URL onto the bench and 301s
-   the file path onto the short one. Adding a protein means adding both routes
-   and the bench's own `<base>` tag; docs/deploy.md is the procedure. */
-const benchOf = p => `/proteins/${p.key}`;
-const lessonOf = p => p.lesson ? '../' + p.lesson : null;
-const storyOf = p => p.story ? '../' + p.story : null;
-
-/* Every protein's data sits under its own `dir`, which is not always beside
-   this page — haemoglobin lives outside `proteins/` because its bakes belong
-   to the folding pipeline. */
-const dataOf = (p, file) => `../${p.dir}/data/${file}`;
-
-/* ONE CONTEXT ON THIS PAGE, AND IT BELONGS TO THE MODAL. Every card used to
-   be live, out of a pool of eight, which is a grid of WebGL contexts a reader
-   is mostly scrolling past: the cards do not animate, and the frame they show
-   is the frame `proteins/tools/stills.html` baked from the same box, colour
-   and rotation. So a card is its still, and the molecule becomes turnable the
-   moment the reader opens one. The pool stays because the modal's context has
-   to be released on close — a canvas that has lost one can never be granted
-   another. */
-/* TWO REGISTRIES, ONE GALLERY. `nucleic-acids.js` indexes the bakes that carry
-   DNA or RNA, and the ones with a protein in them belong on this page — Zif268
-   is a protein that arrives with a duplex, and leaving it off would make the
-   gallery incomplete for no reason a reader could see. A structure with no
-   protein does NOT come here: this is a gallery of proteins, and its benches
-   are reachable from admin.html. `withProtein()` is where that line lives. */
-const NA_KEYS = new Set(NucleicAcids.withProtein().map(s => s.key));
-const isNA = p => NA_KEYS.has(p.key);
-/* THE TWO WITH A PAGE OF THEIR OWN COME FIRST. Everything else on this shelf
-   is a structure to look at; these two are already lessons, and a reader who
-   scrolls past them to find one is being shown the collection in the order the
-   registry happens to be written in. Keys, not indices — reordering
-   proteins.js must not silently reorder this. */
-const LEAD = ['hemoglobin', 'myoglobin'];
-const ENTRIES = [...ProteinLib.PROTEINS, ...NucleicAcids.withProtein()]
-  .sort((a, b) => (LEAD.indexOf(a.key) + 1 || 99) - (LEAD.indexOf(b.key) + 1 || 99));
-const entryOf = key => isNA({ key }) ? NucleicAcids.byKey(key) : ProteinLib.byKey(key);
-const defaultOf = p => isNA(p) ? NucleicAcids.defaultOf(p) : ProteinLib.defaultOf(p);
-
+/* ONE CONTEXT ON THIS PAGE, AND IT BELONGS TO THE MODAL. A card is its still,
+   baked by `proteins/tools/stills.html` from the same box, colour and rotation,
+   and the molecule becomes turnable the moment the reader opens one. The pool
+   stays because the modal's context has to be released on close — a canvas
+   that has lost one can never be granted another. */
 const pool = CardStage.pool({ limit: 1 });
-
-/* THE BAKED FRAME EVERY CARD SHOWS. `proteins/tools/stills.html` bakes these
-   from the same box, colour and rotation the modal opens in, so a card and the
-   molecule it opens are one picture. A missing file just fails to load, and
-   the card is then an empty stage rather than a broken one. */
-const stillSrc = key => `stills/${key}.webp`;
-
-/* One protein's default variant, as chains the box can draw — every protein
-   bakes the same shape now, so there is one path and no branch on pipeline.
-   Prion was reduced PDB text until the unfold animation was dropped, and the
-   card drew it in a different frame from the bench for exactly as long as the
-   parse and the solved view happened at load in two places. */
-function load(p) {
-  const v = defaultOf(p);
-  return fetch(dataOf(p, v.read.baked)).then(r => r.json());
-}
-
-/* WHAT IT DOES, the registry's word for it, on a card and in the modal both.
-   `unknown` draws nothing: it would read as a missing field rather than as the
-   answer it is, and the protein it belongs to spends three views on its bench
-   saying what is known instead. */
-/* An EC number is a protein-registry fact; a nucleic entry has none and asking
-   for one would be reaching into the wrong index. */
-function ecClass(p) {
-  const ec = isNA(p) ? null : ProteinLib.ecOf(p);
-  return ec ? ProteinLib.EC_CLASS[+ec[0]] : null;
-}
-
-function fillDoes(el, p) {
-  if (!el) return;
-  if (!p.does || p.does === 'unknown') { el.remove(); return; }
-  /* An enzyme says WHICH KIND beside the word, because "enzyme" is a category
-     and the class name (hydrolase, transferase) is the thing a reader
-     recognizes without a lookup. The description goes in the title where a
-     hover reaches it. */
-  const cls = ecClass(p);
-  el.textContent = p.does + (cls ? ` \u00b7 ${cls[0]}` : '');
-  el.title = cls ? cls[1] : '';
-  el.className = 'does ' + (p.does === 'enzyme' ? 'enzyme' : 'carrier');
-}
 
 /* Everything printed below is counted or read, never typed here. */
 function card(p) {
@@ -364,25 +192,15 @@ function card(p) {
       ${lessonOf(p) || storyOf(p) ? `<div class="links">${lessonOf(p) ? `<a class="open" href="${lessonOf(p)}">the lesson &rarr;</a>` : ''}${storyOf(p) ? `<a class="open" href="${storyOf(p)}">Learn More &rarr;</a>` : ''}</div>` : ''}
     </div>`;
 
-  /* THE WHOLE CARD OPENS THE MODAL. The stage is included, so the handler has
-     to tell a click from the end of a drag that turned the molecule: a pointer
-     that moved more than a few px is the reader steering, not choosing.
-     Anchors keep their own destination: a link inside leaves the page. */
-  let down = null;
-  el.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+  /* THE WHOLE CARD OPENS THE MODAL. Anchors keep their own destination: a link
+     inside leaves the page. */
   el.addEventListener('click', e => {
     if (e.target.closest('a')) return;
-    if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
     openModal(p);
   });
 
   el.querySelector('.name').textContent = p.name;
-  /* WHAT IT DOES, the registry's word for it. `unknown` draws nothing: on a
-     card it would read as a missing field rather than as the answer it is,
-     and the protein it belongs to has a bench that spends three views saying
-     what is known instead. */
-  const does = el.querySelector('.does');
-  fillDoes(does, p);
+  fillDoes(el.querySelector('.does'), p);
 
   /* THE FIRST SENTENCE, not the whole blurb. The registry's blurb is written
      for the node graph's card, where it is the claim and has room to be one;
@@ -404,12 +222,8 @@ function card(p) {
   }
 
   /* WHAT A CARD DOES NOT SAY. The structure ids, what each variant is for and
-     how much of the protein its file holds all live on the bench, which is one
-     click away and is where a reader deciding between two files actually is.
-     On a shelf they were four lines of monospace between the reader and the
-     next protein. The tally in the masthead still counts them, so the page
-     does not stop knowing they exist.
-     The registry is unchanged: nothing here was the only reader of it. */
+     how much of the protein its file holds all live on the bench, one click
+     away. The tally in the masthead still counts them. */
 
   return el;
 }
@@ -418,12 +232,9 @@ const grid = $('grid');
 for (const p of ENTRIES) grid.appendChild(card(p));
 
 /* THE TALLY, COUNTED AT RENDER, and it names the two registries separately
-   rather than adding them up. A nucleosome IS proteins, so "16 proteins" was
-   not wrong — but it flattened the one distinction this page now makes, which
-   is that some of these entries arrive with a nucleic acid in the same file.
-   A reader who sees "2 complexes" knows there is something here to look for.
-   The word is dropped entirely when there are none, so the day this page is
-   proteins again it stops advertising an empty category. */
+   rather than adding them up: "2 complexes" tells a reader some of these
+   arrive with a nucleic acid in the same file. The word is dropped when there
+   are none. */
 const nComplex = NucleicAcids.withProtein().length;
 const variants = ENTRIES.reduce((k, p) => k + p.variants.length, 0);
 $('tally').textContent =
@@ -431,203 +242,50 @@ $('tally').textContent =
   + (nComplex ? ` · ${nComplex} complexes` : '')
   + ` · ${variants} structures`;
 
-const traces = {};                       // key -> the loaded chains, per modal open
-
-/* ===================================================================
-   THE MODAL. A card is a thumbnail and a sentence; this is where the rest of
-   the registry gets printed, and where the two proteins that already became
-   lessons hand the reader off to them.
-
-   IT SHARES THE POOL, on its own key. A modal box is one more WebGL context,
-   and the one thing this page is careful about is contexts, so it is acquired
-   the same way a card's is: the oldest card loses its box and keeps its last
-   frame, and gets it back when the reader scrolls or clicks it. Released on
-   close, so the shelf is whole again behind it.
-   =================================================================== */
-
-const MODAL_KEY = '\u2318modal';        // cannot collide with a protein key
+/* ---- the modal: proteins/protein-card.js inside a backdrop ---------------- */
 const modal = $('modal');
-let openKey = null;
+let open = null;
 
-/* WHERE THE READER GOES FROM HERE, in the order they should read it. The
-   lesson and the story are the registry's; a protein with a story sends the
-   reader there and not to its bench, which `vercel.json` moves to
-   /proteins/<key>/bench. */
-function linksFor(p) {
-  const out = [];
-  if (p.lesson) out.push([lessonOf(p), 'the lesson \u2192']);
-  if (p.story) out.push([storyOf(p), 'Learn More \u2192']);
-  else out.push([benchOf(p), p.lesson ? 'every structure we hold \u2192' : 'open the bench \u2192']);
-  return out;
-}
+/* THE EMBED CODE, one sheet for every protein. `layout=card` is this modal as
+   a frame; the bare URL is the model alone. */
+const sheet = EmbedSheet.create({
+  heading: 'Embed this protein', pick: 'Protein',
+  items: ENTRIES.map(p => ({ key: p.key, title: p.name })),
+  views: [{ key: 'card', label: 'With description' }, { key: 'solo', label: 'Model only' }],
+  resolve: (it, view) => ({
+    src: `/embed/protein/${it.key}` + (view === 'card' ? '?layout=card' : ''),
+    lw: view === 'card' ? 1000 : 0,
+  }),
+  credit: it => ({ href: `/proteins/${it.key}`, text: 'Open this protein on Kodolab →' }),
+  size: { w: 960, h: 640 },
+});
 
 function openModal(p) {
-  openKey = p.key;
-  $('m-name').textContent = p.name;
-  fillDoes($('m-does'), p);
-  /* THE CLASS, DEFINED. The chip says "enzyme \u00b7 hydrolase"; this says what a
-     hydrolase does, which is the half a reader who does not already know the
-     word needs. Read from EC_CLASS, so the word and its definition cannot
-     drift apart. */
-  const cls = ecClass(p);
-  const defEl = $('m-def');
-  defEl.hidden = !cls;
-  if (cls) defEl.textContent = `${cls[0]}: ${cls[1]}`;
-  /* THE WHOLE BLURB HERE, where the card takes its first sentence. The clamp on
-     a shelf is what a reader has to get past to reach the next protein; in a
-     modal they have already chosen this one. */
-  $('m-blurb').textContent = p.blurb;
-
-  /* WHICH FILE IS ON SCREEN, under the file on screen: its id, what it was
-     chosen for, and the way out to the deposition. Derived from `source`
-     rather than stored, the same as every bench builds it. */
-  const def = defaultOf(p);
-  const cap = $('m-cap');
-  cap.innerHTML = `<span class="pdb"></span><span class="what"></span>
-    <a target="_blank" rel="noopener">at the PDB \u2192</a>`;
-  cap.querySelector('.pdb').textContent = def.id;
-  cap.querySelector('.what').textContent = def.purpose || def.label || '';
-  cap.querySelector('a').href =
-    isNA(p) ? NucleicAcids.urls(def.id).rcsb : ProteinLib.urls(def).entry;
-
-  /* THE MEASURES ARE READ OFF THE BAKE, not off the index, and they wait for
-     it: every one of them except the species is a number the file answers and
-     the registry does not, and a page that typed any of them would be a claim
-     nothing checks and a re-bake silently falsifies. Filled by fillMeasure()
-     when the trace lands, which is the same moment the box appears. */
-  $('m-measure').innerHTML = '';
-
-  const links = $('m-links');
-  links.innerHTML = '';
-  for (const [href, text] of linksFor(p)) {
-    const a = document.createElement('a');
-    a.className = 'open'; a.href = href; a.textContent = text;
-    links.appendChild(a);
-  }
-
+  closeModal();
+  /* Shown before the card is mounted: a box with no size cannot be fitted. */
   modal.hidden = false;
   document.body.style.overflow = 'hidden';
-  $('m-close').focus();
-
-  /* THE BOX LAST, and only once the sheet is laid out: a zero-sized mount gets
-     THREE's constructor frustum, which is the same trap the cards have.
-     The card's own still stands in the mount until the box has drawn: the
-     trace is a fetch away, and the modal opens on the picture the reader
-     just clicked rather than on a hole where it was. */
-  const mount = $('m-stage');
-  mount.style.cssText = `background-image:url(${stillSrc(p.key)});`
-    + 'background-size:contain;background-position:center;background-repeat:no-repeat';
-  requestAnimationFrame(() => { if (openKey === p.key) openBox(p, mount); });
+  open = ProteinCard.mount(modal, p, { pool, onClose: closeModal, onEmbed: () => sheet.show(p.key),
+    onImage: () => EmbedSheet.saveStill(stillSrc(p.key), p.key) });
+  open.el.setAttribute('aria-modal', 'true');
+  open.el.querySelector('.x').focus();
 }
 
-/* WHAT WAS MEASURED OFF THE FILE ON SCREEN. The same tiles the myoglobin page
-   prints under its viewer, in the same order, because a reader who arrives here
-   from that page should not have to re-learn the layout: what the file is, how
-   much of the protein it holds, how sharp it is, then what shape it came out.
-
-   `meta` OR THE TRACE ITSELF. A protein bake nests its header under `meta`; a
-   nucleic one writes the same fields at the top level. Reading through one
-   alias is what keeps the nucleic entries from silently printing blanks. */
-/* A COUNT, OR NOTHING. The two indexes disagree about shape \u2014 a protein bake
-   writes `chainsInFile: 4`, a nucleic one writes `chains` as the chains
-   themselves and `pairs` as the list of them \u2014 so a field is taken as a number
-   only if it is one, and as a length if it is a list. */
-const num = v => typeof v === 'number' ? v : Array.isArray(v) ? v.length : null;
-
-function fillMeasure(p, t) {
-  const v = defaultOf(p), r = v.read || {}, m = t.meta || t;
-  const tiles = [];
-
-  tiles.push([v.species || m.organism || '\u2014', 'species']);
-
-  /* ALWAYS "x of y", NEVER THE BARE COUNT. Files of one protein declare
-     different lengths, and a single number invites a reader to compare two
-     things that are not the same measurement. The percentage is the part that
-     compares across files. */
-  const counts = m.counts || [];
-  const modelled = counts.reduce((n, c) => n + (c.modelled || 0), 0) || r.residues;
-  const declared = counts.reduce((n, c) => n + (c.declared || 0), 0) || r.declared;
-  if (modelled) tiles.push([
-    declared ? `${modelled} of ${declared}` : modelled,
-    declared ? `amino acids, ${Math.round(100 * modelled / declared)}%`
-             : 'amino acids']);
-  if (num(r.nucleotides)) tiles.push([r.nucleotides, 'nucleotides']);
-
-  /* HOW GOOD THE CLAIM IS, beside what KIND of claim it is. A predicted
-     structure has no resolution and must not borrow the look of one, so the
-     em dash stands where the number would be. */
-  const method = m.method || r.method;
-  tiles.push([m.resolution ? m.resolution.toFixed(2) + ' \u00c5' : '\u2014', method]);
-
-  /* HOW MANY PIECES, or \u2014 for a single chain, where "1 chain" says nothing
-     the picture does not \u2014 what the fold is made of. */
-  const chains = num(m.chainsInFile) || num(r.chainsInFile) || num(r.chains);
-  if (chains > 1) tiles.push([chains, 'chains']);
-  else if (m.helices) tiles.push([m.helices, m.strands ? 'helices' : 'helices, no sheet']);
-  /* A NUCLEIC BAKE COUNTS ITS PAIRS BY LISTING THEM, so `pairs` is the list and
-     not the number. Everything read out of a bake goes through `num()` for that
-     reason: a field that is a count in one index and an array in the other
-     prints as [object Object] and looks like a typography bug. */
-  const pairs = num(m.pairs) || num(r.pairs);
-  if (pairs) tiles.push([pairs, 'base pairs']);
-
-  /* HOW BIG IT IS, which is the one figure a ribbon cannot give a reader and
-     the reason the extents are baked at all. */
-  if (t.extents) tiles.push([t.extents.map(x => x.toFixed(0)).join(' \u00d7 '),
-                             'the whole molecule, \u00c5']);
-
-  const measure = $('m-measure');
-  measure.innerHTML = '';
-  for (const [n, label] of tiles) {
-    if (n == null || label == null) continue;
-    const d = document.createElement('div');
-    d.innerHTML = '<b></b><span></span>';
-    d.querySelector('b').textContent = n;
-    d.querySelector('span').textContent = label;
-    measure.appendChild(d);
-  }
-}
-
-/* The modal's box, on the pool's own terms. Zoom is ON here where a card
-   refuses it: the sheet is the whole stage, so the wheel is the reader's zoom
-   rather than how they get down a grid. */
-function openBox(p, mount) {
-  if (!mount.clientWidth || !mount.clientHeight) return;
-  const draw = t => {
-    const box = pool.acquire(MODAL_KEY, () => Proteinbox.create({
-      mount, orbit: true, pad: 1.1, sub: 10,
-      stage: { ortho: false, turn: 'trackball', zoom: true },
-      chains: isNA(p) ? NucleicAcids.drawnOf(p, null, t) : null,
-      colors: isNA(p) ? null : ProteinLib.colorsOf(p, ProteinLib.defaultOf(p)),
-      view: (isNA(p) ? NucleicAcids : ProteinLib).viewOf(p),
-      data: t,
-    }));
-    if (box && box.setPocket && t.pocket) box.setPocket(t.pocket);
-    mount.style.backgroundImage = '';     // the live box has drawn the same frame
-    fillMeasure(p, t);
-  };
-  if (traces[p.key]) draw(traces[p.key]);
-  else load(p).then(t => { traces[p.key] = t; draw(t); })
-    .catch(e => console.warn(`modal: ${p.key} \u2014 ${e.message}`));
-}
-
-/* CLOSING RELEASES THE CONTEXT. A canvas that has lost one can never be granted
-   another, so the pool destroys the box and the next open builds a fresh one on
-   a fresh canvas: card-stage.js makes the canvas for exactly this reason. */
 function closeModal() {
-  if (modal.hidden) return;
-  pool.release(MODAL_KEY);
-  $('m-stage').innerHTML = '';
+  if (!open) return;
+  open.destroy();
+  open = null;
   modal.hidden = true;
-  openKey = null;
   document.body.style.overflow = '';
 }
 
-$('m-close').addEventListener('click', closeModal);
-/* The backdrop closes; the sheet does not, so a drag that turns the molecule
-   and ends outside the canvas is not a close. */
+/* The backdrop closes; the card does not, so a drag that turns the molecule
+   and ends outside the canvas is not a close. Escape belongs to the embed
+   sheet while it is open. */
 modal.addEventListener('mousedown', e => { if (e.target === modal) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !sheet.isOpen()) closeModal();
+});
 </script>
 </body>
 </html>

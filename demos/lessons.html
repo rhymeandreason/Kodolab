@@ -28,6 +28,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <!-- /seo -->
 <link rel="stylesheet" href="/demos/css/brand.css">
+<link rel="stylesheet" href="/demos/css/embed-sheet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
@@ -268,67 +269,6 @@
   footer a { text-decoration: none; }
   footer .dots i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 4px; }
 
-  /* ---- the embed sheet ---------------------------------------------------------
-     One dialog for every lesson. The left column is the choices and the code;
-     the right is the framed lesson itself, so what the code says is what a
-     teacher is looking at. The iframe is made on open and dropped on close:
-     a WebGL page left running behind this one costs every frame. */
-  dialog.sheet { --gap: 2.5rem; width: calc(100vw - 2 * var(--gap)); max-width: none; max-height: calc(100vh - 2 * var(--gap)); padding: 0; border: 0; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 40px 100px -30px rgba(var(--ink-t), .6); overflow: hidden; }
-  dialog.sheet::backdrop { background: rgba(20, 33, 61, .55); backdrop-filter: blur(3px); }
-  /* A fixed height, so the controls column has something to scroll inside of:
-     a grid with only a max-height gives its rows no height to overflow. */
-  .sheet .in { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); height: calc(100vh - 2 * var(--gap)); }
-  .sheet .ctl { min-height: 0; padding: 1.8rem 1.7rem 1.6rem; display: flex; flex-direction: column; gap: 1.1rem; overflow: auto; border-right: 1px solid rgba(var(--ink-t), .1); }
-  .sheet .ctl h2 { font-size: 1.55rem; line-height: 1.1; }
-  .sheet label.f { display: flex; flex-direction: column; gap: .35rem; font: 500 11.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
-  .sheet select { font: 400 15px var(--sans); padding: .55rem .8rem; border-radius: 10px; border: 1.5px solid rgba(var(--ink-t), .2); background: #fff; color: var(--ink); }
-  .sheet .views { display: flex; gap: .4rem; padding: 4px; border-radius: 999px; background: rgba(var(--ink-t), .06); }
-  .sheet .views label { flex: 1; text-align: center; cursor: pointer; font: 500 13px var(--sans); letter-spacing: .04em; text-transform: none; padding: .45rem .6rem; border-radius: 999px; color: var(--ink-2); transition: background .15s, color .15s; }
-  .sheet .views input { position: absolute; opacity: 0; pointer-events: none; }
-  .sheet .views input:checked + label { background: var(--ink); color: #fff; }
-  .sheet .views input:disabled + label { opacity: .4; cursor: not-allowed; }
-  .sheet .note { margin: 0; font-family: var(--serif); font-size: .88rem; line-height: 1.4; color: var(--ink-2); }
-  .sheet .dims { display: flex; align-items: center; gap: .5rem; }
-  .sheet .dims label { display: flex; align-items: baseline; gap: .35rem; font: 400 13px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink-3); }
-  .sheet .dims input { width: 5.2em; font: 400 15px var(--sans); padding: .45rem .6rem; border-radius: 10px; border: 1.5px solid rgba(var(--ink-t), .2); background: #fff; color: var(--ink); }
-  .sheet .dims .by { color: var(--ink-3); font-size: 14px; }
-  .sheet .dims .lock { margin-left: .4rem; white-space: nowrap; }
-  .sheet .dims .lock input { width: auto; padding: 0; accent-color: var(--ink); }
-  .sheet .size .note { margin-top: .5rem; font-size: .82rem; color: var(--ink-3); }
-  .sheet pre { margin: 0; text-transform: none; letter-spacing: 0; padding: .9rem 1rem; border-radius: 12px; background: var(--ink); color: rgba(var(--paper-t), .9); font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; user-select: all; max-height: 7.5em; overflow: auto; }
-  .sheet .btns { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
-  .sheet .btns .ok { font: 500 13px var(--sans); color: var(--deep); }
-  /* Centred; fit() caps the frame's width so it also fits the pane's height. */
-  .sheet .prev { position: relative; min-height: 0; background: var(--paper-2); display: flex; align-items: center; justify-content: center; padding: 1.6rem; overflow: hidden; }
-  .sheet .stack { display: flex; flex-direction: column; gap: .5rem; }
-  .sheet .credit { margin: 0; font: 400 13px/1.4 var(--sans); color: var(--mute); }
-  /* The wordmark's baseline is the bottom of its box, so it sits on the text's baseline, not centred. */
-  .sheet .credit a { color: inherit; text-decoration: none; display: inline-flex; align-items: baseline; gap: .4rem; }
-  .sheet .credit img { height: 14px; width: auto; }
-  /* container-type is load-bearing, not decoration: the iframe inside is styled
-     with the snippet's own CSS, which scales itself against 100cqw. Without a
-     container here that unit resolves to the viewport and the preview lies. */
-  .sheet .frame { container-type: inline-size; width: 100%; aspect-ratio: var(--ar, 16 / 10); background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(var(--ink-t), .4); position: relative; }
-  /* THE PREVIEW IS A LAPTOP, SCALED DOWN. The frame here is ~700px wide and
-     every lesson stacks into its narrow layout under 920px, which is not what a
-     teacher's page will show. So the lesson is laid out at the full laptop width
-     and scaled to fit, by the same declaration the teacher pastes. */
-  .sheet .frame iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; }
-  .sheet .frame .cap { position: absolute; left: 12px; bottom: 10px; font: 500 10.5px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); background: rgba(255, 255, 255, .8); padding: 5px 8px; border-radius: 999px; pointer-events: none; }
-  /* While a PNG is taken: square corners, no label, and a magenta ring that
-     savePNG() finds in the captured screen to know where the frame is. */
-  .sheet .frame.shooting { border-radius: 0; box-shadow: none; outline: 4px solid #f0f; }
-  .sheet .frame.shooting .cap { display: none; }
-  /* kodo.css's .btn, which this page does not load: hair border, fills with ink on hover. */
-  .sheet .btn { position: absolute; right: 1.2rem; bottom: 1.2rem; display: inline-flex; align-items: center; border: 1px solid rgba(var(--ink-t), .2); border-radius: 10px; padding: 6px 16px; background: transparent; color: var(--ink-3); font: 600 13px/18px var(--sans); letter-spacing: .5px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
-  .sheet .btn:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-  .sheet .btn[hidden] { display: none; }
-  .sheet .x { position: absolute; top: 12px; right: 14px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 0; background: #fff; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 0 2px 10px rgba(var(--ink-t), .2); }
-  @media (max-width: 860px) {
-    .sheet .in { grid-template-columns: 1fr; }
-    .sheet .ctl { border-right: 0; border-bottom: 1px solid rgba(var(--ink-t), .1); }
-  }
-
   @media (prefers-reduced-motion: reduce) { .card, .card .pic img, .build .beta i { transition: none; animation: none; } }
 </style>
 </head>
@@ -432,49 +372,14 @@
   </div>
 </footer>
 
-<dialog class="sheet" id="sheet" aria-labelledby="sheet-h">
-  <button class="x" type="button" id="sheet-x" aria-label="Close">&times;</button>
-  <div class="in">
-    <form class="ctl" method="dialog" id="sheet-form">
-      <h2 id="sheet-h">Embed this lesson</h2>
-      <label class="f">Lesson <select id="s-lesson"></select></label>
-      <div class="f" role="radiogroup" aria-label="View">
-        <span>View</span>
-        <div class="views" style="position:relative">
-          <input type="radio" name="view" id="v-full" value="full" checked><label for="v-full">Full lesson</label>
-          <input type="radio" name="view" id="v-simple" value="simple"><label for="v-simple">Simple view</label>
-        </div>
-      </div>
-      <p class="note" id="s-note"></p>
-      <div class="f size"><span>Size on your page</span>
-        <div class="dims"><label><input type="number" id="s-w" min="320" max="2400" step="10" value="960"> <span>wide</span></label><span class="by">×</span><label><input type="number" id="s-h" min="200" max="1600" step="10" value="600"> <span>tall</span></label><label class="lock"><input type="checkbox" id="s-lock" checked> <span>keep ratio</span></label></div>
-        <p class="note" id="s-size"></p>
-      </div>
-      <label class="f">Paste this<pre id="s-code"></pre></label>
-      <div class="btns">
-        <button class="cta" type="button" id="s-copy">Copy code</button>
-        <a class="cta ghost" id="s-open" href="#" target="_blank" rel="noopener">Open in a tab</a>
-        <span class="ok" id="s-ok" hidden>Copied</span>
-      </div>
-    </form>
-    <div class="prev">
-      <div class="stack" id="s-stack">
-        <div class="frame" id="s-frame"><span class="cap">Live preview</span></div>
-        <p class="credit" id="s-credit"></p>
-      </div>
-      <button class="btn" type="button" id="s-png" hidden>Save as PNG</button>
-    </div>
-  </div>
-</dialog>
 
 <script src="/demos/lib/lessons.js"></script>
+<script src="/demos/lib/embed-sheet.js"></script>
 <script>
-/* THE TABLE lives in lib/lessons.js. `url` is the short URL a student is sent to and the one the embed
-   code carries; `file` is the page's own path, which the preview frames so it
-   works on the dev server before vercel.json has been re-read. `simple` names
-   the query that gives the lesson's reduced view, where one exists; `bare`
-   says the page drops its title bar when framed (lib/embed.js). */
-const SITE = 'https://www.kodolab.org';
+/* THE TABLE lives in lib/lessons.js. `url` is the short URL a student is sent
+   to and the one the embed code carries and previews. `simple` names the query
+   that gives the lesson's reduced view, where one exists; `bare` says the page
+   drops its title bar when framed (lib/embed.js). */
 const UNITS = [
   { key: 'chem',  n: '01', hue: 'var(--blue)',   title: 'The chemistry of life', why: 'Why water behaves as it does, and how atoms decide what they bond to.' },
   { key: 'macro', n: '02', hue: 'var(--coral)',  title: 'Proteins',              why: 'A chain that folds, one letter that changes a body, and a gallery of real structures to turn over.' },
@@ -524,187 +429,27 @@ function card(l, extra = '') {
   }).join('');
 })();
 
-/* ---- the embed sheet --------------------------------------------------------- */
+/* ---- the embed sheet: lib/embed-sheet.js ------------------------------------
+   Every pathway lesson stacks into its phone layout under 920px, which is
+   never what a teacher wants on a slide, so a lesson is laid out at a laptop's
+   1200px and scaled down to the box. */
 (() => {
-  const dlg = document.getElementById('sheet'), sel = document.getElementById('s-lesson');
-  const full = document.getElementById('v-full'), simple = document.getElementById('v-simple');
-  const note = document.getElementById('s-note');
-  const code = document.getElementById('s-code'), open = document.getElementById('s-open'), frame = document.getElementById('s-frame');
-  const ok = document.getElementById('s-ok');
-  /* THE LAYOUT WIDTH. Every pathway lesson stacks into its phone layout under
-     920px, which is never what a teacher wants on a slide. So a frame narrower
-     than LAPTOP is laid out at LAPTOP and scaled down to the size asked for; a
-     wider one is laid out at its own width. The preview and the snippet use
-     the same numbers. */
-  const LAPTOP = 1200;
-  const wEl = document.getElementById('s-w'), hEl = document.getElementById('s-h'), sizeNote = document.getElementById('s-size');
-  /* The pair a teacher types is a SHAPE and a ceiling, not a promise: the host's
-     column decides the real width, and no teacher can know it (Canvas's depends
-     on the institution's theme, Notion's on a per-page setting, and both change
-     again on a phone). So the lesson is always laid out at `lw`, and the snippet
-     scales that box down to whatever width it is actually given. */
-  function size() {
-    const w = Math.max(320, Number(wEl.value) || 960), h = Math.max(200, Number(hEl.value) || 600);
-    const lw = Math.max(LAPTOP, w);
-    return { w, h, lw, lh: Math.round(lw * h / w), scale: w / lw };
-  }
-  /* SCALING WITH NO SCRIPT. Canvas's sanitizer strips <script> and <style> from
-     anything a teacher pastes, so the snippet has one inline declaration to do
-     this with: read the container's own width as a unit and divide it down to
-     the unitless factor scale() takes. The plain scale() before it is the
-     fallback an engine keeps when it cannot do the division — that one crops in
-     a narrow column, which is where this started, but it is never worse. */
-  function fitCSS(z) {
-    return `width:${z.lw}px;height:${z.lh}px;transform-origin:0 0;`
-         + `transform:scale(${z.scale.toFixed(4)});transform:scale(calc(100cqw / ${z.lw}px))`;
-  }
-  /* The preview only has to decide how much of the pane to take. The frame
-     inside it carries the SNIPPET'S OWN CSS and scales itself exactly as a host
-     page would, so a preview that looks right is evidence the paste will. The
-     old preview measured the pane and set the scale itself, which is why it
-     went on looking right while the code it handed out cropped. */
-  function fit() {
-    const f = frame.querySelector('iframe'), z = size(), pane = frame.parentElement.parentElement;
-    frame.style.setProperty('--ar', `${z.w} / ${z.h}`);
-    // as wide as the pane allows, unless the height runs out first
-    const room = pane.clientHeight - 2 * parseFloat(getComputedStyle(pane).paddingTop) - 30;   // less the credit line
-    // at the size asked for, when the pane has room for it; scaled down when not
-    const want = Math.min(z.w, pane.clientWidth, room * z.w / z.h) + 'px', stack = document.getElementById('s-stack');
-    if (stack.style.width !== want) stack.style.width = want;   // an unchanged write still re-fires the observer
-    if (f) f.style.cssText = 'position:absolute;left:0;top:0;border:0;' + fitCSS(z);
-  }
-  new ResizeObserver(fit).observe(frame);
-  sel.innerHTML = LESSONS.filter(l => !l.soon && !l.noEmbed).map(l => `<option value="${l.key}">${esc(l.title)}</option>`).join('');
+  const sheet = EmbedSheet.create({
+    heading: 'Embed this lesson', pick: 'Lesson',
+    items: LESSONS.filter(l => !l.soon && !l.noEmbed).map(l => ({ key: l.key, title: l.title })),
+    views: [{ key: 'full', label: 'Full lesson' }, { key: 'simple', label: 'Simple view' }],
+    can: (it, v) => v !== 'simple' || !!byKey(it.key).simple,
+    note: it => byKey(it.key).simple ? 'Simple view: the pathway and its ledger, without the enzyme and energy detail.' : '',
+    resolve: (it, v) => {
+      const l = byKey(it.key);
+      return { src: l.url + (v === 'simple' && l.simple ? '?' + l.simple : ''), lw: 1200 };
+    },
+    credit: it => ({ href: byKey(it.key).url, text: 'Open this lesson on Kodolab \u2192' }),
+  });
   const byKey = k => LESSONS.find(l => l.key === k);
-  let okTimer = 0;
-
-  function query(l) { return simple.checked && l.simple ? '?' + l.simple : ''; }
-  /* `container-type` on the outer box is what makes 100cqw mean "the width this
-     embed was actually given"; aspect-ratio keeps the hole the right shape as
-     that width changes, so nothing is ever cropped. */
-  function snippet(l) {
-    const src = SITE + l.url + query(l), z = size();
-    return `<div style="container-type:inline-size;width:${z.w}px;max-width:100%">\n<div style="position:relative;overflow:hidden;aspect-ratio:${z.w} / ${z.h};border-radius:12px">\n  <iframe src="${src}" title="${esc(l.title)} — Kodolab"\n    style="position:absolute;left:0;top:0;border:0;${fitCSS(z)}"\n    allow="fullscreen" loading="lazy"></iframe>\n</div>\n${credit(l, 'style="margin:6px 0 0;font:13px/1.4 -apple-system,Segoe UI,sans-serif;color:#6b7280"', 'style="color:inherit;text-decoration:none"', 'style="height:14px;vertical-align:baseline;margin-right:6px"')}\n</div>`;
-  }
-  /* THE CREDIT under the frame, in the snippet and the preview alike: the
-     wordmark and a link back to the lesson page. target=_blank is load-bearing
-     inside a host page: a plain link would navigate the teacher's page. */
-  function credit(l, pStyle = '', aStyle = '', imgStyle = '') {
-    return `<p ${pStyle}><a href="${SITE + l.url}?from=embed" target="_blank" rel="noopener" ${aStyle}><img src="${SITE}/kodolab-wordmark.svg" alt="Kodolab" ${imgStyle}>Open this lesson on Kodolab →</a></p>`;
-  }
-  function draw() {
-    const l = byKey(sel.value);
-    simple.disabled = !l.simple;
-    if (!l.simple && simple.checked) full.checked = true;
-    note.textContent = l.simple ? 'Simple view: the pathway and its ledger, without the enzyme and energy detail.' : '';
-    note.hidden = !l.simple;
-    const z = size();
-    sizeNote.textContent = `Laid out at ${z.lw} px, the laptop layout, and shown at ${Math.round(z.scale * 100)}% here. `
-      + 'A narrower column scales it down to fit rather than cropping it.';
-    code.textContent = snippet(l);
-    document.getElementById('s-credit').innerHTML = credit(l).replace(/^<p >|<\/p>$/g, '').replace(SITE + '/kodolab', '/kodolab');
-    open.href = l.url + query(l);
-    ok.hidden = true;
-  }
-  /* The preview frames the file path, which the dev server answers before it
-     has re-read vercel.json; the code a teacher pastes carries the short URL.
-     Only a change of lesson or view reloads it: a size change rescales. */
-  function load() {
-    const l = byKey(sel.value);
-    frame.querySelectorAll('iframe').forEach(f => f.remove());
-    const f = document.createElement('iframe');
-    f.src = l.file + query(l); f.title = l.title; f.loading = 'lazy';
-    f.setAttribute('allow', 'fullscreen');
-    frame.appendChild(f);
-    fit();
-  }
-  const redraw = () => { draw(); load(); };
-  function show(key) {
-    sel.value = key;
-    if (!byKey(key).simple) full.checked = true;
-    redraw();
-    dlg.showModal();
-  }
-  function hide() { frame.querySelectorAll('iframe').forEach(f => f.remove()); }
-  sel.addEventListener('change', redraw);
-  /* KEEP RATIO: editing one side sets the other from the ratio the pair had
-     when the lock was last on. Rounded to the field's step. */
-  const lock = document.getElementById('s-lock');
-  let ratio = (Number(wEl.value) || 960) / (Number(hEl.value) || 600);
-  const snap = v => Math.max(0, Math.round(v / 10) * 10);
-  lock.addEventListener('change', () => { if (lock.checked) ratio = size().w / size().h; });
-  wEl.addEventListener('input', () => { if (lock.checked && Number(wEl.value) > 0) hEl.value = snap(Number(wEl.value) / ratio); fit(); draw(); });
-  hEl.addEventListener('input', () => { if (lock.checked && Number(hEl.value) > 0) wEl.value = snap(Number(hEl.value) * ratio); fit(); draw(); });
-  full.addEventListener('change', redraw);
-  simple.addEventListener('change', redraw);
-  dlg.addEventListener('close', hide);
-  document.getElementById('sheet-x').addEventListener('click', () => dlg.close());
-  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
-  document.getElementById('s-copy').addEventListener('click', async () => {
-    const text = code.textContent;
-    try { await navigator.clipboard.writeText(text); }
-    catch (e) { const r = document.createRange(); r.selectNodeContents(code); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); }
-    ok.hidden = false; clearTimeout(okTimer); okTimer = setTimeout(() => { ok.hidden = true; }, 1800);
-  });
-  /* SAVE AS PNG, FROM THE SCREEN ITSELF, LOCALHOST ONLY. Rasterising the DOM
-     drops web fonts in Safari and reads a blank WebGL buffer, and a page's own
-     screen capture asks permission on every click. So the dev server runs
-     macOS `screencapture` over this window (tools/dev-server.js, /api/screenshot)
-     and the page crops the frame out of it. Where the frame sits is found, not
-     computed, since the browser's toolbar height is not something a page can
-     read: the page rings the frame in magenta and looks for the ring. The PNG is
-     the preview's own pixels, so it is the requested size times the display's
-     pixel ratio when the pane has room, smaller when the preview is scaled down. */
-  const png = document.getElementById('s-png');
-  png.hidden = !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  async function grab() {
-    frame.classList.add('shooting');
-    try {
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-      await new Promise(r => setTimeout(r, 80));   // past the compositor, onto the glass
-      const res = await fetch('/api/screenshot', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x: screenX, y: screenY, w: outerWidth, h: outerHeight }) });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
-      const img = await createImageBitmap(await res.blob());
-      const c = document.createElement('canvas');
-      c.width = img.width; c.height = img.height;
-      c.getContext('2d').drawImage(img, 0, 0);
-      return c;
-    } finally { frame.classList.remove('shooting'); }
-  }
-  function crop(c) {
-    const W = c.width, H = c.height, d = c.getContext('2d').getImageData(0, 0, W, H).data;
-    let x0 = W, y0 = H, x1 = -1, y1 = -1;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      if (d[i] > 200 && d[i + 1] < 70 && d[i + 2] > 200) {
-        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-      }
-    }
-    if (x1 < 0) return null;
-    const r = frame.getBoundingClientRect(), px = (x1 - x0 + 1) / (r.width + 8);   // captured px per CSS px
-    const ring = Math.ceil(4 * px) + 1;   // one extra px for an edge on a fractional pixel
-    const out = document.createElement('canvas');
-    out.width = x1 - x0 + 1 - 2 * ring; out.height = y1 - y0 + 1 - 2 * ring;
-    out.getContext('2d').drawImage(c, x0 + ring, y0 + ring, out.width, out.height, 0, 0, out.width, out.height);
-    return out;
-  }
-  let pngTimer = 0;
-  const say = t => { png.textContent = t; clearTimeout(pngTimer); pngTimer = setTimeout(() => { png.textContent = 'Save as PNG'; }, 2400); };
-  png.addEventListener('click', async () => {
-    let c;
-    try { c = crop(await grab()); } catch (e) { return say(String(e.message || e)); }
-    // A capture with no windows in it is macOS withholding Screen Recording.
-    if (!c) return say('Frame not found: allow Screen Recording for the terminal');
-    const z = size(), a = document.createElement('a');
-    a.download = `${sel.value}${simple.checked ? '-simple' : ''}-${z.w}x${z.h}.png`;
-    a.href = URL.createObjectURL(await new Promise(r => c.toBlob(r, 'image/png')));
-    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    say(`Saved ${c.width}×${c.height}`);
-  });
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-embed]'); if (!b) return;
-    e.preventDefault(); show(b.dataset.embed);
+    e.preventDefault(); sheet.show(b.dataset.embed);
   });
 })();
 </script>

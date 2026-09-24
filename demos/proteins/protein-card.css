@@ -1,0 +1,94 @@
+/* =============================================================================
+   protein-card.css — proteins/protein-card.js's card: the gallery's modal and
+   the embed's whole frame. The page sets the card's size and its frame.
+   `.pcard`, NOT `.modal`: kodo.css §10.3 owns `.modal`, and its `:root .modal
+   h2` outranks anything stated here about the heading.
+   ========================================================================== */
+
+/* THE CARD IS BOUNDED AND THE DETAILS SCROLL INSIDE IT, which is a framing rule
+   and not a taste: let it grow to its content and the stage grows with the grid
+   row, so a protein with seven depositions hands the box a column twice as tall
+   as the frame it solved for and the molecule sits low and left in it. */
+.pcard{position:relative;background:var(--surface-card);overflow:hidden;
+  display:grid;grid-template-columns:1.05fr 1fr}
+.pcard.solo{grid-template-columns:1fr;background:var(--paper)}
+/* `min-height:0` on both: a grid item's default `auto` minimum refuses to
+   shrink below its content, which is how a bounded card still overflows. */
+.pcard .mstage{position:relative;background:var(--paper);
+  border-right:1px solid rgba(var(--brand-ink-t),.1);min-height:0}
+.pcard.solo .mstage{border-right:0}
+.pcard .mbox{position:absolute;inset:0}
+.pcard .mbody{padding:clamp(1.4rem,3vw,2.2rem);display:flex;flex-direction:column;
+  min-height:0;overflow-y:auto}
+/* Stacked, the card scrolls as one and the stage takes a fixed slice of it. */
+@media (max-width:800px){
+  .pcard:not(.solo){grid-template-columns:1fr;overflow:auto}
+  .pcard:not(.solo) .mstage{border-right:0;border-bottom:1px solid var(--border-hair)}
+  /* the box stops above the caption, so the molecule never runs under it */
+  .pcard:not(.solo) .mbox{position:relative;inset:auto;height:320px}
+  .pcard:not(.solo) .cap{position:static}
+  .pcard .mbody{overflow:visible}
+}
+/* The kicker sits ABOVE the name, the way a lesson section does: the reader
+   wants what kind of thing this is before its name. Its colour stays
+   library.css's, enzyme or carrier. */
+.pcard .mbody .does{margin:0 0 .5rem;font-size:13px;font-weight:500;letter-spacing:.22em}
+/* dna-structure.html's reading typography: the display face for the name, an
+   italic gloss under it, editorial serif for the one paragraph. */
+.pcard .name{margin:0;font-family:var(--font-display);font-weight:500;
+  font-size:clamp(28px,3vw,40px);line-height:1.1;letter-spacing:-.02em;color:var(--brand-ink)}
+/* THE CLASS NAME, GLOSSED, where a touch screen can reach it: a title
+   attribute is not. */
+.pcard .def{margin:6px 0 0;font-family:var(--font-editorial);font-style:italic;
+  font-size:15px;color:var(--text-muted)}
+.pcard .mblurb{margin:20px 0 1.4rem;font-family:var(--font-editorial);font-size:17px;
+  line-height:1.6;color:var(--text-body)}
+
+/* WHAT IS UNDER THE PICTURE IS ABOUT THE PICTURE: which deposition is on
+   screen, what it was chosen for, and the way out to it. */
+.pcard .cap{position:absolute;left:0;right:0;bottom:0;margin:0;
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:.55rem;
+  padding:.7rem 1rem;font-size:.78rem;color:var(--muted);
+  background:linear-gradient(to top,var(--paper),rgba(0,0,0,0))}
+.pcard .cap .pdb{font-family:var(--font-mono,ui-monospace,monospace);font-weight:600;
+  letter-spacing:.04em;color:var(--ink)}
+.pcard .cap a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
+.pcard .cap a:hover{color:var(--spark)}
+
+.pcard .measure{display:flex;gap:1.1rem 1.9rem;flex-wrap:wrap;margin:0 0 1.4rem;
+  padding:1.1rem 0 0;border-top:1px solid var(--border-hair)}
+.pcard .measure div{min-width:7rem}
+.pcard .measure b{display:block;font-family:var(--font-display);font-weight:500;
+  font-size:1.35rem;line-height:1.1;letter-spacing:-.02em;color:var(--ink)}
+.pcard .measure span{display:block;margin-top:.3rem;font-size:.76rem;color:var(--muted)}
+
+.pcard .links{margin-top:auto;display:flex;flex-wrap:wrap;gap:.5rem}
+.pcard .open{display:inline-flex;align-items:center;gap:6px;padding:.55rem 1.1rem;
+  border-radius:999px;background:var(--deep);color:#fff;font:500 13px var(--sans);
+  letter-spacing:.04em;text-decoration:none;transition:background .15s}
+.pcard .open:hover{background:var(--ink)}
+
+/* The gallery's close, top right. */
+.pcard .x{position:absolute;top:12px;right:14px;z-index:3;
+  width:36px;height:36px;border-radius:50%;cursor:pointer;
+  border:0;background:#fff;color:var(--brand-ink);font-size:22px;line-height:1;
+  box-shadow:0 2px 10px rgba(var(--brand-ink-t),.2);transition:box-shadow .15s}
+.pcard .x:hover{box-shadow:0 3px 14px rgba(var(--brand-ink-t),.32)}
+
+/* The embed code, as lessons.html's shelf offers it: a small outlined pill. */
+.pcard .emb{cursor:pointer;font:600 11.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);background:none;border:1.5px solid rgba(var(--ink-t),.18);border-radius:999px;
+  padding:.42em .8em;display:inline-flex;align-items:center;gap:.35em;white-space:nowrap;
+  transition:color .15s,border-color .15s}
+.pcard .emb:hover{color:var(--ink);border-color:var(--ink)}
+.pcard .emb svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2}
+.pcard .links .emb{align-self:center}
+.pcard .links .emb:first-of-type{margin-left:auto}
+
+/* The gate: a still, and one button over it that makes it live. */
+.pcard .gate{position:absolute;inset:0;z-index:2;display:flex;align-items:center;
+  justify-content:center;border:0;background:transparent;cursor:pointer}
+.pcard .gate span{padding:.6rem 1.2rem;border-radius:999px;background:var(--brand-ink);
+  color:#fff;font:500 14px var(--sans);letter-spacing:.04em;
+  box-shadow:0 8px 20px -8px rgba(var(--brand-ink-t),.5);transition:transform .15s}
+.pcard .gate:hover span{transform:translateY(-2px)}

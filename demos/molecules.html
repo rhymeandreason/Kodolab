@@ -39,71 +39,18 @@
 <link rel="stylesheet" href="css/kodo.css">
 
 <link rel="stylesheet" href="css/library.css">
+<link rel="stylesheet" href="css/mol-card.css">
+<link rel="stylesheet" href="css/embed-sheet.css">
 <style>
-  /* ---- the molecule modal: lessons.html's embed sheet, one molecule -----
-     Its navy backdrop, round corners, deep shadow and floating close.
-     `.mmodal`, not `.modal`: kodo.css §10.3 owns `.modal` and its heading. */
+  /* ---- the molecule modal: lib/mol-card.js in lessons.html's embed sheet's
+     frame. Its navy backdrop, round corners, deep shadow and floating close. */
   .mmodal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
     justify-content:center;padding:clamp(1rem,4vw,3rem);
     background:rgba(var(--brand-ink-t),.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
   .mmodal[hidden]{display:none}
-  .sheet{position:relative;background:var(--surface-card);
-    border:0;border-radius:20px;
-    box-shadow:0 40px 100px -30px rgba(var(--brand-ink-t),.6);
-    width:min(940px,100%);height:min(100%,600px);overflow:hidden;
-    display:grid;grid-template-columns:1.1fr 1fr}
-  .mstage{position:relative;background:var(--paper);
-    border-right:1px solid rgba(var(--brand-ink-t),.1);min-height:0}
-  .mstage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .stagebar{position:absolute;z-index:2;left:0;right:0;bottom:1rem;
-    display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;align-items:center}
-  .stagebar:empty,.stagebar[hidden]{display:none}
-  /* Both instruments stand on the model's paper, so the ghost capsule carries
-     the card's own surface: over a molecule, a transparent chip is a floating
-     outline. */
-  .stagebar .pill--check,
-  .stagebar .pill--check:hover:not([disabled]){background:var(--surface-card)}
-  .mbody{padding:clamp(1.4rem,3vw,2.2rem);display:flex;flex-direction:column;
-    min-height:0;overflow-y:auto}
-  @media (max-width:800px){
-    .sheet{grid-template-columns:1fr;height:auto;max-height:100%;overflow:auto}
-    .mstage{height:300px;border-right:0;border-bottom:1px solid var(--border-hair)}
-    .mbody{overflow:visible}
-  }
-  /* lessons.html's eyebrow over its Futura heading. */
-  .mbody .does{margin:0 0 .5rem;font-size:13px;font-weight:500;letter-spacing:.22em;color:var(--brand-orange)}
-  .mbody .name{font-weight:500;font-size:clamp(26px,3vw,36px);line-height:1.1;letter-spacing:-.02em;color:var(--brand-ink)}
-  .mbody .formula{font-size:1rem;margin:.5rem 0 0}
-  .measure{display:flex;gap:1.1rem 1.9rem;flex-wrap:wrap;margin:1.3rem 0 1.4rem;
-    padding:1.1rem 0 0;border-top:1px solid var(--border-hair)}
-  .measure div{min-width:6.5rem}
-  .measure b{display:block;font-family:var(--font-display);font-weight:500;
-    font-size:1.35rem;line-height:1.1;letter-spacing:-0.02em;color:var(--ink)}
-  .measure span{display:block;margin-top:.3rem;font-size:.76rem;color:var(--muted)}
-  .hint{font-family:var(--font-editorial);font-style:italic;font-size:.9rem;line-height:1.4;
-    color:var(--brand-ink-2);margin:0 0 1rem}
-  /* Pushed to the foot of the column, so the reader meets the molecule's name
-     and measurements before its drawing. */
-  .dwrap{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border-hair)}
-  .dwrap[hidden]{display:none}
-  /* The strip the pill stands in. The column is nearly full at this height, so
-     the diagram gives up the room rather than the column growing a scrollbar
-     that would slide content under a pinned control. */
-  .mbody.haspairs .dwrap{padding-bottom:2.1rem}
-  #m-pairs{position:absolute;z-index:2;bottom:1rem;right:clamp(1.4rem,3vw,2.2rem)}
-  #m-pairs[hidden]{display:none}
-  /* One column: the sheet itself scrolls, so a pinned corner would float over
-     whatever happened to be under it. It goes back in the flow. Must sit after
-     the rule it overrides — same specificity, so source order decides. */
-  @media (max-width:800px){
-    #m-pairs{position:static;display:block;width:max-content;margin:0 auto 1.4rem}
-    .mbody.haspairs .dwrap{padding-bottom:0}
-  }
-  .mdiagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
-  .x{position:absolute;top:12px;right:14px;z-index:2;width:36px;height:36px;border-radius:50%;
-    cursor:pointer;border:0;background:#fff;color:var(--brand-ink);font-size:22px;line-height:1;
-    box-shadow:0 2px 10px rgba(var(--brand-ink-t),.2);transition:box-shadow .15s}
-  .x:hover{box-shadow:0 3px 14px rgba(var(--brand-ink-t),.32)}
+  .mmodal .mcard{border-radius:20px;box-shadow:0 40px 100px -30px rgba(var(--brand-ink-t),.6);
+    width:min(940px,100%);height:min(100%,600px)}
+  @media (max-width:800px){ .mmodal .mcard{height:auto;max-height:100%} }
 </style>
 </head>
 <body>
@@ -145,45 +92,7 @@
   </div>
 </footer>
 
-<div class="mmodal" id="modal" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="m-name">
-    <button class="x" id="m-close" aria-label="Close">&times;</button>
-    <div class="mstage" id="m-stage">
-      <!-- On-stage instruments (kodo.css §.segmented, §.pill), each shown only
-           where the spec supports it: a molecule with no `flat2d` cannot lie
-           down, and one with no `optH` has no C-H hydrogens to hide. -->
-      <div class="stagebar" id="m-bar">
-        <div class="segmented segmented--sm" id="m-modes" role="group" aria-label="View" hidden>
-          <button type="button" data-mode="3d" aria-pressed="true">3D</button>
-          <button type="button" data-mode="2d" aria-pressed="false">2D</button>
-        </div>
-        <label class="pill pill--ghost pill--check" id="m-hyd" hidden>
-          <input type="checkbox" id="m-hyd-in"> C&ndash;H hydrogens</label>
-      </div>
-    </div>
-    <div class="mbody" id="m-body-col">
-      <p class="does" id="m-does"></p>
-      <h2 class="name" id="m-name"></h2>
-      <p class="formula" id="m-formula"></p>
-      <div class="measure" id="m-measure"></div>
-      <p class="hint" id="m-hint"></p>
-      <!-- The drawn diagram, BESIDE the model rather than a view of it: it is
-           the only picture here that is not the molecule's own coordinates, so
-           it is shown next to them to be compared, not switched to. The panel
-           is its own element inside the wrapper because a repaint clears it,
-           and the toggle must survive that. -->
-      <div class="dwrap" id="m-dwrap" hidden>
-        <div class="mdiagram" id="m-diagram"></div>
-      </div>
-    </div>
-    <!-- Pinned to the SHEET, not to the body column: the body scrolls, and an
-         instrument that scrolls with the thing it acts on is not an instrument.
-         It shares the stagebar's `bottom`, so the two columns' controls sit on
-         one line. -->
-    <label class="pill pill--ghost pill--check" id="m-pairs" hidden>
-      <input type="checkbox" id="m-pairs-in"> lone pairs</label>
-  </div>
-</div>
+<div class="mmodal" id="modal" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="lib/palette.js"></script>
@@ -209,6 +118,8 @@
 <script src="lib/diagram-2d.js"></script>
 <script src="kit/card-stage.js"></script>
 <script src="lib/mol-shelf.js"></script>
+<script src="lib/mol-card.js"></script>
+<script src="lib/embed-sheet.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -234,181 +145,51 @@ for (const m of MOLS) {
 }
 $('tally').textContent = `${MOLS.length} molecules`;
 
-/* ---- the molecule modal ---------------------------------------------------
-   THE BOX IS lib/molview.js's, not a stage of our own. It owns the two views
-   this modal offers and the morph between them: 2D is the same spheres sliding
-   onto the diagram's layout, so the reader watches one molecule lie down rather
-   than being shown a second picture of it. It also owns the opening pose (the
-   spec's declared `view:`, or MolView.flatPose where it declares none, which is
-   the pose the card's still was baked in) and the drag, which turns the MODEL.
+/* ---- the molecule modal: lib/mol-card.js inside a backdrop ---------------- */
+const modal = $('modal');
+let open = null;
 
-   kit/card-stage.js owns everything around it: one canvas, the loop, and a
-   destroy that hands the WebGL context back — a canvas that has lost one is
-   never granted another, so the box is new on every open. */
-const modal = $('modal'), modes = $('m-modes'), bar = $('m-bar');
-const hyd = $('m-hyd'), hydIn = $('m-hyd-in');
-let box = null, view = null, current = null;
-
-const diagramEl = $('m-diagram'), dwrap = $('m-dwrap');
-const pairs = $('m-pairs'), pairsIn = $('m-pairs-in'), bodyCol = $('m-body-col');
-/* WHERE THE SHAPE CAME FROM. Every spec names its own source in `src:{path}`
-   and check-molecules.js fails one that does not, so this is read rather than
-   written — a molecule that changes path changes the line by itself.
-   MolecularGeometry.md §1 is the argument for choosing between them; this says
-   only which was chosen, because a student looking at a model is entitled to
-   know whether they are looking at a measurement or at a construction. */
-const SOURCE = {
-  hand:    () => 'Placed by hand from measured angles.',
-  skel:    () => 'Built from VSEPR angles, not from a deposited record.',
-  pubchem: src => `From a deposited 3D record, PubChem CID ${src.cid}.`,
-  built:   src => `Idealised geometry, written in as coordinates: ${src.method}.`,
-  mirror:  src => `The mirror image of ${src.of}, reflected at load.`,
-};
-function sourceLine(spec) {
-  const src = spec.src || {};
-  const say = SOURCE[src.path];
-  return say ? say(src) : '';
-}
-
-const HINT = { '2d': '2D projection drawn from the diagram.' };
-
-/* Sized for the BODY column, which is narrower than the stage, so the boxes are
-   the page's rather than the module's defaults. A disaccharide is two rings
-   wide. Hidden for a molecule neither projection can draw — an empty rule above
-   nothing would read as a diagram that failed to load. */
-function paintDiagram() {
-  const sp = current.spec;
-  // Only a Haworth draws them today, so the toggle appears with the projection
-  // that can act on it rather than sitting dead under the others.
-  const canPair = Diagram2D.mode(sp) === 'haworth';
-  const drawn = Diagram2D.draw(diagramEl, sp, {
-    showH: hydIn.checked,
-    lonePairs: canPair && pairsIn.checked,
-    width: sp.glycosidic ? 420 : 250, height: canPair ? 126 : 150,
-    maxW: 330, maxH: 170,
-  });
-  dwrap.hidden = !drawn;
-  pairs.hidden = !(drawn && canPair);
-  bodyCol.classList.toggle('haspairs', !pairs.hidden);
-}
-pairsIn.addEventListener('change', () => { if (current) paintDiagram(); });
-
-function setMode(next) {
-  if (!view) return;
-  /* The flat layout folds every hydrogen into the atom it hangs on, so the
-     checkbox has nothing to say there. Disabled rather than hidden: a control
-     that vanishes reads as one you imagined. The attribute is on the label too,
-     because that is what carries the dimming. */
-  hydIn.disabled = next !== '3d';
-  hyd.toggleAttribute('disabled', next !== '3d');
-  view.setMode(next);
-  for (const b of modes.children) b.setAttribute('aria-pressed', String(b.dataset.mode === next));
-  $('m-hint').textContent = next === '3d' ? sourceLine(current.spec) : HINT[next];
-}
-modes.addEventListener('click', e => {
-  const b = e.target.closest('button');
-  if (b) setMode(b.dataset.mode);
+/* THE EMBED CODE, one sheet for every molecule. `layout=card` is this modal as
+   a frame; the bare URL is the model alone, with its 3D/2D and hydrogens. */
+const sheet = EmbedSheet.create({
+  heading: 'Embed this molecule', pick: 'Molecule',
+  items: MOLS.map(m => ({ key: m.key, title: m.spec.name, group: MolShelf.groupOf(m.spec.domain) })),
+  views: [{ key: 'card', label: 'With description' }, { key: 'solo', label: 'Model only' }],
+  resolve: (it, view) => ({
+    src: `/embed/molecule/${it.key}` + (view === 'card' ? '?layout=card' : ''),
+    lw: view === 'card' ? 960 : 0,
+  }),
+  credit: it => ({ href: `/molecules#${it.key}`, text: 'Open this molecule on Kodolab \u2192' }),
+  size: { w: 960, h: 620 },
 });
 
-/* The nonpolar C-H's, which a spec lists in `optH`. Off to begin with, the way
-   a textbook figure leaves them out: they are most of the atoms and none of the
-   chemistry. An H on N or O is never in that list, so the H-bond donors stay. */
-function setHydrogens(on) {
-  if (!view) return;
-  view.setOptionalH(on);
-  hydIn.checked = on;
-  // The diagram shows the same atoms as the model beside it, or the two
-  // disagree about what the molecule has. Only Haworth acts on this; a SMILES
-  // carries its own hydrogens.
-  if (!dwrap.hidden) paintDiagram();
-}
-hydIn.addEventListener('change', () => setHydrogens(hydIn.checked));
-
 function openModal(m) {
-  current = m;
-  const s = m.spec;
-  $('m-name').textContent = s.name;
-  $('m-formula').textContent = s.formula || '';
-  const does = $('m-does');
-  does.className = 'does'; does.textContent = s.class || '';
-
-  /* Counted or measured at render, never typed. Span is in real ångströms:
-     Stage.measure divides SCALE back out. */
-  const heavy = s.atoms.filter(a => a.el !== 'H').length;
-  const rings = (s.topology && s.topology.rings) || [];
-  const tiles = [
-    [s.atoms.length, 'atoms'],
-    [heavy, 'heavy atoms'],
-  ];
-  /* A span needs two heavy atoms to be between: methane's one carbon would
-     report 0.0 Å, which reads as a measurement rather than as nothing. */
-  if (heavy > 1) tiles.push([Stage.measure(s).span.toFixed(1) + ' Å', 'widest span']);
-  if (rings.length) tiles.push([rings.length, rings.length === 1 ? 'ring' : 'rings']);
-  const measure = $('m-measure');
-  measure.innerHTML = '';
-  for (const [n, label] of tiles) {
-    const d = document.createElement('div');
-    d.innerHTML = '<b></b><span></span>';
-    d.querySelector('b').textContent = n;
-    d.querySelector('span').textContent = label;
-    measure.appendChild(d);
-  }
-
-  paintDiagram();
-
-  const mount = $('m-stage');
-  mount.style.background = `url(media/molecules/${m.key}.webp) center/contain no-repeat var(--paper)`;
+  closeModal();
+  /* Shown before the card is mounted: a box with no size cannot be fitted. */
   modal.hidden = false;
   document.body.style.overflow = 'hidden';
-  $('m-close').focus();
-
-  /* Built after the modal is shown: a box with no size cannot be fitted.
-     `orbit:false` because MolView turns the MODEL — a camera that also moved
-     would make the flat layout tiltable, and a layout you can tilt has stopped
-     saying that its angles are not the molecule's. */
-  box = CardStage.create({
-    mount,
-    stage: { ortho: true, cam: { theta: 0, phi: Math.PI / 2, r: 40 }, orbit: false },
-    step: () => { if (view) view.step(); },
-    onResize: () => { if (view) view.fit(); },
-  });
-  modes.hidden = !(s.flat2d && s.flat2d.length);
-  hyd.hidden = !(s.optH && s.optH.length);
-  bar.hidden = modes.hidden && hyd.hidden;
-  /* The instruments stand ON the stage, so the frame the molecule is fitted
-     into stops above them — which is what `usable` is for, and it matters most
-     for a wide flat layout. A hidden bar has a zero-sized box, and a zero box
-     measured as an edge reserves the whole stage, so skip it. */
-  const around = MolView.usableAround($('m-stage'), { bottom: [bar] });
-  view = MolView.create({ canvas: box.canvas, camera: box.stage.camera,
-                          applyCam: box.stage.applyCam, root: box.stage.root,
-                          usable: () => bar.hidden ? { fw: 1, fh: 1 } : around() });
-  view.show(s);
-  view.fit();
-  setMode('3d');
-  setHydrogens(false);
-  // One frame now, so the box is never blank in the gap before the loop runs.
-  box.draw();
-  mount.style.backgroundImage = '';
+  open = MolCard.mount(modal, m, { onClose: closeModal, onEmbed: () => sheet.show(m.key),
+    onImage: () => EmbedSheet.saveStill(MolCard.stillSrc(m.key), m.key) });
+  open.el.setAttribute('aria-modal', 'true');
+  open.el.querySelector('.x').focus();
 }
 
 function closeModal() {
-  if (modal.hidden) return;
-  if (box) { box.destroy(); box = null; view = null; }
-  dwrap.hidden = true; diagramEl.innerHTML = ''; pairs.hidden = true;
-  pairsIn.checked = false; bodyCol.classList.remove('haspairs'); current = null;
-  $('m-stage').style.background = '';
+  if (!open) return;
+  open.destroy();
+  open = null;
   modal.hidden = true;
   document.body.style.overflow = '';
 }
-$('m-close').addEventListener('click', closeModal);
 modal.addEventListener('mousedown', e => { if (e.target === modal) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !sheet.isOpen()) closeModal();
+});
 
 /* library.html's shelf links here as /molecules#<key>. */
 function openFromHash() {
   const m = BY_KEY.get(decodeURIComponent(location.hash.slice(1)));
-  if (m) { closeModal(); openModal(m); }
+  if (m) openModal(m);
 }
 window.addEventListener('hashchange', openFromHash);
 openFromHash();

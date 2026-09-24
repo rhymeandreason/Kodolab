@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at /embed/molecule/<key> by a vercel.json rewrite, which does not
+     move the file. -->
+<base href="/demos/">
+<title>Molecule — Kodolab</title>
+<meta name="robots" content="noindex">
+
+<!-- ===================================================================
+     ONE MOLECULE, FOR SOMEONE ELSE'S PAGE. lib/mol-card.js, the card
+     molecules.html's modal draws, filling the window:
+
+       /embed/molecule/<key>               the model, its 3D/2D and hydrogens
+       /embed/molecule/<key>?layout=card   the model and its text
+
+     The key is MolLib's, and a pasted embed code holds it forever. GATED,
+     for the reason embed/protein.html gives.
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/library.css">
+<link rel="stylesheet" href="css/mol-card.css">
+<link rel="stylesheet" href="embed/embed.css">
+</head>
+<body>
+<div id="host"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/palette.js"></script>
+<script src="lib/tokens-from-palette.js"></script>
+<script src="lib/molecules.js"></script>
+<!-- Every domain file, in MolLib.DOMAINS order, as molecules.html loads them. -->
+<script src="lib/skel.js"></script>
+<script src="lib/mol-small.js"></script>
+<script src="lib/mol-aminoacids.js"></script>
+<script src="lib/mol-pathways.js"></script>
+<script src="lib/mol-krebs.js"></script>
+<script src="lib/mol-carriers.js"></script>
+<script src="lib/mol-sugars.js"></script>
+<script src="lib/mol-glycans.js"></script>
+<script src="lib/mol-lipids.js"></script>
+<script src="lib/mol-nucleic.js"></script>
+<script src="lib/scene.js"></script>
+<script src="lib/molview.js"></script>
+<script src="lib/haworth.js"></script>
+<script src="https://unpkg.com/smiles-drawer@2.4.1/dist/smiles-drawer.min.js"></script>
+<script src="lib/diagram-2d.js"></script>
+<script src="kit/card-stage.js"></script>
+<script src="lib/mol-shelf.js"></script>
+<script src="lib/mol-card.js"></script>
+<script>
+'use strict';
+const qs = new URLSearchParams(location.search);
+const key = qs.get('key') || (location.pathname.match(/^\/embed\/molecule\/([A-Za-z0-9_-]+)/) || [])[1];
+/* A key the shelf does not show (atpSkel beside atp) is still a molecule. */
+const m = key && (MolShelf.list().find(x => x.key === key)
+  || (MolLib.MOLECULES[key] && MolLib.MOLECULES[key].atoms ? { key, spec: MolLib.MOLECULES[key] } : null));
+const host = document.getElementById('host');
+
+if (!m) {
+  host.innerHTML = '<div class="missing"><p>This molecule is not in the library.</p><p><a href="/molecules" target="_blank" rel="noopener">See every molecule →</a></p></div>';
+} else {
+  document.title = `${m.spec.name} — Kodolab`;
+  MolCard.mount(host, m, { layout: qs.get('layout') === 'card' ? 'card' : 'solo', gate: true });
+}
+</script>
+</body>
+</html>

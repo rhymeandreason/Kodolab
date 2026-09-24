@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at /embed/protein/<key> by a vercel.json rewrite, which does not
+     move the file. -->
+<base href="/demos/">
+<title>Protein — Kodolab</title>
+<!-- An embed is a piece of someone else's page: search should send a student
+     to the gallery or the lesson, not to the frame. -->
+<meta name="robots" content="noindex">
+
+<!-- ===================================================================
+     ONE PROTEIN, FOR SOMEONE ELSE'S PAGE. proteins/protein-card.js, the
+     card the gallery's modal draws, filling the window:
+
+       /embed/protein/<key>               the model alone
+       /embed/protein/<key>?layout=card   the model and its text
+
+     The embed code is written by lib/embed-sheet.js, from the gallery's
+     modal. The URL is a promise to every teacher who pasted one: a key
+     here never changes.
+
+     GATED: a still until the reader clicks. A teacher's page may hold six
+     of these, and the browser drops the oldest WebGL context past about
+     eight without an error.
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/library.css">
+<link rel="stylesheet" href="kit/proteinbox.css">
+<link rel="stylesheet" href="proteins/protein-card.css">
+<link rel="stylesheet" href="embed/embed.css">
+</head>
+<body>
+<div id="host"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/palette.js"></script>
+<script src="lib/tokens-from-palette.js"></script>
+<script src="lib/molecules.js"></script>
+<script src="lib/scene.js"></script>
+<script src="folding/folding.js"></script>
+<script src="kit/ribbon.js"></script>
+<script src="kit/card-stage.js"></script>
+<script src="kit/proteinbox.js"></script>
+<script src="kit/nucleic.js"></script>
+<script src="proteins/proteins.js"></script>
+<script src="proteins/nucleic-acids.js"></script>
+<script src="proteins/protein-card.js"></script>
+<script>
+'use strict';
+/* The key is the last segment of the short URL; `?key=` answers on the file
+   path, for opening this directly. */
+const qs = new URLSearchParams(location.search);
+const key = qs.get('key') || (location.pathname.match(/^\/embed\/protein\/([a-z0-9-]+)/) || [])[1];
+const p = key && ProteinCard.byKey(key);
+const host = document.getElementById('host');
+
+if (!p) {
+  host.innerHTML = '<div class="missing"><p>This protein is not in the gallery.</p><p><a href="/proteins" target="_blank" rel="noopener">See every protein →</a></p></div>';
+} else {
+  document.title = `${p.name} — Kodolab`;
+  ProteinCard.mount(host, p, {
+    layout: qs.get('layout') === 'card' ? 'card' : 'solo',
+    gate: true,
+    target: '_blank',
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+/* =============================================================================
+   embed-sheet.css — lib/embed-sheet.js's dialog. Loaded by lessons.html,
+   molecules.html and proteins/index.html; reads library.css's short tokens
+   (--ink, --paper, --sans, --serif), which lessons.html states the same way.
+   Its buttons are its own (.ebtn): kodo.css's .cta and lessons.html's are two
+   different buttons, and this sheet sits on both kinds of page.
+   ========================================================================== */
+dialog.esheet { --gap: 2.5rem; width: calc(100vw - 2 * var(--gap)); max-width: none; max-height: calc(100vh - 2 * var(--gap)); padding: 0; border: 0; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 40px 100px -30px rgba(var(--ink-t), .6); overflow: hidden; }
+dialog.esheet::backdrop { background: rgba(20, 33, 61, .55); backdrop-filter: blur(3px); }
+/* A fixed height, so the controls column has something to scroll inside of:
+   a grid with only a max-height gives its rows no height to overflow. */
+.esheet .in { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); height: calc(100vh - 2 * var(--gap)); }
+.esheet .ctl { min-height: 0; padding: 1.8rem 1.7rem 1.6rem; display: flex; flex-direction: column; gap: 1.1rem; overflow: auto; border-right: 1px solid rgba(var(--ink-t), .1); }
+.esheet .ctl h2 { font-size: 1.55rem; line-height: 1.1; }
+.esheet label.f { display: flex; flex-direction: column; gap: .35rem; font: 500 11.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+.esheet select { font: 400 15px var(--sans); padding: .55rem .8rem; border-radius: 10px; border: 1.5px solid rgba(var(--ink-t), .2); background: #fff; color: var(--ink); }
+.esheet .views { position: relative; display: flex; gap: .4rem; padding: 4px; border-radius: 999px; background: rgba(var(--ink-t), .06); }
+.esheet .views label { flex: 1; text-align: center; cursor: pointer; font: 500 13px var(--sans); letter-spacing: .04em; text-transform: none; padding: .45rem .6rem; border-radius: 999px; color: var(--ink-2); transition: background .15s, color .15s; }
+.esheet .views input { position: absolute; opacity: 0; pointer-events: none; }
+.esheet .views input:checked + label { background: var(--ink); color: #fff; }
+.esheet .views input:disabled + label { opacity: .4; cursor: not-allowed; }
+.esheet .note { margin: 0; font-family: var(--serif); font-size: .88rem; line-height: 1.4; color: var(--ink-2); }
+.esheet .dims { display: flex; align-items: center; gap: .5rem; }
+.esheet .dims label { display: flex; align-items: baseline; gap: .35rem; font: 400 13px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+.esheet .dims input { width: 5.2em; font: 400 15px var(--sans); padding: .45rem .6rem; border-radius: 10px; border: 1.5px solid rgba(var(--ink-t), .2); background: #fff; color: var(--ink); }
+.esheet .dims .by { color: var(--ink-3); font-size: 14px; }
+.esheet .dims .lock { margin-left: .4rem; white-space: nowrap; }
+.esheet .dims .lock input { width: auto; padding: 0; accent-color: var(--ink); }
+.esheet .size .note { margin-top: .5rem; font-size: .82rem; color: var(--ink-3); }
+.esheet pre { margin: 0; text-transform: none; letter-spacing: 0; padding: .9rem 1rem; border-radius: 12px; background: var(--ink); color: rgba(var(--paper-t), .9); font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; user-select: all; max-height: 7.5em; overflow: auto; }
+.esheet .btns { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.esheet .btns .ok { font: 500 13px var(--sans); color: var(--deep); }
+/* Centred; fit() caps the frame's width so it also fits the pane's height. */
+.esheet .prev { position: relative; min-height: 0; background: var(--paper-2); display: flex; align-items: center; justify-content: center; padding: 1.6rem; overflow: hidden; }
+.esheet .stack { display: flex; flex-direction: column; gap: .5rem; }
+.esheet .credit { margin: 0; font: 400 13px/1.4 var(--sans); color: var(--mute); }
+/* The wordmark's baseline is the bottom of its box, so it sits on the text's baseline, not centred. */
+.esheet .credit a { color: inherit; text-decoration: none; display: inline-flex; align-items: baseline; gap: .4rem; }
+.esheet .credit img { height: 14px; width: auto; }
+/* container-type is load-bearing, not decoration: the iframe inside is styled
+   with the snippet's own CSS, which scales itself against 100cqw. Without a
+   container here that unit resolves to the viewport and the preview lies. */
+.esheet .frame { container-type: inline-size; width: 100%; aspect-ratio: var(--ar, 16 / 10); background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(var(--ink-t), .4); position: relative; }
+/* THE PREVIEW IS A LAPTOP, SCALED DOWN. The frame here is ~700px wide and
+   every lesson stacks into its narrow layout under 920px, which is not what a
+   teacher's page will show. So the lesson is laid out at the full laptop width
+   and scaled to fit, by the same declaration the teacher pastes. */
+.esheet .frame iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; }
+.esheet .frame .cap { position: absolute; left: 12px; bottom: 10px; font: 500 10.5px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); background: rgba(255, 255, 255, .8); padding: 5px 8px; border-radius: 999px; pointer-events: none; }
+/* While a PNG is taken: square corners, no label, and a magenta ring that
+   savePNG() finds in the captured screen to know where the frame is. */
+.esheet .frame.shooting { border-radius: 0; box-shadow: none; outline: 4px solid #f0f; }
+.esheet .frame.shooting .cap { display: none; }
+/* kodo.css's .btn, which this page does not load: hair border, fills with ink on hover. */
+.esheet .btn { position: absolute; right: 1.2rem; bottom: 1.2rem; display: inline-flex; align-items: center; border: 1px solid rgba(var(--ink-t), .2); border-radius: 10px; padding: 6px 16px; background: transparent; color: var(--ink-3); font: 600 13px/18px var(--sans); letter-spacing: .5px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+.esheet .btn:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.esheet .btn[hidden] { display: none; }
+.esheet .x { position: absolute; top: 12px; right: 14px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 0; background: #fff; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 0 2px 10px rgba(var(--ink-t), .2); }
+@media (max-width: 860px) {
+  .esheet .in { grid-template-columns: 1fr; }
+  .esheet .ctl { border-right: 0; border-bottom: 1px solid rgba(var(--ink-t), .1); }
+}
+
+
+.esheet h2 { font-family: var(--display); font-weight: 500; letter-spacing: -0.015em; margin: 0; }
+.esheet .ebtn { font: 500 14px var(--sans); letter-spacing: .06em; padding: .8rem 1.4rem; border-radius: 999px; border: 0; background: var(--ink); color: var(--paper); cursor: pointer; text-decoration: none; display: inline-block; box-shadow: 0 8px 20px -8px rgba(var(--ink-t), .5); transition: transform .15s var(--soft), box-shadow .15s; }
+.esheet .ebtn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -8px rgba(var(--ink-t), .55); }
+.esheet .ebtn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px rgba(var(--ink-t), .35); }
+.esheet .ebtn.ghost:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }

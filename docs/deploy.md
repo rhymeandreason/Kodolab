@@ -92,6 +92,12 @@ out of `vercel.json`, so the index's own links resolve on the dev server instead
 of 404ing there and working only once deployed. The file path still serves
 directly as well.
 
+**Embeds are routes too, and their keys are forever.** `/embed/protein/<key>`
+and `/embed/molecule/<key>` serve `demos/embed/`; `?layout=card` adds the
+modal's text. A teacher's pasted code holds the key, so renaming a protein or
+molecule key breaks every page that embeds it. Hidden from search in
+`tools/seo.js`.
+
 **Two files become public endpoints: `api/ask.js` and `api/find.js`.** Vercel
 does not route files whose names begin with an underscore, so `_tutor.js`,
 `_keys.js`, `_limit.js`, `_finds.js`, `_log.js`, `_catalog.js`, `_targets.js`,
