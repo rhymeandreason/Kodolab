@@ -25,7 +25,7 @@
  *    NOT        the crescent's exact shape (bloodcell.js calls its own a
  *               caricature, and this is a low-polygon one), the speed (real
  *               capillary flow is a millimetre a second and would be a blur), and
- *               the sticking rule, which is a contact distance and not
+ *               the sticking rule, which is touching and not
  *               adhesion chemistry. state() reports counts and lengths, never a
  *               rate.
  *
@@ -43,7 +43,7 @@
 (function (global) {
   'use strict';
 
-  const DEFAULTS = { sickle: 0, n: 40, speed: 1, throat: 0.47, seed: 3 };
+  const DEFAULTS = { sickle: 0, n: 40, speed: 1, throat: 0.6, seed: 3 };
 
   const R0 = 9;                 // µm, the vessel before it narrows
   const HALF = 65;              // µm, half the drawn length
@@ -51,7 +51,7 @@
   const U0 = 20;                // µm/s at the axis, before the throat (choreography)
 
   const CRESCENT = { len: 11.2, thick: 1.25, depth: 0.9, bend: 1.15 };   // µm, radians of arc
-  const CONTACT = 5.2;          // µm centre to centre: two crescents this close stick
+  const ALIGN = 16;             // µm upstream of the jam where the stream lays a crescent lengthwise
   const PASS_ANGLE = 0.42;      // radians off the axis a crescent may arrive at and still pass
 
   const rng = seed => { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
@@ -158,7 +158,8 @@
           rho: Math.sqrt(R()) * 0.8, th: R() * 6.283,
           q: new THREE.Quaternion().setFromAxisAngle(axis, R() * 6.283),
           spin: axis.clone().multiplyScalar(0.35 + R() * 0.4),
-          stuck: false, sticky: false, counted: false,
+          tilt: new THREE.Vector3(0, (R() - .5) * 0.8, (R() - .5) * 0.8),
+          stuck: false, sticky: false, touchStuck: false, counted: false,
           pos: new THREE.Vector3(),
         });
       }
@@ -178,25 +179,28 @@
     discG.computeBoundingSphere(); sickG.computeBoundingSphere();
     const halfOf = c => (c.kind === 'disc' ? discG.boundingSphere.radius : sickG.boundingSphere.radius);
 
+    const roomAt = (c, Rx) => Math.max(0, Rx - (c.kind === 'disc' ? Math.min(halfOf(c), Rx) * 0.98 : CRESCENT.thick));
+
     function place() {
       for (const c of cells) {
         const Rx = radiusAt(c.x, Rt);
         /* A disc fits the throat face-on and only face-on, so its centre is
            forced to the axis as the wall closes in; a crescent keeps its
            offset, which is what puts it against the wall. */
-        const room = Math.max(0, Rx - (c.kind === 'disc' ? Math.min(halfOf(c), Rx) * 0.98 : CRESCENT.thick));
-        const rc = c.rho * room;
+        const rc = c.rho * roomAt(c, Rx);
         c.pos.set(c.x, rc * Math.cos(c.th), rc * Math.sin(c.th));
       }
     }
 
-    /* Discs never overlap. Each is a cluster of spheres on its midplane, a
-       sphere at radius r as thick as the measured profile is there, so two
-       discs stacked face-on touch rim to rim and an edge meeting a face stops
-       at the dimple. Overlaps are pushed apart along the deepest contact and
-       the push is written back to x, rho, th: a disc that meets one ahead
-       waits behind it rather than being placed through it next frame. */
-    const hull = (() => {
+    /* No two cells overlap, and a crescent stays inside the wall. Each cell is
+       a cluster of spheres: a disc's on its midplane, each as thick as the
+       measured profile is at that radius, so two discs stacked face-on touch
+       rim to rim; a crescent's along its arc, tapering to the horns. Overlaps
+       are pushed apart along the deepest contact and written back to x, rho,
+       th, so a cell that meets one ahead waits behind it rather than being
+       placed through it next frame. A caught cell does not move, which is
+       what lets the jam hold the cells piling onto it. */
+    const discHull = (() => {
       const out = [];
       for (const [rho, n] of [[0, 1], [0.36, 6], [0.7, 12]]) {
         const r = B.R0 * rho, t = B.AMP * Math.sqrt(1 - rho * rho) * B.profileY(rho);
@@ -207,50 +211,88 @@
       }
       return out;
     })();
-    const HN = hull.length;
-    let hw = new Float32Array(0);
-    const _d = new THREE.Vector3();
+    /* The same arc crescentGeo() sweeps. */
+    const sickHull = (() => {
+      const C = CRESCENT, Rb = C.len / C.bend, th0 = C.bend / 2, out = [];
+      for (let i = 0; i < 9; i++) {
+        const u = 0.07 + 0.86 * i / 8, ph = -th0 + C.bend * u;
+        const taper = Math.pow(Math.sin(Math.PI * u), 0.55);
+        out.push({ p: new THREE.Vector3(Rb * Math.sin(ph), Rb * (Math.cos(ph) - Math.cos(th0)), 0), r: 0.5 * (C.thick + C.depth) * taper });
+      }
+      return out;
+    })();
+    const hullOf = c => (c.kind === 'disc' ? discHull : sickHull);
+    const TOUCH = 0.15;          // µm of gap that still counts as touching, for sticking
+    const _d = new THREE.Vector3(), _n = new THREE.Vector3();
 
-    function separate() {
-      const ds = cells.filter(c => c.kind === 'disc');
-      if (ds.length < 2) return;
-      if (hw.length < ds.length * HN * 3) hw = new Float32Array(ds.length * HN * 3);
-      const reach = 2 * discG.boundingSphere.radius;
+    function hullWorld(c) {
+      const h = hullOf(c);
+      if (!c.hw) c.hw = new Float32Array(h.length * 3);
+      for (let k = 0; k < h.length; k++) {
+        _p.copy(h[k].p).applyQuaternion(c.q).add(c.pos);
+        c.hw[3 * k] = _p.x; c.hw[3 * k + 1] = _p.y; c.hw[3 * k + 2] = _p.z;
+      }
+    }
+
+    /* Deepest overlap between two cells' spheres, its normal (a to b) left in _d. */
+    function contact(a, b) {
+      const ha = hullOf(a), hb = hullOf(b);
+      let best = -Infinity;
+      for (let k = 0; k < ha.length; k++) for (let l = 0; l < hb.length; l++) {
+        const dx = b.hw[3 * l] - a.hw[3 * k], dy = b.hw[3 * l + 1] - a.hw[3 * k + 1], dz = b.hw[3 * l + 2] - a.hw[3 * k + 2];
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz), pen = ha[k].r + hb[l].r - d;
+        if (pen > best) { best = pen; if (d > 1e-6) _d.set(dx / d, dy / d, dz / d); else _d.subVectors(b.pos, a.pos).normalize(); }
+      }
+      if (_d.lengthSq() < 1e-9) _d.set(1, 0, 0);
+      return best;
+    }
+
+    /* Pushes a crescent's centre in by the sphere that pokes furthest through the wall. */
+    function wallPush(c) {
+      const h = sickHull;
+      let worst = 0;
+      for (let k = 0; k < h.length; k++) {
+        const y = c.hw[3 * k + 1], z = c.hw[3 * k + 2], r = Math.hypot(y, z);
+        const over = r - (radiusAt(c.hw[3 * k], Rt) - h[k].r);
+        if (over > worst && r > 1e-6) { worst = over; _n.set(0, -y / r, -z / r); }
+      }
+      if (worst > 0) c.pos.addScaledVector(_n, worst);
+      return worst > 0;
+    }
+
+    function separate(touches) {
+      if (cells.length < 2) return;
       for (let it = 0; it < 4; it++) {
-        ds.forEach((c, i) => {
-          for (let k = 0; k < HN; k++) {
-            _p.copy(hull[k].p).applyQuaternion(c.q).add(c.pos);
-            hw[(i * HN + k) * 3] = _p.x; hw[(i * HN + k) * 3 + 1] = _p.y; hw[(i * HN + k) * 3 + 2] = _p.z;
-          }
-        });
+        for (const c of cells) hullWorld(c);
         let moved = false;
-        for (let i = 0; i < ds.length; i++) for (let j = i + 1; j < ds.length; j++) {
-          const a = ds[i], b = ds[j];
+        for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) {
+          const a = cells[i], b = cells[j];
+          if (a.stuck && b.stuck) continue;
+          const reach = halfOf(a) + halfOf(b);
           if (Math.abs(a.pos.x - b.pos.x) > reach || a.pos.distanceToSquared(b.pos) > reach * reach) continue;
-          let best = 0;
-          for (let k = 0; k < HN; k++) for (let l = 0; l < HN; l++) {
-            const ia = (i * HN + k) * 3, ib = (j * HN + l) * 3;
-            const dx = hw[ib] - hw[ia], dy = hw[ib + 1] - hw[ia + 1], dz = hw[ib + 2] - hw[ia + 2];
-            const d = Math.sqrt(dx * dx + dy * dy + dz * dz), pen = hull[k].r + hull[l].r - d;
-            if (pen > best) { best = pen; d > 1e-6 ? _d.set(dx / d, dy / d, dz / d) : _d.subVectors(b.pos, a.pos).normalize(); }
-          }
-          if (best <= 0) continue;
-          if (_d.lengthSq() < 1e-9) _d.set(1, 0, 0);
-          _d.multiplyScalar(best * 0.5 + 0.01);
-          b.pos.add(_d); a.pos.sub(_d);
+          const pen = contact(a, b);
+          if (touches && pen > -TOUCH && a.kind === 'sickle' && b.kind === 'sickle') touches.push(a, b);
+          if (pen <= 0) continue;
+          const wa = a.stuck ? 0 : 1, wb = b.stuck ? 0 : 1;
+          _d.multiplyScalar(pen + 0.01);
+          b.pos.addScaledVector(_d, wb / (wa + wb)); a.pos.addScaledVector(_d, -wa / (wa + wb));
           moved = true;
         }
-        for (const c of ds) toCyl(c);
+        for (const c of cells) {
+          if (c.stuck) continue;
+          if (c.kind === 'sickle') { hullWorld(c); if (wallPush(c)) moved = true; }
+          toCyl(c);
+        }
         place();
+        touches = null;
         if (!moved) break;
       }
     }
 
-    /* The inverse of place() for a disc: where it was pushed, as flow coordinates. */
+    /* The inverse of place(): where a cell was pushed, as flow coordinates. */
     function toCyl(c) {
       c.x = c.pos.x;
-      const Rx = radiusAt(c.x, Rt);
-      const room = Math.max(0, Rx - Math.min(halfOf(c), Rx) * 0.98);
+      const room = roomAt(c, radiusAt(c.x, Rt));
       const r = Math.hypot(c.pos.y, c.pos.z);
       if (room > 1e-3 && r > 1e-6) { c.rho = Math.min(1, r / room); c.th = Math.atan2(c.pos.z, c.pos.y); }
     }
@@ -270,9 +312,11 @@
 
     function step(dt) {
       let moving = 0;
-      const stuckList = cells.filter(c => c.stuck);
+      let tail = Infinity;
+      for (const c of cells) if (c.stuck) tail = Math.min(tail, c.x);
       for (const c of cells) {
         if (c.stuck) continue;
+        c.x0 = c.x;
         const Rx = radiusAt(c.x, Rt);
         const nearThroat = Rx < R0 - 0.5;
         let u = flowAt(c.x, c.rho);
@@ -288,16 +332,8 @@
             c.q.premultiply(_q);
           }
         } else {
-          /* Crescents. Sticking first: to a caught cell, or to each other. */
-          for (const o of stuckList) {
-            if (o === c) continue;
-            if (c.pos.distanceTo(o.pos) < CONTACT) { catchCell(c); break; }
-          }
-          if (c.stuck) continue;
-          if (!c.sticky) for (const o of cells) {
-            if (o === c || o.kind !== 'sickle' || o.stuck) continue;
-            if (c.pos.distanceTo(o.pos) < CONTACT * 0.85) { c.sticky = true; o.sticky = true; }
-          }
+          /* A crescent that touched a caught one last frame is caught. */
+          if (c.touchStuck) { catchCell(c); continue; }
           if (c.sticky) u *= 0.55;
           /* At the throat, only a crescent that arrived nearly end-on fits. */
           if (Rx < CRESCENT.len / 2 + 0.6) {
@@ -305,13 +341,37 @@
             const off = Math.acos(Math.min(1, Math.abs(_a.x)));
             if (off > PASS_ANGLE || c.sticky) { catchCell(c); continue; }
           }
-          const rate = c.sticky ? 0.15 : 1;
-          _q.setFromAxisAngle(_t.copy(c.spin).normalize(), c.spin.length() * rate * dt);
-          c.q.premultiply(_q);
+          /* Shear lays a long cell along the stream as it slows into the jam,
+             so the pile stacks lengthwise, each at its own small tilt; one
+             still tumbling freely keeps tumbling. */
+          if (c.sticky || c.x > tail - ALIGN) {
+            _a.copy(_x).applyQuaternion(c.q);
+            _t.set(Math.sign(_a.x) || 1, c.tilt.y, c.tilt.z).normalize();
+            _q.setFromUnitVectors(_a, _t).multiply(c.q);
+            c.q.slerp(_q, Math.min(1, 1.6 * dt));
+          } else {
+            _q.setFromAxisAngle(_t.copy(c.spin).normalize(), c.spin.length() * dt);
+            c.q.premultiply(_q);
+          }
         }
 
         c.x += u * dt;
-        moving++;
+      }
+      place();
+      const touches = [];
+      separate(touches);
+      for (const c of cells) c.touchStuck = false;
+      for (let i = 0; i < touches.length; i += 2) {
+        const a = touches[i], b = touches[i + 1];
+        if (a.stuck) b.touchStuck = true;
+        else if (b.stuck) a.touchStuck = true;
+        else { a.sticky = true; b.sticky = true; }
+      }
+      /* Moving means getting somewhere: a cell held against the jam is pushed
+         by the flow and pushed back by the pile, and goes nowhere. */
+      for (const c of cells) {
+        if (c.stuck) continue;
+        if (c.x - c.x0 > 0.25 * U0 * P.speed * dt * 0.3) moving++;
         if (c.x > X0 + NARROW && !c.counted) { c.counted = true; passed++; }
         if (c.x > HALF + halfOf(c)) {
           c.x = -HALF - halfOf(c) + 1;
@@ -320,7 +380,6 @@
         }
       }
       place();
-      separate();
       upload();
       if (!blocked && !moving && cells.length) { blocked = true; emit('blocked', state()); }
     }

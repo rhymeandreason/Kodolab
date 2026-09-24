@@ -652,7 +652,7 @@ const F = BloodFlow.mount(el, {
   sickle: 0,         // 0..1 fraction of the cells that are crescents (rebuild)
   n: 40,             // cells in the vessel (rebuild)
   speed: 1,          // choreography; 1 is watchable
-  throat: 0.47,      // throat radius over vessel radius (rebuild)
+  throat: 0.6,       // throat radius over vessel radius (rebuild)
   seed: 3,
 });
 F.reset();
