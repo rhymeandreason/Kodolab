@@ -22,12 +22,12 @@
 <!-- ===================================================================
      TEST BENCH for diagram/diagram.js. Not a lesson, not linked from the index.
 
-     ON THE DOCUMENT SHELL, for the reason graph/graph-test.html gives: a
-     component bench normally takes the lesson shell so a scene is judged in
-     the chrome a student sees, but a structural diagram is not a scene, and
-     what has to be judged here is whether THREE NOTATIONS read as one
-     drawing. Three of them inside one glass panel is not a thing anyone
-     would see.
+     ON THE DOCUMENT SHELL, with graph/graph-test.html's layout, for the
+     reason that page gives: a component bench normally takes the lesson shell
+     so a scene is judged in the chrome a student sees, but a structural
+     diagram is not a scene, and what has to be judged here is whether THREE
+     NOTATIONS read as one drawing. Three of them inside one glass panel is
+     not a thing anyone would see.
 
      WHAT EACH CARD IS FOR:
 
@@ -41,37 +41,67 @@
           on named atoms, and the electrons.
      =================================================================== -->
 
-<link rel="stylesheet" href="../css/bench.css">
+<link rel="stylesheet" href="../css/kodo.css">
 <link rel="stylesheet" href="../diagram/diagram.css">
 <style>
-  body{padding:24px 28px;max-width:1100px}
-  h1{font-family:var(--font-shout);font-weight:var(--weight-regular);font-size:26px;margin:0 0 4px}
-  p.intro{margin:0 0 20px;color:var(--text-muted);font-size:14px;max-width:60em}
-  h2{font-family:var(--font-slab);font-size:12px;letter-spacing:1.2px;text-transform:uppercase;
-     color:var(--muted);margin:28px 0 12px;border-bottom:1px solid var(--hair);padding-bottom:6px}
-  .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
-  .card{background:var(--paper);border:1px solid var(--hair);border-radius:6px;padding:14px 16px}
-  button{font-weight:600;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;
-    border:1.5px solid var(--ink);background:transparent;color:var(--ink);margin:0 6px 6px 0}
-  #readout{font-family:var(--font-slab);font-size:12.5px;color:var(--muted);margin-top:10px;
-    white-space:pre-wrap}
+  main { display: grid; gap: 2rem; }
+  .card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-hair);
+    border-radius: 10px;
+    padding: 1.25rem 1.4rem 1.4rem;
+  }
+  .card > h2 {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-muted); margin: 0 0 1rem;
+  }
+  .row { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: start; }
+  /* The script mounts each diagram into a .card; inside a section card it is a cell, not a second frame. */
+  .row > .card { background: none; border: 0; border-radius: 0; padding: 0; }
+  .readout {
+    margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--border-hair);
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); line-height: 1.6;
+  }
+  .buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 1rem; }
 </style>
 </head>
-<body>
-<h1>diagram.js</h1>
-<p class="intro">The structure component. A caller names a molecule; the module picks the
-  notation. Every caption here is read from <code>state()</code>, so a wrong projection
-  reports itself rather than being spotted.</p>
+<body class="kodo">
+<div class="page">
 
-<h2>1 — one molecule per projection</h2>
-<div class="row" id="three"></div>
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <span class="crumb">diagram.js bench</span>
+  </nav>
 
-<h2>2 — set() under a live handle</h2>
-<div class="card"><div id="live"></div><div id="readout"></div></div>
-<p id="buttons"></p>
+  <header class="pagehead">
+    <h1>diagram</h1>
+    <p class="deck">The structure component. A caller names a molecule; the module picks the
+      notation. Every caption here is read from <code>state()</code>, so a wrong projection
+      reports itself rather than being spotted.</p>
+  </header>
 
-<h2>3 — what a caller asks for: a highlight, and the electrons</h2>
-<div class="row" id="asks"></div>
+  <main>
+
+    <section class="card">
+      <h2>1 &middot; one molecule per projection</h2>
+      <div class="row" id="three"></div>
+    </section>
+
+    <section class="card">
+      <h2>2 &middot; set() under a live handle</h2>
+      <div id="live"></div>
+      <div class="readout" id="readout"></div>
+      <div class="buttons" id="buttons"></div>
+    </section>
+
+    <section class="card">
+      <h2>3 &middot; what a caller asks for: a highlight, and the electrons</h2>
+      <div class="row" id="asks"></div>
+    </section>
+
+  </main>
+
+</div>
 
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
@@ -106,11 +136,12 @@ for (const key of ['glucose', 'water', 'alanine']) {
 const live = Diagram.mount(document.getElementById('live'), { molecule: 'ribose' });
 const out = document.getElementById('readout');
 live.on('render', s => { out.textContent = s
-  ? `${s.name} — ${s.projection}, ${s.atoms} atoms, ${s.lonePairs} lone pairs, charge ${s.charge}`
+  ? `${s.name} · ${s.projection}, ${s.atoms} atoms, ${s.lonePairs} lone pairs, charge ${s.charge}`
   : 'nothing to draw'; });
 live.render();
 for (const key of ['ribose', 'maltose', 'ethanol', 'co2', 'pyruvate', 'atp', 'popc']) {
   const b = document.createElement('button');
+  b.className = 'btn';
   b.textContent = key;
   b.onclick = () => live.set({ molecule: key, title: key });
   document.getElementById('buttons').appendChild(b);
@@ -120,7 +151,7 @@ for (const key of ['ribose', 'maltose', 'ethanol', 'co2', 'pyruvate', 'atp', 'po
 const asks = document.getElementById('asks');
 const hi = document.createElement('div'); hi.className = 'card'; asks.appendChild(hi);
 Diagram.mount(hi, { molecule: 'galactose', highlight: ['O4', 'HO4'],
-  title: 'highlight', caption: 'C4 — the one -OH that makes it galactose, not glucose' });
+  title: 'highlight', caption: 'C4: the one -OH that makes it galactose, not glucose' });
 const lp = document.createElement('div'); lp.className = 'card'; asks.appendChild(lp);
 Diagram.mount(lp, { molecule: 'glucose', lonePairs: true,
   title: 'lone pairs', caption: 'what a water molecule hydrogen-bonds to' });

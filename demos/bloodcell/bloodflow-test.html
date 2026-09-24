@@ -38,7 +38,7 @@
 <script>
 /* The bench for bloodcell/bloodflow.js: one vessel, every parameter live. */
 const shell = LessonShell.create({
-  brand: 'Blood flow · component bench',
+  brand: 'Blood flow', section: { label: 'library', href: '/library' },
   hint: 'Drag to orbit · Scroll to zoom',
   steps: [{ eyebrow: 'bloodcell/bloodflow.js', title: 'A vessel that narrows', onEnter: bench }],
 });
@@ -60,7 +60,7 @@ function bench(ctx) {
     <div class="bench-group">
       <div class="bench-hd">the vessel</div>
       <div class="slider"><div class="slider-head"><span class="label">throat</span><span class="value" id="tv"></span></div>
-        <input type="range" id="throat" min="0.3" max="1" step="0.01" value="0.47"></div>
+        <input type="range" id="throat" min="0.3" max="1" step="0.01" value="0.6"></div>
       <div class="row">
         <button class="btn ghost" type="button" id="reset">Reset</button>
         <button class="btn ghost" type="button" id="seed">New seed</button>

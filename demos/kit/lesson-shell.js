@@ -8,6 +8,7 @@
  *
  *      const shell = LessonShell.create({
  *        brand: 'The Mass of a Tree',
+ *        section: { label: 'library', href: '/library' },   // optional, beside the mark
  *        hint:  'Drag to orbit · Scroll to zoom',
  *        steps: [{ eyebrow, title, body, nextLabel, camera,
  *                  onEnter(ctx), onExit(ctx),
@@ -90,7 +91,7 @@
     el.innerHTML = `
       <div class="lshell-stage"></div>
       <header class="lshell-topbar">
-        <div class="lshell-brand"></div>
+        <div class="lshell-brand"><a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a><a class="lshell-section" hidden></a><span class="lshell-crumb"></span></div>
         <nav class="lshell-progress" aria-label="Lesson progress"></nav>
       </header>
       <aside class="lshell-panel">
@@ -129,7 +130,19 @@
     };
     els.count.setAttribute('data-live', '');
 
-    els.brand.textContent = opts.brand || '';
+    /* The wordmark is the shell's, the words beside it the page's. In someone
+       else's frame (the builder's viewer) the mark goes home in that frame, so
+       it stops being a link there. */
+    els.brand.querySelector('.lshell-crumb').textContent = opts.brand || '';
+    /* `section: { label, href }` is the shelf a page sits on, a link between
+       the mark and its name: a bench's is the library. */
+    const section = els.brand.querySelector('.lshell-section');
+    if (opts.section) {
+      section.textContent = opts.section.label;
+      section.href = opts.section.href;
+      section.hidden = false;
+    }
+    if (window.top !== window) for (const a of els.brand.querySelectorAll('a')) a.removeAttribute('href');
     /* `chrome: 'none'` takes the Back/Next row and the progress dots away, for
        a shell with nowhere to go: a sandbox, a bench. Everything else is
        unchanged, so a one-step lesson and a sandbox differ by this word. */

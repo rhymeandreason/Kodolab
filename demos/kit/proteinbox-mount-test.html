@@ -18,44 +18,24 @@
 <meta name="robots" content="noindex">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
-<link rel="stylesheet" href="../css/bench.css">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
 <link rel="stylesheet" href="../kit/proteinbox.css">
 <style>
-  #side { overflow-y:auto; }
-  .grp { margin-bottom:16px; }
-  .hd { font-weight:600; margin-bottom:6px; }
-  button { margin:0 6px 6px 0; }
-  select { font-size:14px; }
-  p.note { font-size:13px; opacity:.8; line-height:1.45; }
-  table.rd { font-size:13px; border-collapse:collapse; width:100%; }
-  table.rd td { padding:2px 0; vertical-align:top; }
-  table.rd td:last-child { text-align:right; font-weight:600; }
-  .reps button[aria-pressed=true] { outline:2px solid currentColor; }
+  .bench-group { display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .bench-group:first-child { padding-top: 0; border-top: 0; }
+  .bench-hd { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .bench-group .segmented { flex-wrap: wrap; border-radius: 22px; }
+  .bench-group [hidden] { display: none !important; }
+  select.pick { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+  table.rd { font-size: 13px; border-collapse: collapse; width: 100%; color: var(--ink-2); }
+  table.rd td { padding: 3px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.rd td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); padding-left: 12px; }
+  .lshell-nav, .lshell-progress { display: none; }
+  .lshell-scroll { padding-bottom: 32px; }
 </style>
 </head>
 <body>
-<div id="app-sidebar">
-  <div id="stage"></div>
-  <div id="side">
-    <h1 style="font-size:17px">a protein, by name</h1>
-    <p class="note"><code>kit/proteinbox.js</code> through <code>Proteinbox.mount</code>:
-      the registry answers for the files, and the page only names the protein.
-      Every control is a <code>set()</code>; every line below is <code>state()</code>.</p>
-    <div class="grp">
-      <div class="hd">which</div>
-      <select id="which"></select>
-    </div>
-    <div class="grp">
-      <div class="hd">shown as</div>
-      <div class="reps" id="reps"></div>
-    </div>
-    <div class="grp">
-      <div class="hd">what the registry says</div>
-      <table class="rd" id="rd"></table>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
@@ -66,40 +46,75 @@
 <script src="../kit/nucleic.js"></script>
 <script src="../kit/surface.js"></script>
 <script src="../kit/card-stage.js"></script>
+<script src="../kit/lesson-shell.js"></script>
 <script src="../kit/proteinbox.js"></script>
 <script src="../proteins/proteins.js"></script>
 <script>
-const $ = id => document.getElementById(id);
-const P = Proteinbox.mount($('stage'), { protein: 'myoglobin' });
+/* The bench for kit/proteinbox.js through Proteinbox.mount: the page names a
+   protein and the registry (proteins/proteins.js) answers for the files.
+   Every control is a set() and every readout a state(). */
 
-for (const p of ProteinLib.PROTEINS) {
-  const o = document.createElement('option');
-  o.value = p.key; o.textContent = p.name;
-  $('which').appendChild(o);
-}
-$('which').value = 'myoglobin';
-$('which').onchange = e => P.set({ protein: e.target.value });
+const REPS = ['ribbon', 'surface', 'fold'];
 
-const row = (k, v) => `<tr><td>${k}</td><td>${v == null ? '—' : v}</td></tr>`;
-function paint() {
-  const s = P.state();
-  $('reps').innerHTML = '';
-  for (const r of ['ribbon', 'surface', 'fold']) {
-    if (r !== 'ribbon' && !s.available[r]) continue;
-    const b = document.createElement('button');
-    b.type = 'button'; b.textContent = r; b.setAttribute('aria-pressed', s.rep === r);
-    b.onclick = () => { P.set({ rep: r }); paint(); };
-    $('reps').appendChild(b);
+const shell = LessonShell.create({
+  brand: 'Proteinbox', section: { label: 'library', href: '/library' },
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [{
+    eyebrow: 'kit/proteinbox.js',
+    title: 'A protein, by name',
+    body: '<p>The page names a protein; the registry answers for the files. Every control is a <strong>set()</strong> and every line below a <strong>state()</strong>.</p>',
+    onEnter: bench,
+  }],
+});
+
+const P = Proteinbox.mount(shell.stage, { protein: 'myoglobin', viewOffset: shell.viewOffset });
+/* The console handle: `pbox.set({...})`, `pbox.state()`. */
+window.pbox = P;
+
+function bench(ctx) {
+  const ui = ctx.ui;
+  ui.controls(`
+    <div class="bench-group">
+      <div class="bench-hd">which</div>
+      <select class="pick" id="which">${ProteinLib.PROTEINS.map(p => `<option value="${p.key}">${p.name}</option>`).join('')}</select>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">shown as</div>
+      <div class="segmented" id="reps" role="group">${REPS.map(r => `<button type="button" data-v="${r}">${r}</button>`).join('')}</div>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">what the registry says</div>
+      <table class="rd" id="rd"></table>
+      <p class="foot" id="blurb"></p>
+    </div>`);
+
+  const which = ui.q('#which');
+  which.value = P.state().protein;
+  which.onchange = e => P.set({ protein: e.target.value });
+  for (const b of ui.qa('#reps > button')) b.onclick = () => { P.set({ rep: b.dataset.v }); paint(); };
+
+  const row = (k, v) => `<tr><td>${k}</td><td>${v == null ? 'none' : v}</td></tr>`;
+  function paint() {
+    const s = P.state();
+    /* A rep the registry has no file for is hidden, not disabled: ribbon is always there. */
+    for (const b of ui.qa('#reps > button')) {
+      b.hidden = b.dataset.v !== 'ribbon' && !s.available[b.dataset.v];
+      b.setAttribute('aria-pressed', String(s.rep === b.dataset.v));
+    }
+    ui.q('#rd').innerHTML =
+      row('name', s.name) + row('does', s.does) + row('variant', s.variant) +
+      row('species', s.species) + row('method', s.method) + row('residues', s.residues) +
+      row('chains', s.chains) + row('shown as', s.rep);
+    ui.q('#blurb').textContent = s.blurb || '';
   }
-  $('rd').innerHTML =
-    row('name', s.name) + row('does', s.does) + row('variant', s.variant) +
-    row('species', s.species) + row('method', s.method) + row('residues', s.residues) +
-    row('chains', s.chains) + row('shown as', s.rep) +
-    `<tr><td colspan="2"><p class="note">${s.blurb || ''}</p></td></tr>`;
+  P.on('rep', paint);
+  P.on('load', paint);
+  paint();
 }
-P.on('rep', paint);
-P.on('load', paint);
-paint();
+
+shell.goTo(0);
 </script>
 </body>
 </html>

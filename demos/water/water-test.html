@@ -18,126 +18,140 @@
 <meta name="robots" content="noindex">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
-<link rel="stylesheet" href="../css/bench.css">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
 <style>
-  /* #app-sidebar / #stage / #side are bench.css's shell — the bench uses the
-     same furniture as a lesson so it is judged on the same paper. */
-  canvas { width:100%; height:100%; display:block; }
-  #side { overflow-y:auto; }
-  .grp { margin-bottom:16px; }
-  .hd { font-weight:600; margin-bottom:6px; }
-  label { display:block; margin:7px 0; font-size:14px; }
-  input[type=range] { width:100%; }
-  button { margin:0 6px 6px 0; }
-  p.note { font-size:13px; opacity:.8; line-height:1.45; }
-  table.rd { font-size:13px; border-collapse:collapse; width:100%; }
-  table.rd td { padding:2px 0; }
-  table.rd td:last-child { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
-  .bad { color:#b3261e; }
-  .ok  { opacity:.55; }
+  .bench-group { display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .bench-group:first-child { padding-top: 0; border-top: 0; }
+  .bench-hd { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  table.rd { font-size: 13px; border-collapse: collapse; width: 100%; color: var(--ink-2); }
+  table.rd td { padding: 3px 0; border-bottom: 1px solid var(--line); }
+  table.rd td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+  .lshell-panel .foot.bad { color: #b3261e; }
+  /* A bench is one screen, not a sequence: no Back/Next, no progress dot. */
+  .lshell-nav, .lshell-progress { display: none; }
+  .lshell-scroll { padding-bottom: 32px; }
 </style>
 </head>
 <body>
-<div id="app-sidebar">
-  <div id="stage"></div>
-  <div id="side">
-    <h1 style="font-size:17px">water, with no lesson around it</h1>
-    <p class="note">
-      <code>water/watersim.js</code> through <code>WaterSim.mount</code>, the
-      declarative box a generated page gets. Everything here is the
-      module: the H-bond network, the ice I<sub>h</sub> lattice, the hydration
-      shells and the temperature continuum. No steps, no callouts, no tabs.
-      Rulebook: <code>docs/WaterSim.md</code>.
-    </p>
-
-    <div class="grp">
-      <div class="hd">the pool</div>
-      <button type="button" id="addw">+ water</button>
-      <button type="button" id="remw">− water</button>
-      <button type="button" id="adds">+ NaCl</button>
-      <button type="button" id="clrs">clear salt</button>
-    </div>
-
-    <div class="grp">
-      <div class="hd">temperature</div>
-      <label><output id="tv"></output>
-        <input id="t" type="range" min="-25" max="110" value="22"></label>
-      <label><input id="freeze" type="checkbox" checked> let it freeze</label>
-      <label><input id="hb" type="checkbox" checked> draw hydrogen bonds</label>
-    </div>
-
-    <div class="grp">
-      <div class="hd">what the module says it did</div>
-      <table class="rd" id="rd"></table>
-    </div>
-
-    <div class="grp">
-      <div class="hd">invariants</div>
-      <p class="note" id="inv"></p>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
 <script src="../lib/molecules.js"></script>
 <script src="../lib/scene.js"></script>
 <script src="../kit/card-stage.js"></script>
+<script src="../kit/lesson-shell.js"></script>
 <script src="../water/watersim.js"></script>
 <script src="../water/watersim-mount.js"></script>
 <script>
-const $=id=>document.getElementById(id);
-const T=$('t'), rd=$('rd'), inv=$('inv');
+/* The bench for water/watersim.js through WaterSim.mount, the declarative box a
+   generated page gets. Everything on stage is the module: the H-bond network,
+   the ice Ih lattice, the hydration shells, the temperature continuum. Every
+   control is a set() and every number a state(). Rulebook: docs/WaterSim.md.
+   It runs on the lesson shell so the component is judged in the chrome a
+   student sees it in. */
 
-/* The whole stand-up. Every control below is a set(); every number is a state(). */
-const w = WaterSim.mount($('stage'), { nWater:16, temperature:+T.value, freeze:true });
+/* WaterSim.md §1: a water takes at most 4 H-bonds. §4: no atom overlap; two
+   oxygens of radius 0.95 each may not come closer than 1.90. */
+const MAX_HB = 4, O_CONTACT = 2 * 0.95, MERGE_TOL = 0.02;
+const T0 = 22;
+
+const shell = LessonShell.create({
+  brand: 'WaterSim', section: { label: 'library', href: '/library' },
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [{
+    eyebrow: 'water/watersim.js',
+    title: 'Water, with no lesson around it',
+    body: '<p>The H-bond network, the ice I<sub>h</sub> lattice, hydration shells and the temperature continuum, mounted through <strong>WaterSim.mount</strong>. No steps, no callouts, no tabs.</p>',
+    onEnter: bench,
+  }],
+});
+
+const w = WaterSim.mount(shell.stage, { nWater: 16, temperature: T0, freeze: true, viewOffset: shell.viewOffset });
 const sim = w.sim;                               // the invariants read the molecules themselves
+/* The bench's console: `water.set({...})`, `water.state()`, `water.sim`. */
+window.water = w;
 
-$('addw').onclick=()=>w.set({ nWater:Math.min(60, w.params().nWater+1) });
-$('remw').onclick=()=>w.set({ nWater:Math.max(1,  w.params().nWater-1) });
-$('adds').onclick=()=>w.set({ salt:'nacl', nSalt:Math.min(4, w.params().nSalt+1) });
-$('clrs').onclick=()=>w.set({ nSalt:0 });
-T.oninput=()=>w.set({ temperature:+T.value });
-$('freeze').onchange=e=>w.set({ freeze:e.target.checked });
-$('hb').onchange=e=>w.set({ hbonds:e.target.checked });
+function bench(ctx) {
+  const ui = ctx.ui;
+  ui.controls(`
+    <div class="bench-group">
+      <div class="bench-hd">the pool</div>
+      <div class="row">
+        <button class="btn secondary" type="button" id="addw">+ water</button>
+        <button class="btn ghost" type="button" id="remw">− water</button>
+      </div>
+      <div class="row">
+        <button class="btn secondary" type="button" id="adds">+ NaCl</button>
+        <button class="btn ghost" type="button" id="clrs">Clear salt</button>
+      </div>
+    </div>
 
-const row=(k,v,cls)=>`<tr><td>${k}</td><td class="${cls||''}">${v}</td></tr>`;
+    <div class="bench-group">
+      <div class="bench-hd">temperature</div>
+      <div class="slider"><div class="slider-head"><span class="label">temperature</span><span class="value" id="tv"></span></div>
+        <input id="t" type="range" min="-25" max="110" step="1" value="${T0}"></div>
+      <label class="switch"><input type="checkbox" id="freeze" checked><span class="track"></span>let it freeze</label>
+      <label class="switch"><input type="checkbox" id="hb" checked><span class="track"></span>draw hydrogen bonds</label>
+    </div>
 
-/* The checks that would otherwise only be true by eye. WaterSim.md §1: a water
-   takes at most 4 H-bonds, 2 donated and 2 accepted; §4: no atom overlap. Both
-   are printed every frame rather than asserted once, because the failure mode
-   is a transient — a lattice that passes at rest and buries a hydrogen mid-freeze. */
-function invariants(){
-  const over4=sim.mols.filter(w=>(w.userData.hb||0)>4).length;
-  let worst=0;
-  for(let i=0;i<sim.mols.length;i++)for(let j=i+1;j<sim.mols.length;j++){
-    const d=sim.mols[i].userData.oWorld().distanceTo(sim.mols[j].userData.oWorld());
-    worst=Math.max(worst, 1.90-d);          // two oxygens, radius 0.95 each
+    <div class="bench-group">
+      <div class="bench-hd">what the module says it did</div>
+      <table class="rd" id="rd"></table>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">invariants</div>
+      <p class="foot" id="inv"></p>
+    </div>`);
+
+  const $ = s => ui.q(s);
+  const rd = $('#rd'), inv = $('#inv');
+
+  $('#addw').onclick = () => w.set({ nWater: Math.min(60, w.params().nWater + 1) });
+  $('#remw').onclick = () => w.set({ nWater: Math.max(1, w.params().nWater - 1) });
+  $('#adds').onclick = () => w.set({ salt: 'nacl', nSalt: Math.min(4, w.params().nSalt + 1) });
+  $('#clrs').onclick = () => w.set({ nSalt: 0 });
+  ui.range($('#t'), v => w.set({ temperature: v }));
+  $('#freeze').onchange = e => w.set({ freeze: e.target.checked });
+  $('#hb').onchange = e => w.set({ hbonds: e.target.checked });
+
+  const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+
+  /* Printed every frame rather than asserted once, because the failure is a
+     transient: a lattice that passes at rest and buries a hydrogen mid-freeze. */
+  function invariants() {
+    const over = sim.mols.filter(m => (m.userData.hb || 0) > MAX_HB).length;
+    let worst = 0;
+    for (let i = 0; i < sim.mols.length; i++) for (let j = i + 1; j < sim.mols.length; j++) {
+      const d = sim.mols[i].userData.oWorld().distanceTo(sim.mols[j].userData.oWorld());
+      worst = Math.max(worst, O_CONTACT - d);
+    }
+    const bad = [];
+    if (over) bad.push(`${over} molecule(s) over ${MAX_HB} H-bonds`);
+    if (worst > MERGE_TOL) bad.push(`oxygens merged by ${worst.toFixed(2)}`);
+    inv.classList.toggle('bad', bad.length > 0);
+    inv.textContent = bad.length ? bad.join(' · ') : `≤${MAX_HB} H-bonds per molecule · no merged oxygens`;
   }
-  const bad=[];
-  if(over4) bad.push(`${over4} molecule(s) over 4 H-bonds`);
-  if(worst>0.02) bad.push(`oxygens merged by ${worst.toFixed(2)}`);
-  inv.className='note'+(bad.length?' bad':' ok');
-  inv.textContent=bad.length?bad.join(' · ')
-    :'≤4 H-bonds per molecule · no merged oxygens';
+
+  w.on('frame', p => {
+    $('#tv').textContent = w.params().temperature + '°C';
+    rd.innerHTML =
+      row('water', p.nWater) +
+      row('ions', p.nIons) +
+      row('hydrogen bonds', p.hbondCount) +
+      row('bonds per molecule', p.nWater ? (p.hbondCount * 2 / p.nWater).toFixed(2) : '0') +
+      row('frozen', p.fz.toFixed(2)) +
+      row('escaping', p.escaping) +
+      row('molality', p.molal.toFixed(2) + ' m') +
+      row('freezes at', (-p.dTf).toFixed(1) + '°C') +
+      row('boils at', (100 + p.dTb).toFixed(1) + '°C') +
+      (sim.salt.length ? row('shells', sim.salt.map(s => s.userData.shellCount).join(' / ')) : '');
+    invariants();
+  });
 }
 
-w.on('frame', p=>{
-  $('tv').textContent=w.params().temperature+'°C';
-  rd.innerHTML=
-    row('water', p.nWater)+
-    row('ions', p.nIons)+
-    row('hydrogen bonds', p.hbondCount)+
-    row('bonds per molecule', p.nWater?(p.hbondCount*2/p.nWater).toFixed(2):'—')+
-    row('frozen', p.fz.toFixed(2))+
-    row('escaping', p.escaping)+
-    row('molality', p.molal.toFixed(2)+' m')+
-    row('freezes at', (-p.dTf).toFixed(1)+'°C')+
-    row('boils at', (100+p.dTb).toFixed(1)+'°C')+
-    (sim.salt.length?row('shells', sim.salt.map(s=>s.userData.shellCount).join(' / ')):'');
-  invariants();
-});
+shell.goTo(0);
 </script>
 </body>
 </html>

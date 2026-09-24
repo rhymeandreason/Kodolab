@@ -69,7 +69,14 @@ body.lshell-page.is-night { --bg: #232735; --on-bg: #f4f2ec; }
   padding: 0 28px; pointer-events: none; z-index: 5; color: var(--on-bg);
   transition: color 1s ease;
 }
-.lshell-brand { font-family: var(--display); font-weight: 500; letter-spacing: 0.04em; font-size: 15px; }
+.lshell-brand { display: flex; align-items: baseline; gap: 14px; font-family: var(--display); font-weight: 500; letter-spacing: 0.04em; font-size: 15px; }
+.lshell-brand .mark { pointer-events: auto; }
+.lshell-crumb:empty, .lshell-section[hidden] { display: none; }
+.lshell-section { pointer-events: auto; color: inherit; opacity: 0.6; text-decoration: none; }
+.lshell-section:hover { opacity: 1; }
+.lshell-section:not([hidden]) + .lshell-crumb::before { content: '/'; opacity: 0.35; margin-right: 10px; }
+/* The drawn mark is one ink; the night scene needs it light. */
+body.is-night .lshell-brand .mark img { filter: invert(1); transition: filter 1s ease; }
 .lshell-progress { display: flex; gap: 6px; pointer-events: auto; }
 .lshell-progress button {
   width: 8px; height: 8px; border-radius: 4px; border: 0; padding: 0;

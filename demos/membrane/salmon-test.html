@@ -18,68 +18,25 @@
 <meta name="robots" content="noindex">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
-<link rel="stylesheet" href="../css/bench.css">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
 <link rel="stylesheet" href="../css/annotate.css">
 <link rel="stylesheet" href="../graph/graph.css">
 <style>
-  /* The first app written in the shape a generated page takes: one mounted
-     component, controls that are set(), readouts that are state(). The
-     membrane module is judged on whether THIS file had to reach past its
-     params, and the answer is recorded in the sidebar. */
-  #side { overflow-y:auto; }
-  .grp { margin-bottom:16px; }
-  .hd { font-weight:600; margin-bottom:6px; }
-  label { display:block; margin:7px 0; font-size:14px; }
-  button { margin:0 6px 6px 0; }
-  p.note { font-size:13px; opacity:.8; line-height:1.45; }
-  table.rd { font-size:13px; border-collapse:collapse; width:100%; }
-  table.rd td { padding:2px 0; }
-  table.rd td:last-child { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
-  .env { display:flex; gap:6px; }
-  .env button[aria-pressed=true] { outline:2px solid currentColor; }
+  .bench-group { display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .bench-group:first-child { padding-top: 0; border-top: 0; }
+  .bench-hd { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .claim { font-family: var(--display); font-weight: 500; font-size: 14px; line-height: 1.4; margin: 0; color: var(--ink); }
+  table.rd { font-size: 13px; border-collapse: collapse; width: 100%; color: var(--ink-2); }
+  table.rd td { padding: 3px 0; border-bottom: 1px solid var(--line); }
+  table.rd td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+  .lshell-panel .show-panel .show-chip { font-family: var(--display); font-weight: 500; }
+  /* A bench is one screen, not a sequence: no Back/Next, no progress dot. */
+  .lshell-nav, .lshell-progress { display: none; }
+  .lshell-scroll { padding-bottom: 32px; }
 </style>
 </head>
 <body>
-<div id="app-sidebar">
-  <div id="stage"></div>
-  <div id="side">
-    <h1 style="font-size:17px">a gill cell, seawater or freshwater</h1>
-    <p class="note" id="claim"></p>
-
-    <div class="grp">
-      <div class="hd">the water outside</div>
-      <div class="env">
-        <button type="button" data-env="sea" aria-pressed="true">seawater</button>
-        <button type="button" data-env="fresh" aria-pressed="false">freshwater</button>
-      </div>
-      <label><input id="pumpOn" type="checkbox" checked> the pump is paid for</label>
-      <label><input id="shells" type="checkbox"> draw hydration shells</label>
-      <label>speed <input id="speed" type="range" min="1" max="4" step="1" value="1"></label>
-    </div>
-
-    <div class="grp" id="panel"></div>
-
-    <div class="grp">
-      <div class="hd">free water on each side</div>
-      <div id="chart"></div>
-    </div>
-
-    <div class="grp">
-      <div class="hd">what the module says</div>
-      <table class="rd" id="rd"></table>
-    </div>
-
-    <div class="grp">
-      <div class="hd">what this app had to reach for</div>
-      <p class="note">Nothing. The first draft reached under the params twice,
-      to keep the anions deep in the cytosol and to swap the environment by
-      clearing and re-scattering; <code>scatter</code>'s anion default and the
-      <code>contents</code> param took both. Switching waters now moves only
-      the difference, so the water that already crossed stays where it went.</p>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
@@ -89,6 +46,7 @@
 <script src="../lib/atomkit.js"></script>
 <script src="../lib/annotate.js"></script>
 <script src="../kit/card-stage.js"></script>
+<script src="../kit/lesson-shell.js"></script>
 <script src="../membrane/parts.js"></script>
 <script src="../membrane/chemiosmosis.js"></script>
 <script src="../membrane/sheet.js"></script>
@@ -98,18 +56,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/dist/plot.umd.min.js"></script>
 <script src="../graph/graph.js"></script>
 <script>
-const $ = id => document.getElementById(id);
+/* The bench for membrane/membrane.js, written in the shape a generated page
+   takes: one mounted component, controls that are set(), readouts that are
+   state(). The module is judged on whether this file had to reach past its
+   params, and the answer is the panel's last group. It runs on the lesson
+   shell so the component is judged in the chrome a student sees it in. */
 
-/* One cell with the four doors a gill cell needs: a Na⁺ leak so salt gets
-   in, the K⁺ channel and the pump as at rest in membrane-lab, and an
-   aquaporin so water moves the way a gill's does. The pump runs itself: a
-   fish does not press a button. */
-const m = Membrane.mount($('stage'), {
-  proteins: { NA:{ x:-108 }, K:{ x:-36 }, pump:{ x:36 }, AQP:{ x:108 } },
-  potential: 'nernst', pumpAuto: true, pumpOn: true,
-});
-
-/* SAME PARTICLE COUNT PER SIDE, FEWER FREE WATERS WHERE THE SALT IS — the
+/* SAME PARTICLE COUNT PER SIDE, FEWER FREE WATERS WHERE THE SALT IS: the
    osmosis step's rule, so the only asymmetry is the headcount. The inside
    is the same cell in both waters: a salmon's blood does not change, which
    is the whole reason the gill has work to do.
@@ -123,64 +76,116 @@ const OUTSIDE = {
   fresh: { NA:2,  CL:2  },                     // solute 4,  water 74: hypotonic
 };
 const CLAIM = {
-  sea:   '<b>Seawater is saltier than the fish. Water leaves, salt leaks in, and the pump spends ATP throwing sodium back out.</b>',
-  fresh: '<b>The river is nearly pure water. Water floods in, salt leaks out, and the same pump is what holds the inside together.</b>',
+  sea:   'Seawater is saltier than the fish. Water leaves, salt leaks in, and the pump spends ATP throwing sodium back out.',
+  fresh: 'The river is nearly pure water. Water floods in, salt leaks out, and the same pump is what holds the inside together.',
 };
-let env = 'sea';
 const solute = o => Object.values(o).reduce((a, b) => a + b, 0);
 
-/* The environment is one set(): the module adds and removes the difference. */
-function populate() {
-  const out = OUTSIDE[env];
-  m.set({ contents: {
-    inside:  Object.assign({ water: PARTICLES - solute(INSIDE) }, INSIDE),
-    outside: Object.assign({ water: PARTICLES - solute(out) }, out),
-  } });
-  m.reset();
-  $('claim').innerHTML = CLAIM[env];
-  chart.clear();
-}
-
-for (const b of document.querySelectorAll('[data-env]')) b.onclick = () => {
-  env = b.dataset.env;
-  for (const o of document.querySelectorAll('[data-env]')) o.setAttribute('aria-pressed', o === b);
-  populate();
-};
-$('pumpOn').onchange = e => m.set({ pumpOn: e.target.checked });
-$('shells').onchange = e => m.set({ shells: e.target.checked });
-$('speed').oninput = e => m.set({ timeScale: +e.target.value });
-/* The component's own chips: point at, show, colours. Nothing here was written for this page. */
-CardStage.showPanel($('panel'), m, { notes: ['channel.K', 'pump'], layers: ['shells', 'water'] });
-
-/* ---- the chart: free water per side, over the last two minutes ----
-   This page used to draw it: twenty lines of path arithmetic, a y-maximum
-   typed as PARTICLES, and a viewBox stretched with preserveAspectRatio="none"
-   so the strokes came out thicker across than down. All of it is now the
-   membrane's own `water` signal, which carries the label, the unit and the
-   range, so nothing here knows how many particles there are. */
-const chart = Graph.mount($('chart'), { live: { span: 120 }, height: 130, legend: false })
-  .follow(m, 'water');
-
-const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
-/* The chart keeps its own subscription, on the sim's own clock: a backgrounded
-   tab freezes the sim and the trace together, and a bench driving pump() by
-   hand still plots. What is left here is the table. */
-m.on('frame', s => {
-  const w = s.counts.water || { inside:0, outside:0 };
-  const na = s.counts.NA || { inside:0, outside:0 };
-  const k = s.counts.K || { inside:0, outside:0 };
-  $('rd').innerHTML =
-    row('water in / out', `${w.inside} / ${w.outside}`) +
-    row('net water, recent', s.net === 'balanced' ? 'balanced' : s.net + ' the cell') +
-    row('Na⁺ in / out', `${na.inside} / ${na.outside}`) +
-    row('K⁺ in / out', `${k.inside} / ${k.outside}`) +
-    row('membrane', s.mV.toFixed(0) + ' mV') +
-    row('E_K (Nernst)', s.equilibrium.K.toFixed(0) + ' mV') +
-    row('ATP spent', s.atpSpent) +
-    row('pump', s.pumpRunning ? s.pumpPhase : 'idle');
+const shell = LessonShell.create({
+  brand: 'Membrane', section: { label: 'library', href: '/library' },
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [{
+    eyebrow: 'membrane/membrane.js',
+    title: 'A gill cell, seawater or freshwater',
+    body: '<p>A Na⁺ leak, a K⁺ channel, the Na⁺/K⁺ pump and an aquaporin in one plasma membrane. Everything below is a <strong>set()</strong> and every number a <strong>state()</strong>.</p>',
+    onEnter: bench,
+  }],
 });
 
-populate();
+/* The pump runs itself: a fish does not press a button. */
+const m = Membrane.mount(shell.stage, {
+  viewOffset: shell.viewOffset,
+  proteins: { NA:{ x:-108 }, K:{ x:-36 }, pump:{ x:36 }, AQP:{ x:108 } },
+  potential: 'nernst', pumpAuto: true, pumpOn: true,
+});
+window.membrane = m;
+
+function bench(ctx) {
+  const ui = ctx.ui;
+  const $ = s => ui.q(s);
+  ui.controls(`
+    <div class="bench-group">
+      <div class="bench-hd">the water outside</div>
+      <div class="segmented" id="env" role="group">
+        <button type="button" data-v="sea">seawater</button>
+        <button type="button" data-v="fresh">freshwater</button>
+      </div>
+      <p class="claim" id="claim"></p>
+      <label class="switch"><input type="checkbox" id="pumpOn" checked><span class="track"></span>the pump is paid for</label>
+      <label class="switch"><input type="checkbox" id="shells"><span class="track"></span>draw hydration shells</label>
+      <div class="slider"><div class="slider-head"><span class="label">speed</span><span class="value" id="sv"></span></div>
+        <input id="speed" type="range" min="1" max="4" step="1" value="1"></div>
+    </div>
+
+    <div class="bench-group"><div id="panel"></div></div>
+
+    <div class="bench-group">
+      <div class="bench-hd">free water on each side</div>
+      <div id="chart"></div>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">what the module says</div>
+      <table class="rd" id="rd"></table>
+    </div>
+
+    <div class="bench-group">
+      <div class="bench-hd">what this app had to reach for</div>
+      <p class="foot">Nothing. The environment is one <code>contents</code> set(),
+      and <code>scatter</code>'s anion default keeps the anions deep in the cytosol.
+      Switching waters moves only the difference, so the water that already
+      crossed stays where it went.</p>
+    </div>`);
+
+  /* The chart is the membrane's own `water` signal, which carries the label,
+     the unit and the range, so nothing here knows how many particles there
+     are. It subscribes on the sim's own clock: a backgrounded tab freezes the
+     sim and the trace together. */
+  const chart = Graph.mount($('#chart'), { live: { span: 120 }, height: 130, legend: false })
+    .follow(m, 'water');
+
+  let env = 'sea';
+  /* The environment is one set(): the module adds and removes the difference. */
+  function populate() {
+    const out = OUTSIDE[env];
+    m.set({ contents: {
+      inside:  Object.assign({ water: PARTICLES - solute(INSIDE) }, INSIDE),
+      outside: Object.assign({ water: PARTICLES - solute(out) }, out),
+    } });
+    m.reset();
+    $('#claim').textContent = CLAIM[env];
+    for (const b of ui.qa('#env > button')) b.setAttribute('aria-pressed', String(b.dataset.v === env));
+    chart.clear();
+  }
+  for (const b of ui.qa('#env > button')) b.onclick = () => { env = b.dataset.v; populate(); };
+
+  $('#pumpOn').onchange = e => m.set({ pumpOn: e.target.checked });
+  $('#shells').onchange = e => m.set({ shells: e.target.checked });
+  ui.range($('#speed'), v => { m.set({ timeScale: v }); $('#sv').textContent = '×' + v; });
+
+  /* The component's own chips: point at, show, colours. Nothing here was written for this page. */
+  CardStage.showPanel($('#panel'), m, { notes: ['channel.K', 'pump'], layers: ['shells', 'water'] });
+
+  const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+  m.on('frame', s => {
+    const w = s.counts.water || { inside:0, outside:0 };
+    const na = s.counts.NA || { inside:0, outside:0 };
+    const k = s.counts.K || { inside:0, outside:0 };
+    $('#rd').innerHTML =
+      row('water in / out', `${w.inside} / ${w.outside}`) +
+      row('net water, recent', s.net === 'balanced' ? 'balanced' : s.net + ' the cell') +
+      row('Na⁺ in / out', `${na.inside} / ${na.outside}`) +
+      row('K⁺ in / out', `${k.inside} / ${k.outside}`) +
+      row('membrane', s.mV.toFixed(0) + ' mV') +
+      row('E_K (Nernst)', s.equilibrium.K.toFixed(0) + ' mV') +
+      row('ATP spent', s.atpSpent) +
+      row('pump', s.pumpRunning ? s.pumpPhase : 'idle');
+  });
+
+  populate();
+}
+
+shell.goTo(0);
 </script>
 </body>
 </html>
