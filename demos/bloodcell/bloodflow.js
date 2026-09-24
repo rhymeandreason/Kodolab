@@ -174,7 +174,8 @@
       for (let i = 0; i < P.n; i++) {
         const axis = new THREE.Vector3(R() - .5, R() - .5, R() - .5).normalize();
         cells.push({
-          kind: i < nS ? 'sickle' : 'disc', v: i % SHAPES.length,
+          /* Crescents spread evenly down the vessel, not bunched at one end. */
+          kind: Math.floor((i + 1) * nS / P.n) > Math.floor(i * nS / P.n) ? 'sickle' : 'disc', v: i % SHAPES.length,
           x: -HALF + 2 * HALF * ((i + 0.5) / P.n) + (R() - .5) * 3,
           rho: Math.sqrt(R()) * 0.8, th: R() * 6.283,
           q: new THREE.Quaternion().setFromAxisAngle(axis, R() * 6.283),
