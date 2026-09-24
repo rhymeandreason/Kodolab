@@ -52,7 +52,7 @@ const PAGES = {
       ],
       steps: ['Water, H2O', 'Methane, CH4', 'Ammonia, NH3', 'Carbon dioxide, CO2', 'Nitrogen gas, N2', 'Hydrogen chloride, HCl', 'Salt, NaCl', 'Potassium chloride, KCl', 'Magnesium chloride, MgCl2', 'Ammonium, NH4+', 'Hydrochloric acid, H3O+ and Cl-'],
     } },
-  '/protein': {
+  '/protein': { image: 'protein',
     description: 'The levels of protein structure on one real molecule: watch a hemoglobin chain fold, heme settle into its pocket, and the chains assemble.' },
   '/glycolysis': { image: 'glycolysis',
     description: 'Glycolysis step by step in 3D. Every intermediate is drawn as the real molecule, with the energy curve and a running ATP and NADH ledger.',
@@ -65,15 +65,15 @@ const PAGES = {
       ],
       steps: ['Hexokinase traps glucose', 'Phosphoglucose isomerase', 'Phosphofructokinase-1, the committed step', 'Aldolase splits the sugar', 'Triose-phosphate isomerase', 'Glyceraldehyde-3-phosphate dehydrogenase makes NADH', 'Phosphoglycerate kinase, the first ATP', 'Phosphoglycerate mutase', 'Enolase', 'Pyruvate kinase, the second ATP'],
     } },
-  '/respiration': {
+  '/respiration': { image: 'respiration',
     description: 'Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.' },
-  '/krebs': {
+  '/krebs': { image: 'krebs',
     description: 'The Krebs cycle in 3D: pyruvate oxidation, then eight steps round the ring drawn as the real molecules, and where each carbon goes.' },
   '/electron-transport': {
     description: 'The electron transport chain in 3D: NADH and FADH2 hand electrons to the complexes, protons are pumped, and the ledger counts what the gradient is worth.' },
   '/etc-sim': {
     description: 'The electron transport chain as a live simulation: send one glucose\'s NADH and FADH2 into the inner membrane, watch protons pumped out and back through ATP synthase, and count the ATP.' },
-  '/fermentation': {
+  '/fermentation': { image: 'fermentation',
     description: 'Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.' },
   '/sickle-cell': {
     description: 'Sickle cell in 3D: one letter changes in the hemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.' },
@@ -111,7 +111,7 @@ const PAGES = {
 };
 
 // Routes search should not see: accounts, student work, our own index, a bench.
-const HIDDEN = ['/build', '/apps', '/app/:id', '/teach', '/beta', '/login', '/join', '/join/:code',
+const HIDDEN = ['/build', '/apps', '/app/:id', '/teach', '/beta', '/beta-invite', '/login', '/join', '/join/:code',
                 '/admin', '/proteins/myoglobin/bench', '/proteins/prion/bench',
                 '/proteins/atp-synthase/bench'];
 // Paths no route names that are still reachable by file.
