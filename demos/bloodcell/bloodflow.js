@@ -168,7 +168,9 @@
       sicks = new THREE.InstancedMesh(sickG, sickMat, Math.max(1, nS));
       for (const m of [discs, sicks]) { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; grp.add(m); }
       jammed = false; blocked = false; passed = 0;
-      place(); upload();
+      place();
+      for (let k = 0; k < 20; k++) separate();
+      upload();
     }
 
     /* Half the room a cell needs, measured on its own geometry: the disc's
@@ -186,6 +188,71 @@
         const rc = c.rho * room;
         c.pos.set(c.x, rc * Math.cos(c.th), rc * Math.sin(c.th));
       }
+    }
+
+    /* Discs never overlap. Each is a cluster of spheres on its midplane, a
+       sphere at radius r as thick as the measured profile is there, so two
+       discs stacked face-on touch rim to rim and an edge meeting a face stops
+       at the dimple. Overlaps are pushed apart along the deepest contact and
+       the push is written back to x, rho, th: a disc that meets one ahead
+       waits behind it rather than being placed through it next frame. */
+    const hull = (() => {
+      const out = [];
+      for (const [rho, n] of [[0, 1], [0.36, 6], [0.7, 12]]) {
+        const r = B.R0 * rho, t = B.AMP * Math.sqrt(1 - rho * rho) * B.profileY(rho);
+        for (let k = 0; k < n; k++) {
+          const a = 2 * Math.PI * k / n;
+          out.push({ p: new THREE.Vector3(r * Math.cos(a), 0, r * Math.sin(a)), r: t });
+        }
+      }
+      return out;
+    })();
+    const HN = hull.length;
+    let hw = new Float32Array(0);
+    const _d = new THREE.Vector3();
+
+    function separate() {
+      const ds = cells.filter(c => c.kind === 'disc');
+      if (ds.length < 2) return;
+      if (hw.length < ds.length * HN * 3) hw = new Float32Array(ds.length * HN * 3);
+      const reach = 2 * discG.boundingSphere.radius;
+      for (let it = 0; it < 4; it++) {
+        ds.forEach((c, i) => {
+          for (let k = 0; k < HN; k++) {
+            _p.copy(hull[k].p).applyQuaternion(c.q).add(c.pos);
+            hw[(i * HN + k) * 3] = _p.x; hw[(i * HN + k) * 3 + 1] = _p.y; hw[(i * HN + k) * 3 + 2] = _p.z;
+          }
+        });
+        let moved = false;
+        for (let i = 0; i < ds.length; i++) for (let j = i + 1; j < ds.length; j++) {
+          const a = ds[i], b = ds[j];
+          if (Math.abs(a.pos.x - b.pos.x) > reach || a.pos.distanceToSquared(b.pos) > reach * reach) continue;
+          let best = 0;
+          for (let k = 0; k < HN; k++) for (let l = 0; l < HN; l++) {
+            const ia = (i * HN + k) * 3, ib = (j * HN + l) * 3;
+            const dx = hw[ib] - hw[ia], dy = hw[ib + 1] - hw[ia + 1], dz = hw[ib + 2] - hw[ia + 2];
+            const d = Math.sqrt(dx * dx + dy * dy + dz * dz), pen = hull[k].r + hull[l].r - d;
+            if (pen > best) { best = pen; d > 1e-6 ? _d.set(dx / d, dy / d, dz / d) : _d.subVectors(b.pos, a.pos).normalize(); }
+          }
+          if (best <= 0) continue;
+          if (_d.lengthSq() < 1e-9) _d.set(1, 0, 0);
+          _d.multiplyScalar(best * 0.5 + 0.01);
+          b.pos.add(_d); a.pos.sub(_d);
+          moved = true;
+        }
+        for (const c of ds) toCyl(c);
+        place();
+        if (!moved) break;
+      }
+    }
+
+    /* The inverse of place() for a disc: where it was pushed, as flow coordinates. */
+    function toCyl(c) {
+      c.x = c.pos.x;
+      const Rx = radiusAt(c.x, Rt);
+      const room = Math.max(0, Rx - Math.min(halfOf(c), Rx) * 0.98);
+      const r = Math.hypot(c.pos.y, c.pos.z);
+      if (room > 1e-3 && r > 1e-6) { c.rho = Math.min(1, r / room); c.th = Math.atan2(c.pos.z, c.pos.y); }
     }
 
     function upload() {
@@ -253,6 +320,7 @@
         }
       }
       place();
+      separate();
       upload();
       if (!blocked && !moving && cells.length) { blocked = true; emit('blocked', state()); }
     }
