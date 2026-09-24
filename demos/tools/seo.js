@@ -79,7 +79,7 @@ const PAGES = {
     description: 'Sickle cell in 3D: one letter changes in the hemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.' },
   '/tree': { image: 'massoftree',
     description: "Where a tree's mass comes from: Van Helmont's willow, photosynthesis as traffic in and out of the leaf, and the tree taken apart by origin." },
-  '/lessons': {
+  '/lessons': { image: 'lessons',
     description: 'Every Kodolab lesson in teaching order: water, bonding, proteins, the membrane, cellular respiration stage by stage, plants and DNA, with embed codes for teachers.' },
   '/membrane': { image: 'membrane',
     description: 'The cell membrane in 3D: the phospholipid bilayer, simple diffusion, selective channels, the sodium-potassium pump, and active versus passive transport.',
