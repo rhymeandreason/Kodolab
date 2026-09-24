@@ -160,7 +160,9 @@ for (const [url, dest] of routes) {
   const m = url.match(/^\/proteins\/([a-z0-9-]+)$/);
   if (!entry && m) {
     const blurb = registryBlurb(m[1]);
-    if (blurb) entry = { description: clip(blurb) };
+    const still = `proteins/${m[1]}`;
+    if (blurb) entry = { description: clip(blurb),
+      image: fs.existsSync(path.join(DEMOS, 'media', 'og', still + '.jpg')) ? still : undefined };
   }
   const lib = url.match(/^\/library\/([a-z0-9-]+)$/);
   if (!entry && lib) {
