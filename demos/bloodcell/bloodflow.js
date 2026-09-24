@@ -20,10 +20,10 @@
  *  ---- MEASURED AND NOT --------------------------------------------------------
  *
  *    MEASURED   the disc (bloodcell.js's Evans & Fung profile, 7.8 µm), the
- *               vessel radii, and the crescent's LENGTH (about 11 µm, in the
+ *               vessel radii, and the crescent's LENGTH (read off the geometry, in the
  *               range of a deoxygenated sickle cell). A scene unit is a µm.
- *    NOT        the crescent's exact shape (bloodcell.js calls its own a
- *               caricature, and this is a low-polygon one), the speed (real
+ *    NOT        the crescent's exact shape (bloodcell.js's warp(), which it
+ *               calls a caricature, under three seeds), the speed (real
  *               capillary flow is a millimetre a second and would be a blur), and
  *               the sticking rule, which is touching and not
  *               adhesion chemistry. state() reports counts and lengths, never a
@@ -50,7 +50,7 @@
   const X0 = 4, NARROW = 18;    // the throat begins here and takes this long to close
   const U0 = 20;                // µm/s at the axis, before the throat (choreography)
 
-  const CRESCENT = { len: 11.2, thick: 1.25, depth: 0.9, bend: 1.15 };   // µm, radians of arc
+  const SHAPES = [11, 23, 47];  // BloodCell seeds: a crowd is three different sickled cells
   const ALIGN = 16;             // µm upstream of the jam where the stream lays a crescent lengthwise
   const PASS_ANGLE = 0.42;      // radians off the axis a crescent may arrive at and still pass
 
@@ -69,35 +69,56 @@
     return new THREE.LatheGeometry(pts, 28);
   }
 
-  /* A bent, tapered tube: the centreline is an arc in the xy plane with the
-     middle at the origin, the section an ellipse that pinches to a point at
-     both horns. Its long axis is local x. */
-  function crescentGeo(THREE) {
-    const NU = 36, NV = 14, C = CRESCENT;
-    const Rb = C.len / C.bend, th0 = C.bend / 2;
-    const pos = [], idx = [];
-    for (let i = 0; i <= NU; i++) {
-      const u = i / NU, ph = -th0 + C.bend * u;
-      const taper = Math.pow(Math.sin(Math.PI * u), 0.55);
-      const a = C.thick * taper, b = C.depth * taper;
-      const cx = Rb * Math.sin(ph), cy = Rb * (Math.cos(ph) - Math.cos(th0));
-      const nx = Math.sin(ph), ny = Math.cos(ph);
-      for (let j = 0; j <= NV; j++) {
-        const v = 2 * Math.PI * j / NV;
-        pos.push(cx + a * Math.cos(v) * nx, cy + a * Math.cos(v) * ny, b * Math.sin(v));
+  /* A sickled cell is BloodCell's: the resting disc carried through its
+     warp() at full sickling, under one seed's shape. Its long axis is local x,
+     its width z, and the boat bends it up in y. The lathe's seam is welded so
+     the normals do not crease along it. */
+  function crescentGeo(THREE, seed) {
+    const B = global.BloodCell, S = B.makeShape(seed), o = [0, 0, 0, 1];
+    const K = 32, pts = [];
+    for (let k = 0; k <= K; k++) {
+      const f = Math.PI * k / K, rho = Math.sin(f);
+      pts.push(new THREE.Vector2(Math.max(1e-3, B.R0 * rho), B.AMP * Math.cos(f) * B.profileY(rho)));
+    }
+    const g = new THREE.LatheGeometry(pts, 48);
+    const pa = g.attributes.position;
+    for (let i = 0; i < pa.count; i++) {
+      B.warp(pa.getX(i), pa.getY(i), pa.getZ(i), 1, S, o);
+      pa.setXYZ(i, o[0], o[1], o[2]);
+    }
+    g.computeVertexNormals();
+    const na = g.attributes.normal, by = new Map(), _v = new THREE.Vector3();
+    for (let i = 0; i < pa.count; i++) {
+      const k = [pa.getX(i), pa.getY(i), pa.getZ(i)].map(v => Math.round(v * 1e4)).join();
+      (by.get(k) || by.set(k, []).get(k)).push(i);
+    }
+    for (const ids of by.values()) {
+      if (ids.length < 2) continue;
+      _v.set(0, 0, 0);
+      for (const i of ids) _v.x += na.getX(i), _v.y += na.getY(i), _v.z += na.getZ(i);
+      _v.normalize();
+      for (const i of ids) na.setXYZ(i, _v.x, _v.y, _v.z);
+    }
+    /* The spheres collision reads, on the warped midplane: each as thick as
+       the disc's profile is there, thinned as warp() thinned it. */
+    const hull = [];
+    for (const [rho, n] of [[0, 1], [0.36, 6], [0.7, 12], [0.92, 18]]) {
+      const r = B.R0 * rho, t = B.AMP * Math.sqrt(1 - rho * rho) * B.profileY(rho);
+      for (let k = 0; k < n; k++) {
+        const an = 2 * Math.PI * k / n;
+        B.warp(r * Math.cos(an), 0, r * Math.sin(an), 1, S, o);
+        hull.push({ p: new THREE.Vector3(o[0], o[1], o[2]), r: Math.max(0.3, t * o[3]) });
       }
     }
-    for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
-      const a = i * (NV + 1) + j, b = a + NV + 1;
-      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    let half = 0, halfLen = 0, across = 0;
+    for (let i = 0; i < pa.count; i++) {
+      const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i);
+      half = Math.max(half, Math.hypot(x, y, z));
+      halfLen = Math.max(halfLen, Math.abs(x));
+      across = Math.max(across, Math.hypot(y, z));
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setIndex(idx);
-    g.computeVertexNormals();
-    return g;
+    return { geo: g, hull, half, halfLen, across };
   }
-
   function vesselGeo(THREE, Rt) {
     const N = 48, pts = [];
     for (let i = 0; i <= N; i++) {
@@ -141,8 +162,8 @@
 
     const discMat = new THREE.MeshStandardMaterial({ color: B.COL.outer, roughness: 0.62, metalness: 0.02 });
     const sickMat = new THREE.MeshStandardMaterial({ color: B.COL.outerSickle, roughness: 0.62, metalness: 0.02 });
-    const discG = discGeo(THREE), sickG = crescentGeo(THREE);
-    let discs = null, sicks = null;
+    const discG = discGeo(THREE), sickV = SHAPES.map(k => crescentGeo(THREE, k));
+    let discs = null, sicks = [];
     const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(1, 1, 1);
     const _a = new THREE.Vector3(), _t = new THREE.Vector3(), _x = new THREE.Vector3(1, 0, 0), _z = new THREE.Vector3(0, 0, 1);
 
@@ -153,7 +174,7 @@
       for (let i = 0; i < P.n; i++) {
         const axis = new THREE.Vector3(R() - .5, R() - .5, R() - .5).normalize();
         cells.push({
-          kind: i < nS ? 'sickle' : 'disc',
+          kind: i < nS ? 'sickle' : 'disc', v: i % SHAPES.length,
           x: -HALF + 2 * HALF * ((i + 0.5) / P.n) + (R() - .5) * 3,
           rho: Math.sqrt(R()) * 0.8, th: R() * 6.283,
           q: new THREE.Quaternion().setFromAxisAngle(axis, R() * 6.283),
@@ -164,10 +185,10 @@
         });
       }
       if (discs) { grp.remove(discs); discs.dispose(); }
-      if (sicks) { grp.remove(sicks); sicks.dispose(); }
+      for (const m of sicks) { grp.remove(m); m.dispose(); }
       discs = new THREE.InstancedMesh(discG, discMat, Math.max(1, P.n - nS));
-      sicks = new THREE.InstancedMesh(sickG, sickMat, Math.max(1, nS));
-      for (const m of [discs, sicks]) { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; grp.add(m); }
+      sicks = sickV.map(V => new THREE.InstancedMesh(V.geo, sickMat, Math.max(1, nS)));
+      for (const m of [discs, ...sicks]) { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; grp.add(m); }
       jammed = false; blocked = false; passed = 0;
       place();
       for (let k = 0; k < 20; k++) separate();
@@ -175,11 +196,11 @@
     }
 
     /* Half the room a cell needs, measured on its own geometry: the disc's
-       radius, the crescent's half-length. Read once, not typed. */
-    discG.computeBoundingSphere(); sickG.computeBoundingSphere();
-    const halfOf = c => (c.kind === 'disc' ? discG.boundingSphere.radius : sickG.boundingSphere.radius);
+       radius, the crescent's furthest point. Read once, not typed. */
+    discG.computeBoundingSphere();
+    const halfOf = c => (c.kind === 'disc' ? discG.boundingSphere.radius : sickV[c.v].half);
 
-    const roomAt = (c, Rx) => Math.max(0, Rx - (c.kind === 'disc' ? Math.min(halfOf(c), Rx) * 0.98 : CRESCENT.thick));
+    const roomAt = (c, Rx) => Math.max(0, Rx - (c.kind === 'disc' ? Math.min(halfOf(c), Rx) * 0.98 : sickV[c.v].across));
 
     function place() {
       for (const c of cells) {
@@ -195,7 +216,7 @@
     /* No two cells overlap, and a crescent stays inside the wall. Each cell is
        a cluster of spheres: a disc's on its midplane, each as thick as the
        measured profile is at that radius, so two discs stacked face-on touch
-       rim to rim; a crescent's along its arc, tapering to the horns. Overlaps
+       rim to rim; a crescent's the same spheres carried through its warp. Overlaps
        are pushed apart along the deepest contact and written back to x, rho,
        th, so a cell that meets one ahead waits behind it rather than being
        placed through it next frame. A caught cell does not move, which is
@@ -211,17 +232,7 @@
       }
       return out;
     })();
-    /* The same arc crescentGeo() sweeps. */
-    const sickHull = (() => {
-      const C = CRESCENT, Rb = C.len / C.bend, th0 = C.bend / 2, out = [];
-      for (let i = 0; i < 9; i++) {
-        const u = 0.07 + 0.86 * i / 8, ph = -th0 + C.bend * u;
-        const taper = Math.pow(Math.sin(Math.PI * u), 0.55);
-        out.push({ p: new THREE.Vector3(Rb * Math.sin(ph), Rb * (Math.cos(ph) - Math.cos(th0)), 0), r: 0.5 * (C.thick + C.depth) * taper });
-      }
-      return out;
-    })();
-    const hullOf = c => (c.kind === 'disc' ? discHull : sickHull);
+    const hullOf = c => (c.kind === 'disc' ? discHull : sickV[c.v].hull);
     const TOUCH = 0.15;          // µm of gap that still counts as touching, for sticking
     const _d = new THREE.Vector3(), _n = new THREE.Vector3();
 
@@ -249,7 +260,7 @@
 
     /* Pushes a crescent's centre in by the sphere that pokes furthest through the wall. */
     function wallPush(c) {
-      const h = sickHull;
+      const h = hullOf(c);
       let worst = 0;
       for (let k = 0; k < h.length; k++) {
         const y = c.hw[3 * k + 1], z = c.hw[3 * k + 2], r = Math.hypot(y, z);
@@ -298,13 +309,14 @@
     }
 
     function upload() {
-      let d = 0, s = 0;
+      let d = 0;
+      const s = SHAPES.map(() => 0);
       for (const c of cells) {
         _m.compose(c.pos, c.q, _s);
-        if (c.kind === 'disc') discs.setMatrixAt(d++, _m); else sicks.setMatrixAt(s++, _m);
+        if (c.kind === 'disc') discs.setMatrixAt(d++, _m); else sicks[c.v].setMatrixAt(s[c.v]++, _m);
       }
-      discs.count = d; sicks.count = s;
-      discs.instanceMatrix.needsUpdate = true; sicks.instanceMatrix.needsUpdate = true;
+      discs.count = d; discs.instanceMatrix.needsUpdate = true;
+      sicks.forEach((m, k) => { m.count = s[k]; m.instanceMatrix.needsUpdate = true; });
     }
 
     /* Poiseuille in the wide part, faster through the throat by continuity. */
@@ -336,7 +348,7 @@
           if (c.touchStuck) { catchCell(c); continue; }
           if (c.sticky) u *= 0.55;
           /* At the throat, only a crescent that arrived nearly end-on fits. */
-          if (Rx < CRESCENT.len / 2 + 0.6) {
+          if (Rx < sickV[c.v].halfLen + 0.6) {
             _a.copy(_x).applyQuaternion(c.q);
             const off = Math.acos(Math.min(1, Math.abs(_a.x)));
             if (off > PASS_ANGLE || c.sticky) { catchCell(c); continue; }
@@ -397,7 +409,7 @@
         sickle: P.sickle, n: P.n, speed: P.speed,
         crescents: cells.filter(c => c.kind === 'sickle').length,
         moving: cells.length - stuck, stuck, passed, jammed, blocked,
-        vesselR: R0, throatR: Rt, crescentLen: CRESCENT.len, discR: B.R0,
+        vesselR: R0, throatR: Rt, crescentLen: 2 * Math.max(...sickV.map(V => V.halfLen)), discR: B.R0,
       };
     }
 
@@ -443,7 +455,7 @@
         return () => { const i = listeners[ev].indexOf(fn); if (i >= 0) listeners[ev].splice(i, 1); }; },
       dispose() {
         root.remove(grp);
-        discG.dispose(); sickG.dispose(); discMat.dispose(); sickMat.dispose(); wallMat.dispose();
+        discG.dispose(); sickV.forEach(V => V.geo.dispose()); discMat.dispose(); sickMat.dispose(); wallMat.dispose();
         if (wall) wall.geometry.dispose();
       },
     };
@@ -499,7 +511,7 @@
     return api;
   }
 
-  global.BloodFlow = { create, mount, DEFAULTS, R0, HALF, CRESCENT };
+  global.BloodFlow = { create, mount, DEFAULTS, R0, HALF };
   /* Scale (kit/scale.js). A scene unit is a micrometre: the
      disc is bloodcell.js's measured profile, the vessel radii are real
      capillary numbers, and the crescent's length is in the measured range, so

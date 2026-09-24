@@ -986,7 +986,7 @@
   /* COL and the disc profile are shared with bloodcell/bloodflow.js, so a
      crowd of cells and the one cell a page cuts open are the same red and the
      same shape rather than two opinions about a red cell. */
-  global.BloodCell = { mount, create, DEFAULTS, R0, AMP, COL, profileY: g };
+  global.BloodCell = { mount, create, DEFAULTS, R0, AMP, COL, profileY: g, makeShape, warp };
 
   /* Scale (kit/scale.js). MEASURED, unlike the cell diagrams:
      the profile is Evans & Fung's and a scene unit is a micrometre, so a page
