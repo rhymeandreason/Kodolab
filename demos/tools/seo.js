@@ -65,19 +65,19 @@ const PAGES = {
       ],
       steps: ['Hexokinase traps glucose', 'Phosphoglucose isomerase', 'Phosphofructokinase-1, the committed step', 'Aldolase splits the sugar', 'Triose-phosphate isomerase', 'Glyceraldehyde-3-phosphate dehydrogenase makes NADH', 'Phosphoglycerate kinase, the first ATP', 'Phosphoglycerate mutase', 'Enolase', 'Pyruvate kinase, the second ATP'],
     } },
-  '/respiration': { image: 'respiration',
+  '/respiration': { image: 'pyruvate-oxidation',
     description: 'Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.' },
   '/krebs': { image: 'krebs',
     description: 'The Krebs cycle in 3D: pyruvate oxidation, then eight steps round the ring drawn as the real molecules, and where each carbon goes.' },
-  '/electron-transport': {
+  '/electron-transport': { image: 'etc',
     description: 'The electron transport chain in 3D: NADH and FADH2 hand electrons to the complexes, protons are pumped, and the ledger counts what the gradient is worth.' },
-  '/etc-sim': {
+  '/etc-sim': { image: 'etc-sim',
     description: 'The electron transport chain as a live simulation: send one glucose\'s NADH and FADH2 into the inner membrane, watch protons pumped out and back through ATP synthase, and count the ATP.' },
   '/fermentation': { image: 'fermentation',
     description: 'Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.' },
   '/sickle-cell': {
     description: 'Sickle cell in 3D: one letter changes in the hemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.' },
-  '/tree': {
+  '/tree': { image: 'massoftree',
     description: "Where a tree's mass comes from: Van Helmont's willow, photosynthesis as traffic in and out of the leaf, and the tree taken apart by origin." },
   '/lessons': {
     description: 'Every Kodolab lesson in teaching order: water, bonding, proteins, the membrane, cellular respiration stage by stage, plants and DNA, with embed codes for teachers.' },
@@ -92,7 +92,7 @@ const PAGES = {
       ],
       steps: ['The bilayer', 'What gets through', 'Osmosis', 'A channel', 'The pump', 'A cell at rest'],
     } },
-  '/dna': {
+  '/dna': { image: 'dna',
     description: 'The DNA double helix in 3D, built from real coordinates and taken apart piece by piece: the backbone, the bases, and how they pair.' },
   '/nodes': {
     description: 'All of Bio 101 as one interactive map: how the concepts connect, from molecules to cells to organisms and ecosystems.' },
