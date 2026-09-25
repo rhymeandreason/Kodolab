@@ -10,13 +10,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sickle cell — one letter, and what follows</title>
 <!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
-<meta name="description" content="Sickle cell in 3D: one letter changes in the hemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.">
+<meta name="description" content="Sickle cell in 3D: one letter changes in the hemoglobin gene, a red cell sickles, a vessel jams, and one copy protects against malaria.">
 <link rel="canonical" href="https://www.kodolab.org/sickle-cell">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kodolab">
 <meta property="og:url" content="https://www.kodolab.org/sickle-cell">
 <meta property="og:title" content="Sickle cell — one letter, and what follows">
-<meta property="og:description" content="Sickle cell in 3D: one letter changes in the hemoglobin gene, the protein sticks to itself, a red cell sickles, and a vessel jams.">
+<meta property="og:description" content="Sickle cell in 3D: one letter changes in the hemoglobin gene, a red cell sickles, a vessel jams, and one copy protects against malaria.">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
 <link rel="stylesheet" href="css/kodo.css">
@@ -75,6 +75,18 @@
   .sk-btn.ghost:hover{border-color:var(--ink-3)}
   .sk-btn[hidden]{display:none}
   .sk-btn:disabled{opacity:.3;cursor:default;transform:none}
+  /* Beat 7: a live readout under each label, and the key to the figures. */
+  .sk-read{position:absolute;top:96px;display:flex;align-items:center;gap:12px;pointer-events:none;
+    font-family:var(--display);font-size:13px;color:var(--ink-2)}
+  .sk-read.left{left:28px}
+  .sk-read.right{left:calc(50% + 28px)}
+  .sk-read svg{display:block;overflow:visible}
+  .sk-read[hidden]{display:none}
+  .sk-legend{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:4;display:flex;gap:18px;
+    padding:6px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
+    font-family:var(--display);font-size:13px;color:var(--ink-2);white-space:nowrap}
+  .sk-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+  .sk-legend[hidden]{display:none}
   .sk-split-only{display:none}
   body.sk-split .sk-split-only{display:flex}
   @media (max-width:760px){
@@ -84,6 +96,8 @@
     .sk-half.right{top:50%;bottom:0}
     .sk-divider{left:0;right:0;top:50%;width:auto;height:1px}
     .sk-label.right{left:28px;top:calc(50% + 12px)}
+    .sk-read.right{left:28px;top:calc(50% + 34px)}
+    .sk-legend{bottom:auto;top:12px}
   }
 </style>
 </head>
@@ -107,6 +121,7 @@
 <script src="bloodcell/bloodcell.js"></script>
 <script src="bloodcell/bloodflow.js"></script>
 <script src="dna/codon.js"></script>
+<script src="sickle/population.js"></script>
 <script src="sickle/sickle-steps.js"></script>
 <script>
 'use strict';
@@ -128,7 +143,8 @@
  *  nothing.
  *
  *  What ctx carries for the steps: `variant` and `onToggle` (the switch),
- *  `use`, `split`, `caption`, `replay`, `fade`, `after` / `clearTimers`.
+ *  `use`, `split`, `caption`, `replay`, `fade`, `after` / `clearTimers`, and
+ *  for the village `legend`, `readout` and `pct`.
  * ========================================================================== */
 
 const V = { HbA: SickleSteps.HBA, HbS: SickleSteps.HBS };
@@ -202,6 +218,48 @@ ctx.split = (on, labels = {}) => {
   for (const s of Object.values(live)) if (s.api.box && s.api.box.layout) s.api.box.layout();
 };
 ctx.caption = text => { capText.textContent = text.replace(/\s+/g, ' ').trim(); };
+
+/* The village's colours are the β6 marks' from beat 2 and 3, read off the
+   crowd so a reader who learned them there does not relearn them here. */
+const hexCss = h => '#' + h.toString(16).padStart(6, '0');
+const ALLELE = { A: HbCrowd.markOf('HbA'), S: HbCrowd.markOf('HbS') };
+const DEAD = '#b3ada3';
+ctx.pct = x => Math.round(x * 100) + '%';
+
+const legend = document.createElement('div');
+legend.className = 'sk-legend'; legend.hidden = true;
+shell.el.appendChild(legend);
+ctx.legend = items => {
+  legend.hidden = !items;
+  legend.innerHTML = (items || []).map(it => {
+    const c = it.colour === 'dead' ? DEAD : hexCss(ALLELE[it.colour]);
+    return `<span><i style="background:${c}"></i>${it.text}</span>`;
+  }).join('');
+};
+
+/* A number and a sparkline of where it has been, per half. `mark` is a
+   dashed level the line is heading for; the scale is fixed so the two
+   halves can be compared by eye. */
+const reads = {};
+for (const side of ['left', 'right']) {
+  const r = document.createElement('div');
+  r.className = 'sk-read sk-split-only ' + side; r.hidden = true;
+  shell.stage.insertBefore(r, divider);
+  reads[side] = r;
+}
+ctx.readout = (side, o) => {
+  if (!side) { for (const r of Object.values(reads)) r.hidden = true; return; }
+  const r = reads[side], W = 120, H = 28, top = 0.25;
+  const vs = o.values, n = Math.max(1, vs.length - 1);
+  const y = v => (H - Math.min(1, v / top) * H).toFixed(1);
+  const pts = vs.map((v, i) => `${(i / n * W).toFixed(1)},${y(v)}`).join(' ');
+  const mark = o.mark ? `<line x1="0" x2="${W}" y1="${y(o.mark)}" y2="${y(o.mark)}" stroke="var(--ink-3)" stroke-dasharray="3 3" stroke-width="1"/>` : '';
+  r.hidden = false;
+  r.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)" stroke-width="1"/>${mark}
+      <polyline points="${pts}" fill="none" stroke="${hexCss(ALLELE.S)}" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    <span>${o.text}</span>`;
+};
 ctx.replay = fn => { replayFn = fn; capReplay.hidden = !fn; };
 
 /* Timers a step sets die with the step, the same way its subscriptions do. */
@@ -310,6 +368,13 @@ const MAKE = {
   cellS:   () => BloodCell.mount(host('right', 'sk-fade'), { sickle: 1, cut: 1 }),
   flowA:   () => BloodFlow.mount(host('left'),  { sickle: 0 }),
   flowS:   () => BloodFlow.mount(host('right'), { sickle: 1 }),
+  malaria: () => BloodCell.mount(host('full'), { cut: 1, viewOffset: shell.stage.viewOffset }),
+  /* Cut open like beat 4, so the parasite is on show. */
+  infA:    () => BloodCell.mount(host('left',  'sk-fade'), { sickle: 0, cut: 1 }),
+  infS:    () => BloodCell.mount(host('right', 'sk-fade'), { sickle: 0, cut: 1 }),
+  /* The same seed on both sides: the villages start as the same people. */
+  popA:    () => Population.mount(host('left'),  Object.assign({ malaria: 0, colours: ALLELE }, SickleSteps.POP)),
+  popS:    () => Population.mount(host('right'), Object.assign({ malaria: 1, colours: ALLELE }, SickleSteps.POP)),
 };
 
 const live = {};

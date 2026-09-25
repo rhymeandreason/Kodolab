@@ -8,13 +8,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BloodCell: Red Blood Cell and Tonicity in 3D — Kodolab</title>
 <!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
-<meta name="description" content="One red blood cell, cut open: tonicity, lysis and crenation, sickling.">
+<meta name="description" content="One red blood cell, cut open: tonicity, lysis and crenation, sickling, malaria.">
 <link rel="canonical" href="https://www.kodolab.org/library/bloodcell">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kodolab">
 <meta property="og:url" content="https://www.kodolab.org/library/bloodcell">
 <meta property="og:title" content="BloodCell: Red Blood Cell and Tonicity in 3D — Kodolab">
-<meta property="og:description" content="One red blood cell, cut open: tonicity, lysis and crenation, sickling.">
+<meta property="og:description" content="One red blood cell, cut open: tonicity, lysis and crenation, sickling, malaria.">
 <meta name="robots" content="noindex">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
@@ -89,6 +89,15 @@ function bench(ctx) {
     </div>
 
     <div class="bench-group">
+      <div class="bench-hd">malaria</div>
+      <div class="slider"><div class="slider-head"><span class="label">parasite</span><span class="value" data-v="parasite"></span></div>
+        <input type="range" id="parasite" min="0" max="1" step="0.005" value="0"></div>
+      <div class="row">
+        <button class="btn secondary" type="button" id="infect">Run the whole cycle</button>
+      </div>
+    </div>
+
+    <div class="bench-group">
       <div class="bench-hd">point at · show · colours</div>
       <div id="panel"></div>
     </div>
@@ -112,6 +121,7 @@ function bench(ctx) {
     sickle: x => at(x, 0) ? 'discocyte' : at(x, 1) ? 'sickled' : x.toFixed(2),
     tonicity: TON,
     spill: x => at(x, 0) ? 'intact' : at(x, 1) ? 'ghost' : x.toFixed(2),
+    parasite: x => at(x, 0) ? 'uninfected' : `${Math.round(C.state().hours)} h · ${C.state().stage}`,
   };
   /* THE CONTROL SHOWS THE INTENT, NOT THE ARRIVAL. A press starts a three
      second glide, and a control that waits for the value to land leaves the
@@ -128,6 +138,12 @@ function bench(ctx) {
 
   sync.tonicity = ui.range(ui.q('#tonicity'), x => { want = null; C.set({ tonicity: x }, { snap: true }); v('tonicity', TON(x)); });
   sync.spill = ui.range(ui.q('#spill'), x => { C.set({ spill: x }, { snap: true }); v('spill', LABEL.spill(x)); });
+  sync.parasite = ui.range(ui.q('#parasite'), x => { C.set({ parasite: x }, { snap: true }); v('parasite', LABEL.parasite(x)); });
+  /* The whole blood cycle in twelve seconds, from a fresh merozoite. */
+  ui.q('#infect').onclick = () => {
+    C.set({ parasite: 0, spill: 0 }, { snap: true });
+    C.set({ parasite: 1 }, { seconds: 12 });
+  };
 
   /* The two halves of what pure water does, in the order it does them: the
      cell fills until it is the sphere its membrane area allows, and then it
@@ -164,15 +180,15 @@ function bench(ctx) {
   /* showPanel takes the names it may offer; a chip for a part this cell does
      not have right now (a horn on a disc) is dropped by `present`. */
   CardStage.showPanel(ui.q('#panel'), C, {
-    notes: ['rim', 'dimple', 'cutFace', 'haemoglobin', 'horn', 'spicule'],
-    layers: ['membrane', 'hb'],
+    notes: ['rim', 'dimple', 'cutFace', 'haemoglobin', 'horn', 'spicule', 'parasite', 'hemozoin', 'knob', 'merozoite'],
+    layers: ['membrane', 'hb', 'parasite'],
   });
 
   ui.q('#seed').onclick = () => C.set({ seed: (Math.random() * 1e9) >>> 0 });
 
   /* The tween owns a slider while it runs; a slider the reader is dragging is
      not written to, which a blanket write every frame would do. */
-  const follow = { sickle: ui.q('#sickle'), tonicity: ui.q('#tonicity'), spill: ui.q('#spill') };
+  const follow = { sickle: ui.q('#sickle'), tonicity: ui.q('#tonicity'), spill: ui.q('#spill'), parasite: ui.q('#parasite') };
   const sw = { cut: ui.q('#cut'), rot: ui.q('#rot'), hb: ui.q('#hb') };
   const toggle = ui.q('#toggle');
   /* EVERY CONTROL READS THE COMPONENT, none of them remembers what it did.

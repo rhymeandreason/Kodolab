@@ -8,17 +8,20 @@
  *      C.set({ sickle: 1, cut: 1 });     // glides; {snap:true} for a slider
  *      C.state(); C.note('rim'); C.show('membrane', false); C.destroy();
  *
- *  PARAMS: sickle 0..1 · tonicity -1..1 · spill 0..1 · cut 0..1 · cutTurn
- *  turns · membrane µm · hb · hbCount · seed · autoRotate. The first four
- *  glide through the mount's tweens; `membrane` and `seed` rebuild and snap.
+ *  PARAMS: sickle 0..1 · tonicity -1..1 · spill 0..1 · cut 0..1 · parasite
+ *  0..1 · cutTurn turns · membrane µm · hb · hbCount · seed · autoRotate. The
+ *  first five glide through the mount's tweens; `membrane` and `seed` rebuild
+ *  and snap.
  *  state() is those plus facts() — discR, sphereR, area, volume, restVolume,
  *  swellRatio, crenateFraction — every one measured off the profile so a page
  *  prints rather than types. `volume` is the cell as it stands, so it tracks
- *  tonicity; `restVolume` is the disc's, and `area` cannot move. Event: frame.
+ *  tonicity; `restVolume` is the disc's, and `area` cannot move. The parasite
+ *  adds stage, hours, cycleHours, merozoites, hbEaten. Events: frame, stage.
  *
- *  ANCHORS for note(): rim · dimple · cutFace · haemoglobin · horn · spicule.
- *  The last three answer null on a cell that has no such part, so a callout
- *  waits instead of pointing at water. LAYERS for show(): membrane · hb.
+ *  ANCHORS for note(): rim · dimple · cutFace · haemoglobin · horn · spicule ·
+ *  parasite · hemozoin · knob · merozoite. All but the first four answer null
+ *  on a cell that has no such part, so a callout waits instead of pointing at
+ *  water. LAYERS for show(): membrane · hb · parasite.
  *
  *  ONE SURFACE, BUILT ONCE, MOVED EVERY FRAME. Every behaviour here —
  *  sickling, the creases, the cut — is a deformation or a re-index of a grid
@@ -61,6 +64,18 @@
  *  boat with drawn-out horns, and the beads become those bundles. It is drawn
  *  from `seed`, and no two seeds give the same cell — see `makeShape`.
  *
+ *  THE PARASITE IS Plasmodium falciparum's 48-hour blood stage, on one axis:
+ *  `parasite` is hours / 48, so 0 is an uninfected cell. The merozoite lands
+ *  on the top face and sinks in (the first 5%, which in life is a minute and
+ *  is stretched so it can be seen); a ring, thin in the middle; an amoeboid
+ *  trophozoite; a schizont of MERO merozoites; and at 95% the cell bursts,
+ *  which is `spill` driven from inside. What it does to the cell is the
+ *  lesson: it eats up to EAT of the hemoglobin, nearest beads first, and
+ *  stacks the heme as hemozoin, dark grains that grow with what was eaten;
+ *  from about 16 h it studs the membrane with knobs. Every part is placed in
+ *  the resting disc and carried by warp(), so a carrier's cell can sickle
+ *  with its parasite inside. It ignores tonicity.
+ *
  *  A ZOOM INTO THE SHELL IS A HANDOFF TO Membrane, not a camera move, and it
  *  skips the organelle rung deliberately: a red cell has no organelles to
  *  stop at. SCALE.down says so.
@@ -98,6 +113,9 @@
        is the whole reason the cell has that shape. On the disc the same plane
        is the classic cross-section through both dimples. */
     cutTurn: 0,
+    /* Hours into the parasite's 48 h blood cycle, over 48. 0 is uninfected.
+       See the header for the stages. */
+    parasite: 0,
     membrane: 0.1,      // thick enough to see, and no more than that (see header)
     hb: true,           // the haemoglobin inside
     hbCount: 2000,
@@ -117,6 +135,38 @@
     edge: 0xe08268,                 // the cut face: lighter, so thickness reads
     hb: 0xc9c469, hbFibre: 0xd6d074,
     ghost: 0xe8b4a6,
+    /* The parasite in the colours a Giemsa-stained smear gives it, which is
+       how every textbook photograph shows one: lilac cytoplasm, red-purple
+       chromatin, and hemozoin the brown-black of the real pigment. */
+    parasite: 0x9a8fd0, merozoite: 0x7d70c2, chromatin: 0x9c1d5c,
+    hemozoin: 0x33241a, knob: 0x93261a,
+  };
+
+  /* ---- the parasite's numbers ------------------------------------------- */
+
+  const CYCLE_H = 48;          // h, P. falciparum's blood-stage cycle
+  const MERO = 16;             // merozoites per schizont (8-32 are counted; 16-20 is typical)
+  const EAT = 0.7;             // share of the host's hemoglobin digested (60-80% measured)
+  const HZ = 36;               // hemozoin grains drawn at the most that is eaten
+  const NK = 420;              // knobs drawn, far fewer than a real cell's thousands
+  const KNOB_R = 0.075;        // µm; a real knob is ~0.1 µm across, so drawn 1.5x
+  /* Where it settles, in the resting disc: just behind the cut face the
+     default camera looks at, so a cut slices it and shows its inside, and
+     halfway out, where the lumen is deep enough to hold it. */
+  const PARA_C = [1.2, -0.5];
+  /* Stage boundaries on the axis, and what each is called. */
+  const STAGES = [[0.05, 'invading'], [0.5, 'ring'], [0.75, 'trophozoite'], [0.95, 'schizont'], [Infinity, 'bursting']];
+  const stageOf = p => (p <= 0 ? null : STAGES.find(s => p <= s[0])[1]);
+  /* The body's radius in the disc's plane, µm, at each point of the cycle:
+     a 1.2 µm ring, a trophozoite about 3 µm across, a schizont filling most
+     of the cell. */
+  const BODY_R = [[0.05, 0.6], [0.5, 1.05], [0.75, 1.6], [0.95, 2.05]];
+  const ramp = (x, kf) => {
+    if (x <= kf[0][0]) return kf[0][1];
+    for (let i = 1; i < kf.length; i++) {
+      if (x <= kf[i][0]) { const [a, va] = kf[i - 1], [b, vb] = kf[i]; return va + (vb - va) * (x - a) / (b - a); }
+    }
+    return kf[kf.length - 1][1];
   };
 
   /* ---- the resting profile ---------------------------------------------- */
@@ -582,6 +632,244 @@
     const o3 = [0, 0, 0, 1];
     let dirty = true;
 
+    /* ---- the parasite ------------------------------------------------------ */
+
+    /* WHAT IT EATS IS WHAT IS NEAREST: each bead's place in the queue is its
+       resting distance from the parasite, so the cell empties outward from it. */
+    let eatRank = null;
+    function rankBeads() {
+      const n = P.hbCount, d = new Float32Array(n), ids = new Uint32Array(n);
+      for (let i = 0; i < n; i++) {
+        d[i] = Math.hypot(bd.free[i * 3] - PARA_C[0], bd.free[i * 3 + 1] * 1.6, bd.free[i * 3 + 2] - PARA_C[1]);
+        ids[i] = i;
+      }
+      ids.sort((a, b) => d[a] - d[b]);
+      eatRank = new Uint32Array(n);
+      for (let r = 0; r < n; r++) eatRank[ids[r]] = r;
+    }
+    rankBeads();
+
+    const pr = rng(0x9a1a);
+    const para = new THREE.Group();
+    grp.add(para);
+    const bodyGeo = new THREE.SphereGeometry(1, 30, 18);
+    const bodyDir = Float32Array.from(bodyGeo.attributes.position.array);
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: COL.parasite, roughness: 0.55, metalness: 0, transparent: true, opacity: 0.78, depthWrite: false,
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.frustumCulled = false; body.renderOrder = 2;
+    const dotGeo = new THREE.SphereGeometry(1, 12, 8);
+    const chromMat = new THREE.MeshStandardMaterial({ color: COL.chromatin, roughness: 0.5, metalness: 0 });
+    const chrom = new THREE.Mesh(dotGeo, chromMat);
+    chrom.frustumCulled = false;
+    const hzGeo = new THREE.BoxGeometry(1, 1, 1);
+    const hzMat = new THREE.MeshStandardMaterial({ color: COL.hemozoin, roughness: 0.35, metalness: 0.1 });
+    const hz = new THREE.InstancedMesh(hzGeo, hzMat, HZ);
+    const meroMat = new THREE.MeshStandardMaterial({ color: COL.merozoite, roughness: 0.5, metalness: 0 });
+    const mero = new THREE.InstancedMesh(dotGeo, meroMat, MERO);
+    const meroDot = new THREE.InstancedMesh(dotGeo, chromMat, MERO);
+    for (const im of [hz, mero, meroDot]) { im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); }
+    /* What is inside the body draws after it: the body writes no depth, so
+       these land on top of its tint instead of under it. */
+    for (const mt of [chromMat, hzMat]) mt.transparent = true;
+    for (const o of [chrom, hz, mero]) o.renderOrder = 3;
+    /* And a merozoite's nucleus shows through it, the way stain shows it. */
+    Object.assign(meroMat, { transparent: true, opacity: 0.82, depthWrite: false });
+    meroDot.renderOrder = 4;
+    para.add(body, chrom, hz, mero, meroDot);
+
+    const knobGeo = new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+    const knobMat = new THREE.MeshStandardMaterial({ color: COL.knob, roughness: 0.6, metalness: 0 });
+    const knobs = new THREE.InstancedMesh(knobGeo, knobMat, NK);
+    knobs.frustumCulled = false; knobs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    grp.add(knobs);
+
+    /* Fixed draws: where each grain, merozoite and knob sits, and which way a
+       merozoite leaves. Drawn once, so a cell keeps its own parasite. */
+    const GA = Math.PI * (3 - Math.sqrt(5));
+    const hzOff = new Float32Array(HZ * 6);
+    for (let i = 0; i < HZ; i++) {
+      const a = pr() * 6.283, r = Math.sqrt(pr());
+      hzOff[i * 6] = r * Math.cos(a); hzOff[i * 6 + 1] = pr() * 2 - 1; hzOff[i * 6 + 2] = r * Math.sin(a);
+      hzOff[i * 6 + 3] = pr() * 6.283; hzOff[i * 6 + 4] = pr() * 6.283; hzOff[i * 6 + 5] = 0.6 + pr() * 0.8;
+    }
+    const meroOut = new Float32Array(MERO * 4);
+    for (let i = 0; i < MERO; i++) {
+      const a = i * GA + pr() * 0.4, up = pr() * 1.6 - 0.5;
+      const L = Math.hypot(1, up);
+      meroOut[i * 4] = Math.cos(a) / L; meroOut[i * 4 + 1] = up / L; meroOut[i * 4 + 2] = Math.sin(a) / L;
+      meroOut[i * 4 + 3] = 4.5 + pr() * 4;
+    }
+    const knobAt = new Uint32Array(NK);
+    for (let i = 0; i < NK; i++) {
+      const k = 3 + ((pr() * (K - 5)) | 0), j = (pr() * J) | 0;
+      knobAt[i] = k * J + j;
+    }
+
+    const spillNow = () => Math.max(P.spill, smooth(0.95, 1.0, P.parasite));
+    const eatenNow = () => EAT * smooth(0.12, 0.92, P.parasite);
+    const knobNow = () => smooth(0.33, 0.55, P.parasite) * (1 - spillNow());
+
+    /* The half that is cut away, as a plane: a parasite body that reached
+       into it is flattened against the cut, as if it were sliced with the
+       cell. Only for a half; a wedge part-open is a transition. */
+    const cutPlane = [0, 0, 0];
+    function sliceTo(o) {
+      if (cutN < J * 0.25 || P.parasite >= 0.95) return o;
+      const d = o[0] * cutPlane[0] + o[2] * cutPlane[2] + 0.04;
+      if (d > 0) { o[0] -= d * cutPlane[0]; o[2] -= d * cutPlane[2]; }
+      return o;
+    }
+    /* A point inside the lumen, `rad` clear of both membranes and the rim. */
+    function inside(x, y, z, rad, o) {
+      let r = Math.hypot(x, z);
+      const rMax = R0 * 0.86 - rad;
+      if (r > rMax) { x *= rMax / r; z *= rMax / r; r = rMax; }
+      const cap = Math.max(0, tableAt(lut, r) - rad - 0.03);
+      o[0] = x; o[1] = y > cap ? cap : y < -cap ? -cap : y; o[2] = z;
+      return sliceTo(o);
+    }
+
+    const q4 = [0, 0, 0, 1], w4 = [0, 0, 0, 1];
+    const _q = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0), _n = new THREE.Vector3();
+    const _z = new THREE.Vector3(0, 0, 1);
+    let clock = 0;
+    const paraAt = [0, 0, 0];                  // the body's centre, warped, for the anchor
+    function parasiteFrame() {
+      const p = P.parasite, m = P.sickle;
+      para.visible = p > 0 && vis.parasite;
+      if (!para.visible) return;
+      const e = smooth(0.95, 1.0, p);          // the burst
+      const inv = p <= 0.05;
+      const [cx, cz] = PARA_C;
+      let R, H, oy = 0;
+      if (inv) {
+        /* Lands on the top face apical end down, holds, and sinks in. */
+        const u = p / 0.05, roof = tableAt(top, Math.hypot(cx, cz));
+        R = 0.42; H = 0.6;
+        oy = u < 0.45 ? roof + H + 2.6 * (1 - smooth(0, 0.45, u))
+                      : (roof + H) * (1 - smooth(0.45, 1, u));
+      } else {
+        R = ramp(p, BODY_R); H = R * 0.62;
+      }
+      const amoeba = smooth(0.1, 0.4, p) * (1 - smooth(0.72, 0.82, p));
+      const ring = smooth(0.05, 0.12, p) * (1 - smooth(0.32, 0.5, p));
+
+      const pos = bodyGeo.attributes.position.array, n = pos.length / 3;
+      for (let i = 0; i < n; i++) {
+        const dx = bodyDir[i * 3], dy = bodyDir[i * 3 + 1], dz = bodyDir[i * 3 + 2];
+        let x, y, z;
+        if (inv) {
+          const nar = 1 - 0.35 * Math.max(0, -dy);            // the apical end, narrower
+          x = cx + dx * R * nar; y = oy + dy * H; z = cz + dz * R * nar;
+          q4[0] = x; q4[1] = y; q4[2] = z;
+        } else {
+          const ph = Math.atan2(dz, dx);
+          const w = 1 + amoeba * (0.14 * Math.sin(2 * ph + 0.55 * clock)
+                                + 0.08 * Math.sin(3 * ph - 0.8 * clock + 1.3)
+                                + 0.05 * Math.sin(5 * ph + 0.4 * clock + 2.1));
+          const thin = 1 - ring * 0.72 * (1 - (dx * dx + dz * dz));   // a ring: thin in the middle
+          inside(cx + dx * R * w, dy * H * thin, cz + dz * R * w, 0.02, q4);
+        }
+        warp(q4[0], q4[1], q4[2], m, shape, w4);
+        pos[i * 3] = w4[0]; pos[i * 3 + 1] = w4[1]; pos[i * 3 + 2] = w4[2];
+      }
+      bodyGeo.attributes.position.needsUpdate = true;
+      bodyGeo.computeVertexNormals();
+      /* Segmenting, the body thins to the vacuole that holds the merozoites,
+         and it is gone when the cell bursts. */
+      bodyMat.opacity = 0.78 * (1 - 0.7 * smooth(0.76, 0.9, p)) * (1 - e);
+      body.visible = bodyMat.opacity > 0.01;
+      warp(cx, oy, cz, m, shape, w4);
+      paraAt[0] = w4[0]; paraAt[1] = w4[1]; paraAt[2] = w4[2];
+
+      /* One nucleus until it divides into the merozoites' own. */
+      const nuc = 1 - smooth(0.74, 0.8, p);
+      chrom.visible = nuc > 0.01;
+      if (chrom.visible) {
+        const cr = inv ? 0.17 : 0.2 + 0.08 * smooth(0.3, 0.7, p);
+        if (inv) { q4[0] = cx; q4[1] = oy - H * 0.35; q4[2] = cz; }
+        else inside(cx + R * 0.45, 0, cz + R * 0.2, cr, q4);
+        warp(q4[0], q4[1], q4[2], m, shape, w4);
+        chrom.position.set(w4[0], w4[1], w4[2]);
+        chrom.scale.setScalar(cr * nuc);
+      }
+
+      /* Hemozoin: one grain per share of what has been eaten, clumped where
+         the food vacuole is and scattered when the cell bursts. */
+      const nH = Math.round(HZ * eatenNow() / EAT);
+      const spread = 0.28 + 0.22 * Math.min(1, R / 1.6);
+      for (let i = 0; i < HZ; i++) {
+        const o = i * 6;
+        if (i >= nH) { dummy.scale.setScalar(0); }
+        else {
+          const out = e * 2.6;
+          inside(cx - R * 0.15 + hzOff[o] * spread * (1 + out), hzOff[o + 1] * 0.25, cz + hzOff[o + 2] * spread * (1 + out), 0.1, q4);
+          if (e > 0) q4[1] += hzOff[o + 1] * out;
+          warp(q4[0], q4[1], q4[2], m, shape, w4);
+          dummy.position.set(w4[0], w4[1], w4[2]);
+          dummy.rotation.set(hzOff[o + 3], hzOff[o + 4], 0);
+          const g = hzOff[o + 5];
+          dummy.scale.set(0.07 * g, 0.07 * g, 0.2 * g);
+        }
+        dummy.updateMatrix();
+        hz.setMatrixAt(i, dummy.matrix);
+      }
+      hz.instanceMatrix.needsUpdate = true;
+
+      /* The merozoites grow inside the schizont, two layers deep, and leave
+         along their own lines when it bursts. */
+      const g = smooth(0.76, 0.9, p);
+      mero.visible = meroDot.visible = g > 0.01;
+      if (mero.visible) {
+        for (let i = 0; i < MERO; i++) {
+          const a = i * GA, rr = 0.8 * R * Math.sqrt((i + 0.5) / MERO);
+          inside(cx + rr * Math.cos(a), (i & 1 ? 1 : -1) * 0.32, cz + rr * Math.sin(a), 0.3, q4);
+          if (e > 0) {
+            const d = meroOut[i * 4 + 3] * e;
+            q4[0] += meroOut[i * 4] * d; q4[1] += meroOut[i * 4 + 1] * d; q4[2] += meroOut[i * 4 + 2] * d;
+          }
+          warp(q4[0], q4[1], q4[2], m, shape, w4);
+          _n.set(meroOut[i * 4], meroOut[i * 4 + 1] * 0.4, meroOut[i * 4 + 2]).normalize();
+          _q.setFromUnitVectors(_z, _n);
+          dummy.position.set(w4[0], w4[1], w4[2]);
+          dummy.quaternion.copy(_q);
+          dummy.scale.set(0.3 * g, 0.3 * g, 0.44 * g);
+          dummy.updateMatrix();
+          mero.setMatrixAt(i, dummy.matrix);
+          _n.multiplyScalar(0.2 * g);
+          dummy.position.add(_n);
+          dummy.scale.setScalar(0.13 * g);
+          dummy.updateMatrix();
+          meroDot.setMatrixAt(i, dummy.matrix);
+        }
+        mero.instanceMatrix.needsUpdate = meroDot.instanceMatrix.needsUpdate = true;
+      }
+      dummy.rotation.set(0, 0, 0); dummy.quaternion.identity();
+    }
+
+    /* Knobs sit on the outer surface as it stands, so they run after apply(). */
+    function knobFrame() {
+      const kn = knobNow();
+      knobs.visible = kn > 0.01 && vis.membrane && vis.parasite;
+      if (!knobs.visible) return;
+      for (let i = 0; i < NK; i++) {
+        const v = knobAt[i], j = v % J, o = v * 3;
+        if (cutAway(j)) dummy.scale.setScalar(0);
+        else {
+          _n.set(norOut[o], norOut[o + 1], norOut[o + 2]);
+          dummy.quaternion.setFromUnitVectors(_up, _n);
+          dummy.position.set(posOut[o], posOut[o + 1], posOut[o + 2]);
+          dummy.scale.setScalar(KNOB_R * kn);
+        }
+        dummy.updateMatrix();
+        knobs.setMatrixAt(i, dummy.matrix);
+      }
+      knobs.instanceMatrix.needsUpdate = true;
+      dummy.quaternion.identity();
+    }
+
     /* -- the index buffer, rewritten only when the wedge moves -- */
     let cutA = 0, cutN = 0;
     function reindex() {
@@ -604,6 +892,8 @@
       geoOut.setDrawRange(0, n); geoIn.setDrawRange(0, n);
       geoOut.index.needsUpdate = true; geoIn.index.needsUpdate = true;
       meshIn.visible = meshEdge.visible = cutN > 0 && vis.membrane;
+      const tb = 2 * Math.PI * (cutA + cutN / 2) / J;
+      cutPlane[0] = Math.cos(tb); cutPlane[2] = Math.sin(tb);
       dirty = true;
     }
 
@@ -646,6 +936,7 @@
 
       if (cutN > 0) edge();
       if (hb.visible) instances(m);
+      knobFrame();
     }
 
     /* Normals from the grid itself: one cross product per vertex, against
@@ -689,7 +980,8 @@
     }
 
     function instances(m) {
-      const n = P.hbCount, TAU = Math.PI * 2, t = P.tonicity, sp = P.spill;
+      const n = P.hbCount, TAU = Math.PI * 2, t = P.tonicity, sp = spillNow();
+      const eaten = Math.round(eatenNow() * n);
       const w = Math.abs(t);
       // The beads take the smooth target and never the spikes: a spicule only
       // pushes the membrane outward, so what was inside stays inside.
@@ -722,6 +1014,7 @@
           const j = Math.floor(th / TAU * J) % J;
           hide = ((j - cutA + J) % J) < cutN;
         }
+        if (eatRank[i] < eaten) hide = true;
         /* And smaller out where the rim's own points stretch the sheet
            sideways, which no vertical measure sees. Scaled by the sickling,
            because a cell that has not sickled has no points to stretch it. */
@@ -762,7 +1055,7 @@
        the only place this component draws anything transparent, so the flag
        goes on with the spill and off again with it. */
     function paint() {
-      const sp = P.spill;
+      const sp = spillNow();
       matOut.color.setHex(COL.outer).lerp(cSickle, P.sickle).lerp(cGhost, sp);
       matOut.transparent = sp > 0.001;
       matOut.opacity = 1 - 0.62 * sp;
@@ -809,13 +1102,33 @@
       cutFace: () => (cutN <= 0 ? null
                       : vert(posOut, KC, cutA, _a).lerp(vert(posIn, KC, cutA, _c), 0.5)),
       haemoglobin: () => {
-        if (!P.hb || P.spill > 0.85) return null;
+        if (!P.hb || spillNow() > 0.85) return null;
         hb.getMatrixAt(0, _m4);
         return grp.localToWorld(_a.setFromMatrixPosition(_m4));
       },
       horn:    () => (P.sickle < 0.35 ? null : vert(posOut, K >> 1, showSpoke(0), _a)),
       spicule: () => (P.tonicity < 0.35 ? null
                       : vert(posOut, (spikeIdx / J) | 0, showSpoke(spikeIdx % J), _a)),
+      parasite: () => (P.parasite <= 0 || P.parasite > 0.9 ? null
+                       : grp.localToWorld(_a.set(paraAt[0], paraAt[1], paraAt[2]))),
+      hemozoin: () => {
+        if (eatenNow() < 0.15 || P.parasite > 0.95) return null;
+        hz.getMatrixAt(0, _m4);
+        return grp.localToWorld(_a.setFromMatrixPosition(_m4));
+      },
+      knob: () => {
+        if (knobNow() < 0.5) return null;
+        for (let i = 0; i < NK; i++) {
+          const v = knobAt[i];
+          if (!cutAway(v % J) && norOut[v * 3 + 1] > 0.6) return vert(posOut, (v / J) | 0, v % J, _a);
+        }
+        return null;
+      },
+      merozoite: () => {
+        if (P.parasite < 0.88) return null;
+        mero.getMatrixAt(0, _m4);
+        return grp.localToWorld(_a.setFromMatrixPosition(_m4));
+      },
     };
 
     /* A note fades as its part turns away, and only the two FLAT parts want
@@ -843,13 +1156,17 @@
       haemoglobin: { text: 'hemoglobin', card: 'Around 270 million copies fill the cell, a third of its weight, and each carries four oxygens. There is no nucleus and there are no mitochondria in here; the space went to cargo.' },
       horn: { text: 'a sickled point', card: 'Deoxygenated HbS polymerises into stiff fibres that push the membrane out into points. A cell this shape is rigid, jams in small vessels, and is destroyed early.' },
       spicule: { text: 'a spicule', card: 'Water has left, so the volume fell while the membrane area could not. The surplus membrane buckles outward into spikes: a crenated cell, or echinocyte.' },
+      parasite: { text: 'the malaria parasite', card: 'Plasmodium falciparum, a single cell that lives inside a red cell for two days at a time. In here the immune system cannot see it, and the hemoglobin is its food.' },
+      hemozoin: { text: 'hemozoin', card: 'The parasite digests hemoglobin for its amino acids, but the heme left over is toxic to it. It stacks the heme into these dark crystals, the pigment a microscope shows in an infected cell.' },
+      knob: { text: 'a knob', card: 'The parasite builds sticky knobs into the membrane from its own proteins. They glue the cell to the vessel wall, so it never passes through the spleen, which would destroy it.' },
+      merozoite: { text: 'a merozoite', card: `The parasite has divided into ${MERO} new ones. When the cell bursts, each can invade another red cell and start the cycle again.` },
     };
 
     /* Layers, by visibility: hiding the membrane leaves the haemoglobin
        standing in the shape of the cell it was filling, which is the picture
        for "what is inside". */
-    const vis = { membrane: true, hb: true };
-    const LAYER_LABEL = { membrane: 'membrane', hb: 'hemoglobin' };
+    const vis = { membrane: true, hb: true, parasite: true };
+    const LAYER_LABEL = { membrane: 'membrane', hb: 'hemoglobin', parasite: 'parasite' };
     function show(name, on) {
       if (!(name in vis)) return;
       vis[name] = !!on;
@@ -858,6 +1175,7 @@
       meshOut.visible = vis.membrane;
       meshIn.visible = meshEdge.visible = vis.membrane && cutN > 0;
       dirty = true;
+      parasiteFrame();
     }
     const layersOf = () => Object.keys(vis).map(k => ({ name: k, label: LAYER_LABEL[k], on: vis[k] }));
     const hex = c => '#' + c.getHexString();
@@ -865,9 +1183,13 @@
       { name: 'membrane', color: hex(matOut.color) },
       { name: 'cut face', color: hex(matEdge.color) },
       { name: 'hemoglobin', color: hex(hbMat.color) },
+      ...(P.parasite > 0 ? [
+        { name: 'parasite', color: hex(bodyMat.color) },
+        { name: 'hemozoin', color: hex(hzMat.color) },
+      ] : []),
     ];
 
-    reindex(); apply(); paint();
+    reindex(); apply(); paint(); parasiteFrame();
 
     return {
       group: grp, anchors, facings, library, layersOf, show, palette,
@@ -880,26 +1202,36 @@
           if (k === 'seed') rebuild = true;
           P[k] = next[k];
         }
-        if (rebuild) { prof = profile(P.membrane); lut = lumenTable(prof); top = topTable(prof); shape = makeShape(P.seed); spic = spicules(P.seed); bd = beads(P.hbCount, prof, P.seed); sphere(); findSpike(); }
+        if (rebuild) { prof = profile(P.membrane); lut = lumenTable(prof); top = topTable(prof); shape = makeShape(P.seed); spic = spicules(P.seed); bd = beads(P.hbCount, prof, P.seed); sphere(); findSpike(); rankBeads(); }
         vis.hb = !!P.hb; hb.visible = vis.hb;
         if (re) reindex();
         dirty = true;
       },
       step(dt) {
         if (P.autoRotate) { grp.rotation.y += dt * 0.35; }
+        clock += dt || 0;
+        /* The parasite moves every frame it is there: a trophozoite is
+           amoeboid. Its own few hundred vertices, not the membrane's. */
+        if (P.parasite > 0) parasiteFrame();
+        else if (para.visible) para.visible = false;
         if (!dirty) return;
         dirty = false;
         apply(); paint();
       },
+      stage: () => stageOf(P.parasite),
       touch() { dirty = true; },
       params: P,
       /* Measured off the profile, never typed: a page printing "half as much
          again" reads it from here. */
-      facts() { return { discR: R0, sphereR: prof.sphereR, crenR: prof.crenR, area: prof.area, volume: volumeNow(), restVolume: prof.vol, swellRatio: prof.swellRatio, crenateFraction: CRENATE }; },
+      facts() {
+        return { discR: R0, sphereR: prof.sphereR, crenR: prof.crenR, area: prof.area, volume: volumeNow(), restVolume: prof.vol, swellRatio: prof.swellRatio, crenateFraction: CRENATE,
+                 stage: stageOf(P.parasite), hours: P.parasite * CYCLE_H, cycleHours: CYCLE_H, merozoites: MERO, hbEaten: eatenNow() };
+      },
       dispose() {
         root.remove(grp);
         geoOut.dispose(); geoIn.dispose(); geoEdge.dispose(); hbGeo.dispose();
         matOut.dispose(); matIn.dispose(); matEdge.dispose(); hbMat.dispose();
+        for (const x of [bodyGeo, dotGeo, hzGeo, knobGeo, bodyMat, chromMat, hzMat, meroMat, knobMat]) x.dispose();
       },
     };
   }
@@ -908,7 +1240,7 @@
 
   function mount(el, params = {}) {
     if (!global.CardStage) throw new Error('bloodcell.js: load kit/card-stage.js first');
-    let cell = null, nb = null;
+    let cell = null, nb = null, stage = null;
     const listeners = {};
     const emit = (ev, ...a) => CardStage.fire(listeners[ev], a, 'BloodCell ' + ev);
 
@@ -916,7 +1248,13 @@
       mount: el,
       cam: params.cam || { theta: 0.35, phi: 0.95, r: 16 },   // square onto the cut face
       stage: Object.assign({ rMin: 7, rMax: 48, phiMin: 0.12, phiMax: 3.02 }, params.stage || {}),
-      step: dt => { if (cell) { cell.step(dt); tw.update(dt); if (nb) nb.step(); emit('frame', api.state(), dt); } },
+      step: dt => {
+        if (!cell) return;
+        cell.step(dt); tw.update(dt); if (nb) nb.step();
+        const st = cell.stage();
+        if (st !== stage) { stage = st; emit('stage', st); }
+        emit('frame', api.state(), dt);
+      },
       viewOffset: params.viewOffset,
     });
 
@@ -938,6 +1276,7 @@
     box.camera.add(key, key.target, rim, rim.target, under, under.target);
 
     cell = create(THREE, box.root, params);
+    stage = cell.stage();
     const tw = global.CardStage.tweens();
     nb = global.Notebook
       ? global.Notebook.create({ box, anchors: cell.anchors, facings: cell.facings, library: cell.library })
@@ -947,7 +1286,7 @@
       set(next, opts = {}) {
         const glide = opts.snap ? 0 : (opts.seconds === undefined ? 0.9 : opts.seconds);
         let done = opts.onDone || null;        // fires once, on the first key that glides
-        for (const k of ['sickle', 'tonicity', 'spill', 'cut']) {
+        for (const k of ['sickle', 'tonicity', 'spill', 'cut', 'parasite']) {
           if (next[k] === undefined) continue;
           const from = cell.params[k], to = next[k];
           if (glide > 0 && from !== to) {

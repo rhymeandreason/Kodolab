@@ -35,7 +35,7 @@ const CHECKERS = [
   'chemiosmosis/check-light-reactions.js', 'cell/check-mitochondrion.js',
   'reaction/check-reaction.js', 'energy/check-energy.js', 'coupling/check-coupling.js',
   'tools/check-water.js', 'dna/check-codon.js', 'proteins/check-nucleic-acids.js', 'kit/check-nucleic.js',
-  'proteins/check-proteins.js', 'kit/check-ribbon.js', 'tools/check-residues.js', 'sickle/tools/check-fibre.js',
+  'proteins/check-proteins.js', 'kit/check-ribbon.js', 'tools/check-residues.js', 'sickle/tools/check-fibre.js', 'sickle/tools/check-population.js',
   `hemoglobin/tools/check-hb.js${full ? '' : ' --quick'}`, 'tools/bake-graph-vectors.js --gate',
   'diffusion/check-diffusion.js', 'folding/tools/check-folding.js',
 ];

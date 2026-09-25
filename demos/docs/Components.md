@@ -594,6 +594,7 @@ const C = BloodCell.mount(el, {
   sickle: 0,         // 0 discocyte · 1 sickled
   cut: 0,            // 0 whole · 1 halved, which is what shows the inside
   cutTurn: 0,        // turns: which half is taken away
+  parasite: 0,       // 0 uninfected · 0..1 the malaria parasite's 48 h cycle, 1 the cell bursts
   hb: true,          // the haemoglobin inside
   seed: 7,           // a new seed is a different cell; only the sickled shape uses it
   autoRotate: false,
@@ -606,13 +607,15 @@ One cell, and every shape it takes is the same membrane moved: nothing is rebuil
 
 **`cut: 1` is the setting most steps want on.** Whole, the cell is a smooth red disc; halved, the shell has visible thickness and the haemoglobin is on show, which is what makes the inside a fact rather than a claim.
 
-Glides: `tonicity`, `spill`, `sickle`, `cut`. Snaps: `seed`, `membrane`, and anything passed with `{snap:true}`, which a slider must.
+**Malaria is `parasite`, hours of the cycle over 48**: glide it 0 → 1 and a merozoite lands and sinks in, grows from a ring to a trophozoite that eats the hemoglobin (it disappears, dark hemozoin grains appear, knobs rise on the membrane), divides into merozoites, and the cell bursts. It passes through the same warp as everything else, so `sickle: 1` with a parasite inside is a sickled infected cell, which is how sickle trait protects: pair a normal cell and a carrier's, infect both, and sickle only the carrier's.
 
-`state()`: the params, plus `discR` and `sphereR` (µm), `area` (µm²), `volume` (µm³) — the volume of the cell as it stands, so it moves with `tonicity` and a printout beside a solution control tracks it; `restVolume` is the resting disc's, and `area` does not move, which is the premise both ends of the axis follow from. Also `swellRatio` (how many times its resting volume the cell holds when it is a sphere) and `crenateFraction`. Print those; do not type them. Events: `frame`.
+Glides: `tonicity`, `spill`, `sickle`, `cut`, `parasite`. Snaps: `seed`, `membrane`, and anything passed with `{snap:true}`, which a slider must.
 
-Anchors for `note()`: `rim`, `dimple`, `cutFace`, `haemoglobin`, `horn` (only when sickled), `spicule` (only in brine). Layers for `show()`: `membrane`, `hb`; hiding the membrane leaves the haemoglobin standing in the shape of the cell.
+`state()`: the params, plus `discR` and `sphereR` (µm), `area` (µm²), `volume` (µm³) — the volume of the cell as it stands, so it moves with `tonicity` and a printout beside a solution control tracks it; `restVolume` is the resting disc's, and `area` does not move, which is the premise both ends of the axis follow from. Also `swellRatio` (how many times its resting volume the cell holds when it is a sphere) and `crenateFraction`. The parasite adds `stage` (`invading` · `ring` · `trophozoite` · `schizont` · `bursting`, null uninfected), `hours`, `cycleHours`, `merozoites` and `hbEaten` (fraction). Print those; do not type them. Events: `frame`, and `stage` when the parasite enters a new one, which is what a caption hangs off.
 
-Good for: the biconcave shape and why it is that shape, osmosis and tonicity on a real cell, lysis and crenation, what a red cell is filled with, and sickle-cell disease. Not for: transport across the membrane, blood as a fluid or a vessel full of cells, anything with a nucleus — this one has none — or standing in for a typical cell, which is AnimalCell's job.
+Anchors for `note()`: `rim`, `dimple`, `cutFace`, `haemoglobin`, `horn` (only when sickled), `spicule` (only in brine), `parasite`, `hemozoin`, `knob`, `merozoite` (each only while that stage is on show). Layers for `show()`: `membrane`, `hb`, `parasite`; hiding the membrane leaves the haemoglobin standing in the shape of the cell.
+
+Good for: the biconcave shape and why it is that shape, osmosis and tonicity on a real cell, lysis and crenation, what a red cell is filled with, sickle-cell disease, and the malaria parasite's blood stage and why sickle trait protects against it. Not for: transport across the membrane, blood as a fluid or a vessel full of cells, anything with a nucleus — this one has none — or standing in for a typical cell, which is AnimalCell's job.
 
 ## HbCrowd — a crowd of haemoglobins, and the moment HbS starts a fibre
 
