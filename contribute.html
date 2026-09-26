@@ -36,6 +36,7 @@
     --ink-t: var(--brand-ink-t);
     --ink-2: var(--brand-ink-2);
     --mute: var(--brand-mute);
+    --deep: var(--brand-green);
     --green: var(--hue-green); --coral: var(--hue-coral); --blue: var(--hue-blue);
     --amber: var(--hue-amber); --violet: var(--hue-violet);
     --butter: var(--hue-butter);
@@ -59,39 +60,50 @@
   /* Colour carries the emphasis: Jost has no italic, so an italic em here would be synthesized. */
   h1 em, h2 em, h3 em { font-style: normal; }
   p { margin: 0; }
-  .wrap { width: min(1080px, calc(100% - 4rem)); margin-inline: auto; }
+  .wrap { width: min(1180px, calc(100% - 4rem)); margin-inline: auto; }
   .narrow { width: min(760px, calc(100% - 4rem)); margin-inline: auto; }
   .eyebrow { display: block; font: 500 14px/1 var(--sans); letter-spacing: 0.22em; text-transform: uppercase; color: var(--coral); margin-bottom: 1rem; }
   .lede { font-family: var(--serif); font-weight: 400; font-size: 1.18rem; line-height: 1.6; color: var(--ink-2); }
 
-  /* ---- chrome ---------------------------------------------------------- */
-  /* THE BAR IS THE SITE'S, in a sticky translucent frame this page keeps: the
-     mark and the crumb are kodo.css's §6.5 grammar to the value, so this header
-     and a lesson's are one bar. What stays this page's own is the translucent
-     backing and the links to its own sections. Design.md §§1-2 */
-  .sitenav {
-    background: rgba(var(--paper-t),.92); backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(var(--ink-t),.12);
+  /* ---- the bar: lessons.html's, the site's standard ---------------------- */
+  header.bar { position: sticky; top: 0; z-index: 30; background: rgba(var(--paper-t), .86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(var(--ink-t), .1); }
+  header.bar .wrap { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; flex-wrap: wrap; padding: 1rem 0 .9rem; }
+  header.bar .mk { line-height: 0; text-decoration: none; }
+  header.bar .mk img { width: 132px; height: auto; display: inline-block; vertical-align: baseline; }
+  header.bar nav.links { display: flex; flex-wrap: wrap; align-items: baseline; gap: clamp(.9rem, 2.4vw, 1.7rem); }
+  header.bar a.lnk, header.bar .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
+  header.bar a.lnk:hover, header.bar a.acct:hover { color: var(--coral); }
+  header.bar a.lnk[aria-current="page"], header.bar a.acct[aria-current="page"] { color: var(--ink); }
+  /* The account, as lib/site.js paints it. */
+  header.bar .links .signin { padding: .35em .9em; border: 1.5px solid currentColor; border-radius: 999px; }
+  /* The phone menu lib/site.js adds, restated from kodo.css's `.navfold`. */
+  .navfold > .burger { display: none; }
+  @media (max-width: 560px) {
+    header.bar .wrap.navfold { align-items: center; gap: 0; }
+    .navfold > .mk { display: flex; align-self: center; }
+    .navfold > .burger { display: grid; place-content: center; gap: 5px; width: 44px; height: 44px; margin: 0 -10px 0 auto; padding: 0; border: 0; background: none; cursor: pointer; }
+    .navfold > .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .2s, opacity .2s; }
+    .navfold.nav-open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .navfold.nav-open > .burger i:nth-child(2) { opacity: 0; }
+    .navfold.nav-open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    header.bar .navfold > nav.links { display: none; flex-basis: 100%; flex-direction: column; align-items: flex-start; gap: 0; padding-top: .4rem; }
+    header.bar .navfold.nav-open > nav.links { display: flex; }
+    .navfold > nav > * { padding: .8rem 0; }
+    .navfold > nav .rule { display: none; }
+    .navfold > nav .menu .card { left: 0; right: auto; }
   }
-  .sitenav .wrap { display: flex; align-items: baseline; gap: .75rem; padding: .9rem 0; }
-  /* One element, one size — 1.35rem, the size it is on every page that is not
-     the front door. The image is inline on its own baseline so the crumb sits
-     on the wordmark's, the way it does under kodo.css. */
-  .sitenav .mark { --mark-size: 1.35rem; line-height: 0; text-decoration: none; }
-  .sitenav .mark img { display: inline-block; vertical-align: baseline; height: var(--mark-size); width: auto; }
-  .sitenav .here { display: inline-flex; align-items: baseline; gap: .75rem; }
-  /* Where you are. No divider rule: the system separates it by space. */
-  .sitenav .crumb { font: 600 .74rem var(--ui); letter-spacing: .18em; text-transform: uppercase; color: var(--mute); }
-  .sitenav .sp { flex: 1; }
-  /* The links are kodo.css's `.sitelinks`, in this page's own ink: same
-     micro-cap face, size, tracking and case, so a reader crossing from a
-     document-shell page sees one bar. */
-  .sitenav .links { display: flex; flex-wrap: wrap; align-items: baseline; gap: clamp(.9rem,2.4vw,1.7rem); }
-  .sitenav a.lnk { font: 600 .74rem var(--ui); letter-spacing: .18em; text-transform: uppercase;
-    text-decoration: none; color: var(--mute); }
-  .sitenav a.lnk:hover { color: var(--coral); }
-  /* Where you are is the one entry that is not a way out. */
-  .sitenav a.lnk[aria-current="page"] { color: var(--ink); }
+  header.bar .links .rule { width: 1px; height: 1.1rem; align-self: center; background: rgba(var(--ink-t), .18); }
+  header.bar .links .menu { position: relative; display: inline-block; }
+  header.bar .links .menu .summary { position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0; border: 0; background: none; cursor: pointer; font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--mute); line-height: inherit; }
+  header.bar .links .menu .summary:hover, header.bar .links .menu .summary[aria-expanded="true"] { color: var(--ink); }
+  header.bar .links .avatar { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.7rem; height: 1.7rem; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--deep); color: var(--paper); font-size: .8rem; letter-spacing: 0; }
+  header.bar .links .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  header.bar .links .menu .card { position: absolute; right: 0; top: calc(100% + .6rem); z-index: 10; min-width: 15rem; padding: .9rem 1rem; background: var(--paper); border: 1px solid rgba(var(--ink-t), .12); border-radius: 12px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t), .45); display: flex; flex-direction: column; gap: .75rem; font: 400 .9rem var(--sans); color: var(--ink-2); text-transform: none; letter-spacing: 0; }
+  header.bar .links .menu .card[hidden] { display: none; }
+  header.bar .links .menu .who { margin: 0; display: flex; flex-direction: column; gap: .15rem; line-height: 1.3; }
+  header.bar .links .menu .who b { color: var(--ink); font-weight: 600; }
+  header.bar .links .menu .who span { color: var(--mute); font-size: .8rem; overflow-wrap: anywhere; }
+  header.bar .links .menu .card button { align-self: flex-start; cursor: pointer; padding: .4em 1em; border: 1.5px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font: 600 .8rem var(--sans); }
 
   .cta {
     font: 500 14px var(--sans); letter-spacing: .06em; padding: .8rem 1.4rem; border-radius: 999px;
@@ -199,10 +211,10 @@
      first card lines up with the heading and the last can still reach it. */
   .gallery {
     display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x proximity;
-    padding: 0 max(2rem, calc((100% - 1080px) / 2)) .6rem;
+    padding: 0 max(2rem, calc((100% - 1180px) / 2)) .6rem;
     /* Snapping aligns a card to the row's edge, not to its padding, so the
        row would open scrolled past the gutter without this. */
-    scroll-padding-inline: max(2rem, calc((100% - 1080px) / 2));
+    scroll-padding-inline: max(2rem, calc((100% - 1180px) / 2));
     -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   .gallery::-webkit-scrollbar { display: none; }
@@ -265,30 +277,23 @@
     .ways, .licence .wrap { grid-template-columns: 1fr; }
     .hero { padding: 4rem 0 3rem; }
     section.band { padding: 4rem 0; }
-    .sitenav .crumb { display: none; }
   }
 </style>
 </head>
 <body>
 
-<nav class="sitenav">
+<header class="bar">
   <div class="wrap">
-    <span class="here">
-      <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-      <span class="crumb">Community</span>
-    </span>
-    <span class="sp"></span>
-    <!-- The site's three places, in this page's own ink: lib/site.js writes this
-         row on every document-shell page, and cannot write it here because the
-         bar is this page's own (fixed, blurred, its own palette). The words and
-         the order are that list's — a fifth place added there is added here. -->
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The site's three places, the same words and order as lib/site.js's
+         list; site.js adds the account and the phone menu. -->
     <nav class="links" aria-label="Site">
       <a class="lnk" href="/lessons">Lessons</a>
       <a class="lnk" href="/library">Library</a>
       <a class="lnk" href="/build">Build</a>
     </nav>
   </div>
-</nav>
+</header>
 
 <!-- ============ hero ============ -->
 <header class="hero">

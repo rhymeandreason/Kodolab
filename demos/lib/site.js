@@ -308,7 +308,6 @@
   }
 
   function nav() {
-    each('.sitenav nav.links', drop);   // contribute.html's own bar, which takes no account
     var own = document.querySelectorAll(OWN);
     if (own.length) { each(OWN, function (n) { drop(n); paintAccount(n, stored()); }); each('header.bar nav.links', fold); reconcile(); return; }
     if (!document.body.classList.contains('kodo')) return;
