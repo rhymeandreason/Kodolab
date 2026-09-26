@@ -113,89 +113,62 @@
   }
   .field.done .mast { display: flex; animation: mast .6s var(--soft) both; }
   @keyframes mast { from { opacity: 0; translate: 0 -10px; } to { opacity: 1; translate: 0 0; } }
-  /* The bar every other page has: wordmark, the three places, and a HAIR under
-     it running the full window rather than the column's width. The tagline the
-     slot used to hold is the hero's own line, one screen up. */
-  .mast .brand { position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; flex-wrap: wrap; padding-bottom: 1.4rem; }
-  .mast .brand::after { content: ''; position: absolute; bottom: 0; left: 50%;
-    width: 100vw; margin-left: -50vw; height: 1px; background: rgba(var(--ink-t),.12); }
-  .mast .brand .mk { line-height: 0; text-decoration: none; }
-  .mast .brand img { width: 148px; height: auto; display: inline-block; vertical-align: baseline; }
-  .mast .links { display: flex; flex-wrap: wrap; align-items: baseline; gap: clamp(.9rem,2.4vw,1.7rem); }
-  :is(.mast, .hero) a.lnk { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase;
-    text-decoration: none; color: var(--mute); }
-  :is(.mast, .hero) a.lnk:hover { color: var(--coral); }
-  .mast a.lnk[aria-current="page"] { color: var(--ink); }
-  /* The account, as lib/site.js paints it, in this page's ink: kodo.css's
-     `.sitelinks` rules are not loaded here, so the same shapes are restated.
-     Twice on this page: in the mast, and at the top right of the intro screen,
-     where it arrives with the tagline. The z-index keeps its menu above the
-     lesson cards, which come later in the page and are positioned. */
-  .hero .links { position: absolute; top: 1.4rem; right: clamp(1rem, 3vw, 2rem); z-index: 20; display: flex; align-items: baseline; gap: clamp(.9rem, 2.4vw, 1.7rem);
-    pointer-events: auto; opacity: 0; transition: opacity .9s var(--soft); }
-#acct-card, #acct-card-2 { z-index: 40; }
-  .hero.said .links { opacity: 1; }
-  .hero .links .rule { display: none; }
-  .hero .links .lnk, .hero .links .navdrop, .hero > .burger { display: none; }
+  /* ---- the bar: lessons.html's, fixed so the runway's scroll math never sees it */
+  header.bar { position: fixed; top: 0; left: 0; right: 0; z-index: 30; background: rgba(var(--paper-t), .86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(var(--ink-t), .1); }
+  header.bar .wrap { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; flex-wrap: wrap; padding: 1rem 0 .9rem; }
+  header.bar .mk { line-height: 0; text-decoration: none; }
+  header.bar .mk img { width: 132px; height: auto; display: inline-block; vertical-align: baseline; }
+  header.bar nav.links { display: flex; flex-wrap: wrap; align-items: baseline; gap: clamp(.9rem, 2.4vw, 1.7rem); }
+  header.bar a.lnk, header.bar .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
+  header.bar a.lnk:hover, header.bar a.acct:hover { color: var(--coral); }
+  header.bar a.lnk[aria-current="page"], header.bar a.acct[aria-current="page"] { color: var(--ink); }
+  /* The account, as lib/site.js paints it. */
+  header.bar .links .signin { padding: .35em .9em; border: 1.5px solid currentColor; border-radius: 999px; }
+  /* The phone menu lib/site.js adds, restated from kodo.css's `.navfold`. */
+  .navfold > .burger { display: none; }
   @media (max-width: 560px) {
-    .hero > .burger { position: absolute; top: .9rem; right: .6rem; z-index: 21; display: grid; place-content: center; gap: 5px;
-      width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; opacity: 0; transition: opacity .9s var(--soft); }
-    .hero.said > .burger { opacity: 1; }
-    .hero > .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .25s var(--soft), opacity .2s; }
-    .hero.open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-    .hero.open > .burger i:nth-child(2) { opacity: 0; }
-    .hero.open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-    .hero .links { display: none; top: 4rem; right: 1rem; flex-direction: column; align-items: flex-start; gap: 0; min-width: 12rem; padding: .4rem 1.1rem;
-      background: var(--paper); border: 1px solid rgba(var(--ink-t),.12); border-radius: 12px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t),.45); }
-    .hero.open .links { display: flex; }
-    .hero .links > * { padding: .8rem 0; }
-    .hero .links .lnk { display: inline; }
-    .hero .links .navdrop { display: flex; }
-    .hero .links .menu .card { left: 0; right: auto; }
+    header.bar .wrap.navfold { align-items: center; gap: 0; }
+    .navfold > .mk { display: flex; align-self: center; }
+    .navfold > .burger { display: grid; place-content: center; gap: 5px; width: 44px; height: 44px; margin: 0 -10px 0 auto; padding: 0; border: 0; background: none; cursor: pointer; }
+    .navfold > .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .2s, opacity .2s; }
+    .navfold.nav-open > .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .navfold.nav-open > .burger i:nth-child(2) { opacity: 0; }
+    .navfold.nav-open > .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    header.bar .navfold > nav.links { display: none; flex-basis: 100%; flex-direction: column; align-items: flex-start; gap: 0; padding-top: .4rem; }
+    header.bar .navfold.nav-open > nav.links { display: flex; }
+    .navfold > nav > * { padding: .8rem 0; }
+    .navfold > nav .rule { display: none; }
+    .navfold > nav .menu .card { left: 0; right: auto; }
   }
-  :is(.mast, .hero) .links .acct { font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--mute); }
-  :is(.mast, .hero) .links a.acct:hover { color: var(--coral); }
-  :is(.mast, .hero) .links a.acct[aria-current="page"] { color: var(--ink); }
-  :is(.mast, .hero) .links .signin { padding: .35em .9em; border: 1.5px solid currentColor; border-radius: 999px; }
-  :is(.mast, .hero) .links .rule { width: 1px; height: 1.1rem; align-self: center; background: rgba(var(--ink-t), .18); }
-  :is(.mast, .hero) .links .menu { position: relative; display: inline-block; }
-  :is(.mast, .hero) .links .menu .summary { position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0; border: 0; background: none; cursor: pointer;
-    font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--mute); line-height: inherit; }
-  :is(.mast, .hero) .links .menu .summary:hover, .mast .links .menu .summary[aria-expanded="true"] { color: var(--ink); }
-  :is(.mast, .hero) .links .menu .summary:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 999px; }
-  :is(.mast, .hero) .links .avatar { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.7rem; height: 1.7rem; border-radius: 50%; overflow: hidden;
-    display: grid; place-items: center; background: var(--green); color: var(--paper); font-size: .8rem; letter-spacing: 0; }
-  :is(.mast, .hero) .links .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  /* `.card` is also this page's lesson card, which starts at opacity 0 and
-     is placed by scroll: both are undone here. */
-  :is(.mast, .hero) .links .menu .card { opacity: 1; transform: none; will-change: auto; position: absolute; right: 0; top: calc(100% + .6rem); z-index: 10; min-width: 15rem; padding: .9rem 1rem;
-    background: var(--paper); border: 1px solid rgba(var(--ink-t), .12); border-radius: 12px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t), .45);
-    display: flex; flex-direction: column; gap: .75rem; font: 400 .9rem var(--sans); color: var(--ink-2); text-transform: none; letter-spacing: 0; }
-  :is(.mast, .hero) .links .menu .card[hidden] { display: none; }
-  :is(.mast, .hero) .links .menu .who { margin: 0; display: flex; flex-direction: column; gap: .15rem; line-height: 1.3; }
-  :is(.mast, .hero) .links .menu .who b { color: var(--ink); font-weight: 600; }
-  :is(.mast, .hero) .links .menu .who span { color: var(--mute); font-size: .8rem; overflow-wrap: anywhere; }
-  :is(.mast, .hero) .links .menu .card button { align-self: flex-start; cursor: pointer; padding: .4em 1em; border: 1.5px solid var(--ink); border-radius: 999px;
-    background: transparent; color: var(--ink); font: 600 .8rem var(--sans); }
-  :is(.mast, .hero) .links .menu .card button:hover { background: var(--ink); color: var(--paper); }
-  .mast .burger { display: none; }
-  @media (max-width: 560px) {
-    .field .mast { width: calc(100% - 2rem); }
-    .mast .brand { flex-wrap: wrap; align-items: center; gap: 0; padding-bottom: 1rem; }
-    .mast .brand img { width: 112px; }
-    .mast .brand .mk { display: flex; }
-    .mast .burger { display: grid; place-content: center; gap: 5px; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; background: none; cursor: pointer; }
-    .mast .burger i { display: block; width: 22px; height: 2px; border-radius: 1px; background: var(--ink); transition: transform .25s var(--soft), opacity .2s; }
-    .mast .brand.open .burger i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-    .mast .brand.open .burger i:nth-child(2) { opacity: 0; }
-    .mast .brand.open .burger i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-    .mast .links { display: none; flex-basis: 100%; flex-direction: column; align-items: flex-start; gap: 0; padding-top: .6rem; }
-    .mast .brand.open .links { display: flex; }
-    .mast .links > * { padding: .8rem 0; }
-    .mast .links .rule { display: none; }
-    .mast .links .menu .card { left: 0; right: auto; }
-  }
-  .mast .sechead { display: flex; align-items: baseline; gap: 1.2rem; margin-top: 2.6rem; }
+  header.bar .links .rule { width: 1px; height: 1.1rem; align-self: center; background: rgba(var(--ink-t), .18); }
+  header.bar .links .menu { position: relative; display: inline-block; }
+  header.bar .links .menu .summary { position: relative; display: inline-block; padding: 0 0 0 2.2rem; margin: 0; border: 0; background: none; cursor: pointer; font: 600 .74rem var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--mute); line-height: inherit; }
+  header.bar .links .menu .summary:hover, header.bar .links .menu .summary[aria-expanded="true"] { color: var(--ink); }
+  header.bar .links .avatar { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.7rem; height: 1.7rem; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--deep); color: var(--paper); font-size: .8rem; letter-spacing: 0; }
+  header.bar .links .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  header.bar .links .menu .card { position: absolute; right: 0; top: calc(100% + .6rem); z-index: 10; min-width: 15rem; padding: .9rem 1rem; background: var(--paper); border: 1px solid rgba(var(--ink-t), .12); border-radius: 12px; box-shadow: 0 6px 24px -12px rgba(var(--ink-t), .45); display: flex; flex-direction: column; gap: .75rem; font: 400 .9rem var(--sans); color: var(--ink-2); text-transform: none; letter-spacing: 0; }
+  header.bar .links .menu .card[hidden] { display: none; }
+  header.bar .links .menu .who { margin: 0; display: flex; flex-direction: column; gap: .15rem; line-height: 1.3; }
+  header.bar .links .menu .who b { color: var(--ink); font-weight: 600; }
+  header.bar .links .menu .who span { color: var(--mute); font-size: .8rem; overflow-wrap: anywhere; }
+  header.bar .links .menu .card button { align-self: flex-start; cursor: pointer; padding: .4em 1em; border: 1.5px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font: 600 .8rem var(--sans); }
+  /* `.card` is also this page's lesson card, which starts at opacity 0 and is
+     placed by scroll: both are undone for the account menu. */
+  header.bar .links .menu .card { opacity: 1; transform: none; will-change: auto; }
+  #acct-card, #acct-card-2 { z-index: 40; }
+  /* The intro: the hero IS the wordmark, so the bar drops its own and its paper,
+     and the links arrive with the tagline. It becomes the standard bar when the
+     grid forms. */
+  header.bar { transition: background-color .5s var(--soft), border-color .5s var(--soft); }
+  header.bar .mk, header.bar nav.links, header.bar .burger { transition: opacity .9s var(--soft); }
+  body:has(.field:not(.done)) header.bar { background: transparent; border-bottom-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  body:has(.field:not(.done)) header.bar .mk { opacity: 0; visibility: hidden; }
+  body:has(.hero:not(.said)) header.bar :is(nav.links, .burger) { opacity: 0; pointer-events: none; }
+  body:has(.field:not(.done)) header.bar:has(.nav-open) { background: var(--paper); border-bottom-color: rgba(var(--ink-t), .1); }
+  @media (max-width: 560px) { body:has(.field:not(.done)) header.bar .navfold > .burger { margin-left: auto; } }
+  .field.done .sticky { padding-top: calc(6vh + 6rem); }
+
+  .mast .sechead { display: flex; align-items: baseline; gap: 1.2rem; }
   .mast .sechead h2 { font: 500 1.3rem/1 var(--display); letter-spacing: -0.01em; }
   .mast .sechead .rule { display: none; }
   .mast .sechead .count { display: none; }
@@ -386,6 +359,19 @@
 </head>
 <body>
 
+<header class="bar">
+  <div class="wrap">
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The site's three places, the same words and order as lib/site.js's
+         list; site.js adds the account and the phone menu. -->
+    <nav class="links" aria-label="Site">
+      <a class="lnk" href="/lessons">Lessons</a>
+      <a class="lnk" href="/library">Library</a>
+      <a class="lnk" href="/build">Build</a>
+    </nav>
+  </div>
+</header>
+
 <!-- ============ 1. the word ============ -->
 <!-- ============ 2. the constellation that becomes the shelf ============ -->
 <section class="field" id="field" style="--p:0; --w:0">
@@ -395,27 +381,8 @@
   <div class="mark" id="mark" title="play again"></div>
   <p class="tag"><b>Seeing it beats reading it.</b> Learn biology in 3D.</p>
   <div class="cue"><span>scroll</span><i></i></div>
-  <!-- Only the account: lib/site.js paints Sign in, or the person's links and menu. -->
-  <button class="burger" type="button" aria-label="Menu" aria-expanded="false"><i></i><i></i><i></i></button>
-  <!-- The account, painted by lib/site.js. The three places are here for the
-       phone menu only; above 560px the mast carries them. -->
-  <nav class="links" aria-label="Account">
-    <a class="lnk" href="/lessons">Lessons</a>
-    <a class="lnk" href="/library">Library</a>
-    <a class="lnk" href="/build">Build</a>
-  </nav>
 </div>
     <div class="mast">
-      <!-- The site's three places, in this page's own ink: lib/site.js writes
-           this row on every document-shell page and cannot write it here. The
-           words and the order are that list's. Lessons is where you are. -->
-      <div class="brand"><a class="mk" href="#field"><img src="kodolab-wordmark.svg" alt="kodolab"></a>
-        <button class="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="sitenav"><i></i><i></i><i></i></button>
-        <nav class="links" id="sitenav" aria-label="Site">
-          <a class="lnk" href="/lessons" aria-current="page">Lessons</a>
-          <a class="lnk" href="/library">Library</a>
-          <a class="lnk" href="/build">Build</a>
-        </nav></div>
       <div class="sechead"><h2>Lessons</h2><span class="rule"></span><span class="count" id="count"></span></div>
     </div>
     <ul class="cards" id="cards">
@@ -841,10 +808,6 @@ const lenis = new Lenis({ autoRaf: true, duration: 1.1 });
   }
 })();
 });
-</script>
-<script>
-for (const [row, b] of [['.mast .brand', '.mast .burger'], ['.hero', '.hero > .burger']].map(q => q.map(s => document.querySelector(s))))
-  b.addEventListener('click', () => b.setAttribute('aria-expanded', row.classList.toggle('open')));
 </script>
 </body>
 </html>

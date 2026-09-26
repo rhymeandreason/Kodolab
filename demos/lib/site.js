@@ -238,10 +238,10 @@
 
   /* Only a page that already has a bar, and only on the document shell — a
      lesson on body.lshell-page is a full-window scene, and Design.md forbids a
-     second masthead over it. Same rule the foot below follows. The builder's
-     bar and the front door's mast are the two exceptions: each writes the four
+     second masthead over it. Same rule the foot below follows. A page with
+     its own `header.bar` (lessons, the front door, the builder) writes the
      links itself, in its own ink, and is only given the account. */
-  var OWN = 'header.bar nav.links, .mast nav.links, .hero nav.links';
+  var OWN = 'header.bar nav.links';
   function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
   // Below 560px a bar's links fold behind a menu button (kodo.css `.navfold`).
   function fold(links) {
