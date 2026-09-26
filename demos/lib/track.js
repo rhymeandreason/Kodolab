@@ -174,6 +174,8 @@
        app), the frame's own page has the gear; a second one inside would
        float over the card. Events still report from the frame. */
     if (window.top !== window.self) return;
+    /* The homepage is not a lesson; nothing on it reports. */
+    if (PAGE === '/') return;
     var st = document.createElement('style'); st.textContent = STYLE; document.head.appendChild(st);
     var b = document.createElement('button');
     b.id = 'classgear'; b.type = 'button'; b.innerHTML = GEAR;
