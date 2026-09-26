@@ -169,17 +169,21 @@
   .field.done .sticky { padding-top: calc(6vh + 6rem); }
 
   .mast .sechead { display: flex; align-items: baseline; gap: 1.2rem; }
-  .mast .sechead h2 { font: 500 1.3rem/1 var(--display); letter-spacing: -0.01em; }
+  .mast .sechead h2 { font: 500 clamp(1.8rem, 3vw, 2.4rem)/1 var(--display); letter-spacing: -0.02em; }
   .mast .sechead .rule { display: none; }
   .mast .sechead .count { display: none; }
   .field.done .hero { display: none; }
   .field.done .cards { position: static; transform: none; margin: 0 auto; }
+  .field.done :is(.mast, .cards) { width: min(1180px, calc(100% - 4rem)); }
   .field .more { display: none; justify-content: center; margin-top: 2.4rem; }
   .field.done .more { display: flex; }
   .cards {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -48%);
-    width: min(920px, calc(100% - 6rem));
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; list-style: none; margin: 0; padding: 0;
+    /* The page column from the start, so the grid forms at the size it keeps.
+       The third term fits two rows (each ~4/9 w + text) under the bar on a
+       short screen; there the grid widens to the column once formed. */
+    width: min(1180px, calc(100% - 4rem), calc((100vh - 360px) * 2.25));
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6rem; list-style: none; margin: 0; padding: 0;
   }
   .card {
     /* --sx --sy --rot --sc: where the card floats when scattered. The scroll
@@ -228,7 +232,8 @@
   .card .text p { margin: .4rem 0 0; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: .88rem; line-height: 1.35; color: var(--ink-2); }
   @media (max-width: 900px) { .cards { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px) {
-    .cards { width: calc(100% - 2rem); gap: .6rem; }
+    .cards, .field.done :is(.mast, .cards) { width: calc(100% - 2rem); }
+    .cards { gap: .6rem; }
     .card a { border-radius: 12px; }
     .card .stage { aspect-ratio: 1; }
     .card .stage .num { left: 8px; top: 8px; font-size: 9px; padding: 4px 6px; }
@@ -726,14 +731,22 @@ const lenis = new Lenis({ autoRaf: true, duration: 1.1 });
       // place on screen is measured BEFORE the layout switches and the scroll
       // is moved to put it back there, so the reader sees no hop.
       const cards = document.getElementById("cards");
-      const before = cards.getBoundingClientRect().top;
+      const was = cards.getBoundingClientRect(), before = was.top;
       // HOW FAST THE READER WAS GOING, read BEFORE the reposition, which zeroes
       // it. Lenis reports velocity in px per frame, signed by direction.
       const v = lenis.velocity || 0;
       field.style.setProperty("--w", 1); field.style.setProperty("--p", 1);
       field.classList.add("in", "told", "set", "done");
       field.style.height = "auto";
-      const after = cards.getBoundingClientRect().top + scrollY;
+      const now = cards.getBoundingClientRect(), after = now.top + scrollY;
+      // On a short screen the grid widens to the column here. Resized once and
+      // eased back from its old scale about its top edge: animating width
+      // would reflow the page and resize six canvases every frame mid-scroll.
+      if (Math.abs(now.width - was.width) > 1) {
+        cards.style.transformOrigin = "50% 0";
+        cards.animate([{ transform: `scale(${was.width / now.width})` }, { transform: "none" }],
+          { duration: 600, easing: "cubic-bezier(0.22, 1, 0.36, 1)" });
+      }
       // through Lenis, immediately: the section just stopped being a runway, so
       // its cached page height is stale and a raw scrollTo lands nowhere.
       const to = Math.max(0, after - before);
