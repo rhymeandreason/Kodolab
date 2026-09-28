@@ -136,8 +136,6 @@
   .card:hover .pic.mol img { transform: scale(1.08); }
   .card .pic .tag { position: absolute; left: 12px; top: 11px; font: 600 10.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink); background: rgba(255, 255, 255, .8); backdrop-filter: blur(6px); padding: 6px 9px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
   .card .pic .tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--hue); display: inline-block; }
-  .card .pic .tag.soon { color: var(--ink-3); }
-  .card .pic .tag.soon i { background: transparent; box-shadow: inset 0 0 0 2px var(--hue); }
   /* A TEASER: a lesson that is coming, drawn as an outline. No still, no
      link, no embed button; a dotted stage where the picture will go. */
   .card.teaser { background: transparent; border: 1.5px dashed rgba(var(--ink-t), .22); box-shadow: none; }
@@ -185,8 +183,6 @@
   .hub .body { padding: 1.5rem 1.6rem; justify-content: center; }
   .hub h3 { font-size: 1.7rem; }
   .hub p { font-size: 1rem; }
-  .hub .pic .tag { background: var(--ink); color: #fff; }
-  .hub .pic .tag i { background: var(--hue); }
   /* Three in a row, joined by arrows; the branch hangs under the first. */
   .path { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.6rem 2.4rem; position: relative; }
   .path .card { overflow: visible; }
@@ -389,7 +385,6 @@ const UNITS = [
   { key: 'gene',  n: '06', hue: 'var(--blue)',   title: 'Genetics',              why: 'The helix, from real coordinates, taken apart.' },
 ];
 const LESSONS = window.Lessons;
-const STATUS = { featured: 'Featured', new: 'New', preview: 'Preview', gallery: 'Gallery' };
 const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const EMB_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>';
 
@@ -403,7 +398,7 @@ function card(l, extra = '') {
   if (l.soon) return teaser(l);
   const marks = [l.build && '<span class="mark made">⌘ Made with Build</span>'].filter(Boolean).join('');
   return `<article class="card ${extra}" data-key="${l.key}">
-    <a class="pic ${l.mol ? 'mol' : ''}" href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"><span class="tag ${l.status === 'preview' ? 'soon' : ''}"><i></i>${l.hub ? 'Start here' : STATUS[l.status]}</span></a>
+    <a class="pic ${l.mol ? 'mol' : ''}" href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"></a>
     <div class="body">
       <h3><a href="${l.url}">${esc(l.title)}</a></h3>
       <p>${esc(l.blurb)}</p>
