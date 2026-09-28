@@ -31,6 +31,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
 <style>
+  /* lib/site.js marks <html> .signed-in; a CTA pair shows one side. */
+  html.signed-in .if-out, html:not(.signed-in) .if-in { display: none !important; }
   :root {
     /* SHORT NAMES ONLY. Every value is brand.css's, aliased so this page's
        inline `--dot:var(--coral)` stays short; a hex typed here is a colour
@@ -439,7 +441,7 @@
       <span class="eyebrow">Kodolab Build</span>
       <h2>Ask for a lesson<br>that <em>doesn't exist yet.</em></h2>
       <p class="lede">Build your own lesson with our library of 3D components and design templates. Seconds between iterations. Share with a link. Free and extendable.</p>
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1.6rem"><a class="cta big hot" href="/login?next=%2Fbuild">Make an account →</a><span class="beta" style="margin:0"><i></i>Beta</span></div>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1.6rem"><a class="cta big hot if-out" href="/login?next=%2Fbuild">Make an account →</a><a class="cta big hot if-in" href="/build">Open the builder →</a><span class="beta" style="margin:0"><i></i>Beta</span></div>
     </div>
     <div class="ask" id="ask">
       <form id="askForm">
@@ -493,7 +495,7 @@
     <span class="eyebrow" style="color:var(--ink)">Beta</span>
     <h2>Start <em>building</em></h2>
     <p>The builder is open to everyone during the beta. Sign in with Google or email to make a free account.</p>
-    <a class="cta big" href="/login?next=%2Fbuild">Make an account →</a>
+    <a class="cta big if-out" href="/login?next=%2Fbuild">Make an account →</a><a class="cta big if-in" href="/build">Open the builder →</a>
     <p class="small">Teaching a class? <a href="mailto:mary@kodolab.org?subject=Teacher%20account">Email me</a> to request a teacher account.</p>
   </div>
 </section>

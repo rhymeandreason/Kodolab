@@ -33,6 +33,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
 <style>
+  /* lib/site.js marks <html> .signed-in; a CTA pair shows one side. */
+  html.signed-in .if-out, html:not(.signed-in) .if-in { display: none !important; }
   :root {
     --paper: var(--brand-paper); --paper-t: var(--brand-paper-t); --paper-2: var(--brand-paper-2);
     --ink: var(--brand-ink); --ink-t: var(--brand-ink-t); --ink-2: var(--brand-ink-2); --ink-3: var(--brand-ink-3);
@@ -348,8 +350,8 @@
       <p class="lede">It takes about five minutes and is free. You edit it in words, every change is a version, and you share it with a link.</p>
       <p class="lede">Anyone can make a free account and start building.</p>
       <div class="row">
-        <a class="cta big hot" href="/login?next=%2Fbuild">Make an account →</a>
-        <a class="cta big light" href="/build">Open the builder</a>
+        <a class="cta big hot if-out" href="/login?next=%2Fbuild">Make an account →</a>
+        <a class="cta big light if-in" href="/build">Open the builder</a>
         <span class="beta"><i></i>Beta · free</span>
       </div>
     </div>

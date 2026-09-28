@@ -144,6 +144,7 @@
      menu. Everything the account adds is marked `.acct` so a repaint can clear
      it without touching the site's four links. */
   function paintAccount(links, user) {
+    document.documentElement.classList.toggle('signed-in', !!user);
     Array.prototype.slice.call(links.querySelectorAll('.acct')).forEach(function (n) { n.remove(); });
     var here = place();
 
