@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- deck.html — a five-slide talk about Kodolab. Front-door palette (brand.css
      alone, like index.html). Each slide is a 1600x900 frame scaled to the
-     window; its band colour fills the letterbox. Arrow keys, space, or click. -->
+     window; its band colour fills the letterbox. Arrow keys or space; R or Home back to the start. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -60,15 +60,18 @@
   .s1 h2 { font-size: 76px; line-height: 1.02; }
   .s1 h2 em { color: var(--coral); }
   .s1 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 80px; }
-  .s1 .card { background: #fff; border-radius: 22px; padding: 44px 48px; height: 420px;
+  .s1 .card { display: flex; flex-direction: column; background: #fff; border-radius: 22px; padding: 44px 48px;
     box-shadow: 0 1px 2px rgba(var(--ink-t),.05), 0 26px 60px -20px rgba(var(--ink-t),.35); }
   .s1 .k { font: 500 16px var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--dot); margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
   .s1 .k i { width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
   .s1 h3 { font-size: 50px; line-height: 1.05; }
   .s1 .who { font: 400 28px/1.35 var(--serif); color: var(--ink-2); margin: 20px 0 0; }
   .s1 .who b { font-weight: 600; color: var(--ink); }
-  .s1 .url { display: inline-block; margin-top: 28px; font: 500 16px var(--sans); letter-spacing: .08em; color: var(--mute); text-decoration: none; border-bottom: 1px solid rgba(var(--ink-t),.25); padding-bottom: 3px; }
-  .bars { display: grid; grid-template-columns: 190px 1fr; gap: 12px 16px; margin-top: 30px; }
+  .s1 .note { font: 400 22px/1.35 var(--serif); color: var(--ink-2); margin: 12px 0 0; }
+  .s1 .facts { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0 0; }
+  .s1 .facts span { font: 500 17px var(--sans); letter-spacing: .04em; color: var(--ink); padding: 8px 16px; border-radius: 999px; background: var(--paper-2); }
+  .s1 .url { align-self: flex-start; margin-top: auto; padding-top: 28px; font: 500 16px var(--sans); letter-spacing: .08em; color: var(--mute); text-decoration: none; border-bottom: 1px solid rgba(var(--ink-t),.25); padding-bottom: 3px; }
+  .bars { display: grid; grid-template-columns: 190px 1fr; gap: 12px 16px; margin-top: 24px; }
   .bars .name { font: 400 20px var(--sans); color: var(--ink-2); display: flex; align-items: center; gap: 10px; white-space: nowrap; }
   .bars .bar { display: flex; align-items: center; gap: 10px; }
   .bars .bar i { display: block; height: 16px; border-radius: 0 4px 4px 0; background: var(--c); width: 0;
@@ -76,7 +79,7 @@
   .slide.on .bars .bar i { width: var(--w); }
   .bars .v { font: 500 18px var(--sans); color: var(--ink-3); font-variant-numeric: tabular-nums; }
   .s1 .src .sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; background: var(--blue); margin-right: 8px; vertical-align: -1px; }
-  .s1 .src { margin-top: 18px; font: 400 14px var(--sans); color: var(--mute); }
+  .s1 .src { margin-top: auto; padding-top: 18px; font: 400 14px var(--sans); color: var(--mute); }
 
   /* optical centre: everything sits 40px above the frame's true middle, as the intro's word does */
   .s1 .frame, .s5 .frame { padding-bottom: 176px; }
@@ -249,11 +252,13 @@
         <p class="k"><i></i>Class test</p>
         <h3>d.tech High School</h3>
         <p class="who"><b>Neal Addicott</b><br>Biology teacher</p>
+        <p class="facts"><span>Honors Biology</span><span>30-minute class activity</span></p>
         <a class="url" href="https://www.designtechhighschool.org" target="_blank" rel="noopener">designtechhighschool.org</a>
       </div>
       <div class="card rise" style="--d:.26s; --dot:var(--blue)">
         <p class="k"><i></i>Organic search</p>
         <h3 id="euHead"></h3>
+        <p class="note" id="euNote"></p>
         <div class="bars" id="bars"></div>
         <div class="src"><i class="sw"></i>Europe · visitors, top countries · Vercel Web Analytics</div>
       </div>
@@ -404,6 +409,9 @@ const TRAFFIC = [
     <span class="bar"><i style="--w:${(r.v / maxV * 80).toFixed(1)}%;--c:${r.eu ? 'var(--blue)' : '#b3b9c6'};--d:${.4 + i * .06}s"></i><span class="v">${r.v}</span></span>`).join('');
   const sum = (rows, k) => rows.reduce((a, r) => a + r[k], 0);
   const eu = TRAFFIC.filter(r => r.eu);
+  const ppv = rows => sum(rows, 'pv') / sum(rows, 'v'), us = TRAFFIC[0];
+  document.getElementById('euNote').textContent =
+    `European visitors view ${Math.round(ppv(eu))} pages each, ${Math.round(ppv(eu) / ppv([us]))}× the US.`;
   document.getElementById('euHead').textContent = `${Math.round(sum(eu, 'v') / sum(TRAFFIC, 'v') * 100)}% from Europe`;
 })();
 
@@ -451,10 +459,10 @@ const Build = (() => {
     for (let i = 0; run === id; i = (i + 1) % ASKS.length) {
       const a = ASKS[i];
       for (let n = 0; n <= a.q.length && run === id; n++) { typed.textContent = a.q.slice(0, n); await wait(22); }
-      await wait(350); if (run !== id) return;
+      await wait(200); if (run !== id) return;
       imgs.forEach((im, j) => im.classList.toggle('on', j === i));
       chips.forEach(c => c.classList.toggle('on', c.textContent === a.part));
-      await wait(2600);
+      await wait(1600);
     }
   }
   return { start() { mark.build(); loop(++run); }, stop() { run++; } };
@@ -486,12 +494,8 @@ const Build = (() => {
   addEventListener('keydown', e => {
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(at + 1); }
     if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(at - 1); }
-    if (e.key === 'Home') go(0);
+    if (e.key === 'Home' || e.key === 'r' || e.key === 'R') go(0);
     if (e.key === 'End') go(slides.length - 1);
-  });
-  addEventListener('click', e => {
-    if (e.target.closest('a, button')) return;
-    go(e.clientX > innerWidth / 3 ? at + 1 : at - 1);
   });
   addEventListener('hashchange', () => go((parseInt(location.hash.slice(1), 10) || 1) - 1));
   addEventListener('resize', fit);
