@@ -34,10 +34,12 @@ const COOKIE = 'kl_session';
 const SESSION_DAYS = 30;
 
 /* A code is short because it is typed from a phone onto a laptop, and short is
-   safe only with all three of these: ten minutes, five guesses, one live code
+   safe only with all three of these: a short life, five guesses, one live code
    per address. A million codes and five guesses is one chance in 200,000 per
-   send, and the cooldown is what stops that being retried in bulk. */
-const CODE_TTL_MIN   = 10;
+   send, and the cooldown is what stops that being retried in bulk. The guesses
+   are counted per code, so the odds do not grow with the TTL; thirty minutes is
+   for a school inbox that delivers slowly. */
+const CODE_TTL_MIN   = 30;
 const MAX_ATTEMPTS   = 5;
 const COOLDOWN_S     = 60;
 const MAX_SENDS_DAY  = 10;   // to one address
