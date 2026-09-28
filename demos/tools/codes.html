@@ -31,6 +31,7 @@
   .off, .off code { color: var(--text-muted); text-decoration: line-through; }
   .tag { display: inline-block; padding: .1em .6em; border-radius: 999px; font-family: var(--font-ui); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; background: color-mix(in srgb, var(--text-muted) 14%, transparent); color: var(--text-dim); }
   .tag.ok { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+  .reminder { margin: 1.5rem 0 0; padding: .9rem 1.2rem; border-radius: 12px; border: 1px solid var(--hue-coral); background: color-mix(in srgb, var(--hue-coral) 8%, var(--surface-card)); font-size: .92rem; line-height: 1.5; max-width: 60em; }
   .tag.warn { background: color-mix(in srgb, var(--hue-coral) 16%, transparent); color: var(--hue-coral); }
 
   /* The mint forms: a row on a card, so making a code reads as one act. */
@@ -85,6 +86,7 @@
     <p class="deck">Who may build, and how they get in. This machine only.</p>
   </header>
   <main>
+    <p class="reminder"><b>Open sign-up ends Oct 31</b> (Pacific). Until then any account is admitted on sign-in, cohort <code>open</code>. By Nov 1: extend <code>OPEN_UNTIL</code> in <code>api/_accounts.js</code>, or restore the invite wording on /login, /build, the homepage and /lessons (commit <code>60315d3</code>). Delete this note after.</p>
     <p class="err" id="err" hidden></p>
     <div class="fresh" id="fresh" hidden></div>
 

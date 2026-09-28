@@ -189,6 +189,7 @@
   a.bigbtn small { display: block; font-size: .85rem; font-weight: 400; opacity: .75; margin-top: .15rem; }
   a.bigbtn .go { font-size: 1.6rem; line-height: 1; }
   a.bigbtn:hover { opacity: .92; }
+  .reminder { margin: 0 0 1.5rem; padding: .9rem 1.2rem; border-radius: 12px; border: 1px solid var(--spark); background: color-mix(in srgb, var(--spark) 8%, var(--card)); font-size: .92rem; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -197,6 +198,8 @@
   <p class="sub">Internal index — not linked from the public site. Grouped by topic; badge is status per <code>CLAUDE.md</code>.</p>
 
   <a class="big-button" href="tools/social.html">Social image generator →</a>
+
+  <p class="reminder"><b>Open sign-up ends Oct 31</b> (Pacific). Until then any account is admitted on sign-in, cohort <code>open</code>. By Nov 1: extend <code>OPEN_UNTIL</code> in <code>api/_accounts.js</code>, or restore the invite wording on /login, /build, the homepage and /lessons (commit <code>60315d3</code>). Delete this note after.</p>
 
   <a class="bigbtn" href="tools/codes.html"><span>Access codes<small>Teachers, seat codes, invites, accounts. Localhost only.</small></span><span class="go">&rarr;</span></a>
 
