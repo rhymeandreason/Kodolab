@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<!-- deck.html — a five-slide talk about Kodolab. Front-door palette (brand.css
+     alone, like index.html). Each slide is a 1600x900 frame scaled to the
+     window; its band colour fills the letterbox. Arrow keys, space, or click. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kodolab — deck</title>
+<link rel="stylesheet" href="/demos/css/brand.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
+<style>
+  :root {
+    --paper: var(--brand-paper); --paper-t: var(--brand-paper-t); --paper-2: var(--brand-paper-2);
+    --ink: var(--brand-ink); --ink-t: var(--brand-ink-t); --ink-2: var(--brand-ink-2); --ink-3: var(--brand-ink-3); --mute: var(--brand-mute);
+    --green: var(--hue-green); --coral: var(--hue-coral); --blue: var(--hue-blue);
+    --amber: var(--hue-amber); --violet: var(--hue-violet); --butter: var(--hue-butter);
+    --serif: 'Literata', Georgia, serif;
+    --sans: 'Jost', -apple-system, 'Segoe UI', sans-serif;
+    --display: 'Futura', 'Jost', -apple-system, sans-serif;
+    --elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --k: 1;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 500; letter-spacing: -0.015em; margin: 0; }
+  h1 em, h2 em, h3 em { font-style: normal; }
+  .eyebrow { display: block; font: 500 20px/1 var(--sans); letter-spacing: 0.22em; text-transform: uppercase; color: var(--coral); margin-bottom: 22px; }
+  .lede { font: 400 30px/1.4 var(--serif); color: var(--ink-2); margin: 28px 0 0; }
+
+  /* ---- the deck ---------------------------------------------------------- */
+  .slide { position: fixed; inset: 0; background: var(--bg, var(--paper)); opacity: 0; visibility: hidden;
+    transition: opacity .6s var(--soft), visibility 0s .6s; }
+  .slide.on { opacity: 1; visibility: visible; transition: opacity .6s var(--soft); z-index: 1; }
+  .frame { position: absolute; left: 50%; top: 50%; width: 1600px; height: 900px;
+    transform: translate(-50%, -50%) scale(var(--k)); padding: 96px 120px; overflow: hidden; }
+  /* pieces with .rise come in on arrival, staggered by --d */
+  .rise { opacity: 0; translate: 0 24px; transition: opacity .7s var(--soft), translate .8s var(--soft); transition-delay: var(--d, 0s); }
+  .slide.on .rise { opacity: 1; translate: 0 0; }
+
+  .chrome { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px; pointer-events: none; }
+  .chrome img { width: 96px; opacity: .8; transition: opacity .4s; }
+  .dots { display: flex; gap: 10px; pointer-events: auto; }
+  .dots button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 0; cursor: pointer;
+    background: rgba(var(--ink-t), .22); transition: background .3s, transform .3s var(--elastic); }
+  .dots button[aria-current="true"] { background: var(--ink); transform: scale(1.3); }
+  body[data-dark] .dots button { background: rgba(var(--paper-t), .3); }
+  body[data-dark] .dots button[aria-current="true"] { background: var(--paper); }
+  body[data-dark] .chrome img, body[data-nomark] .chrome img { opacity: 0; }
+
+  /* ---- 1. early users ---------------------------------------------------- */
+  .s1 .frame { display: flex; flex-direction: column; justify-content: center; }
+  .s1 h2 { font-size: 76px; line-height: 1.02; }
+  .s1 h2 em { color: var(--coral); }
+  .s1 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 80px; }
+  .s1 .card { background: #fff; border-radius: 22px; padding: 44px 48px; height: 420px;
+    box-shadow: 0 1px 2px rgba(var(--ink-t),.05), 0 26px 60px -20px rgba(var(--ink-t),.35); }
+  .s1 .k { font: 500 16px var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--dot); margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
+  .s1 .k i { width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+  .s1 h3 { font-size: 50px; line-height: 1.05; }
+  .s1 .who { font: 400 28px/1.35 var(--serif); color: var(--ink-2); margin: 20px 0 0; }
+  .s1 .who b { font-weight: 600; color: var(--ink); }
+  .s1 .url { display: inline-block; margin-top: 28px; font: 500 16px var(--sans); letter-spacing: .08em; color: var(--mute); text-decoration: none; border-bottom: 1px solid rgba(var(--ink-t),.25); padding-bottom: 3px; }
+  .bars { display: grid; grid-template-columns: 190px 1fr; gap: 12px 16px; margin-top: 30px; }
+  .bars .name { font: 400 20px var(--sans); color: var(--ink-2); display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  .bars .bar { display: flex; align-items: center; gap: 10px; }
+  .bars .bar i { display: block; height: 16px; border-radius: 0 4px 4px 0; background: var(--c); width: 0;
+    transition: width 1s var(--soft); transition-delay: var(--d, 0s); }
+  .slide.on .bars .bar i { width: var(--w); }
+  .bars .v { font: 500 18px var(--sans); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .s1 .src .sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; background: var(--blue); margin-right: 8px; vertical-align: -1px; }
+  .s1 .src { margin-top: 18px; font: 400 14px var(--sans); color: var(--mute); }
+
+  /* optical centre: everything sits 40px above the frame's true middle, as the intro's word does */
+  .s1 .frame, .s5 .frame { padding-bottom: 176px; }
+  .s2 .text, .s4 .grid { padding-bottom: 80px; }
+  .s3 .frame { padding-top: 56px; }
+
+  /* ---- 0. the word -------------------------------------------------------- */
+  .s0 .frame { display: grid; place-items: center; }
+  .s0 .mark { width: 1100px; margin-top: -110px; cursor: pointer; position: relative; z-index: 2; }
+  .s0 .mark svg { width: 100%; height: auto; overflow: visible; display: block; }
+  .s0 .prim { transform-box: fill-box; transform-origin: center; will-change: transform, opacity; }
+  .s0 .hole { fill: var(--paper); transform-box: fill-box; transform-origin: center; }
+  .s0 .stem, .s0 .diag { fill: var(--ink); }
+  /* index.html's .hero .tag: arrives once the word has landed */
+  .s0 .tag { position: absolute; left: 0; right: 0; bottom: 250px; text-align: center; margin: 0;
+    font: italic 400 40px/1.3 var(--serif); color: var(--ink-2); opacity: 0; translate: 0 14px; transition: opacity .9s var(--soft), translate .9s var(--soft); }
+  .s0 .tag b { font-weight: 600; font-style: normal; }
+  .s0.said .tag { opacity: 1; translate: 0 0; }
+  .motes { position: absolute; inset: 0; pointer-events: none; }
+  .motes i { position: absolute; border-radius: 50%; opacity: 0; animation: mote 14s ease-in-out infinite; }
+  .s0.said .motes i, .s5 .motes i { opacity: .55; }
+  @keyframes mote { 0%, 100% { translate: 0 0; } 50% { translate: 18px -26px; } }
+
+  /* ---- 2. lessons -------------------------------------------------------- */
+  .s2 { --bg: var(--paper); }   /* the lessons page's paper, so a card's --paper-2 picture reads as a card */
+  .s2 .text { position: relative; z-index: 3; width: 580px; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+  .s2 h2 { font-size: 96px; line-height: 1.0; }
+  .s2 h2 em { color: var(--coral); }
+  /* every live lesson, in columns that scroll past; the lessons page's card picture */
+  .reel { position: absolute; left: 700px; right: 0; top: 0; bottom: 0; display: flex; gap: 24px; padding-right: 40px;
+    -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
+  .reel .col { flex: 1; display: flex; flex-direction: column; gap: 24px; animation: rise var(--dur) linear infinite; }
+  .reel .col.down { animation-direction: reverse; }
+  .reel .col:nth-child(2) { margin-top: -120px; }
+  @keyframes rise { to { transform: translateY(calc(-50% - 12px)); } }
+  .reel figure { margin: 0; background: #fff; border-radius: 16px; overflow: hidden; flex: none;
+    box-shadow: 0 1px 2px rgba(var(--ink-t),.06), 0 14px 36px -16px rgba(var(--ink-t),.3); }
+  .reel .pic { display: block; aspect-ratio: 3/2; background: var(--paper-2); overflow: hidden; }
+  .reel .pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .reel .pic.mol img { object-fit: contain; transform: scale(1.05); }
+  .reel figcaption { padding: 11px 14px 13px; font: 500 17px/1.2 var(--display); display: flex; align-items: center; gap: 9px; border-top: 1px solid rgba(var(--ink-t),.08); }
+  .reel figcaption i { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); flex: none; }
+  @keyframes drift { 0%, 100% { translate: 0 0; } 33% { translate: 6px -10px; } 66% { translate: -8px 5px; } }
+
+  /* ---- 3. library -------------------------------------------------------- */
+  .s3 { --bg: var(--ink); color: var(--paper); }
+  .s3 .eyebrow { color: var(--violet); }
+  .s3 h2 { font-size: 84px; line-height: 1.02; color: #fff; }
+  .s3 h2 em { color: var(--violet); }
+  .s3 .lede { color: rgba(var(--paper-t), .7); max-width: 1300px; }
+  .belt { position: absolute; left: 0; width: max-content; display: flex; gap: 22px; animation: slide 60s linear infinite; }
+  .belt.one { top: 370px; }
+  .belt.two { top: 635px; animation-direction: reverse; animation-duration: 75s; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+  .belt figure { margin: 0; width: 250px; flex: none; }
+  .belt .pic { aspect-ratio: 4/3; border-radius: 16px; overflow: hidden; background: #1E2C4F; border: 1px solid rgba(255,255,255,.12); }
+  .belt .pic.mol img { object-fit: contain; }
+  .belt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .belt figcaption { margin-top: 8px; font: 400 18px var(--serif); color: rgba(var(--paper-t), .85); }
+
+  /* ---- 4. build ---------------------------------------------------------- */
+  .s4 { --bg: var(--butter); }
+  .s4 .grid { display: grid; grid-template-columns: 560px 1fr; gap: 70px; align-items: center; height: 100%; }
+  .s4 h2 { font-size: 80px; line-height: 1.02; }
+  /* the builder's animated wordmark (build/wordmark.js), styled as build.css does. Its box is sized for
+     `building…` with `build` centred at 1.32×; the negative margin puts the b on the text's left edge. */
+  .wordmark { --wm-ink: var(--ink); --wm-paper: var(--butter);
+    --wm-disc-1: #2FB86B; --wm-disc-2: #F26B4E; --wm-disc-3: #3B7DD8; --wm-disc-4: #0FA3A3; --wm-disc-5: #8B5CF6;
+    width: 560px; margin: 0 0 20px -113px; }
+  .wordmark svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .wordmark .prim { transform-box: fill-box; transform-origin: center; opacity: 0; }
+  .wordmark .hole { fill: var(--wm-paper); transform-box: fill-box; transform-origin: center; }
+  .wordmark .stem, .wordmark .dot { fill: var(--wm-ink); }
+  .wordmark .arc { fill: none; stroke: var(--wm-ink); stroke-width: 14; }
+  .s4 h2 em { color: var(--coral); }
+  .s4 .lede { color: var(--ink); max-width: 520px; }
+  .machine { position: relative; }
+  /* two lines tall whatever the question, so the window under it never moves */
+  .ask { background: #FFFDF7; border-radius: 18px; border: 1px solid rgba(var(--ink-t),.12); padding: 24px 28px; height: calc(2 * 1.3em + 50px); overflow: hidden;
+    font: 400 32px/1.3 var(--serif); color: var(--ink); box-shadow: 0 16px 40px -14px rgba(var(--ink-t),.3); }
+  .ask .caret { display: inline-block; width: 2px; height: 1em; background: var(--ink); vertical-align: -.12em; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .arrow { height: 54px; display: grid; place-items: center; }
+  .arrow svg { width: 26px; height: 40px; stroke: var(--ink); stroke-width: 2; fill: none; }
+  .app { background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 1px 2px rgba(var(--ink-t),.06), 0 30px 60px -20px rgba(var(--ink-t),.45); }
+  .app .bar { height: 38px; display: flex; align-items: center; gap: 7px; padding: 0 16px; border-bottom: 1px solid rgba(var(--ink-t),.08); }
+  .app .bar i { width: 11px; height: 11px; border-radius: 50%; background: rgba(var(--ink-t),.14); }
+  .app .view { position: relative; aspect-ratio: 536/358; }
+  .app .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; scale: .96; transition: opacity .6s var(--soft), scale .8s var(--soft); }
+  .app .view img.on { opacity: 1; scale: 1; }
+  .parts { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+  .parts span { font: 500 15px var(--sans); letter-spacing: .08em; padding: 7px 14px; border-radius: 999px; border: 1.5px solid rgba(var(--ink-t),.35); transition: background .3s, color .3s, border-color .3s; }
+  .parts span.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  /* ---- 5. contact: the intro's paper and motes, its word finished ------------ */
+  .s5 .frame { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .s5 .wm { width: 820px; position: relative; }
+  .s5 .url { margin-top: 34px; font: 500 24px var(--sans); letter-spacing: .32em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; position: relative; }
+  .s5 .url:hover { color: var(--coral); }
+  .s5 .contact { margin-top: 120px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .s5 .contact b { font: 500 40px var(--display); color: var(--ink); margin-bottom: 6px; }
+  .s5 .contact a { font: 400 30px var(--serif); color: var(--ink-2); text-decoration: none; }
+  .s5 .contact a:hover { color: var(--coral); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reel .col, .belt, .ask .caret { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 0. the word ============ -->
+<section class="slide s0" data-name="kodolab" data-nomark>
+  <div class="frame">
+    <div class="motes" id="introMotes"></div>
+    <div class="mark" id="introMark" title="play again"></div>
+    <p class="tag"><b>Seeing it beats reading it.</b> Learn biology in 3D.</p>
+  </div>
+</section>
+
+<!-- ============ 2. lessons ============ -->
+<section class="slide s2" data-name="lessons">
+  <div class="frame">
+    <div class="reel" id="reel"></div>
+    <div class="text">
+      <span class="eyebrow rise">Open source</span>
+      <h2 class="rise" style="--d:.08s">Threshold concepts for Biology<br>in <em>3D.</em></h2>
+      <p class="lede rise" style="--d:.1s; font-size:26px">Free forever, embeddable on any page.<br> The way it should be.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. library ============ -->
+<section class="slide s3" data-name="library" data-dark>
+  <div class="frame">
+    <span class="eyebrow rise">Library</span>
+    <h2 class="rise" style="--d:.08s">Real structures, <em>real data.</em></h2>
+    <p class="lede rise" style="--d:.16s">Proteins from the Protein Data Bank, and molecules from PubChem.</p>
+    <div class="belt one" id="beltOne"></div>
+    <div class="belt two" id="beltTwo"></div>
+  </div>
+</section>
+
+<!-- ============ 4. build ============ -->
+<section class="slide s4" data-name="build">
+  <div class="frame">
+    <div class="grid">
+      <div>
+        <div class="wordmark" id="buildMark" aria-label="build"></div>
+        <h2 class="rise" style="--d:.08s">Make your own lesson.</h2>
+        <p class="lede rise" style="--d:.16s">Build from accurate 3D components. Super fast, low tokens.</p>
+        <div class="parts rise" style="--d:.24s" id="parts"></div>
+      </div>
+      <div class="machine rise" style="--d:.2s">
+        <div class="ask"><span id="typed"></span><span class="caret"></span></div>
+        <div class="arrow"><svg viewBox="0 0 26 40"><path d="M13 2v34M3 26l10 10 10-10"/></svg></div>
+        <div class="app"><div class="bar"><i></i><i></i><i></i></div><div class="view" id="view"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1. early users ============ -->
+<section class="slide s1" data-name="early users">
+  <div class="frame">
+    <h2 class="rise">Early users</h2>
+    <div class="row">
+      <div class="card rise" style="--d:.18s; --dot:var(--coral)">
+        <p class="k"><i></i>Class test</p>
+        <h3>d.tech High School</h3>
+        <p class="who"><b>Neal Addicott</b><br>Biology teacher</p>
+        <a class="url" href="https://www.designtechhighschool.org" target="_blank" rel="noopener">designtechhighschool.org</a>
+      </div>
+      <div class="card rise" style="--d:.26s; --dot:var(--blue)">
+        <p class="k"><i></i>Organic search</p>
+        <h3 id="euHead"></h3>
+        <div class="bars" id="bars"></div>
+        <div class="src"><i class="sw"></i>Europe · visitors, top countries · Vercel Web Analytics</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. contact ============ -->
+<section class="slide s5" data-name="contact" data-nomark>
+  <div class="frame">
+    <div class="motes" id="endMotes"></div>
+    <img class="wm rise" src="/kodolab-wordmark.svg" alt="kodolab">
+    <a class="url rise" style="--d:.1s" href="https://www.kodolab.org">kodolab.org</a>
+    <div class="contact rise" style="--d:.2s">
+      <b>Mary Huang</b>
+      <a href="mailto:mary@kodolab.org">mary@kodolab.org</a>
+      <a href="https://www.linkedin.com/in/maryhuang1/" target="_blank" rel="noopener">linkedin.com/in/maryhuang1</a>
+    </div>
+  </div>
+</section>
+
+<div class="chrome"><img src="/kodolab-wordmark.svg" alt=""><div class="dots" id="dots"></div></div>
+
+<script src="/demos/lib/lessons.js"></script>
+<script src="/demos/build/wordmark.js"></script>
+<script>
+/* ---- 0. the word: index.html's nucleation (tests/kodolab-anim.html), copied ---- */
+const Intro = (() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const S = 14, DISC = 30, HOLE = 16;
+  const COLORS = ["#4ADE80", "#F26B4E", "#5AA9FF", "#F7B733", "#C084FC"];
+  const ARM_UP = { k: "diag", A: [6, 80], B: [50, 40], cut: 40 };
+  const ARM_DN = { k: "diag", A: [18, 70.2], B: [52, 100], cut: 100 };
+  // Optical sidebearings, not metric ones: a stem|stem gap of 12 is the reference,
+  // a round side reads emptier at the same distance, so it closes to 9 and round|round to 7.
+  const LETTERS = [
+    { ch: "k", x: 0,   prims: [{ k: "stem", cx: 7, cy: 50, h: 100 }, ARM_UP, ARM_DN] },
+    { ch: "o", x: 60,  prims: [{ k: "ring", cx: 30, cy: 70 }] },
+    { ch: "d", x: 127, prims: [{ k: "ring", cx: 30, cy: 70 }, { k: "stem", cx: 53, cy: 50, h: 100 }] },
+    { ch: "o", x: 196, prims: [{ k: "ring", cx: 30, cy: 70 }] },
+    { ch: "l", x: 265, prims: [{ k: "stem", cx: 7, cy: 50, h: 100 }] },
+    { ch: "a", x: 288, prims: [{ k: "ring", cx: 30, cy: 70 }, { k: "stem", cx: 53, cy: 70, h: 60 }] },
+    { ch: "b", x: 360, prims: [{ k: "stem", cx: 7, cy: 50, h: 100 }, { k: "ring", cx: 30, cy: 70 }] },
+  ];
+  const VIEW = "-25.5 -70 471 240";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ELASTIC = "cubic-bezier(0.34, 1.56, 0.64, 1)";
+  function armPoly(a) {
+    const [ax, ay] = a.A, [bx, by] = a.B, L = Math.hypot(bx - ax, by - ay);
+    const d = { x: (bx - ax) / L, y: (by - ay) / L }, n = { x: -d.y, y: d.x }, hw = S / 2;
+    const cut = sign => { const t = -(n.y * hw * sign) / d.y; return [bx + n.x * hw * sign + d.x * t, a.cut]; };
+    const pts = [[ax + n.x * hw, ay + n.y * hw], cut(1), cut(-1), [ax - n.x * hw, ay - n.y * hw]];
+    const cx = pts.reduce((m, q) => m + q[0], 0) / 4, cy = pts.reduce((m, q) => m + q[1], 0) / 4;
+    return { cx, cy, points: pts.map(q => `${q[0] - cx},${q[1] - cy}`).join(" ") };
+  }
+  [ARM_UP, ARM_DN].forEach(a => Object.assign(a, armPoly(a)));
+  const el = (tag, attrs = {}, parent) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (parent) parent.appendChild(n); return n; };
+
+  const host = document.getElementById("introMark");
+  const svg = el("svg", { viewBox: VIEW, "aria-label": "kodolab" }, host);
+  const prims = []; let ri = 0;
+  LETTERS.forEach((L, li) => {
+    const g = el("g", {}, svg);
+    L.prims.forEach(p => {
+      const ax = L.x + p.cx, ay = p.cy;
+      const home = el("g", { transform: `translate(${ax} ${ay})` }, g);
+      let s, disc, hole, color;
+      if (p.k === "ring") { color = COLORS[ri++]; s = el("g", { class: "prim" }, home); disc = el("circle", { r: DISC, fill: color }, s); hole = el("circle", { class: "hole", r: HOLE }, s); }
+      else if (p.k === "stem") s = el("rect", { class: "prim stem", x: -S / 2, y: -p.h / 2, width: S, height: p.h }, home);
+      else s = el("polygon", { class: "prim diag", points: p.points }, home);
+      prims.push({ el: s, disc, hole, color, kind: p.k, li, ax, ay });
+    });
+  });
+  const rings = prims.filter(p => p.kind === "ring");
+  let anims = [];
+  const stop = () => { anims.forEach(a => a.cancel()); anims = []; };
+  const timeline = (elm, D, frames, delay = 0) => {
+    const kf = frames.map(f => { const o = { offset: Math.min(1, Math.max(0, f.t / D)) }; for (const k of ["transform", "opacity", "fill"]) if (f[k] !== undefined) o[k] = f[k]; if (f.easing) o.easing = f.easing; return o; });
+    anims.push(elm.animate(kf, { duration: D, delay, fill: "both", easing: "linear" }));
+  };
+  const T = (x, y) => `translate(${x}px, ${y}px)`;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const punch = (r, delay, dur = 650) => timeline(r.hole, dur, [{ t: 0, transform: "scale(0)", easing: ELASTIC }, { t: dur, transform: "scale(1)" }], delay);
+  const closed = r => timeline(r.hole, 10, [{ t: 0, transform: "scale(0)" }, { t: 10, transform: "scale(0)" }]);
+
+  const hero = document.querySelector(".s0");
+  let sayTimer = 0;
+  function nucleate() {
+    stop(); hero.classList.remove("said"); clearTimeout(sayTimer);
+    const D = 5200, SEED_T = 500, STEP = 140;
+    const seeds = rings.filter(r => r.li === 3);
+    const seedX = p => Math.min(...seeds.map(sd => Math.abs(sd.ax - p.ax)));
+    const rest = prims.filter(p => !seeds.includes(p));
+    const attachAt = new Map(), fronts = {};
+    rest.forEach(p => { const sd = seeds[0]; const key = p.ax < sd.ax ? "L" : "R"; (fronts[key] = fronts[key] || []).push(p); });
+    Object.values(fronts).forEach(list => list.sort((a, b) => seedX(a) - seedX(b)).forEach((p, i) => attachAt.set(p, SEED_T + 450 + i * STEP * 2)));
+    const lastAttach = Math.max(...attachAt.values());
+    seeds.forEach(sd => {
+      timeline(sd.el, D, [{ t: 0, transform: "scale(0)", opacity: 0 }, { t: SEED_T, transform: "scale(0)", opacity: 1, easing: ELASTIC }, { t: SEED_T + 600, transform: "none" }, { t: D, transform: "none" }]);
+      closed(sd); punch(sd, SEED_T + 500);
+    });
+    rest.forEach(p => {
+      const attach = attachAt.get(p), frames = [];
+      let x = rnd(-60, 506) - p.ax, y = rnd(-50, 150) - p.ay, rot = rnd(-40, 40);
+      frames.push({ t: 0, transform: `${T(x, y)} rotate(${rot}deg)`, opacity: 0 });
+      frames.push({ t: 150, transform: `${T(x, y)} rotate(${rot}deg)`, opacity: 0.45, easing: "ease-in-out" });
+      let t = 150;
+      while (t + 420 < attach) { t += rnd(300, 420); x += rnd(-40, 40); y += rnd(-30, 30); rot += rnd(-25, 25); frames.push({ t, transform: `${T(x, y)} rotate(${rot}deg)`, opacity: 0.45, easing: "ease-in-out" }); }
+      frames.push({ t: attach, transform: `${T(x, y)} rotate(${rot}deg)`, opacity: 0.45, easing: ELASTIC });
+      frames.push({ t: attach + 40, transform: `${T(x * 0.95, y * 0.95)} rotate(${rot * 0.95}deg)`, opacity: 1, easing: ELASTIC });
+      frames.push({ t: attach + 520, transform: "none", opacity: 1 });
+      frames.push({ t: D, transform: "none", opacity: 1 });
+      timeline(p.el, D, frames);
+      if (p.kind === "ring") { closed(p); punch(p, attach + 380); }
+    });
+    // The sweep to ink lands the word; the tagline follows it.
+    const start = lastAttach + 900;
+    rings.forEach(r => { const t0 = start + seedX(r) * 3.4; timeline(r.disc, D, [{ t: 0, fill: r.color }, { t: t0, fill: r.color }, { t: t0 + 380, fill: "#14213D" }, { t: D, fill: "#14213D" }]); });
+    sayTimer = setTimeout(() => hero.classList.add("said"), start + 300);
+  }
+  host.addEventListener("click", e => { e.stopPropagation(); if (!reduce) nucleate(); });
+  if (reduce) rings.forEach(r => r.disc.setAttribute("fill", "#14213D"));
+  const spots = [[8, 22, 18], [88, 18, 12], [14, 78, 10], [80, 74, 22], [50, 88, 8], [30, 12, 7], [68, 30, 9]];
+  for (const motes of [document.getElementById("introMotes"), document.getElementById("endMotes")]) spots.forEach(([x, y, r], i) => { const m = document.createElement("i"); m.style.cssText = `left:${x}%;top:${y}%;width:${r * 1.4}px;height:${r * 1.4}px;background:${COLORS[i % 5]};animation-delay:${-i * 2.3}s;animation-duration:${11 + i * 1.7}s;transition:opacity 1.2s ${0.1 * i}s`; motes.appendChild(m); });
+  return { play() { if (reduce) hero.classList.add("said"); else nucleate(); } };
+})();
+
+/* ---- 1. the traffic chart ---------------------------------------------- */
+// Vercel Web Analytics, top countries: visitors, page views.
+const TRAFFIC = [
+  { flag: '🇺🇸', name: 'United States', v: 122, pv: 705 },
+  { flag: '🇩🇪', name: 'Germany',       v: 28,  pv: 586, eu: 1 },
+  { flag: '🇸🇪', name: 'Sweden',        v: 23,  pv: 589, eu: 1 },
+  { flag: '🇳🇱', name: 'Netherlands',   v: 14,  pv: 195, eu: 1 },
+  { flag: '🇨🇦', name: 'Canada',        v: 10,  pv: 35 },
+  { flag: '🇨🇭', name: 'Switzerland',   v: 8,   pv: 122, eu: 1 },
+  { flag: '🇬🇧', name: 'United Kingdom',v: 7,   pv: 48,  eu: 1 },
+  { flag: '🇦🇹', name: 'Austria',       v: 6,   pv: 156, eu: 1 },
+  { flag: '🇫🇷', name: 'France',        v: 4,   pv: 44,  eu: 1 },
+  { flag: '🇦🇪', name: 'UAE',           v: 3,   pv: 72 },
+  { flag: '🇧🇬', name: 'Bulgaria',      v: 3,   pv: 26,  eu: 1 },
+];
+(() => {
+  const SHOWN = 5;
+  const maxV = Math.max(...TRAFFIC.map(r => r.v));
+  document.getElementById('bars').innerHTML = TRAFFIC.slice(0, SHOWN).map((r, i) => `
+    <span class="name" title="${r.name}: ${r.v} visitors, ${r.pv} page views"><span>${r.flag}</span>${r.name}</span>
+    <span class="bar"><i style="--w:${(r.v / maxV * 80).toFixed(1)}%;--c:${r.eu ? 'var(--blue)' : '#b3b9c6'};--d:${.4 + i * .06}s"></i><span class="v">${r.v}</span></span>`).join('');
+  const sum = (rows, k) => rows.reduce((a, r) => a + r[k], 0);
+  const eu = TRAFFIC.filter(r => r.eu);
+  document.getElementById('euHead').textContent = `${Math.round(sum(eu, 'v') / sum(TRAFFIC, 'v') * 100)}% from Europe`;
+})();
+
+/* ---- 2. the lesson reel -------------------------------------------------- */
+(() => {
+  const live = (window.Lessons || []).filter(l => l.file && !l.soon);
+  // lessons.html's unit hues
+  const HUE = { chem: 'blue', macro: 'coral', cell: 'amber', energy: 'violet', plant: 'green', gene: 'blue' };
+  const COLS = 3, cols = Array.from({ length: COLS }, () => []);
+  live.forEach((l, i) => cols[i % COLS].push(`
+    <figure style="--dot:var(--${HUE[l.unit] || 'blue'})"><span class="pic${l.mol ? ' mol' : ''}"><img src="${l.still}" alt=""></span><figcaption><i></i>${l.title}</figcaption></figure>`));
+  document.getElementById('reel').innerHTML = cols.map((c, i) =>   // doubled so the loop is seamless
+    `<div class="col${i % 2 ? ' down' : ''}" style="--dur:${38 + i * 7}s">${c.join('') + c.join('')}</div>`).join('');
+})();
+
+/* ---- 3. the library belts: proteins, then molecules ---------------------- */
+(() => {
+  const PROTEINS = [['hemoglobin','Hemoglobin'],['atp-synthase','ATP synthase'],['gfp','GFP'],['collagen','Collagen'],['antibody','Antibody'],['ferritin','Ferritin'],['rubisco','Rubisco'],['napump','Na⁺/K⁺ pump'],['insulin','Insulin'],['polymerase','Polymerase']];
+  // Skel-built (idealised VSEPR) stills only: their clean geometry reads at thumbnail size
+  const MOLECULES = [['atpSkel','ATP'],['glucose','Glucose'],['nadhSkel','NADH'],['citrate','Citrate'],['acetylcoa','Acetyl-CoA'],['fadh2','FADH₂'],['lactose','Lactose'],['pyruvate','Pyruvate'],['ribose','Ribose'],['ascorbate','Vitamin C']];
+  const fig = (src, name, mol) => `<figure><div class="pic${mol ? ' mol' : ''}"><img src="${src}" alt=""></div><figcaption>${name}</figcaption></figure>`;
+  const one = PROTEINS.map(([s, n]) => fig(`/demos/proteins/stills/${s}.webp`, n)).join('');
+  const two = MOLECULES.map(([s, n]) => fig(`/demos/media/molecules/${s}.webp`, n, 1)).join('');
+  document.getElementById('beltOne').innerHTML = one + one;   // doubled so the loop is seamless
+  document.getElementById('beltTwo').innerHTML = two + two;
+})();
+
+/* ---- 4. the builder loop ------------------------------------------------- */
+const Build = (() => {
+  const ASKS = [
+    { q: 'What happens to a red blood cell in salt water?', img: 'bloodcell', part: 'Blood cell' },
+    { q: 'Why does glycolysis start by spending an ATP?', img: 'respiration', part: 'Reaction' },
+    { q: 'How does a chloroplast catch light?', img: 'chloroplast', part: 'Chloroplast' },
+    { q: 'How does a mitochondrion make ATP?', img: 'mitochondrion', part: 'Mitochondrion' },
+  ];
+  const PARTS = ['Blood cell', 'Reaction', 'Chloroplast', 'Mitochondrion', 'Membrane', 'Leaf', 'Water', 'Plant cell', 'Protein'];
+  const view = document.getElementById('view'), typed = document.getElementById('typed'), parts = document.getElementById('parts');
+  view.innerHTML = ASKS.map(a => `<img src="/demos/media/components/${a.img}.webp" alt="">`).join('');
+  parts.innerHTML = PARTS.map(p => `<span>${p}</span>`).join('');
+  const imgs = [...view.children], chips = [...parts.children];
+  const mark = Wordmark.mount(document.getElementById('buildMark'));
+  let run = 0;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  async function loop(id) {
+    for (let i = 0; run === id; i = (i + 1) % ASKS.length) {
+      const a = ASKS[i];
+      for (let n = 0; n <= a.q.length && run === id; n++) { typed.textContent = a.q.slice(0, n); await wait(22); }
+      await wait(350); if (run !== id) return;
+      imgs.forEach((im, j) => im.classList.toggle('on', j === i));
+      chips.forEach(c => c.classList.toggle('on', c.textContent === a.part));
+      await wait(2600);
+    }
+  }
+  return { start() { mark.build(); loop(++run); }, stop() { run++; } };
+})();
+
+/* ---- the deck ------------------------------------------------------------ */
+(() => {
+  const slides = [...document.querySelectorAll('.slide')], dots = document.getElementById('dots');
+  dots.innerHTML = slides.map((s, i) => `<button aria-label="Slide ${i + 1}: ${s.dataset.name}"></button>`).join('');
+  const btns = [...dots.children];
+  let at = -1;
+  function fit() {
+    const k = Math.min(innerWidth / 1600, innerHeight / 900);
+    document.documentElement.style.setProperty('--k', k);
+  }
+  function go(n) {
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    if (n === at) return;
+    at = n;
+    slides.forEach((s, i) => s.classList.toggle('on', i === n));
+    btns.forEach((b, i) => b.setAttribute('aria-current', i === n));
+    document.body.toggleAttribute('data-dark', 'dark' in slides[n].dataset);
+    document.body.toggleAttribute('data-nomark', 'nomark' in slides[n].dataset);
+    slides[n].classList.contains('s4') ? Build.start() : Build.stop();
+    if (slides[n].classList.contains('s0')) Intro.play();
+    history.replaceState(null, '', '#' + (n + 1));
+  }
+  btns.forEach((b, i) => b.addEventListener('click', e => { e.stopPropagation(); go(i); }));
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(at + 1); }
+    if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(at - 1); }
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(slides.length - 1);
+  });
+  addEventListener('click', e => {
+    if (e.target.closest('a, button')) return;
+    go(e.clientX > innerWidth / 3 ? at + 1 : at - 1);
+  });
+  addEventListener('hashchange', () => go((parseInt(location.hash.slice(1), 10) || 1) - 1));
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+})();
+</script>
+</body>
+</html>
