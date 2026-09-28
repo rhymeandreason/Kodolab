@@ -1,7 +1,7 @@
 /* =============================================================================
  *  api/auth.js — sign in with Google or an email code, redeem an invite, sign out
  * =============================================================================
- *  GET  /api/auth                      → {clientId, user}
+ *  GET  /api/auth                      → {clientId, open, user}  (`open`: no invite needed)
  *  POST {action: 'google', credential} → verifies the ID token, sets the session cookie
  *  POST {action: 'code', email}        → mails a six-digit code
  *  POST {action: 'verify', email, code} → sets the session cookie
@@ -29,7 +29,7 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const u = await accounts.userFrom(req);
-      return res.status(200).json({ clientId: accounts.clientId(), user: accounts.describeUser(u) });
+      return res.status(200).json({ clientId: accounts.clientId(), open: accounts.openSignup(), user: accounts.describeUser(u) });
     }
     if (req.method !== 'POST') {
       res.setHeader('Allow', 'GET, POST');

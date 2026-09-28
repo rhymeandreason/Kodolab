@@ -10,13 +10,13 @@
 <link rel="stylesheet" href="../css/kodo.css">
 <link rel="stylesheet" href="login.css">
 <!-- =========================================================================
-     THE STEP AFTER SIGNING IN, while the beta is invite-only. Signing in says
+     THE STEP AFTER SIGNING IN, for an account not yet admitted or a teacher invite. Signing in says
      who you are; this says whether you may build, and they are separate
      because one is Google's or a mailbox's word and the other is ours.
 
      NO STUDENTS DOOR. A class code admits a browser with no account at all, so
      offering it to someone who has just signed in is offering to sign them out
-     again. /login keeps that door.
+     again. /build's gate keeps that door.
 
      THE NAV SAYS WHO IS SIGNED IN without this page asking: lib/site.js paints
      the account into any body.kodo page's .sitenav. Nothing here draws it.
@@ -32,7 +32,7 @@
 
   <header class="pagehead">
     <h1>invite code</h1>
-    <p class="deck">Building is open to invited testers while the beta runs.</p>
+    <p class="deck">The teacher dashboard opens with a teacher invite.</p>
   </header>
 
   <p class="busy" id="busy" hidden></p>
@@ -47,7 +47,7 @@
         <button class="cta" type="submit">Redeem</button>
       </form>
       <p class="err" id="err" hidden></p>
-      <p class="sub">No invite? <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>.</p>
+      <p class="sub">Need one? <a href="mailto:mary@kodolab.org?subject=Teacher%20account">Email me</a> to request a teacher account.</p>
     </section>
   </main>
 </div>

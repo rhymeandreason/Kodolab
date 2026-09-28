@@ -11,8 +11,8 @@
 <link rel="stylesheet" href="../css/library.css">
 <link rel="stylesheet" href="login.css">
 <!-- =========================================================================
-     THE ONE WAY IN. Two doors: a class code (a student, no account) and an
-     account (everyone else).
+     THE ONE WAY IN: an account. A class code is typed on /build's gate, and
+     /join/<code> joins one straight from its link.
 
      SIGNING IN IS NOT BEING ADMITTED, and this page only does the first. An
      account that still needs an invite is handed to /beta-invite, carrying its
@@ -31,6 +31,7 @@
 
      /join/<code> is a student's personal link: the code is read from the
      path, since a rewrite's query never reaches the browser, and joined at once.
+     Bare /join goes to /build, where the class code box is.
      ========================================================================= -->
 </head>
 <body>
@@ -48,7 +49,7 @@
   </div>
 </header>
 
-<section class="head">
+<section class="head head--center">
   <div class="wrap">
     <h1>Sign in</h1>
   </div>
@@ -57,23 +58,11 @@
 <div class="wrap">
   <p class="busy" id="busy" hidden></p>
 
-  <main class="doors">
+  <main class="doors doors--one">
     <section class="door">
-      <h2 class="doorhead">Students</h2>
-      <p class="say">No account needed. <br>Type the class code your teacher gave you.</p>
-      <form class="code" id="codeForm">
-        <input id="classCode" aria-label="Class code" placeholder="abcd-efgh" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="12">
-        <button class="cta" type="submit">Join</button>
-      </form>
-      <p class="err" id="codeErr" hidden></p>
-      <p class="sub" id="seatNow" hidden></p>
-    </section>
-
-    <section class="door">
-      <h2 class="doorhead">Teachers and builders</h2>
       <div class="stack" id="out">
-        <!-- #firstTime: the code step hides it, so two codes are never on screen at once. -->
-        <p class="say" id="firstTime"><b>Beta access:</b> Enter your invite code after you sign in.</p>
+        <!-- #firstTime: the code step hides it, so the code has the door to itself. -->
+        <p class="say" id="firstTime"><b>New here?</b> Signing in makes your free account.</p>
         <!-- Google draws its own button into #gbtn and owns what is inside it,
              so the "Last used" tag hangs on this wrapper instead. -->
         <div class="opt" id="optGoogle"><div class="gbtn" id="gbtn"></div></div>
@@ -81,7 +70,7 @@
         <p class="or"><span>or sign in with email</span></p>
         <form class="code" id="emailForm">
           <input id="email" type="email" name="email" inputmode="email" autocomplete="username"
-                 aria-label="Email address" placeholder="you@school.edu"
+                 aria-label="Email address" placeholder="you@email.com"
                  autocapitalize="off" spellcheck="false" maxlength="254">
           <button class="cta" type="submit">Continue</button>
         </form>
@@ -92,9 +81,6 @@
           <button class="cta" type="submit">Sign in</button>
         </form>
         <p class="sub" id="otpSaid" hidden></p>
-        <!-- Inside #out, so both go when they sign in: past that point the
-             invite is the next page's business, not a warning. -->
-        <p class="sub">No invite? <a href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist</a>.</p>
       </div>
       <div class="stack" id="in" hidden>
         <p class="say" id="inLine"></p>
@@ -134,9 +120,8 @@
     'not-class': 'That is an invite code, not a class code. Sign in with Google and enter it there.',
     disabled: 'This account has been turned off.',
   };
-  // A refused class code is said under the Students door; a turned-off account under Google's.
   const why = params.get('why');
-  if (WHY[why]) show(why === 'disabled' ? 'acctErr' : 'codeErr', WHY[why]);
+  if (WHY[why]) show('acctErr', WHY[why]);
 
   /* ---- the wait --------------------------------------------------------- *
    * Everything but the header goes, and one line says what is happening: a
@@ -151,38 +136,24 @@
     location.replace(url);
   }
 
-  /* ---- students --------------------------------------------------------- */
+  /* ---- a student's link ------------------------------------------------- */
   async function join(code) {
-    show('codeErr', '');
+    show('acctErr', '');
     Apps.codes.setSeat(code);
     busy('Joining…');
     try {
       const r = await Apps.api('../../api/build');
       // A wrong code with a testing link or an account beside it still answers 200, as that other admission.
       if (r.who && r.who.kind === 'seat') return leave(next && !wantsTeach ? next : Apps.page('build'));
-      Apps.codes.setSeat(null); busy(''); show('codeErr', WHY[r.who && r.who.refused] || WHY.invalid);
+      Apps.codes.setSeat(null); busy(''); show('acctErr', WHY[r.who && r.who.refused] || WHY.invalid);
     } catch (err) {
       Apps.codes.setSeat(null); busy('');
-      show('codeErr', err.status === 401 ? err.message : 'Could not check the code: ' + err.message);
+      show('acctErr', err.status === 401 ? err.message : 'Could not check the code: ' + err.message);
     }
   }
-  $('codeForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const code = $('classCode').value.trim();
-    if (code) join(code);
-  });
-
+  if (/^\/join\/?$/.test(location.pathname)) return location.replace(Apps.page('build'));
   const fromPath = (/^\/join\/([A-Za-z0-9-]+)\/?$/.exec(location.pathname) || [])[1];
-  if (fromPath) { $('classCode').value = fromPath; join(fromPath); }
-  else if (Apps.codes.seat()) {
-    Apps.api('../../api/build').then(r => {
-      if (!r.who || r.who.kind !== 'seat') return;
-      $('seatNow').hidden = false;
-      $('seatNow').innerHTML = `This browser is joined as <b>${esc(r.who.label)}</b> · ${esc(r.who.className)}. `
-        + `<a href="${esc(Apps.page('build'))}">Continue</a> · <button class="textbtn" id="notMe" type="button">Not you?</button>`;
-      $('notMe').addEventListener('click', () => { Apps.codes.setSeat(null); $('seatNow').hidden = true; $('classCode').focus(); });
-    }).catch(() => {});
-  }
+  if (fromPath) join(fromPath);
 
   /* ---- accounts --------------------------------------------------------- */
   function paint(user) {
@@ -225,8 +196,7 @@
   function otpStep(said) {
     $('emailForm').hidden = !!said;
     $('otpForm').hidden = !said;
-    // Two codes on screen at once is the one confusion this door has to avoid:
-    // while a sign-in code is being typed, the invite is not the subject.
+    // While a sign-in code is being typed, that code is the only subject.
     $('firstTime').hidden = !!said;
     show('otpSaid', said || '');
     if (said) { $('otp').value = ''; $('otp').focus(); } else { sentTo = null; $('email').focus(); }

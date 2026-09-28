@@ -141,6 +141,7 @@ const REFUSED = {
 function refusal(who) {
   if (who && REFUSED[who.kind]) return { error: REFUSED[who.kind], code: who.kind };
   if (who && who.kind === 'pending') return { error: 'Enter your invite code to start building.', code: 'invite', who: describe(who) };
+  if (require('./_accounts.js').openSignup()) return { error: 'Sign in to start building.', code: 'open' };
   return { error: 'the builder is open to invited testers; ask for an access link' };
 }
 

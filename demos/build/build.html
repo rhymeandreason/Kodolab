@@ -72,17 +72,18 @@
     <div class="hero-in">
       <h1 class="sr-only">Build</h1>
       <div class="wordmark" id="wordmark"></div>
-      <!-- The gate: shown instead of the ask box when nobody is admitted. A
-           class code typed here joins on the spot and the ask box takes its
-           place; teachers and builders go to /login. -->
+      <!-- The gate: shown instead of the ask box when nobody is admitted.
+           Signing in is the way in; a class code typed here joins on the spot
+           and the ask box takes its place. This is the only class code box. -->
       <form class="gate" id="gate" hidden>
-        <p class="hint">Add your class code to start building.</p>
+        <p class="hint">Make a free account to start building.</p>
+        <a class="cta" id="gateLogin" href="login.html">Sign in</a>
+        <p class="sub">Or join with a class code</p>
         <div class="code">
           <input id="gateCode" aria-label="Class code" placeholder="abcd-efgh" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="12">
-          <button class="cta" type="submit">Join</button>
+          <button class="cta cta--ghost" type="submit">Join</button>
         </div>
         <p class="errs" id="gateErr" hidden></p>
-        <p class="sub">Teacher or builder? <a id="gateLogin" href="login.html">Sign in</a>.</p>
       </form>
       <form id="ask">
         <div class="refs" id="refs" hidden></div>
@@ -845,7 +846,7 @@
     $('gate').hidden = !on;
     $('ask').hidden = on;
     $('gateErr').textContent = why || ''; $('gateErr').hidden = !why;
-    if (on) $('gateCode').focus();
+    if (on) $('gateLogin').focus();
   }
   $('gateLogin').href = Apps.login();
   $('gate').addEventListener('submit', async e => {

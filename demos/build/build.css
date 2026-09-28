@@ -206,6 +206,8 @@ body.work .hero { opacity: 0; transform: scale(.985); visibility: hidden; pointe
 }
 .hero .gate input:focus-visible { outline: 0; border-color: var(--play-ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--play-ink) 12%, transparent); }
 .hero .gate .cta { margin: 0; flex: none; }
+/* `.hero .cta` sets the label to paper and hides the border, which a hollow button on yellow cannot spare. */
+.hero .gate .cta--ghost { color: var(--play-ink); border-color: var(--play-ink); box-shadow: none; }
 .hero .gate .sub { margin: 0; font-size: .9rem; color: color-mix(in srgb, var(--play-ink) 72%, transparent); }
 .hero .gate .sub a { color: var(--play-ink); }
 .hero form[hidden] { display: none; }

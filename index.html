@@ -2,7 +2,7 @@
 <!-- index.html — the front door.
      The wordmark nucleates (demos/tests/kodolab-anim.html), six live 3D boxes drift
      in as a constellation, and the scroll settles them into a grid of the
-     featured lessons. Then the builder's ask box, gated by a waitlist, and
+     featured lessons. Then the builder's ask box, which points at sign-up, and
      the protein gallery as an interlude. Its own palette, on purpose: it is
      the front door, not a document on the site's paper. -->
 <html lang="en">
@@ -275,7 +275,7 @@
   .cta.ghost:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
   .cta.icon { display: inline-flex; align-items: center; gap: .5em; }
   .cta.icon svg { width: 1.15em; height: 1.15em; fill: currentColor; flex: none; }
-  /* the waitlist card slides over the ask box when Let's go is pressed */
+  /* the sign-up card slides over the ask box when Let's go is pressed */
   .gate {
     position: absolute; inset: -12px; display: flex; flex-direction: column; justify-content: center; gap: .8rem;
     padding: 1.6rem 1.8rem; background: var(--ink); color: var(--paper); border-radius: 18px;
@@ -329,7 +329,7 @@
     .marquee .name { font-size: .95rem; }
   }
 
-  /* ---- the waitlist band -------------------------------------------- */
+  /* ---- the sign-up band --------------------------------------------- */
   .join { background: var(--coral); color: var(--paper); padding: 5.5rem 0; text-align: center; }
   .join h2 { font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.02; color: #fff; }
   .join h2 em { color: var(--ink); }
@@ -439,7 +439,7 @@
       <span class="eyebrow">Kodolab Build</span>
       <h2>Ask for a lesson<br>that <em>doesn't exist yet.</em></h2>
       <p class="lede">Build your own lesson with our library of 3D components and design templates. Seconds between iterations. Share with a link. Free and extendable.</p>
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1.6rem"><a class="cta big hot" href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist →</a><span class="beta" style="margin:0"><i></i>Beta</span></div>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1.6rem"><a class="cta big hot" href="/login?next=%2Fbuild">Make an account →</a><span class="beta" style="margin:0"><i></i>Beta</span></div>
     </div>
     <div class="ask" id="ask">
       <form id="askForm">
@@ -452,9 +452,9 @@
         <button class="close" type="button" id="gateClose">back</button>
         <h3>You're early. <em>Good.</em></h3>
         <p class="echo" id="echo"></p>
-        <p>The builder is in beta and opens with an access key. Join the waitlist and this question is the first thing you build.</p>
-        <p style="margin-top:.5rem"><a class="cta big" id="gateGo" href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist →</a></p>
-        <p class="small">Already have a key? <a href="/build">Open the builder</a>.</p>
+        <p>The builder is open to everyone during the beta. Make a free account and start with this question.</p>
+        <p style="margin-top:.5rem"><a class="cta big" id="gateGo" href="/login?next=%2Fbuild">Make an account →</a></p>
+        <p class="small">Already have an account? <a href="/build">Open the builder</a>.</p>
       </div>
     </div>
   </div>
@@ -487,14 +487,14 @@
   </div>
 </section>
 
-<!-- ============ 4b. the waitlist ============ -->
+<!-- ============ 4b. sign up ============ -->
 <section class="join" id="join">
   <div class="wrap">
     <span class="eyebrow" style="color:var(--ink)">Beta</span>
-    <h2>Be first to <em>build</em></h2>
-    <p>Join the waitlist to get an access key as seats open.</p>
-    <a class="cta big" href="https://forms.gle/D2yTAhtpUo5AaTvb7" target="_blank" rel="noopener">Join the waitlist →</a>
-    <p class="small">Teaching a class? Say so on the form and you go to the front.</p>
+    <h2>Start <em>building</em></h2>
+    <p>The builder is open to everyone during the beta. Sign in with Google or email to make a free account.</p>
+    <a class="cta big" href="/login?next=%2Fbuild">Make an account →</a>
+    <p class="small">Teaching a class? <a href="mailto:mary@kodolab.org?subject=Teacher%20account">Email me</a> to request a teacher account.</p>
   </div>
 </section>
 

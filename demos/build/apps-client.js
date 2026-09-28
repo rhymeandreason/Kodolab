@@ -398,8 +398,7 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
 
   /* The closed door. Shown when a remix or a build answers 401: no copy is
    * made, and the page says why. `err` is that 401: a refused code or a
-   * turned-off account is told so, and only a visitor with nothing is told
-   * about the beta. */
+   * turned-off account is told so, and a visitor with nothing is sent to sign in. */
   const REFUSED = ['revoked', 'invalid', 'not-class', 'disabled'];
   function beta(err) {
     let d = document.getElementById('betaModal');
@@ -413,7 +412,7 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     d.innerHTML = (REFUSED.includes(code)
       ? `<h2>Can't remix</h2><p>${esc(err.message)}</p>`
-      : '<h2>Private beta</h2><p>Building and remixing apps is open to invited testers for now. Sign in with your class code or invite, or join the waitlist.</p>')
+      : '<h2>Sign in to build</h2><p>Building and remixing apps is open to everyone during the beta. Sign in with Google or email to make a free account, or use your class code.</p>')
       + `<form method="dialog"><a class="btn" href="${login(code === 'revoked' || code === 'invalid' ? code : '')}">Sign in</a> <button class="btn btn--tint" type="submit">OK</button></form>`;
     d.showModal();
   }

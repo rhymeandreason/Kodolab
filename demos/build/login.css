@@ -84,6 +84,15 @@
    two-column width and it sets to a column of text instead. */
 .doors--one { max-width: 32rem; }
 
+/* /login is one card, so the heading and the card share a centre line; left
+   aligned, the card sat under half a heading beside an empty half page. The h1
+   steps down from library.css's page size to the card's scale. */
+.head--center .wrap { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+.head--center h1 { font-size: clamp(2.6rem, 5vw, 3.8rem); }
+.head--center + .wrap .doors--one { margin-inline: auto; }
+/* A step under the h1, now that the h1 is smaller: level with it, the two read as two headings. */
+.head--center + .wrap .busy { text-align: center; font-size: clamp(1.6rem, 3.2vw, 2.4rem); margin-top: clamp(1rem, 3vw, 2rem); }
+
 /* THE LAST-USED TAG. A white chip, not a fill: a solid colour is what a button
    is, and a tag in a button's colour reads as another button. The green dot is
    the one accent on it, saying "this is the way you came in". */

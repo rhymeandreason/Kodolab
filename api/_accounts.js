@@ -9,7 +9,7 @@
  *  arriving - which is the whole licence for matching on it.
  *
  *  NEITHER WAY ADMITS ANYBODY. Signing in makes an account; `admitted_at` comes
- *  from redeeming an invite, and that is unchanged.
+ *  from redeeming an invite, except while `OPEN_UNTIL` has not passed.
  *
  *  THE GOOGLE ID TOKEN IS CHECKED HERE, WITH NO LIBRARY. It is a JWT signed
  *  RS256 by a key in Google's published JWKS; Node verifies that with a JWK
@@ -52,6 +52,14 @@ const MAX_SENDS_DAY  = 10;   // to one address
    counters key to `utcDay` rather than `now() - '1 day'`. */
 const MAX_EMAILS_DAY = 90;
 const ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
+
+/* OPEN SIGN-UP: until this moment every account is admitted as it signs in,
+   cohort 'open', and keeps that after the window shuts. A date in the code
+   rather than an env var, so it closes itself and nobody has to remember to
+   unset it. The 'open' cohort shares one cohort cap in `_apps.js`, which is the
+   ceiling on what the window can spend in a day. */
+const OPEN_UNTIL = new Date('2026-11-01T00:00:00-07:00');   // end of Oct 31, Pacific
+const openSignup = () => Date.now() < OPEN_UNTIL.getTime();
 
 /* The one spelling of an address, everywhere: the table, the index, the code's
    row and the cooldown. Anything else gives `Mary@` its own account. */
@@ -112,7 +120,16 @@ async function readUser(id) {
     SELECT u.id, u.email, u.name, u.picture, u.admitted_at, u.invite_label, u.disabled_at,
            u.google_sub, t.id AS teacher_id
     FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ${id}`;
-  return u || null;
+  return admitOpen(u || null);
+}
+
+/* Admits `u` if sign-up is open and it is not yet admitted; returns it either way. */
+async function admitOpen(u) {
+  if (!u || u.admitted_at || u.disabled_at || !openSignup()) return u;
+  const [row] = await log.sql()`
+    UPDATE users SET admitted_at = COALESCE(admitted_at, now()), invite_label = COALESCE(invite_label, 'open')
+    WHERE id = ${u.id} RETURNING admitted_at, invite_label`;
+  return row ? { ...u, ...row } : u;
 }
 
 /* Google's word about a person, turned into the account. Returns {user} or
@@ -215,7 +232,7 @@ async function userFrom(req, { disabled = false } = {}) {
     FROM sessions s JOIN users u ON u.id = s.user_id
     LEFT JOIN teachers t ON t.user_id = u.id
     WHERE s.token_hash = ${hash(token)} AND s.expires_at > now() AND (${disabled} OR u.disabled_at IS NULL)`;
-  return u || null;
+  return admitOpen(u || null);
 }
 
 async function endSession(req) {
@@ -419,6 +436,6 @@ function mintInviteCode() {
   return require('./_access.js').mintSeatCode();
 }
 
-module.exports = { COOKIE, clientId, verifyGoogle, upsertUser, emailUser, readUser, startSession,
+module.exports = { COOKIE, openSignup, clientId, verifyGoogle, upsertUser, emailUser, readUser, startSession,
                    userFrom, endSession, cookie, describeUser, redeem, mintInviteCode,
                    codeSend, codeVerify, codeSweep, CODE_TTL_MIN };

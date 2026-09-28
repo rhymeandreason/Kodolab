@@ -22,8 +22,8 @@
  *  Nothing here calls a model, so nothing here is rate limited. Reading is
  *  open: an id is unguessable and a view link is meant to be shared. A REMIX
  *  NEEDS THE ACCESS KEY, the same one the builder wants, because a copy that
- *  cannot be edited is a dead end and the beta is closed; the viewer shows a
- *  waitlist notice instead of making one.
+ *  cannot be edited is a dead end; the viewer shows a sign-in notice instead
+ *  of making one.
  *  The token travels in the `X-App-Token` header or the body, never a query
  *  string, for the reason `_keys.js` gives.
  *
