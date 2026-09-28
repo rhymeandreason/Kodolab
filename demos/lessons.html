@@ -34,7 +34,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
 <style>
   /* lib/site.js marks <html> .signed-in; a CTA pair shows one side. */
-  html.signed-in .if-out, html:not(.signed-in) .if-in { display: none !important; }
+  html.signed-in .if-out, html:not(.signed-in) .if-in,
+  html.teacher .if-student, html:not(.teacher) .if-teacher { display: none !important; }
   :root {
     --paper: var(--brand-paper); --paper-t: var(--brand-paper-t); --paper-2: var(--brand-paper-2);
     --ink: var(--brand-ink); --ink-t: var(--brand-ink-t); --ink-2: var(--brand-ink-2); --ink-3: var(--brand-ink-3);
@@ -330,7 +331,7 @@
         <span class="k">Class links</span>
         <h3>One link, and the class reports back</h3>
         <p>Make a class, hand out its link, and every session lands on your Teach page. Students never make an account.</p>
-        <div class="act"><a class="cta ghost" href="mailto:mary@kodolab.org?subject=Teacher%20account">Request a teacher account</a></div>
+        <div class="act"><a class="cta ghost if-student" href="mailto:mary@kodolab.org?subject=Teacher%20account">Request a teacher account</a><a class="cta ghost if-teacher" href="/teach">Open Teach</a></div>
       </div>
       <div class="col">
         <span class="k">Build</span>

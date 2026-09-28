@@ -145,6 +145,7 @@
      it without touching the site's four links. */
   function paintAccount(links, user) {
     document.documentElement.classList.toggle('signed-in', !!user);
+    document.documentElement.classList.toggle('teacher', !!(user && user.teacher));
     Array.prototype.slice.call(links.querySelectorAll('.acct')).forEach(function (n) { n.remove(); });
     var here = place();
 
