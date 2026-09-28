@@ -172,11 +172,12 @@
   .parts span.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
   /* ---- 5. contact: the intro's paper and motes, its word finished ------------ */
-  .s5 .frame { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .s5 .frame { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 150px; text-align: center; }
   .s5 .wm { width: 820px; position: relative; }
-  .s5 .url { margin-top: 34px; font: 500 24px var(--sans); letter-spacing: .32em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; position: relative; }
+  .s5 .url { margin-top: 64px; font: 500 24px var(--sans); letter-spacing: .32em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; position: relative; }
   .s5 .url:hover { color: var(--coral); }
-  .s5 .contact { margin-top: 120px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+  /* the word stays centred; the contact sits on its own near the foot */
+  .s5 .contact { position: absolute; left: 0; right: 0; bottom: 110px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .s5 .contact b { font: 500 40px var(--display); color: var(--ink); margin-bottom: 6px; }
   .s5 .contact a { font: 400 30px var(--serif); color: var(--ink-2); text-decoration: none; }
   .s5 .contact a:hover { color: var(--coral); }
