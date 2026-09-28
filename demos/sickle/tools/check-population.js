@@ -42,6 +42,12 @@ for (const q0 of [0.02, 0.5]) {
   ok(Math.abs(q - eq) < 1e-6, `recursion from ${q0} lands on s/(s+t)=${eq.toFixed(4)} (got ${q.toFixed(4)})`);
 }
 ok(Math.abs(run({ malaria: 1 }, 1).state().equilibrium - eq) < 1e-12, 'state().equilibrium is s/(s+t)');
+{
+  const ex = run({ malaria: 1, start: 0.02 }, 1).state().expected;
+  let q = ex[0];
+  for (let i = 1; i < ex.length; i++) q = recur(q);
+  ok(Math.abs(ex[ex.length - 1] - q) < 1e-12, 'state().expected is the same recursion');
+}
 note(`equilibrium ${(eq * 100).toFixed(1)}%, carriers there ${(2 * eq * (1 - eq) * 100).toFixed(1)}%`);
 
 /* 2. Carriers never die of either cause: their fitness is the reference. */
@@ -80,6 +86,8 @@ note(`equilibrium ${(eq * 100).toFixed(1)}%, carriers there ${(2 * eq * (1 - eq)
   ok(Math.abs(S.q - eq) < 0.04, `lesson's malaria village ends within 4 points of ${(eq * 100).toFixed(1)}%`);
   ok(A.q < POP.start, 'lesson\'s malaria-free village ends below where it started');
   ok(S.q > A.q + 0.05, 'the two villages end visibly apart');
+  const h = run(Object.assign({}, POP, { malaria: 1 }), POP.gens).history;
+  ok(h.slice(10).every(q => q > 0.04), 'lesson\'s malaria village never comes near losing the allele');
 }
 
 console.log(`\ncheck-population: ${checks - fails}/${checks} passed`);

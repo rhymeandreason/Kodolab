@@ -18,7 +18,8 @@
  *      7  split     BloodCell ×2, infected — the carrier's cell sickles and is
  *                   removed; the normal one feeds the parasite until it bursts
  *      8  split     Population ×2 — the same village with and without malaria,
- *                   sixty-odd generations; the allele holds only where malaria is
+ *                   sorted into genotype rows, and one chart over both; the
+ *                   allele holds only where malaria is
  *
  *  Beats 3 to 5 and 7 to 8 have no panel. Two halves, one caption, Next. The toggle that
  *  drives 1 and 2 sits at the bottom of the room, the same place on both, and
@@ -65,7 +66,7 @@
   const CARRIERS_MAX = 0.25;
   /* Beat 7's village. sickle/tools/check-population.js runs these exact
      numbers, so the run a student sees is one that makes the claim. */
-  const POP = { n: 220, start: 0.05, seed: 5, gens: 80, slowFor: 4, fast: 4 };
+  const POP = { n: 200, start: 0.05, seed: 1, gens: 80, slowFor: 4, fast: 4 };
 
   /* A STEP'S SUBSCRIPTIONS DIE WITH THE STEP. A readout left subscribed from
      the step before fires on the next step's first set(), looking for an
@@ -342,12 +343,14 @@
   /* ---- 8 ------------------------------------------------------------- */
 
   /* A CHANGE OF RUNG, TO PEOPLE. Two villages that start as the same people
-     (same seed), one with malaria. Slow for the first generations so the
-     reader can see who falls and why, then fast enough to watch the allele
-     settle. Every number printed is read off the sim's state. */
+     (same seed), one with malaria, each standing sorted into its three
+     genotypes so a row's length is its count. A chart under each label, on
+     one scale, is the conclusion: the malaria line holds at the dashed
+     balance and the other falls to nothing. The claim is said first, so the reader knows what to
+     watch; the end confirms it. Every number is read off the sim. */
   const step8 = {
     title: 'Malaria keeps the allele common',
-    onExit(ctx) { leave(ctx); ctx.legend(null); ctx.readout(null); },
+    onExit(ctx) { leave(ctx); ctx.chart(null); ctx.scrub(null); },
     onEnter(ctx) {
       ctx.toggle(false);
       ctx.split(true, { left: 'No malaria', right: 'Malaria' });
@@ -357,34 +360,51 @@
         { colour: 'S', text: `sickle copy (${HBS.label})` },
         { colour: 'dead', text: 'died young' },
       ]);
+      const both = next => { S.popA.set(next); S.popS.set(next); };
+      /* Dragging pauses both villages at that generation; play carries on
+         from wherever the scrubber is, or from the start once at the end. */
+      const onScrub = g => { both({ playing: false, generation: g }); show(); };
+      const onPlay = () => {
+        const m = S.popS.state();
+        if (m.playing && !m.done) { both({ playing: false }); show(); return; }
+        if (m.generation >= POP.gens - 1) both({ generation: 0 });
+        both({ playing: true, speed: S.popS.state().generation >= POP.slowFor ? POP.fast : 1 });
+        S.popA.start(); S.popS.start();
+        show();
+      };
       const show = () => {
-        for (const [side, P] of [['left', S.popA], ['right', S.popS]]) {
-          const s = P.state();
-          ctx.readout(side, { value: s.q, values: s.history, mark: s.equilibrium || null,
-            text: `${ctx.pct(s.q)} of copies are ${HBS.label} · generation ${s.generation + 1}` });
-        }
+        const a = S.popA.state(), m = S.popS.state();
+        ctx.scrub({ gens: POP.gens, value: m.generation, playing: m.playing && !m.done, onScrub, onPlay });
+        const title = `${HBS.label} share of gene copies`;
+        ctx.chart('left', { title, gens: POP.gens, values: a.history, expected: a.expected, text: ctx.pct(a.q) });
+        ctx.chart('right', { title, gens: POP.gens, values: m.history, expected: m.expected, text: ctx.pct(m.q),
+          mark: { value: m.equilibrium, text: `balance, ${ctx.pct(m.equilibrium)}` } });
       };
       bind(ctx, S.popS.on('generation', s => {
         show();
         if (s.generation === POP.slowFor) {
           S.popA.set({ speed: POP.fast }); S.popS.set({ speed: POP.fast });
-          ctx.caption(`Each round is a generation: the survivors have the next one. Faster now.`);
+          ctx.caption(`Each round is a generation, born to the survivors of the last. Watch the
+            middle rows, and the line on the charts.`);
         }
       }));
       bind(ctx, S.popA.on('generation', show));
       bind(ctx, S.popS.on('done', s => {
         show();
-        ctx.caption(`With malaria, the sickle allele settles near ${ctx.pct(s.equilibrium)}, where the
-          two kinds of early death balance. Without it, the allele only costs, and it drains away.`);
-        ctx.after(6, () => ctx.caption(`That is why sickle cell is most common in families from
+        ctx.caption(`With malaria, the sickle allele climbs and holds near ${ctx.pct(s.equilibrium)},
+          where the two kinds of early death balance. Without malaria it only does harm, and it
+          disappears.`);
+        ctx.after(7, () => ctx.caption(`The pale curves are what a village of millions would
+          do. A real one wanders around them by chance, but it cannot wander far from the balance.`));
+        ctx.after(14, () => ctx.caption(`That is why sickle cell is most common in families from
           where malaria was: sub-Saharan Africa, the Mediterranean, the Middle East and India.`));
       }));
       const run = () => {
         ctx.clearTimers();
-        for (const P of [S.popA, S.popS]) { P.stop(); P.set({ speed: 1 }); P.reset(); }
+        for (const P of [S.popA, S.popS]) { P.stop(); P.set({ speed: 1, playing: true }); P.reset(); }
         show();
-        ctx.caption(`Each figure is a person, and its two halves are their two copies of the
-          gene. Both villages start as the same people.`);
+        ctx.caption(`Two villages, the same people, sorted by their two gene copies. Watch the
+          carriers in the middle row: neither disease kills them.`);
         ctx.after(5, () => {
           S.popA.start(); S.popS.start();
           ctx.caption(`Malaria kills some people with two normal copies. Sickle cell disease

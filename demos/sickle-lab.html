@@ -75,16 +75,25 @@
   .sk-btn.ghost:hover{border-color:var(--ink-3)}
   .sk-btn[hidden]{display:none}
   .sk-btn:disabled{opacity:.3;cursor:default;transform:none}
-  /* Beat 7: a live readout under each label, and the key to the figures. */
-  .sk-read{position:absolute;top:96px;display:flex;align-items:center;gap:12px;pointer-events:none;
-    font-family:var(--display);font-size:13px;color:var(--ink-2)}
-  .sk-read.left{left:28px}
-  .sk-read.right{left:calc(50% + 28px)}
-  .sk-read svg{display:block;overflow:visible}
-  .sk-read[hidden]{display:none}
-  .sk-legend{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:4;display:flex;gap:18px;
-    padding:6px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
-    font-family:var(--display);font-size:13px;color:var(--ink-2);white-space:nowrap}
+  /* The village beat: a chart under each half's label, on one scale so the
+     two compare by eye, and one card for the scrubber and the key. */
+  /* Shown as sk-split-only's flex, so stacked here: title over plot. */
+  .sk-chart{position:absolute;top:96px;z-index:2;flex-direction:column;align-items:flex-start;padding:8px 12px 6px;border-radius:12px;
+    background:var(--panel);border:1px solid var(--line);font-family:var(--display);color:var(--ink-2)}
+  .sk-chart.left{left:28px}
+  .sk-chart.right{left:calc(50% + 28px)}
+  .sk-chart h4{margin:0 0 4px;font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .sk-chart svg{display:block;overflow:visible;font-size:12px}
+  .sk-chart[hidden]{display:none}
+  .sk-controls{position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:4;
+    padding:6px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
+    display:flex;align-items:center;gap:18px}
+  .sk-controls[hidden]{display:none}
+  .sk-scrub{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:12px;color:var(--ink-2);white-space:nowrap}
+  .sk-scrub input{width:220px;accent-color:var(--accent)}
+  .sk-scrub button{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);
+    background:#fff;color:var(--ink);cursor:pointer;font-size:11px;line-height:1}
+  .sk-legend{display:flex;gap:14px;font-family:var(--display);font-size:12px;color:var(--ink-2);white-space:nowrap}
   .sk-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
   .sk-legend[hidden]{display:none}
   .sk-split-only{display:none}
@@ -96,8 +105,6 @@
     .sk-half.right{top:50%;bottom:0}
     .sk-divider{left:0;right:0;top:50%;width:auto;height:1px}
     .sk-label.right{left:28px;top:calc(50% + 12px)}
-    .sk-read.right{left:28px;top:calc(50% + 34px)}
-    .sk-legend{bottom:auto;top:12px}
   }
 </style>
 </head>
@@ -144,7 +151,7 @@
  *
  *  What ctx carries for the steps: `variant` and `onToggle` (the switch),
  *  `use`, `split`, `caption`, `replay`, `fade`, `after` / `clearTimers`, and
- *  for the village `legend`, `readout` and `pct`.
+ *  for the village `legend`, `chart`, `scrub` and `pct`.
  * ========================================================================== */
 
 const V = { HbA: SickleSteps.HBA, HbS: SickleSteps.HBS };
@@ -224,41 +231,73 @@ ctx.caption = text => { capText.textContent = text.replace(/\s+/g, ' ').trim(); 
 const hexCss = h => '#' + h.toString(16).padStart(6, '0');
 const ALLELE = { A: HbCrowd.markOf('HbA'), S: HbCrowd.markOf('HbS') };
 const DEAD = '#b3ada3';
+const ROWS = ['two normal', 'carriers', 'two sickle'];
 ctx.pct = x => Math.round(x * 100) + '%';
 
 const legend = document.createElement('div');
-legend.className = 'sk-legend'; legend.hidden = true;
-shell.el.appendChild(legend);
+legend.className = 'sk-legend';
 ctx.legend = items => {
-  legend.hidden = !items;
   legend.innerHTML = (items || []).map(it => {
     const c = it.colour === 'dead' ? DEAD : hexCss(ALLELE[it.colour]);
     return `<span><i style="background:${c}"></i>${it.text}</span>`;
   }).join('');
 };
 
-/* A number and a sparkline of where it has been, per half. `mark` is a
-   dashed level the line is heading for; the scale is fixed so the two
-   halves can be compared by eye. */
-const reads = {};
+/* The scrubber: generations on a range, and play / pause, in one card with
+   the key. It reports; the step decides what a drag or a press does. */
+const controls = document.createElement('div');
+controls.className = 'sk-controls'; controls.hidden = true;
+const scrub = document.createElement('div');
+scrub.className = 'sk-scrub';
+scrub.innerHTML = `<button type="button" aria-label="Pause"></button>
+  <input type="range" min="1" step="1" aria-label="Generation"><span></span>`;
+const scrubBtn = scrub.querySelector('button'), scrubIn = scrub.querySelector('input'), scrubAt = scrub.querySelector('span');
+let scrubOn = {};
+scrubIn.oninput = () => scrubOn.onScrub && scrubOn.onScrub(+scrubIn.value - 1);
+scrubBtn.onclick = () => scrubOn.onPlay && scrubOn.onPlay();
+controls.append(scrub, legend);
+shell.el.appendChild(controls);
+/* A drag the reader is making is not written back to. */
+ctx.scrub = o => {
+  controls.hidden = !o;
+  if (!o) return;
+  scrubOn = o;
+  scrubIn.max = o.gens;
+  if (document.activeElement !== scrubIn) scrubIn.value = o.value + 1;
+  scrubAt.textContent = `generation ${o.value + 1} of ${o.gens}`;
+  scrubBtn.textContent = o.playing ? '❚❚' : '▶';
+  scrubBtn.setAttribute('aria-label', o.playing ? 'Pause' : 'Play');
+};
+
+/* A chart per half: the village's line, the pale curve a village of
+   millions would follow, and a dashed level if there is a balance to reach.
+   Fixed axes (0 to `max`, 0 to `gens`), the same on both sides, so the
+   lines grow across them rather than rescaling. */
+const charts = {};
 for (const side of ['left', 'right']) {
-  const r = document.createElement('div');
-  r.className = 'sk-read sk-split-only ' + side; r.hidden = true;
-  shell.stage.insertBefore(r, divider);
-  reads[side] = r;
+  const c = document.createElement('div');
+  c.className = 'sk-chart sk-split-only ' + side; c.hidden = true;
+  shell.stage.insertBefore(c, divider);
+  charts[side] = c;
 }
-ctx.readout = (side, o) => {
-  if (!side) { for (const r of Object.values(reads)) r.hidden = true; return; }
-  const r = reads[side], W = 120, H = 28, top = 0.25;
-  const vs = o.values, n = Math.max(1, vs.length - 1);
-  const y = v => (H - Math.min(1, v / top) * H).toFixed(1);
-  const pts = vs.map((v, i) => `${(i / n * W).toFixed(1)},${y(v)}`).join(' ');
-  const mark = o.mark ? `<line x1="0" x2="${W}" y1="${y(o.mark)}" y2="${y(o.mark)}" stroke="var(--ink-3)" stroke-dasharray="3 3" stroke-width="1"/>` : '';
-  r.hidden = false;
-  r.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-      <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)" stroke-width="1"/>${mark}
-      <polyline points="${pts}" fill="none" stroke="${hexCss(ALLELE.S)}" stroke-width="1.8" stroke-linejoin="round"/></svg>
-    <span>${o.text}</span>`;
+ctx.chart = (side, o) => {
+  if (!side) { for (const c of Object.values(charts)) c.hidden = true; return; }
+  const c = charts[side];
+  c.hidden = false;
+  const W = 220, H = 64, max = 0.25, R = 44;
+  const x = i => (i / (o.gens - 1) * W).toFixed(1), y = v => (H - Math.min(1, v / max) * H).toFixed(1);
+  const col = hexCss(ALLELE.S);
+  const line = (vs, extra) => `<polyline points="${vs.map((v, i) => `${x(i)},${y(v)}`).join(' ')}" fill="none" stroke-linejoin="round" ${extra}/>`;
+  const last = o.values.length - 1;
+  const mark = o.mark ? `<line x1="0" x2="${W}" y1="${y(o.mark.value)}" y2="${y(o.mark.value)}" stroke="var(--ink-3)" stroke-dasharray="3 4"/>
+      <text x="0" y="${+y(o.mark.value) - 5}" fill="var(--ink-3)">${o.mark.text}</text>` : '';
+  c.innerHTML = `<h4>${o.title}</h4>
+    <svg viewBox="0 0 ${W + R} ${H + 4}" style="width:${W + R}px;height:${H + 4}px">
+      <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>${mark}
+      ${o.expected ? line(o.expected, `stroke="${col}" stroke-width="6" stroke-opacity=".18"`) : ''}
+      ${line(o.values, `stroke="${col}" stroke-width="2"`)}
+      <text x="${+x(last) + 6}" y="${+y(o.values[last]) + 4}" fill="${col}" font-weight="500">${o.text}</text>
+    </svg>`;
 };
 ctx.replay = fn => { replayFn = fn; capReplay.hidden = !fn; };
 
@@ -373,8 +412,8 @@ const MAKE = {
   infA:    () => BloodCell.mount(host('left',  'sk-fade'), { sickle: 0, cut: 1 }),
   infS:    () => BloodCell.mount(host('right', 'sk-fade'), { sickle: 0, cut: 1 }),
   /* The same seed on both sides: the villages start as the same people. */
-  popA:    () => Population.mount(host('left'),  Object.assign({ malaria: 0, colours: ALLELE }, SickleSteps.POP)),
-  popS:    () => Population.mount(host('right'), Object.assign({ malaria: 1, colours: ALLELE }, SickleSteps.POP)),
+  popA:    () => Population.mount(host('left'),  Object.assign({ malaria: 0, colours: ALLELE, rows: ROWS }, SickleSteps.POP)),
+  popS:    () => Population.mount(host('right'), Object.assign({ malaria: 1, colours: ALLELE, rows: ROWS }, SickleSteps.POP)),
 };
 
 const live = {};
