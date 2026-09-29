@@ -69,6 +69,7 @@
 <script src="../lib/mol-nucleic.js"></script>
 <script src="../lib/scene.js"></script>
 <script src="../lib/molview.js"></script>
+<script src="../lib/mol-shelf.js"></script>
 <script>
 'use strict';
 
@@ -153,10 +154,17 @@ async function bake(key, keepView) {
   return out.bytes;
 }
 
+/* Grouped as molecules.html groups them, so the one to redo is found by where it sits there. */
+const groups = new Map();
 for (const k of PICK) {
+  const spec = MolLib.MOLECULES[k], g = MolShelf.groupOf(spec.domain || '');
+  if (!groups.has(g)) {
+    const og = document.createElement('optgroup');
+    og.label = g; groups.set(g, og); pickEl.appendChild(og);
+  }
   const o = document.createElement('option');
-  o.value = k; o.textContent = k;
-  pickEl.appendChild(o);
+  o.value = k; o.textContent = spec.name ? `${spec.name} (${k})` : k;
+  groups.get(g).appendChild(o);
 }
 
 async function run(keys, keepView) {
