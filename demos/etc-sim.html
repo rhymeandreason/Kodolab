@@ -38,15 +38,10 @@
   :root .modal .synth-text h2 { font-size: 34px; }
   :root .modal .synth-text .msub { font-size: 20px; line-height: 1.45; margin: var(--space-3) 0 0; }
 </style>
-<!-- kodo.css is linked at the head's end, not left to kit/app.js: the wordmark sits above that
-     script in the body and would draw at its natural size first. -->
 <link rel="stylesheet" href="css/kodo.css">
 </head>
 <script src="lib/embed.js"></script>
 <body>
-<nav class="sitenav floating chrome-title">
-  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-</nav>
 
 <div id="synthmodal" class="modal" hidden>
   <div class="mback"></div>
