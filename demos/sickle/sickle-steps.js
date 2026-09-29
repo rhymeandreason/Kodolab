@@ -285,57 +285,81 @@
      both hemoglobins and does not sickle on its own; the parasite is what
      tips it, by using up its oxygen (Luzzatto 1970). The left half pauses
      at the ring while the right one sickles, so there is one thing to watch
-     at a time, and then carries on through the whole cycle. Its captions
-     hang off the cell's own `stage` events, so they cannot run ahead of the
-     picture. */
+     at a time, and then carries on through the whole cycle.
+     EACH HALF CARRIES ITS OWN WORDS, under its heading, so the reader never
+     has to work out which cell a sentence is about. The carrier's cell ends
+     as a note where the cell was, and it stays: the empty half is the result.
+     The normal side's lines are read off its parasite's stage, so they
+     cannot run ahead of the picture. The one sentence about both goes in
+     a second card under the carrier's.
+     ONE CLOCK, SO IT SCRUBS. Everything on screen is a function of `t`,
+     seconds into the beat: both cells' params are set from it every frame,
+     snapped, and every line of text is read from where the cells are. A
+     drag is the same call as a frame. */
+  const T7 = 32;
+  const ease = (a, b, t) => { const u = Math.min(1, Math.max(0, (t - a) / (b - a))); return u * u * (3 - 2 * u); };
   const step7 = {
     title: 'One copy protects against malaria',
-    onExit: leave,
+    onExit(ctx) { leave(ctx); ctx.scrub(null); },
     onEnter(ctx) {
       ctx.toggle(false);
       ctx.split(true, { left: `Normal · ${HBA.label} only`, right: `Carrier · ${HBA.label} and ${HBS.label}` });
+      ctx.replay(null);
+      ctx.caption('');
+      ctx.bar(true);
       const S = ctx.use({ show: ['infA', 'infS'] });
-      let live = true;
-      const say = {
-        trophozoite: () => ctx.caption(`In the normal cell the parasite keeps eating hemoglobin.
-          The dark grains are the heme it cannot use, and the bumps on the membrane
-          glue the cell to vessel walls.`),
-        schizont: () => ctx.caption(`Now it divides into ${S.infA.state().merozoites} new parasites.`),
-        bursting: () => {
-          const s = S.infA.state();
-          ctx.caption(`The cell bursts. Each of the ${s.merozoites} can invade a new cell,
-            so the count multiplies every ${s.cycleHours} hours.`);
-          ctx.after(4.5, () => ctx.caption(`Carriers still catch malaria, but they are about
-            ${Math.round((1 - SEVERE_OR) * 10) * 10}% less likely to get the severe kind that kills.`));
-        },
+      ctx.fade('infA', true);
+      let t = 0, playing = true;
+
+      /* Invade and settle to a ring, together (0-6 s); the carrier's cell
+         sickles (6.6-9.2) and is removed (10.6); then the normal side runs
+         the rest of the cycle (15-27) and bursts (27-28.8). */
+      const LEFT = {
+        trophozoite: `The parasite keeps eating hemoglobin. The dark grains are the heme it cannot
+          use, and the bumps on the membrane glue the cell to vessel walls.`,
+        schizont: () => `Now it divides into ${S.infA.state().merozoites} new parasites.`,
       };
-      bind(ctx, S.infA.on('stage', st => { if (live && say[st]) say[st](); }));
-      bind(ctx, () => { live = false; });
-      const run = () => {
-        ctx.clearTimers();
-        live = false;
-        for (const c of [S.infA, S.infS]) { c.set({ parasite: 0, sickle: 0, spill: 0 }, { snap: true }); c.start(); }
-        live = true;
-        ctx.fade('infA', true); ctx.fade('infS', true);
-        ctx.caption(`A malaria parasite gets into a red cell on each side. The carrier's has
-          one copy of each gene, so it holds both kinds of hemoglobin.`);
-        S.infA.set({ parasite: 0.3 }, { seconds: 6 });
-        S.infS.set({ parasite: 0.3 }, { seconds: 6 });
-        ctx.after(6.6, () => {
-          S.infS.set({ sickle: 1 }, { seconds: 2.6 });
-          ctx.caption(`The parasite uses up the carrier cell's oxygen. Without it, the
-            ${HBS.label} polymerizes and the cell sickles.`);
-        });
-        ctx.after(10.6, () => {
-          ctx.fade('infS', false);
-          ctx.caption(`The spleen destroys sickled cells. The parasite dies with this one,
-            before it can multiply.`);
-        });
-        ctx.after(15, () => S.infA.set({ parasite: 0.95 }, { seconds: 12,
-          onDone: () => S.infA.set({ parasite: 1 }, { seconds: 1.8 }) }));
+      /* The normal cell's ending is a card too, where the cell was, so the two
+         halves end the same way: what happened to each cell, on the cell. */
+      const burst = () => { const s = S.infA.state();
+        return `The cell bursts. Each of the ${s.merozoites} new parasites can invade another
+          cell, so the count multiplies every ${s.cycleHours} hours.`; };
+      function apply() {
+        const pA = 0.3 * ease(0, 6, t) + 0.65 * ease(15, 27, t) + 0.05 * ease(27, 28.8, t);
+        S.infA.set({ parasite: pA }, { snap: true });
+        S.infS.set({ parasite: 0.3 * ease(0, 6, t), sickle: ease(6.6, 9.2, t) }, { snap: true });
+        ctx.fade('infS', t < 10.6);
+
+        const st = S.infA.state().stage, l = LEFT[st];
+        ctx.side('left', st === 'bursting' ? null : l ? (typeof l === 'function' ? l() : l)
+          : `A malaria parasite gets into a red cell with only normal hemoglobin.`);
+        ctx.sideNote('left', st === 'bursting' ? burst() : null);
+        ctx.side('right', t < 6.6 ? `The same parasite gets into a carrier's cell, which holds both
+            kinds of hemoglobin.`
+          : t < 10.6 ? `The parasite uses up the cell's oxygen. Without it, the ${HBS.label}
+            polymerizes and the cell sickles.` : null);
+        ctx.sideNote('right', [
+          t >= 10.6 && `Destroyed by the spleen, which removes sickled cells. The parasite died
+            with it, before it could multiply.`,
+          t >= 13.5 && `Carriers still catch malaria, but they are about
+            ${Math.round((1 - SEVERE_OR) * 10) * 10}% less likely to get the severe kind that kills.`,
+        ].filter(Boolean));
+        ctx.scrub({ max: T7, value: t, step: 0.05, playing,
+          label: `${Math.round(S.infA.state().hours)} h into the cycle`, onScrub, onPlay });
+      }
+      const onScrub = v => { playing = false; t = v; apply(); };
+      const onPlay = () => {
+        if (!playing && t >= T7) t = 0;
+        playing = !playing;
+        apply();
       };
-      ctx.replay(run);
-      run();
+      bind(ctx, S.infA.on('frame', (s, dt) => {
+        if (!playing) return;
+        t = Math.min(T7, t + (dt || 0));
+        if (t >= T7) playing = false;
+        apply();
+      }));
+      apply();
     },
   };
 
@@ -361,6 +385,7 @@
         { colour: ['A', 'A'], text: 'Normal' },
         { colour: ['A', 'S'], text: 'Carrier' },
         { colour: ['S', 'S'], text: 'Sickle' },
+        { colour: ['dead', 'dead'], text: 'Died early' },
       ]);
       const both = next => { S.popA.set(next); S.popS.set(next); };
       /* NOTHING MOVES UNTIL THE READER ASKS. The first press of step or play
@@ -391,7 +416,8 @@
       };
       const show = () => {
         const a = S.popA.state(), m = S.popS.state();
-        ctx.scrub({ gens: POP.gens, value: m.generation, playing: m.playing && !m.done, onScrub, onPlay, onStep });
+        ctx.scrub({ max: POP.gens - 1, value: m.generation, label: `generation ${m.generation + 1} of ${POP.gens}`,
+          playing: m.playing && !m.done, onScrub, onPlay, onStep });
         const title = 'Sickle allele frequency';
         ctx.chart('left', { title, gens: POP.gens, values: a.history, expected: a.expected, text: ctx.pct(a.q) });
         ctx.chart('right', { title, gens: POP.gens, values: m.history, expected: m.expected, text: ctx.pct(m.q),

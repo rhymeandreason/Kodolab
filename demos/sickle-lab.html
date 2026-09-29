@@ -59,6 +59,27 @@
   .sk-label{position:absolute;top:68px;font-family:var(--display);font-weight:500;font-size:30px;
     letter-spacing:-.01em;line-height:1.1;color:var(--ink);pointer-events:none;
     flex-direction:column;gap:4px;animation:lshell-fadein .8s both}
+  /* A half's own words, under its heading; and a note that takes the place
+     of what the half has lost. */
+  .sk-side{position:absolute;z-index:3;top:128px;max-width:min(380px,calc(50% - 56px));margin:0;
+    font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30;pointer-events:none;
+    transition:opacity .4s}
+  .sk-side.left{left:28px}
+  .sk-side.right{left:calc(50% + 28px)}
+  /* Above the scene boxes, which are mounted after it. */
+  .sk-note{position:absolute;z-index:3;top:50%;transform:translate(-50%,-50%);width:min(340px,calc(50% - 80px));
+    display:flex;flex-direction:column;gap:12px;pointer-events:none}
+  .sk-note > div{padding:18px 22px;border-radius:14px;background:var(--panel);border:1px solid var(--line);
+    font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30;animation:lshell-fadein .8s both}
+  .sk-note.left{left:25%}
+  .sk-note.right{left:75%}
+  .sk-side[hidden],.sk-note[hidden]{display:none}
+  .sk-cap p:empty{display:none}
+  /* A step with nothing to caption drops the box: its Next joins the
+     scrubber, and the scrubber takes the caption's place. */
+  body.sk-bar .sk-cap{display:none}
+  body.sk-bar .sk-controls{bottom:24px !important}
+  .sk-controls .sk-btn{margin-left:4px}
   .sk-label small{font-size:14px;letter-spacing:.01em;color:var(--ink-2)}   /* not capitals: they would turn HbA into HBA */
   .sk-label.left{left:28px}
   .sk-label.right{left:calc(50% + 28px)}
@@ -69,8 +90,10 @@
     border:1px solid rgba(255,255,255,.7);box-shadow:0 30px 70px -40px rgba(20,30,20,.45)}
   .sk-cap p{margin:0;font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30}
   .sk-cap .sk-say{display:flex;flex-direction:column;gap:6px}
-  /* Back sits on its own at the left: the caption's buttons go forward. */
-  .sk-back{position:fixed;left:28px;bottom:34px;z-index:4;background:var(--panel)}
+  /* Back and the step count sit on their own at the left, the panel
+     footer's order (Back · 3 / 8 · Next) with Next in the caption. */
+  .sk-foot{position:fixed;left:28px;bottom:34px;z-index:4;align-items:center;gap:14px}
+  .sk-back{background:var(--panel)}
   .sk-cap nav{display:flex;gap:6px;flex:none}
   .sk-btn{font-family:var(--display);font-weight:500;font-size:14px;letter-spacing:.02em;
     border-radius:999px;padding:9px 18px;border:1px solid transparent;cursor:pointer;
@@ -174,6 +197,7 @@ const shell = LessonShell.create({
     document.body.dataset.beat = i + 1;
     capNext.hidden = i >= SickleSteps.steps.length - 1;
     capBack.disabled = i === 0;
+    capCount.textContent = `${i + 1} / ${SickleSteps.steps.length}`;
     placeToggle();
   },
 });
@@ -217,8 +241,13 @@ cap.innerHTML = `<div class="sk-say"><p></p></div><nav>
 shell.el.appendChild(cap);
 const capText = cap.querySelector('p');
 const capBack = document.createElement('button');
-capBack.className = 'sk-btn ghost sk-back sk-split-only'; capBack.type = 'button'; capBack.textContent = 'Back';
-shell.el.appendChild(capBack);
+capBack.className = 'sk-btn ghost sk-back'; capBack.type = 'button'; capBack.textContent = 'Back';
+const foot = document.createElement('div');
+foot.className = 'sk-foot sk-split-only';
+const capCount = document.createElement('span');
+capCount.className = 'lshell-count';
+foot.append(capBack, capCount);
+shell.el.appendChild(foot);
 const capReplay = cap.querySelector('[data-k=replay]');
 const capNext = cap.querySelector('[data-k=next]');
 capBack.onclick = () => shell.goTo(shell.current - 1);
@@ -234,11 +263,52 @@ ctx.split = (on, labels = {}) => {
     if (rest.length) { const sm = document.createElement('small'); sm.textContent = rest.join(' · '); el.appendChild(sm); }
   };
   head(labelL, labels.left); head(labelR, labels.right);
+  for (const el of Object.values(sides)) put(el, null);
+  for (const el of Object.values(notes)) putNotes(el, []);
+  ctx.bar(false);
   if (!on) { replayFn = null; capText.textContent = ''; }
   /* Every live box re-fits: the panel's room changed under it. */
   for (const s of Object.values(live)) if (s.api.box && s.api.box.layout) s.api.box.layout();
 };
-ctx.caption = text => { capText.textContent = text.replace(/\s+/g, ' ').trim(); };
+ctx.caption = text => {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (capText.textContent !== t) capText.textContent = t;
+};
+
+const sides = {}, notes = {};
+for (const side of ['left', 'right']) {
+  const t = document.createElement('p');
+  t.className = 'sk-side ' + side; t.hidden = true;
+  const n = document.createElement('div');
+  n.className = 'sk-note ' + side; n.hidden = true;
+  shell.stage.insertBefore(t, divider); shell.stage.insertBefore(n, divider);
+  sides[side] = t; notes[side] = n;
+}
+/* Written every frame by a scrubbed step, so only a change touches the DOM. */
+const putNotes = (el, texts) => {
+  const list = (texts || []).map(t => t.replace(/\s+/g, ' ').trim());
+  const have = [...el.children].map(c => c.textContent);
+  el.hidden = !list.length;
+  if (have.join('\n') === list.join('\n')) return;
+  /* Cards already up stay put, so only a new one fades in. */
+  while (el.children.length > list.length || [...el.children].some((c, i) => c.textContent !== list[i])) el.lastElementChild.remove();
+  for (let i = el.children.length; i < list.length; i++) {
+    const d = document.createElement('div'); d.textContent = list[i]; el.appendChild(d);
+  }
+};
+const put = (el, text) => {
+  const t = text ? text.replace(/\s+/g, ' ').trim() : '';
+  if (el.textContent !== t) el.textContent = t;
+  el.hidden = !t;
+};
+ctx.side = (side, text) => put(sides[side], text);
+/* One card or several, stacked where the half's scene was. */
+ctx.sideNote = (side, texts) => putNotes(notes[side], texts == null ? [] : [].concat(texts));
+/* Next beside the scrubber, and no caption box. */
+ctx.bar = on => {
+  document.body.classList.toggle('sk-bar', !!on);
+  (on ? controls : cap.querySelector('nav')).appendChild(capNext);
+};
 
 /* The village's colours are the β6 marks' from beat 2 and 3, read off the
    crowd so a reader who learned them there does not relearn them here. */
@@ -267,11 +337,11 @@ scrub.className = 'sk-scrub';
 scrub.innerHTML = `<button type="button" data-k="prev" aria-label="Previous generation">‹</button>
   <button type="button" data-k="play" aria-label="Play"></button>
   <button type="button" data-k="next" aria-label="Next generation">›</button>
-  <input type="range" min="1" step="1" aria-label="Generation"><span></span>`;
+  <input type="range" min="0" aria-label="Scrub"><span></span>`;
 const scrubBtn = scrub.querySelector('[data-k=play]'), scrubIn = scrub.querySelector('input'), scrubAt = scrub.querySelector('span');
 const scrubPrev = scrub.querySelector('[data-k=prev]'), scrubNext = scrub.querySelector('[data-k=next]');
 let scrubOn = {};
-scrubIn.oninput = () => scrubOn.onScrub && scrubOn.onScrub(+scrubIn.value - 1);
+scrubIn.oninput = () => scrubOn.onScrub && scrubOn.onScrub(+scrubIn.value);
 scrubBtn.onclick = () => scrubOn.onPlay && scrubOn.onPlay();
 scrubPrev.onclick = () => scrubOn.onStep && scrubOn.onStep(-1);
 scrubNext.onclick = () => scrubOn.onStep && scrubOn.onStep(1);
@@ -283,16 +353,20 @@ new ResizeObserver(() => {
 cap.querySelector('.sk-say').appendChild(legend);
 shell.el.appendChild(controls);
 /* A drag the reader is making is not written back to. */
+/* o: { max, value, step, label, playing, onScrub, onPlay, onStep }. The
+   step buttons are there only for a step that says what a step is. */
 ctx.scrub = o => {
   controls.hidden = !o;
   if (!o) return;
   scrubOn = o;
-  scrubIn.max = o.gens;
-  if (document.activeElement !== scrubIn) scrubIn.value = o.value + 1;
-  scrubAt.textContent = `generation ${o.value + 1} of ${o.gens}`;
+  scrubIn.max = o.max;
+  scrubIn.step = o.step || 1;
+  if (document.activeElement !== scrubIn) scrubIn.value = o.value;
+  scrubAt.textContent = o.label || '';
   scrubBtn.textContent = o.playing ? '❚❚' : '▶';
+  scrubPrev.hidden = scrubNext.hidden = !o.onStep;
   scrubPrev.disabled = o.value <= 0;
-  scrubNext.disabled = o.value >= o.gens - 1;
+  scrubNext.disabled = o.value >= o.max;
   scrubBtn.setAttribute('aria-label', o.playing ? 'Pause' : 'Play');
 };
 

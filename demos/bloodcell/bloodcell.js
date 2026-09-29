@@ -748,7 +748,7 @@
         /* Lands on the top face apical end down, holds, and sinks in. */
         const u = p / 0.05, roof = tableAt(top, Math.hypot(cx, cz));
         R = 0.42; H = 0.6;
-        oy = u < 0.45 ? roof + H + 2.6 * (1 - smooth(0, 0.45, u))
+        oy = u < 0.45 ? roof + H + 1.6 * (1 - smooth(0, 0.45, u))
                       : (roof + H) * (1 - smooth(0.45, 1, u));
       } else {
         R = ramp(p, BODY_R); H = R * 0.62;
