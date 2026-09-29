@@ -44,18 +44,11 @@
   #bonus .goal{min-width:150px;max-width:200px;padding:8px 12px 10px}
   #bonus .gname{font-size:16px}
   #bonus .gform{font-size:14px;margin-top:5px}
-  /* Locked: face down. Kept the same SIZE and place as the card it will become,
-     so unlocking turns a card over rather than making one appear — the student
-     knows there is something there to earn, which is the only reason to show it
-     at all. Paper goes flat and cool; no lift, no hover. */
-  .goal.locked{background:var(--surface-page);box-shadow:0 1px 1px rgba(43,39,35,.10),
-    0 2px 4px -2px rgba(43,39,35,.14);cursor:default}
-  .goal.locked:hover{background:var(--surface-page);animation:none}
-  .goal.locked .gname,.goal.locked .gform{visibility:hidden}
-  .goal.locked::after{content:'???';position:absolute;inset:0;
-    display:flex;align-items:center;justify-content:center;
-    font-family:var(--font-ui);font-weight:600;font-size:24px;
-    color:var(--cream-600);letter-spacing:.12em}
+  /* Locked: not drawn. A bonus card appears, turning over, once its reactant
+     is built; the overlap counts only the cards on the table. */
+  .goal.locked{display:none}
+  #bonus .goal + .goal{margin-left:0}
+  #bonus .goal:not(.locked) ~ .goal:not(.locked){margin-left:-14px}
   .goal.bonus{position:relative}
   /* The turn: it flips up onto its face once, so the unlock is something you
      SEE happen even if you were looking at the molecule when it did. */
