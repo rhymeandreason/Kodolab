@@ -120,7 +120,17 @@
     display:flex;align-items:center;gap:18px}
   .sk-controls[hidden]{display:none}
   .sk-scrub{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:12px;color:var(--ink-2);white-space:nowrap}
-  .sk-scrub input{width:220px;accent-color:var(--accent)}
+  /* A thin line that fills as it plays, and a small dot to grab: the
+     browser's own handle is bigger than anything else in the bar. --p is
+     the fill, written by ctx.scrub. */
+  .sk-scrub input{-webkit-appearance:none;appearance:none;width:220px;height:14px;margin:0;background:transparent;cursor:pointer}
+  .sk-scrub input::-webkit-slider-runnable-track{height:3px;border-radius:2px;
+    background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--line) var(--p,0%))}
+  .sk-scrub input::-moz-range-track{height:3px;border-radius:2px;background:var(--line)}
+  .sk-scrub input::-moz-range-progress{height:3px;border-radius:2px;background:var(--accent)}
+  .sk-scrub input::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;margin-top:-3.5px;
+    border-radius:50%;border:0;background:var(--accent)}
+  .sk-scrub input::-moz-range-thumb{width:10px;height:10px;border-radius:50%;border:0;background:var(--accent)}
   .sk-scrub button{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);
     background:#fff;color:var(--ink);cursor:pointer;font-size:11px;line-height:1}
   .sk-scrub button[data-k=prev],.sk-scrub button[data-k=next]{font-size:17px;line-height:1;padding-bottom:2px}
@@ -346,22 +356,36 @@ scrubBtn.onclick = () => scrubOn.onPlay && scrubOn.onPlay();
 scrubPrev.onclick = () => scrubOn.onStep && scrubOn.onStep(-1);
 scrubNext.onclick = () => scrubOn.onStep && scrubOn.onStep(1);
 controls.append(scrub);
-/* Rides above the caption, whose height changes with its text. */
-new ResizeObserver(() => {
-  controls.style.bottom = (window.innerHeight - cap.getBoundingClientRect().top + 12) + 'px';
-}).observe(cap);
+/* In a split it rides above the caption, whose height changes with its
+   text. With the panel up there is no caption, and it sits where the switch
+   does: centred in the room beside the panel. */
+function placeControls() {
+  if (document.body.classList.contains('sk-split')) {
+    controls.style.left = '';
+    controls.style.bottom = (window.innerHeight - cap.getBoundingClientRect().top + 12) + 'px';
+  } else {
+    const r = shell.panelRect();
+    controls.style.left = shell.narrow() ? '50%' : ((r.right + window.innerWidth) / 2) + 'px';
+    controls.style.bottom = shell.narrow() ? (r.height + 14) + 'px' : '60px';   // clear of the shell's hint
+  }
+}
+new ResizeObserver(placeControls).observe(cap);
+window.addEventListener('resize', placeControls);
 cap.querySelector('.sk-say').appendChild(legend);
 shell.el.appendChild(controls);
 /* A drag the reader is making is not written back to. */
 /* o: { max, value, step, label, playing, onScrub, onPlay, onStep }. The
    step buttons are there only for a step that says what a step is. */
 ctx.scrub = o => {
+  const was = controls.hidden;
   controls.hidden = !o;
   if (!o) return;
+  if (was) placeControls();
   scrubOn = o;
   scrubIn.max = o.max;
   scrubIn.step = o.step || 1;
   if (document.activeElement !== scrubIn) scrubIn.value = o.value;
+  scrubIn.style.setProperty('--p', (o.max ? scrubIn.value / o.max * 100 : 0) + '%');
   scrubAt.textContent = o.label || '';
   scrubBtn.textContent = o.playing ? '❚❚' : '▶';
   scrubPrev.hidden = scrubNext.hidden = !o.onStep;

@@ -241,6 +241,7 @@
      does not fit: the allele is common. The card says why that matters and
      names the parasite; the cell shows it at work, so beat 7's two cells
      open on something the reader has already seen once, slowly. */
+  const ease = (a, b, t) => { const u = Math.min(1, Math.max(0, (t - a) / (b - a))); return u * u * (3 - 2 * u); };
   const WORD = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
   const big = n => (n >= 1e6 ? `${Math.round(n / 1e6)} million` : n.toLocaleString('en-US'));
   const step6 = {
@@ -249,20 +250,43 @@
     body: `Most children born with two sickle copies used to die young, so the allele
       should have faded away. Instead, in parts of Africa about one person in
       ${WORD[Math.round(1 / CARRIERS_MAX)]} carries it. Those are the places where malaria is.`,
-    onExit(ctx) { leave(ctx); if (ctx.state.malaria) ctx.state.malaria.clearNotes(); },
+    onExit(ctx) { leave(ctx); ctx.scrub(null); if (ctx.state.malaria) ctx.state.malaria.clearNotes(); },
     onEnter(ctx) {
       ctx.split(false);
       ctx.toggle(false);
       const { malaria } = ctx.use({ show: ['malaria'] });
       ctx.state.malaria = malaria;
       malaria.clearNotes();
-      malaria.set({ parasite: 0, sickle: 0, spill: 0 }, { snap: true });
-      malaria.set({ parasite: 0.72 }, { seconds: 16 });
-      bind(ctx, malaria.on('stage', st => {
-        if (st === 'ring') malaria.note('parasite');
-        /* Below and left, clear of the parasite's own label. */
-        if (st === 'trophozoite') malaria.note('hemozoin', { offset: [-70, 46] });
+      malaria.set({ sickle: 0, spill: 0 }, { snap: true });
+
+      /* On a clock, like step 7, so it scrubs: the parasite grows to a
+         trophozoite and holds there, and the labels are read off its stage,
+         so dragging back takes them away again. */
+      const T = 18;
+      let t = 0, playing = true, noted = '';
+      const apply = () => {
+        malaria.set({ parasite: 0.72 * ease(0, 16, t) }, { snap: true });
+        const st = malaria.state().stage;
+        const want = st === 'trophozoite' ? 'parasite,hemozoin' : st && st !== 'invading' ? 'parasite' : '';
+        if (want !== noted) {
+          malaria.clearNotes();
+          if (want) malaria.note('parasite');
+          /* Below and left, clear of the parasite's own label. */
+          if (want.includes('hemozoin')) malaria.note('hemozoin', { offset: [-70, 46] });
+          noted = want;
+        }
+        ctx.scrub({ max: T, value: t, step: 0.05, playing, onScrub, onPlay,
+          label: `${Math.round(malaria.state().hours)} h into the cycle` });
+      };
+      const onScrub = v => { playing = false; t = v; apply(); };
+      const onPlay = () => { if (!playing && t >= T) t = 0; playing = !playing; apply(); };
+      bind(ctx, malaria.on('frame', (s, dt) => {
+        if (!playing) return;
+        t = Math.min(T, t + (dt || 0));
+        if (t >= T) playing = false;
+        apply();
       }));
+      apply();
       ctx.ui.controls(`
         <div class="stats">
           <div class="stat accent"><span class="stat-label">Malaria deaths, ${MALARIA.year}</span>
@@ -297,7 +321,6 @@
      snapped, and every line of text is read from where the cells are. A
      drag is the same call as a frame. */
   const T7 = 32;
-  const ease = (a, b, t) => { const u = Math.min(1, Math.max(0, (t - a) / (b - a))); return u * u * (3 - 2 * u); };
   const step7 = {
     title: 'One copy protects against malaria',
     onExit(ctx) { leave(ctx); ctx.scrub(null); },
