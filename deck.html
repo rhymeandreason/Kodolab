@@ -383,7 +383,11 @@ const Intro = (() => {
   if (reduce) rings.forEach(r => r.disc.setAttribute("fill", "#14213D"));
   const spots = [[8, 22, 18], [88, 18, 12], [14, 78, 10], [80, 74, 22], [50, 88, 8], [30, 12, 7], [68, 30, 9]];
   for (const motes of [document.getElementById("introMotes"), document.getElementById("endMotes")]) spots.forEach(([x, y, r], i) => { const m = document.createElement("i"); m.style.cssText = `left:${x}%;top:${y}%;width:${r * 1.4}px;height:${r * 1.4}px;background:${COLORS[i % 5]};animation-delay:${-i * 2.3}s;animation-duration:${11 + i * 1.7}s;transition:opacity 1.2s ${0.1 * i}s`; motes.appendChild(m); });
-  return { play() { if (reduce) hero.classList.add("said"); else nucleate(); } };
+  return {
+    play() { if (reduce) hero.classList.add("said"); else nucleate(); },
+    // R on the intro: first hides the tagline, then replays
+    r() { if (hero.classList.contains("said")) { clearTimeout(sayTimer); hero.classList.remove("said"); } else this.play(); },
+  };
 })();
 
 /* ---- 1. the traffic chart ---------------------------------------------- */
@@ -494,7 +498,8 @@ const Build = (() => {
   addEventListener('keydown', e => {
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(at + 1); }
     if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(at - 1); }
-    if (e.key === 'Home' || e.key === 'r' || e.key === 'R') go(0);
+    if (e.key === 'Home') go(0);
+    if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey) at === 0 ? Intro.r() : go(0);
     if (e.key === 'End') go(slides.length - 1);
   });
   addEventListener('hashchange', () => go((parseInt(location.hash.slice(1), 10) || 1) - 1));
