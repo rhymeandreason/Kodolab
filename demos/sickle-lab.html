@@ -27,6 +27,25 @@
      a switch on the stage, two halves with a caption, and a card in the panel. */
   .lshell-panel .ccard{max-width:100%}
   .lshell-panel .hint-text{margin-top:6px}
+  /* Step 6: the three genotypes as pairs of gene copies, the carrier lit. */
+  .sk-geno{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 12px}
+  .sk-geno-hd{grid-column:1/-1;font-family:var(--display);font-size:11px;font-weight:500;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+  .sk-geno-col{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 9px;
+    border:1px solid var(--line);border-radius:12px;background:#fff;text-align:center}
+  .sk-geno-col.on{border-color:var(--accent);background:var(--accent-soft)}
+  .sk-geno-pair{display:flex;gap:5px;margin-bottom:5px}
+  .sk-geno-pair i{display:block;width:9px;height:30px;border-radius:5px}
+  .sk-geno-col b{font-family:var(--display);font-weight:500;font-size:14px;color:var(--ink)}
+  .sk-geno-col span{font-size:12px;line-height:1.3;color:var(--ink-2)}
+  .sk-geno-key{grid-column:1/-1;display:flex;align-items:center;gap:6px;font-family:var(--display);
+    font-size:12px;color:var(--ink-2)}
+  .sk-geno-key i{display:inline-block;width:10px;height:10px;border-radius:50%}
+  .sk-geno-key i + i{margin-left:10px}
+  .sk-under{position:fixed;transform:translateX(-50%);z-index:3;width:min(440px,calc(100vw - 48px));
+    text-align:center;font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30;pointer-events:none}
+  .sk-under[hidden]{display:none}
+  .lshell-panel .sk-fact{margin:0 0 12px;font-size:13px;line-height:1.45;color:var(--ink-2)}
 
   /* The switch lives on the stage, centred in the room the panel leaves, and
      is placed by script because that room is the panel's width. Its look is
@@ -322,6 +341,7 @@ const hexCss = h => '#' + h.toString(16).padStart(6, '0');
 const ALLELE = { A: HbCrowd.markOf('HbA'), S: HbCrowd.markOf('HbS') };
 const DEAD = '#b3ada3';
 ctx.pct = x => Math.round(x * 100) + '%';
+ctx.allele = { A: hexCss(ALLELE.A), S: hexCss(ALLELE.S) };
 
 const legend = document.createElement('div');
 legend.className = 'sk-legend'; legend.hidden = true;
@@ -364,7 +384,18 @@ function placeControls() {
     controls.style.left = shell.narrow() ? '50%' : ((r.right + window.innerWidth) / 2) + 'px';
     controls.style.bottom = shell.narrow() ? (r.height + 14) + 'px' : '60px';   // clear of the shell's hint
   }
+  /* A note under the scene sits in the same room, above the controls. */
+  const r = shell.panelRect();
+  under.style.left = shell.narrow() || document.body.classList.contains('sk-split') ? '50%'
+    : ((r.right + window.innerWidth) / 2) + 'px';
+  under.style.bottom = (parseFloat(controls.style.bottom) || 60) + (controls.hidden ? 0 : 56) + 'px';
 }
+/* ctx.under(html): a callout under the 3D scene rather than in the panel,
+   for the sentence that names what the reader is looking at. */
+const under = document.createElement('div');
+under.className = 'sk-under'; under.hidden = true;
+shell.el.appendChild(under);
+ctx.under = html => { under.hidden = !html; under.innerHTML = html || ''; placeControls(); };
 new ResizeObserver(placeControls).observe(cap);
 window.addEventListener('resize', placeControls);
 cap.querySelector('.sk-say').appendChild(legend);

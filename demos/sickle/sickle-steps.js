@@ -246,7 +246,7 @@
     body: `Most children born with two sickle copies used to die young, so the allele
       should have faded away. Instead, in parts of Africa about one person in
       ${WORD[Math.round(1 / CARRIERS_MAX)]} carries it. Those are the places where malaria is.`,
-    onExit(ctx) { leave(ctx); ctx.scrub(null); if (ctx.state.malaria) ctx.state.malaria.clearNotes(); },
+    onExit(ctx) { leave(ctx); ctx.scrub(null); ctx.under(null); if (ctx.state.malaria) ctx.state.malaria.clearNotes(); },
     onEnter(ctx) {
       ctx.split(false);
       ctx.toggle(false);
@@ -283,19 +283,23 @@
         apply();
       }));
       apply();
+      ctx.under(`Malaria is a single-celled parasite, <em>Plasmodium</em>, passed on by mosquito
+        bites. It lives inside red blood cells and eats hemoglobin.`);
       ctx.ui.controls(`
-        <div class="stats">
-          <div class="stat accent"><span class="stat-label">Malaria deaths, ${MALARIA.year}</span>
-            <span class="stat-value">${big(MALARIA.deaths)}</span>
-            <span class="stat-sub">in Africa, ${Math.round(MALARIA.under5 * 100)}% were under five</span></div>
-          <div class="stat"><span class="stat-label">Malaria cases, ${MALARIA.year}</span>
-            <span class="stat-value">${big(MALARIA.cases)}</span>
-            <span class="stat-sub">worldwide</span></div>
+        <div class="sk-geno" role="img" aria-label="Two copies of the gene: two normal, one of each (a carrier), or two sickle">
+          <div class="sk-geno-hd">Two copies of the gene, one from each parent</div>
+          ${[['A', 'A', 'Normal', 'no sickling'],
+             ['A', 'S', 'Carrier', 'usually healthy'],
+             ['S', 'S', 'Sickle cell', 'cells sickle']].map(([x, y, name, sub]) =>
+            `<div class="sk-geno-col${x !== y ? ' on' : ''}">
+               <div class="sk-geno-pair"><i style="background:${ctx.allele[x]}"></i><i style="background:${ctx.allele[y]}"></i></div>
+               <b>${name}</b><span>${sub}</span></div>`).join('')}
+          <div class="sk-geno-key"><i style="background:${ctx.allele.A}"></i>normal copy
+            <i style="background:${ctx.allele.S}"></i>sickle copy</div>
         </div>
-        <p class="callout">Malaria is a single-celled parasite, <em>Plasmodium</em>, passed on by
-          mosquito bites. It lives inside red blood cells and eats hemoglobin.</p>
-        <p class="hint-text">This cell is infected. Watch the parasite eat the hemoglobin.
-          If a gene can change that cell, it can change who survives malaria.</p>`);
+        <p class="sk-fact">Malaria killed ${big(MALARIA.deaths)} people in ${MALARIA.year} and infected
+          ${big(MALARIA.cases)}. In Africa, ${Math.round(MALARIA.under5 * 100)}% of the deaths were
+          children under five.</p>`);
     },
   };
 
