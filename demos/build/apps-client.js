@@ -335,7 +335,8 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
 
   function framed(html, relay = RELAY) {
     html = withMols(html);
-    const base = `<base href="${location.origin}/demos/build/">`;
+    // A made app is the student's, so the shell's kodolab mark stays off it.
+    const base = `<base href="${location.origin}/demos/build/"><style>.lshell-brand .mark{display:none!important}</style>`;
     const head = /<head[^>]*>/i.exec(html);
     return head ? html.slice(0, head.index + head[0].length) + '\n' + base + relay + html.slice(head.index + head[0].length)
                 : base + relay + html;
