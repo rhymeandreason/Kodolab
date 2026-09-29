@@ -145,6 +145,11 @@ const SHOTS = [
   { key: 'bloodflow', use: 'BloodFlow', warm: 6,
     mount: el => BloodFlow.mount(el, { sickle: 0 }) },
 
+  /* Not a shelf card: the sickle lesson's own still on lessons.html, named
+     for the lesson. A vessel half crescents, warmed until the jam has formed. */
+  { key: 'sickle-cell', use: 'BloodFlow', warm: 12,
+    mount: el => BloodFlow.mount(el, { sickle: 0.5 }) },
+
   { key: 'tree', use: 'Tree', warm: 2,
     mount: el => Tree.mount(el, {}) },
 
