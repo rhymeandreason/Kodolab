@@ -94,6 +94,18 @@
  *  contact, but a free molecule has not chosen yet.
  *
  *  Anchors for note(): patch · chain. Events: nucleate · bond · done · load.
+ *
+ *  ---- THE TAPE ----------------------------------------------------------------
+ *
+ *  A SIMULATION CANNOT BE SCRUBBED, so the mount records what it draws: every
+ *  molecule's matrix, the fade and the camera, TAPE_HZ times a second, from
+ *  the last reset. `seek(t)` shows the tape at t, blended between frames, and
+ *  leaves the simulation where it was; running from there plays the tape back
+ *  and hands over to the live run when it reaches the end of what was
+ *  recorded. So a reader can go back over a run without making a new one.
+ *  `tape()` says where it is: { t, end, live, marks }, and `marks` holds the
+ *  tape time of play, nucleate and done, which is what a scrubbed page's
+ *  captions read instead of the events.
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -944,6 +956,7 @@
          the camera on that one rather than near it. */
       first: () => (mols[0] ? mols[0].pos : null),
       get molR() { return molR; },
+      get mesh() { return mesh; },
       on(ev, fn) { (listeners[ev] || (listeners[ev] = [])).push(fn);
         return () => { const i = listeners[ev].indexOf(fn); if (i >= 0) listeners[ev].splice(i, 1); }; },
       dispose() { if (mesh) { root.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); } },
@@ -963,8 +976,23 @@
     const box = global.CardStage.create({
       mount: el,
       cam: params.cam || { theta: 0.3, phi: 1.35, r: 520 },
-      stage: Object.assign({ rMin: 90, rMax: 8000 }, params.stage || {}),
-      step: dt => { if (sim) { sim.step(dt); camTw.update(dt); emit('frame', api.state(), dt); } },
+      /* A drag PANS. The crowd is a slab one molecule deep, and turning it
+         shows its edge: the thing a reader drags for is a chain that has
+         wandered off to one side. */
+      stage: Object.assign({ rMin: 90, rMax: 8000, orbit: 'pan' }, params.stage || {}),
+      step: dt => {
+        if (!sim) return;
+        if (seekT !== null) {
+          seekT += dt || 0;
+          if (seekT >= tapeT) { seekT = null; show(tapeT); }
+          else show(seekT);
+        } else {
+          sim.step(dt); camTw.update(dt);
+          tapeT += dt || 0;
+          record();
+        }
+        emit('frame', api.state(), dt);
+      },
       afterFrame: () => { if (nb) nb.step(); },
       onResize: () => frame(0, true),
       viewOffset: params.viewOffset,
@@ -974,6 +1002,40 @@
 
     sim = create(THREE, box.root, box.camera, params);
     const camTw = global.CardStage.tweens();
+
+    /* ---- the tape (see the header) ---- */
+    const TAPE_HZ = 12;
+    let tape = [], tapeT = 0, seekT = null, marks = {};
+    function clearTape() { tape = []; tapeT = 0; seekT = null; marks = {}; }
+    function record() {
+      const mesh = sim.mesh;
+      if (!mesh) return;
+      const last = tape[tape.length - 1];
+      if (last && tapeT - last.t < 1 / TAPE_HZ) return;
+      const c = box.cam.target;
+      tape.push({ t: tapeT, n: mesh.count, m: mesh.instanceMatrix.array.slice(0, mesh.count * 16),
+                  op: mesh.material.opacity, r: box.cam.r, x: c.x, y: c.y, z: c.z });
+    }
+    function show(t) {
+      const mesh = sim.mesh;
+      if (!mesh || !tape.length) return;
+      let lo = 0, hi = tape.length - 1;
+      while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (tape[mid].t <= t) lo = mid; else hi = mid - 1; }
+      const a = tape[lo], b = tape[Math.min(lo + 1, tape.length - 1)];
+      const u = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 0;
+      /* Blended element by element: a twelfth of a second apart, the rotation
+         part is too close to its neighbour for the shear to show. */
+      const n = Math.min(a.n, b.n), arr = mesh.instanceMatrix.array;
+      for (let i = 0; i < n * 16; i++) arr[i] = a.m[i] + (b.m[i] - a.m[i]) * u;
+      mesh.count = n;
+      mesh.instanceMatrix.needsUpdate = true;
+      const op = a.op + (b.op - a.op) * u;
+      mesh.material.opacity = op; mesh.material.transparent = op < 1;
+      box.cam.r = a.r + (b.r - a.r) * u;
+      box.cam.target.set(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u, a.z + (b.z - a.z) * u);
+      box.applyCam();
+    }
+    for (const ev of ['nucleate', 'done']) sim.on(ev, () => { if (marks[ev] == null) marks[ev] = tapeT; });
 
     /* Fit the focus sphere in the room the panel leaves — sickle-fibre.js's
        rule, and the same arithmetic.
@@ -1062,6 +1124,7 @@
     }
     function begin(seconds) {
       camTw.cancel();
+      clearTape();
       sim.set({ reveal: 0 }, { snap: true });
       const one = sim.first();
       if (one) box.cam.target.copy(one); else box.cam.target.set(0, 0, 0);
@@ -1093,8 +1156,16 @@
          the beat never starts. */
       set(next, o) { sim.set(next, o); return api; },
       state: () => sim.state(),
-      play() { ready.then(() => sim.play()); return api; },
-      reset() { ready.then(() => { sim.reset(); if (!pending) frame(0.6, true); }); return api; },
+      play() { ready.then(() => { sim.play(); if (marks.play == null) marks.play = tapeT; }); return api; },
+      reset() { ready.then(() => { clearTape(); sim.reset(); if (!pending) frame(0.6, true); }); return api; },
+      seek(t) {
+        seekT = Math.max(0, Math.min(tapeT, t));
+        show(seekT);
+        if (seekT >= tapeT) seekT = null;
+        if (!box.running) box.draw();
+        return api;
+      },
+      tape: () => ({ t: seekT === null ? tapeT : seekT, end: tapeT, live: seekT === null, marks: Object.assign({}, marks) }),
       zoom(f, dur) { zoom(f, dur); return api; },
       intro(seconds) { return intro(seconds); },
       on(ev, fn) {

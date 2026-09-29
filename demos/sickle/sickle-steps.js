@@ -146,12 +146,14 @@
 
   /* THE ONLY BEAT WITH NO SCRIPT. hbcrowd.js simulates assembly rather than
      playing it, so nothing here knows when the first contact will hold or how
-     long the chains will take — the captions hang off the component's own
-     `nucleate` and `done`, and a timer would be a lie about what is on screen.
-     Replay genuinely re-runs it, and the wait is a different wait. */
+     long the chains will take, and the one caption makes no claim about
+     when. The tape's `done` mark is what ends the run.
+     ONE CLOCK: the HbS crowd's tape. The attraction goes on when the live run
+     reaches the end of the intro, and the run stops a few seconds after
+     `done`, so the tape has an end to scrub to. */
   const step3 = {
     title: 'The greasy spot sticks',
-    onExit: leave,
+    onExit(ctx) { leave(ctx); ctx.scrub(null); },
     onEnter(ctx) {
       ctx.toggle(false);
       ctx.split(true, { left: `Normal · ${HBA.label}`, right: `Sickle · ${HBS.label}` });
@@ -161,30 +163,36 @@
          and widens. The whole argument is arithmetic: one patch is nothing,
          and a cell full of them cannot get through a capillary. Cutting
          straight to a crowd asserts that; widening into one shows it. */
-      const IN = 3.4;
-      const run = () => {
-        ctx.clearTimers();
-        S.crowdA.reset(); S.crowdS.reset();
-        S.crowdA.start(); S.crowdS.start();
-        S.crowdA.intro(IN); S.crowdS.intro(IN);
-        ctx.caption(`The same molecule, the same size. Nothing about it has changed.`);
-        ctx.after(IN * 0.75, () => ctx.caption(`Now the crowd it was always in
-          — ${S.crowdS.state().n} here, and a red cell holds millions.`));
-        ctx.after(IN + 0.8, () => {
-          S.crowdS.play();
-          ctx.caption(`One greasy spot per molecule, and it pulls. Watch the sickle side.`);
-        });
+      const IN = 3.4, AFTER = 5, NOMINAL = 45;
+      let playing = true, ended = false;
+      const boxes = on => { for (const c of [S.crowdA, S.crowdS]) on ? c.start() : c.stop(); playing = on; };
+      const show = () => {
+        const tp = S.crowdS.tape();
+        ctx.scrub({ max: ended ? tp.end : Math.max(NOMINAL, tp.end), value: tp.t, step: 0.05,
+          playing, onScrub, onPlay });
       };
-      bind(ctx, S.crowdS.on('nucleate', () =>
-        ctx.caption(`Pairs kept forming and falling apart. One has held long enough
-          to grow, and now it only grows.`)));
-      /* Chains, plural. One long strand would be the tidier picture and it is
-         not what the simulation makes, or what a sickling cell makes. */
-      bind(ctx, S.crowdS.on('done', () =>
-        ctx.caption(`Most of the crowd is now in chains, every one of them the same
-          contact repeated. Seven twist together into a fibre.`)));
-      ctx.replay(run);
-      run();
+      const onScrub = v => { boxes(false); S.crowdA.seek(v); S.crowdS.seek(v); show(); };
+      const onPlay = () => {
+        if (playing) { boxes(false); return show(); }
+        if (ended && S.crowdS.tape().t >= S.crowdS.tape().end - 0.05) { S.crowdA.seek(0); S.crowdS.seek(0); }
+        boxes(true); show();
+      };
+      bind(ctx, S.crowdS.on('frame', () => {
+        const tp = S.crowdS.tape();
+        if (tp.live && tp.marks.play == null && tp.t >= IN + 0.8) S.crowdS.play();
+        if (tp.live && !ended && tp.marks.done != null && tp.t >= tp.marks.done + AFTER) ended = true;
+        /* A replay of the tape that reaches its end stops there too, rather
+           than carrying the finished run on live. */
+        if (tp.live && ended && playing) boxes(false);
+        show();
+      }));
+      S.crowdA.reset(); S.crowdS.reset();
+      boxes(true);
+      S.crowdA.intro(IN); S.crowdS.intro(IN);
+      ctx.replay(null);
+      ctx.caption(`The greasy spots on sickle hemoglobin stick the molecules to each other, so
+        they polymerize into chains.`);
+      show();
     },
   };
 

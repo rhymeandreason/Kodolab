@@ -643,6 +643,8 @@ Glides: `lay`. Snaps: `n`, `variant`, `drift`, `stick`. `play()` and `reset()` a
 
 Anchors for `note()`: `patch` (β6 on the first molecule), `chain` (the strand's middle, once anything has docked). No layers.
 
+**It scrubs.** The mount records what it draws from the last `reset()`: `C.seek(t)` shows the run at t seconds, and running on from there replays the recording and then continues live. `C.tape()` is `{ t, end, live, marks }`, where `marks` holds the times of `play`, `nucleate` and `done`; a scrubbed page's captions read those instead of listening for the events.
+
 Good for: why one amino acid makes a polymer, HbA against HbS side by side, the start of a sickle fibre. Not for: the whole fibre (SickleFibre), the cell it deforms (BloodCell), or any other protein.
 
 ## BloodFlow — a vessel of red cells, narrowing
