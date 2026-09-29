@@ -251,10 +251,6 @@
         <div class="path">tools/social.html <span class="badge">internal tool</span></div>
         <div class="desc">Post layouts for LinkedIn and Instagram: a lesson card, a statement, a carousel, drawn in the front door&rsquo;s language on a 2D canvas and saved as PNG (a carousel also as one PDF). Colours read from brand.css, wordmark parsed from the svg, images from media/ via the dev server&rsquo;s folder listing or pasted with &#8984;V</div>
       </a>
-      <a class="card tool" href="tools/component-stills.html">
-        <div class="path">tools/component-stills.html <span class="badge">internal tool</span></div>
-        <div class="desc">Bakes the component shelf&rsquo;s thumbnails: each component drawn once in contribute.html&rsquo;s own card box, written to media/components/. Loads a component&rsquo;s scripts from kit/app.js&rsquo;s USES table, so it cannot drift from what a generated page loads, and reloads across the molecule families because WaterSim and the rest cannot share a document. Dev server, and Chrome &mdash; Safari encodes no WebP. Re-run it after changing a component&rsquo;s scene</div>
-      </a>
       <a class="card component" href="water/water-test.html">
         <div class="path">water/water-test.html <span class="badge">component</span></div>
         <div class="desc">water/watersim-mount.js — H-bonds, ice, hydration shells, temperature, invariants printed live</div>
@@ -348,10 +344,6 @@
       <a class="card test" href="build/edit-test.html">
         <div class="path">build/edit-test.html <span class="badge">test</span></div>
         <div class="desc">The text mode's bench: build/app-edit.js armed on a real generated page, with no database. Shows which passages round-trip to the source, prints the find/replace pairs Save would send, and applies them here</div>
-      </a>
-      <a class="card test" href="build/recapture.html">
-        <div class="path">build/recapture.html <span class="badge">test</span></div>
-        <div class="desc">Retakes the shelf's stills. A thumb is drawn only when it is the scene alone, and every capture from before that was a whole page with a rasterised panel in it; this opens each of your apps under the builder's own relay and saves the shot it posts. Needs the tab in front, since a background tab stops animating</div>
       </a>
       <a class="card prototype" href="capillary/pbf-test.html">
         <div class="path">capillary/pbf-test.html <span class="badge">prototype</span></div>
@@ -517,10 +509,6 @@
         <div class="path">molecule-viewer.html <span class="badge">internal tool</span></div>
         <div class="desc">Reference shelf: ATP, NADH — 3D / skel / flat2d / diagram</div>
       </a>
-      <a class="card tool" href="tools/molecule-stills.html">
-        <div class="path">tools/molecule-stills.html <span class="badge">internal tool</span></div>
-        <div class="desc">Bakes library.html&rsquo;s molecule thumbnails: every MolLib spec drawn once in its own <code>view:</code> (or molview&rsquo;s PCA pose), written to media/molecules/. Dev server, and Chrome. Re-run after a spec&rsquo;s geometry or view changes</div>
-      </a>
       <a class="card test" href="molecule-builder/builder-test.html">
         <div class="path">molecule-builder/builder-test.html <span class="badge">test</span></div>
         <div class="desc">Test bench for molecule-builder/ — an ortho builder over a perspective host, both mechanics, two instances</div>
@@ -586,10 +574,6 @@
       <a class="card test" href="proteins/prion/prion-test.html">
         <div class="path">proteins/prion/prion-test.html <span class="badge">test</span></div>
         <div class="desc">PrP as deposited: native and fibril for human and hamster, plus the ten-chain stack, with the helix fraction and flatness that say how far apart the two states are</div>
-      </a>
-      <a class="card tool" href="proteins/tools/stills.html">
-        <div class="path">proteins/tools/stills.html <span class="badge">internal tool</span></div>
-        <div class="desc">Bakes the gallery's first frame: every protein drawn once in the gallery's own box, written to proteins/stills/. Dev server only — re-run it after a re-bake or a rotation change</div>
       </a>
       <a class="card tool" href="proteins/tools/triage.html">
         <div class="path">proteins/tools/triage.html <span class="badge">internal tool</span></div>
@@ -938,6 +922,28 @@
       <a class="card ugc" href="tests/gen-chemi-print.html">
         <div class="path">tests/gen-chemi-print.html <span class="badge">UGC</span></div>
         <div class="desc">"How does a mitochondrion make ATP from a proton gradient? What does an uncoupler do?", regenerated: ElectronTransport, the leak added on step 3, protons leaked and through the synthase printed from state()</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="topic" data-topic="thumbs" data-chip="Render thumbnails" data-group="Infra">
+    <h2>Render thumbnails</h2>
+    <div class="grid">
+      <a class="card tool" href="tools/molecule-stills.html">
+        <div class="path">tools/molecule-stills.html <span class="badge">internal tool</span></div>
+        <div class="desc">Bakes library.html&rsquo;s molecule thumbnails: every MolLib spec drawn once in its own <code>view:</code> (or molview&rsquo;s PCA pose), written to media/molecules/. Dev server, and Chrome. Re-run after a spec&rsquo;s geometry or view changes</div>
+      </a>
+      <a class="card tool" href="tools/component-stills.html">
+        <div class="path">tools/component-stills.html <span class="badge">internal tool</span></div>
+        <div class="desc">Bakes the component shelf&rsquo;s thumbnails: each component drawn once in contribute.html&rsquo;s own card box, written to media/components/. Loads a component&rsquo;s scripts from kit/app.js&rsquo;s USES table, so it cannot drift from what a generated page loads, and reloads across the molecule families because WaterSim and the rest cannot share a document. Dev server, and Chrome &mdash; Safari encodes no WebP. Re-run it after changing a component&rsquo;s scene</div>
+      </a>
+      <a class="card tool" href="proteins/tools/stills.html">
+        <div class="path">proteins/tools/stills.html <span class="badge">internal tool</span></div>
+        <div class="desc">Bakes the gallery's first frame: every protein drawn once in the gallery's own box, written to proteins/stills/. Dev server only — re-run it after a re-bake or a rotation change</div>
+      </a>
+      <a class="card test" href="build/recapture.html">
+        <div class="path">build/recapture.html <span class="badge">test</span></div>
+        <div class="desc">Retakes the shelf's stills. A thumb is drawn only when it is the scene alone, and every capture from before that was a whole page with a rasterised panel in it; this opens each of your apps under the builder's own relay and saves the shot it posts. Needs the tab in front, since a background tab stops animating</div>
       </a>
     </div>
   </section>
