@@ -34,26 +34,21 @@ dialog.beta form { text-align: right; }
   background: var(--brand-paper-2) center / cover no-repeat;
   background-image: radial-gradient(var(--surface-rule) 1px, transparent 1.2px); background-size: 12px 12px;
 }
-/* A live card: the app rendered at laptop size and scaled to the slot, inert.
-   The slot's own size decides the scale, so the frame is laid out at a fixed
-   960 wide and shrunk by the ratio. */
+/* A card is laid out at a fixed 960 wide and shrunk to the slot by the ratio. */
 .mine .thumb { position: relative; overflow: hidden; }
-.mine .live, .mine .card {
+.mine .card {
   position: absolute; left: 0; top: 0; width: 960px; height: 600px;
   transform-origin: 0 0; transform: scale(var(--k, .16));
 }
-.mine .live { border: 0; pointer-events: none; background: var(--surface-card); }
 
-/* A still card: the same box with the frame swapped for the stored scene, and
-   the shell's own first card rebuilt over it in DOM. The panel is never
+/* The stored scene, with the shell's own first card rebuilt over it in DOM. The panel is never
    rasterised, so it stays sharp at any size and re-themes with the page.
 
    THE SHELL'S STYLESHEET CANNOT BE REUSED HERE. Its panel is position:fixed
    and sized in vw, and both resolve against the window rather than this 960
    box, so the measurements it uses at 960 wide are restated. That makes this a
    miniature and not a replica: it tracks the card's SHAPE, and a restyle of
-   the shell will not reach it. Keep it to shape, and let the live cards above
-   carry the detail. */
+   the shell will not reach it. Keep it to shape. */
 /* No background COLOUR: an app whose words are stored but whose scene never
    captured falls through to the slot's own paper rather than a flat fill. */
 .mine .card {

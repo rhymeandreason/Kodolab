@@ -19,15 +19,13 @@
  *  list is the server's, and nothing from this browser's store — on a shared
  *  Chromebook the store holds whoever sat here last. Otherwise the store.
  *
- *  The first few cards are the apps themselves, live in a scaled, inert frame;
- *  six is the cap, since each is a WebGL context. Beyond that a card is the
- *  same box with the frame swapped for a still: the scene as the stored image,
- *  the shell's own card rebuilt over it from the words stored beside it. Same
- *  960x600 layout, same scale, so the two halves read as one set.
+ *  A card is a still, never the live app: the scene as the stored image, the
+ *  shell's own card rebuilt over it from the words stored beside it, laid out
+ *  at 960x600 and scaled to the slot. A live frame per card is a WebGL
+ *  context each, and a dozen of them lagged the page.
  * ========================================================================== */
 window.Shelf = (() => {
   'use strict';
-  const LIVE = 6;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   // Days, then a date: an app is worked on in sittings, so an hour count says
@@ -115,8 +113,8 @@ window.Shelf = (() => {
   // The card opens the editor; the row under it names the three things that
   // are not that. Delete needs the edit token, so it is only offered on an app
   // this browser can still edit or the account owns.
-  const card = (m, i) => `<li data-id="${esc(m.id)}"><a class="open" href="${esc(Apps.link('edit', m.id))}"><span class="thumb">`
-    + (i < LIVE ? `<iframe class="live" data-id="${esc(m.id)}" title="" tabindex="-1" aria-hidden="true"></iframe>` : still(m))
+  const card = m => `<li data-id="${esc(m.id)}"><a class="open" href="${esc(Apps.link('edit', m.id))}"><span class="thumb">`
+    + still(m)
     + `</span><span class="meta"><span class="name">${esc(m.title || 'untitled')}</span>`
     + `<time class="when" datetime="${new Date(m.edited || m.at || Date.now()).toISOString()}">${esc(ago(m.edited || m.at))}</time>`
     + `</span></a>`
@@ -175,28 +173,6 @@ window.Shelf = (() => {
         // one missing column into twelve blank thumbs with nothing to go on.
         console.warn('[shelf] no stored thumbs: ' + err.message);
       }
-      // A live card is a WebGL app: nothing loads until a card is scrolled to,
-      // and then one at a time. Zero margin on purpose: on the builder the
-      // shelf's top edge rests on the fold, and any positive rootMargin is
-      // satisfied without scrolling.
-      const queue = [];
-      let pumping = false;
-      async function pump() {
-        if (pumping) return;
-        pumping = true;
-        while (queue.length) {
-          const f = queue.shift();
-          try { const r = await Apps.api(`../../api/app?id=${f.dataset.id}`); Apps.preview(f, r.html); }
-          catch { /* a card that will not load stays paper */ }
-          await new Promise(done => setTimeout(done, 120));
-        }
-        pumping = false;
-      }
-      const io = new IntersectionObserver((entries, obs) => {
-        for (const e of entries) { if (!e.isIntersecting) continue; obs.unobserve(e.target); queue.push(e.target); }
-        pump();
-      }, { root: null, rootMargin: '0px', threshold: 0.2 });
-      for (const f of box.querySelectorAll('iframe.live')) io.observe(f);
     }
 
     return { refresh };
