@@ -54,9 +54,12 @@
   .sk-half.right{left:50%}
   .sk-fade{transition:opacity 1.2s ease}
   .sk-divider{position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--line);pointer-events:none}
-  .sk-label{position:absolute;top:74px;font-family:var(--display);font-weight:500;font-size:12px;
-    letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);pointer-events:none;
-    animation:lshell-fadein .8s both}
+  /* Each half's name is its heading; what follows a " · " in it is the
+     small line under it. */
+  .sk-label{position:absolute;top:68px;font-family:var(--display);font-weight:500;font-size:30px;
+    letter-spacing:-.01em;line-height:1.1;color:var(--ink);pointer-events:none;
+    flex-direction:column;gap:4px;animation:lshell-fadein .8s both}
+  .sk-label small{font-size:14px;letter-spacing:.01em;color:var(--ink-2)}   /* not capitals: they would turn HbA into HBA */
   .sk-label.left{left:28px}
   .sk-label.right{left:calc(50% + 28px)}
   .sk-cap{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:4;
@@ -65,6 +68,9 @@
     backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);
     border:1px solid rgba(255,255,255,.7);box-shadow:0 30px 70px -40px rgba(20,30,20,.45)}
   .sk-cap p{margin:0;font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30}
+  .sk-cap .sk-say{display:flex;flex-direction:column;gap:6px}
+  /* Back sits on its own at the left: the caption's buttons go forward. */
+  .sk-back{position:fixed;left:28px;bottom:34px;z-index:4;background:var(--panel)}
   .sk-cap nav{display:flex;gap:6px;flex:none}
   .sk-btn{font-family:var(--display);font-weight:500;font-size:14px;letter-spacing:.02em;
     border-radius:999px;padding:9px 18px;border:1px solid transparent;cursor:pointer;
@@ -80,12 +86,13 @@
   /* Shown as sk-split-only's flex, so stacked here: title over plot. */
   .sk-chart{position:absolute;top:96px;z-index:2;flex-direction:column;align-items:flex-start;padding:8px 12px 6px;border-radius:12px;
     background:var(--panel);border:1px solid var(--line);font-family:var(--display);color:var(--ink-2)}
-  .sk-chart.left{left:28px}
-  .sk-chart.right{left:calc(50% + 28px)}
+  .sk-chart.left{right:calc(50% + 28px)}
+  .sk-chart.right{right:28px}
+  body.sk-charted .sk-chart{top:68px}
   .sk-chart h4{margin:0 0 4px;font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
   .sk-chart svg{display:block;overflow:visible;font-size:12px}
-  .sk-chart[hidden]{display:none}
-  .sk-controls{position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:4;
+  body.sk-split .sk-chart[hidden]{display:none}
+  .sk-controls{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:4;
     padding:6px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
     display:flex;align-items:center;gap:18px}
   .sk-controls[hidden]{display:none}
@@ -93,6 +100,8 @@
   .sk-scrub input{width:220px;accent-color:var(--accent)}
   .sk-scrub button{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);
     background:#fff;color:var(--ink);cursor:pointer;font-size:11px;line-height:1}
+  .sk-scrub button[data-k=prev],.sk-scrub button[data-k=next]{font-size:17px;line-height:1;padding-bottom:2px}
+  .sk-scrub button:disabled{opacity:.35;cursor:default}
   .sk-legend{display:flex;gap:14px;font-family:var(--display);font-size:12px;color:var(--ink-2);white-space:nowrap}
   .sk-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
   .sk-legend[hidden]{display:none}
@@ -202,13 +211,14 @@ shell.stage.append(divider, labelL, labelR);
 
 const cap = document.createElement('div');
 cap.className = 'sk-cap sk-split-only';
-cap.innerHTML = `<p></p><nav>
-  <button class="sk-btn ghost" type="button" data-k="back">Back</button>
+cap.innerHTML = `<div class="sk-say"><p></p></div><nav>
   <button class="sk-btn ghost" type="button" data-k="replay">Replay</button>
   <button class="sk-btn primary" type="button" data-k="next">Next</button></nav>`;
 shell.el.appendChild(cap);
 const capText = cap.querySelector('p');
-const capBack = cap.querySelector('[data-k=back]');
+const capBack = document.createElement('button');
+capBack.className = 'sk-btn ghost sk-back sk-split-only'; capBack.type = 'button'; capBack.textContent = 'Back';
+shell.el.appendChild(capBack);
 const capReplay = cap.querySelector('[data-k=replay]');
 const capNext = cap.querySelector('[data-k=next]');
 capBack.onclick = () => shell.goTo(shell.current - 1);
@@ -218,8 +228,12 @@ capReplay.onclick = () => replayFn && replayFn();
 
 ctx.split = (on, labels = {}) => {
   document.body.classList.toggle('sk-split', !!on);
-  labelL.textContent = labels.left || '';
-  labelR.textContent = labels.right || '';
+  const head = (el, t = '') => {
+    const [name, ...rest] = t.split(' · ');
+    el.textContent = name;
+    if (rest.length) { const sm = document.createElement('small'); sm.textContent = rest.join(' · '); el.appendChild(sm); }
+  };
+  head(labelL, labels.left); head(labelR, labels.right);
   if (!on) { replayFn = null; capText.textContent = ''; }
   /* Every live box re-fits: the panel's room changed under it. */
   for (const s of Object.values(live)) if (s.api.box && s.api.box.layout) s.api.box.layout();
@@ -231,15 +245,16 @@ ctx.caption = text => { capText.textContent = text.replace(/\s+/g, ' ').trim(); 
 const hexCss = h => '#' + h.toString(16).padStart(6, '0');
 const ALLELE = { A: HbCrowd.markOf('HbA'), S: HbCrowd.markOf('HbS') };
 const DEAD = '#b3ada3';
-const ROWS = ['two normal', 'carriers', 'two sickle'];
 ctx.pct = x => Math.round(x * 100) + '%';
 
 const legend = document.createElement('div');
-legend.className = 'sk-legend';
+legend.className = 'sk-legend'; legend.hidden = true;
 ctx.legend = items => {
-  legend.innerHTML = (items || []).map(it => {
-    const c = it.colour === 'dead' ? DEAD : hexCss(ALLELE[it.colour]);
-    return `<span><i style="background:${c}"></i>${it.text}</span>`;
+  legend.hidden = !items;
+  if (!items) return;
+  legend.innerHTML = items.map(it => {
+    const [l, r] = it.colour.map(k => (k === 'dead' ? DEAD : hexCss(ALLELE[k])));
+    return `<span><i style="background:linear-gradient(90deg,${l} 50%,${r} 50%)"></i>${it.text}</span>`;
   }).join('');
 };
 
@@ -249,13 +264,23 @@ const controls = document.createElement('div');
 controls.className = 'sk-controls'; controls.hidden = true;
 const scrub = document.createElement('div');
 scrub.className = 'sk-scrub';
-scrub.innerHTML = `<button type="button" aria-label="Pause"></button>
+scrub.innerHTML = `<button type="button" data-k="prev" aria-label="Previous generation">‹</button>
+  <button type="button" data-k="play" aria-label="Play"></button>
+  <button type="button" data-k="next" aria-label="Next generation">›</button>
   <input type="range" min="1" step="1" aria-label="Generation"><span></span>`;
-const scrubBtn = scrub.querySelector('button'), scrubIn = scrub.querySelector('input'), scrubAt = scrub.querySelector('span');
+const scrubBtn = scrub.querySelector('[data-k=play]'), scrubIn = scrub.querySelector('input'), scrubAt = scrub.querySelector('span');
+const scrubPrev = scrub.querySelector('[data-k=prev]'), scrubNext = scrub.querySelector('[data-k=next]');
 let scrubOn = {};
 scrubIn.oninput = () => scrubOn.onScrub && scrubOn.onScrub(+scrubIn.value - 1);
 scrubBtn.onclick = () => scrubOn.onPlay && scrubOn.onPlay();
-controls.append(scrub, legend);
+scrubPrev.onclick = () => scrubOn.onStep && scrubOn.onStep(-1);
+scrubNext.onclick = () => scrubOn.onStep && scrubOn.onStep(1);
+controls.append(scrub);
+/* Rides above the caption, whose height changes with its text. */
+new ResizeObserver(() => {
+  controls.style.bottom = (window.innerHeight - cap.getBoundingClientRect().top + 12) + 'px';
+}).observe(cap);
+cap.querySelector('.sk-say').appendChild(legend);
 shell.el.appendChild(controls);
 /* A drag the reader is making is not written back to. */
 ctx.scrub = o => {
@@ -266,6 +291,8 @@ ctx.scrub = o => {
   if (document.activeElement !== scrubIn) scrubIn.value = o.value + 1;
   scrubAt.textContent = `generation ${o.value + 1} of ${o.gens}`;
   scrubBtn.textContent = o.playing ? '❚❚' : '▶';
+  scrubPrev.disabled = o.value <= 0;
+  scrubNext.disabled = o.value >= o.gens - 1;
   scrubBtn.setAttribute('aria-label', o.playing ? 'Pause' : 'Play');
 };
 
@@ -281,6 +308,7 @@ for (const side of ['left', 'right']) {
   charts[side] = c;
 }
 ctx.chart = (side, o) => {
+  document.body.classList.toggle('sk-charted', !!side);
   if (!side) { for (const c of Object.values(charts)) c.hidden = true; return; }
   const c = charts[side];
   c.hidden = false;
@@ -412,8 +440,8 @@ const MAKE = {
   infA:    () => BloodCell.mount(host('left',  'sk-fade'), { sickle: 0, cut: 1 }),
   infS:    () => BloodCell.mount(host('right', 'sk-fade'), { sickle: 0, cut: 1 }),
   /* The same seed on both sides: the villages start as the same people. */
-  popA:    () => Population.mount(host('left'),  Object.assign({ malaria: 0, colours: ALLELE, rows: ROWS }, SickleSteps.POP)),
-  popS:    () => Population.mount(host('right'), Object.assign({ malaria: 1, colours: ALLELE, rows: ROWS }, SickleSteps.POP)),
+  popA:    () => Population.mount(host('left'),  Object.assign({ malaria: 0, colours: ALLELE }, SickleSteps.POP)),
+  popS:    () => Population.mount(host('right'), Object.assign({ malaria: 1, colours: ALLELE }, SickleSteps.POP)),
 };
 
 const live = {};

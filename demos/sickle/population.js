@@ -11,11 +11,8 @@
  *
  *  ONE GENE, TWO ALLELES, ONE GENERATION AT A TIME. Every figure is one adult,
  *  and its two halves are its two copies of the β-globin gene: A (normal) or
- *  S (sickle). THE VILLAGE STANDS SORTED, one row per genotype (AA at the
- *  back, carriers in the middle, SS at the front), so each row is a bar of
- *  people and its length is the count: a death happens in a row the reader
- *  can name, and the carriers' row is where the argument is. A label rides
- *  the end of each bar with its live count. A generation: some die young, the survivors pair at random,
+ *  S (sickle). Each figure keeps its place in the crowd from one generation to
+ *  the next; who stands there changes. A generation: some die young, the survivors pair at random,
  *  each child takes one allele from each parent at random, and the children
  *  replace them. That is Wright-Fisher with viability selection, the textbook
  *  model, and the drift a village of a few hundred adds is real, not noise to
@@ -38,28 +35,26 @@
  *  PARAMS: n adults (60..400, rebuilds) · start, S frequency at generation 0
  *  (rebuilds) · malaria 0..1 · speed (1 is a generation per GEN seconds) ·
  *  gens (holds after this many) · seed (rebuilds) · colours {A, S} (hex) ·
- *  rows, the three row names for the labels (AA, AS, SS order) · playing ·
- *  generation (snaps there: a scrubber). Every generation reached is kept, so
+ *  playing ·
+ *  generation (snaps there: a scrubber) · stopAt (play on, and pause once
+ *  that generation's dead have fallen: a step button). Every generation reached is kept, so
  *  scrubbing back shows the same people, and forward past the furthest yet
  *  computes it: the run is one run whichever way it is watched.
  *  state(): generation, n, q, carriers, counts {AA, AS, SS}, died {malaria,
  *  sickle}, history (q per generation), expected (the same from the
  *  deterministic recursion, over all `gens`), equilibrium, fitness {AA, AS, SS}.
- *  Events: frame, generation (a new one is standing), done.
+ *  Events: frame, generation (a new one is standing), paused (at stopAt), done.
  * ========================================================================== */
 (function (global) {
   'use strict';
 
-  const DEFAULTS = { n: 200, start: 0.05, malaria: 0, speed: 1, gens: 60, seed: 5, playing: true,
-                     colours: { A: 0x2f6fb5, S: 0xd9822b }, rows: ['AA', 'AS', 'SS'] };
+  const DEFAULTS = { n: 200, start: 0.05, malaria: 0, speed: 1, gens: 60, seed: 5, playing: true, stopAt: null,
+                     colours: { A: 0x2f6fb5, S: 0xd9822b } };
   const S_MALARIA = 0.12;      // extra deaths among AA where malaria is common
   const S_SICKLE = 0.8;        // SS who die before having children, untreated
   const N_MAX = 400;
   const GEN = 1.8;             // s a generation takes at speed 1
-  /* The rows: figures DEPTH deep, so a row of n is n / DEPTH columns long. */
-  const DEPTH = 8, SP = 0.8, ZSP = 0.55, ROWGAP = 1.4;
-  const ROW_D = (DEPTH - 1) * ZSP;
-  const rowZ = k => (k - 1) * (ROW_D + ROWGAP);
+  const SPACING = 1.15;        // between figures
 
   const rng = seed => { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -70,6 +65,19 @@
     const pts = [[0.001, 0], [0.3, 0], [0.31, 0.05], [0.26, 0.2], [0.2, 0.52], [0.22, 0.64], [0.16, 0.72], [0.001, 0.76]]
       .map(([r, y]) => new THREE.Vector2(r, y));
     return new THREE.LatheGeometry(pts, 14, phiStart, Math.PI);
+  }
+
+  /* Hex lattice points, nearest the centre first, jittered so it is a crowd
+     and not a parade. Its own random stream, so where people stand never
+     changes who they are. */
+  function layout(n, seed) {
+    const R = rng(seed ^ 0x51ab), pts = [], h = SPACING * Math.sqrt(3) / 2, span = Math.ceil(Math.sqrt(n)) + 3;
+    for (let r = -span; r <= span; r++) for (let c = -span; c <= span; c++) {
+      const x = (c + (r & 1) * 0.5) * SPACING, z = r * h;
+      pts.push([x + (R() - 0.5) * 0.3, z + (R() - 0.5) * 0.3]);
+    }
+    pts.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]));
+    return pts.slice(0, n);
   }
 
   /* THE GENETICS, free of THREE so sickle/tools/check-population.js runs
@@ -179,19 +187,13 @@
       m.setColorAt(0, new THREE.Color());      // allocates instanceColor
       grp.add(m);
     }
-    /* A track under each row, as long as the whole village, so a bar's
-       length reads against the most it could be. */
-    const trackGeo = new THREE.PlaneGeometry(1, 1);
-    trackGeo.rotateX(-Math.PI / 2);
-    trackGeo.translate(0.5, 0, 0);
-    const trackMat = new THREE.MeshBasicMaterial({ color: 0xe6e0d4 });   // flat: a track, not a floor to light
-    const tracks = [0, 1, 2].map(k => {
-      const m = new THREE.Mesh(trackGeo, trackMat);
-      m.position.set(0, -0.01, rowZ(k));
-      grp.add(m);
-      return m;
-    });
-    let X0 = 0;
+    const groundGeo = new THREE.CircleGeometry(1, 72);
+    groundGeo.rotateX(-Math.PI / 2);
+    const groundMat = new THREE.MeshBasicMaterial({ color: 0xe6e0d4 });   // flat: a place, not a floor to light
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.position.y = -0.01;
+    grp.add(ground);
+    let spots = [];
 
     let V, u = 0, done = false, snaps = [], view = 0;
     const snapshot = () => ({ a1: V.a1, a2: V.a2, doom: V.doom.slice(), lag: V.lag.slice(), st: V.state() });
@@ -201,9 +203,10 @@
 
     function build() {
       V = village(P);
-      const L = Math.ceil(V.n / DEPTH) * SP;
-      X0 = -L / 2;
-      for (const t of tracks) { t.position.x = X0 - SP * 0.6; t.scale.set(L + SP * 0.4, 1, ROW_D + SP * 1.1); }
+      spots = layout(V.n, P.seed);
+      let far = 0;
+      for (const p of spots) far = Math.max(far, Math.hypot(p[0], p[1]));
+      ground.scale.setScalar(far + 1.2);
       halfL.count = halfR.count = head.count = V.n;
       snaps = [snapshot()]; view = 0;
       /* Generation 0 stands from the start, so a paused village is a village. */
@@ -218,16 +221,14 @@
     function draw() {
       cA.setHex(P.colours.A); cS.setHex(P.colours.S);
       const { n, yaw } = V, { a1, a2, doom, lag } = snaps[view];
-      const slot = [0, 0, 0];
       for (let i = 0; i < n; i++) {
-        const k = a1[i] + a2[i], sl = slot[k]++;
-        const x = X0 + Math.floor(sl / DEPTH) * SP, z = rowZ(k) + (sl % DEPTH) * ZSP - ROW_D / 2;
+        const [x, z] = spots[i];
         const born = smooth(lag[i], lag[i] + 0.2, u);
         const leave = done ? 0 : smooth(0.86 + lag[i], 0.98 + lag[i] * 0.2, u);
         const fall = doom[i] ? smooth(0.42 + lag[i], 0.62 + lag[i], u) : 0;
         dummy.position.set(x, 0, z);
         _yaw.setFromAxisAngle(_Y, yaw[i]);
-        /* Backward, away from the camera, so the fallen do not cover the row. */
+        /* Backward, away from the camera, so the fallen do not cover the living. */
         _ax.set(1, 0, 0);
         _tilt.setFromAxisAngle(_ax, -fall * Math.PI * 0.47);
         dummy.quaternion.copy(_tilt).multiply(_yaw);
@@ -242,12 +243,6 @@
       for (const m of [halfL, halfR, head]) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
     }
 
-    /* Just behind the head of each row, where its label sits: fixed, so a
-       label never rides a full bar off the box, and inside it, so it never
-       needs a margin the box does not have. */
-    const _e = new THREE.Vector3();
-    const rowHead = k => () => grp.localToWorld(_e.set(X0 - SP * 0.4, 0, rowZ(k) - ROW_D / 2 - SP * 0.55));
-    const anchors = { AA: rowHead(0), AS: rowHead(1), SS: rowHead(2) };
 
     const state = () => Object.assign({}, snaps[view].st,
       { malaria: P.malaria, speed: P.speed, playing: P.playing, done, reached: snaps.length - 1 });
@@ -255,10 +250,14 @@
     build();
 
     return {
-      group: grp, params: P, state, anchors,
+      group: grp, params: P, state,
       step(dt) {
         if (done || !P.playing) return;
         u += (dt || 0) * P.speed / GEN;
+        if (P.stopAt === view && u >= 0.75) {
+          u = 0.75; P.playing = false; P.stopAt = null;
+          draw(); emit('paused', state()); return;
+        }
         if (u >= 1) {
           if (view + 1 >= P.gens) { u = 0.99; done = true; draw(); emit('done', state()); return; }
           reach(++view);
@@ -291,44 +290,32 @@
       },
       dispose() {
         root.remove(grp);
-        for (const x of [geoL, geoR, geoH, trackGeo, trackMat, matL, matH]) x.dispose();
+        for (const x of [geoL, geoR, geoH, groundGeo, groundMat, matL, matH]) x.dispose();
       },
     };
   }
 
   function mount(el, params = {}) {
     if (!global.CardStage) throw new Error('population.js: load kit/card-stage.js first');
-    let sim = null, nb = null;
+    let sim = null;
     const frames = [];
     const box = global.CardStage.create({
       mount: el,
-      cam: params.cam || { theta: 0, phi: 0.55, r: 48 },
+      cam: params.cam || { theta: 0, phi: 0.72, r: 46 },
       stage: Object.assign({ rMin: 10, rMax: 60, phiMin: 0.2, phiMax: 1.45 }, params.stage || {}),
       step: dt => { if (sim) { sim.step(dt); CardStage.fire(frames, [sim.state(), dt], 'Population frame'); } },
-      afterFrame: () => { if (nb) nb.step(); },
       viewOffset: params.viewOffset,
     });
     box.scene.add(new THREE.HemisphereLight(0xfff8ee, 0x8a8070, 0.35));
-    /* Aimed behind the middle row, so the village sits low in its box and a
+    /* Aimed behind the centre, so the village sits low in its box and a
        page can lay a chart across the top. */
-    box.cam.target.set(0, 0, -3);
+    box.cam.target.set(0, 0, -2.5);
     box.applyCam();
     sim = create(THREE, box.root, params);
-    /* Each row's name and count, at the end of its bar. */
-    const names = sim.params.rows, KEYS = ['AA', 'AS', 'SS'];
-    const notes = {};
-    if (global.Notebook) {
-      nb = global.Notebook.create({ box, anchors: sim.anchors, library: {} });
-      KEYS.forEach(k => { notes[k] = nb.note(k, { text: k, offset: [4, -12] }); });
-    }
-    const label = s => KEYS.forEach((k, i) => { if (notes[k]) notes[k].set(`${names[i]} · ${s.counts[k]}`); });
-    sim.on('generation', label);
-    label(sim.state());
     const api = {
       sim, box,
       set(next) {
         sim.set(next);
-        if (next.generation !== undefined) label(sim.state());
         if (!box.running) box.draw();
         return api;
       },
@@ -340,7 +327,7 @@
         return () => { const i = frames.indexOf(fn); if (i >= 0) frames.splice(i, 1); };
       },
       start: box.start, stop: box.stop, pump: box.pump, draw: box.draw,
-      destroy() { if (nb) nb.clear(); sim.dispose(); box.destroy(); },
+      destroy() { sim.dispose(); box.destroy(); },
     };
     box.pump();
     return api;
