@@ -153,7 +153,10 @@ const Apps = (() => {
           done(user);
         },
       });
-      window.google.accounts.id.renderButton(el, { theme: 'filled_blue', size: 'large', shape: 'pill', text: 'signin_with' });
+      // The button is Google's cross-origin iframe, so a click on the wrapper
+      // cannot be forwarded into it; widen the button instead. 400 is Google's cap.
+      const width = Math.min(400, Math.floor(el.clientWidth)) || undefined;
+      window.google.accounts.id.renderButton(el, { theme: 'filled_blue', size: 'large', shape: 'pill', text: 'signin_with', width });
       return s;
     },
     /* The email door. `codeSend` answers {sent, minutes, console}; `minutes` is
