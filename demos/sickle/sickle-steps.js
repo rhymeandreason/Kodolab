@@ -110,10 +110,10 @@
   /* ---- 2 ------------------------------------------------------------- */
 
   const step2 = {
-    eyebrow: 'One amino acid',
-    title: 'Glutamate becomes valine',
-    body: `Same fold, same four chains. Only position 6 of each β chain is different.
-      Glutamate carries a charge and sits happily in water. Valine is greasy, and on
+    eyebrow: 'The hemoglobin protein',
+    title: 'Sickle Hemoglobin has greasy spots',
+    body: `Same fold, same four chains. Only position 6 of each β chain is different.<br><br>
+      Normally, Glutamate carries a charge and sits happily in water. <br><br>In sickle Hemoglobin, Valine is greasy, and on
       the outside of a protein it wants somewhere to hide.`,
     onExit(ctx) { leave(ctx); ctx.state.protein = null; },
     /* THE HANDOFF STARTS HERE. Beat 3 opens on one molecule as a bare skin,
@@ -189,7 +189,6 @@
       S.crowdA.reset(); S.crowdS.reset();
       boxes(true);
       S.crowdA.intro(IN); S.crowdS.intro(IN);
-      ctx.replay(null);
       ctx.caption(`The greasy spots on sickle hemoglobin stick the molecules to each other, so
         they polymerize into chains.`);
       show();
@@ -209,15 +208,9 @@
       ctx.toggle(false);
       ctx.split(true, { left: 'Normal cell', right: 'Sickle cell' });
       const S = ctx.use({ show: ['cellA', 'cellS'] });
-      const run = () => {
-        ctx.clearTimers();
-        S.cellA.start(); S.cellS.start();
-        ctx.fade('cellA', true); ctx.fade('cellS', true);
-        ctx.caption(`Both cells, cut open. On the right the fibres run the length of
-          it and push the membrane out into a crescent.`);
-      };
-      ctx.replay(run);
-      run();
+      S.cellA.start(); S.cellS.start();
+      ctx.fade('cellA', true); ctx.fade('cellS', true);
+      ctx.caption(`The fibres cause the blood cell to deform into a crescent shape.`);
     },
   };
 
@@ -230,16 +223,11 @@
       ctx.toggle(false);
       ctx.split(true, { left: 'Normal cells', right: 'Sickle cells' });
       const S = ctx.use({ show: ['flowA', 'flowS'] });
-      const run = () => {
-        ctx.clearTimers();
-        S.flowA.reset(); S.flowS.reset();
-        ctx.caption(`Round cells fold and slip through. Stiff cells catch, stick to
-          each other, and block the vessel.`);
-      };
+      S.flowA.reset(); S.flowS.reset();
+      ctx.caption(`Round cells fold and slip through. Stiff cells catch, stick to
+        each other, and block the vessel.`);
       bind(ctx, S.flowS.on('blocked', () =>
-        ctx.caption(`Blocked. Nothing behind it moves, and the tissue past it runs short of oxygen.`)));
-      ctx.replay(run);
-      run();
+        ctx.caption(`Sickle cells get stuck in narrow blood vessels, and the tissue past it runs short of oxygen.`)));
     },
   };
 
@@ -253,8 +241,8 @@
   const WORD = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
   const big = n => (n >= 1e6 ? `${Math.round(n / 1e6)} million` : n.toLocaleString('en-US'));
   const step6 = {
-    eyebrow: 'A puzzle',
-    title: 'Why is it common?',
+    eyebrow: 'Why the mutation persists',
+    title: 'One sickle gene offers malaria resistance',
     body: `Most children born with two sickle copies used to die young, so the allele
       should have faded away. Instead, in parts of Africa about one person in
       ${WORD[Math.round(1 / CARRIERS_MAX)]} carries it. Those are the places where malaria is.`,
@@ -305,7 +293,7 @@
             <span class="stat-sub">worldwide</span></div>
         </div>
         <p class="callout">Malaria is a single-celled parasite, <em>Plasmodium</em>, passed on by
-          mosquito bites. It lives inside red blood cells: the cell this lesson is about.</p>
+          mosquito bites. It lives inside red blood cells and eats hemoglobin.</p>
         <p class="hint-text">This cell is infected. Watch the parasite eat the hemoglobin.
           If a gene can change that cell, it can change who survives malaria.</p>`);
     },
@@ -335,7 +323,6 @@
     onEnter(ctx) {
       ctx.toggle(false);
       ctx.split(true, { left: `Normal · ${HBA.label} only`, right: `Carrier · ${HBA.label} and ${HBS.label}` });
-      ctx.replay(null);
       ctx.caption('');
       ctx.bar(true);
       const S = ctx.use({ show: ['infA', 'infS'] });
@@ -408,7 +395,6 @@
     onEnter(ctx) {
       ctx.toggle(false);
       ctx.split(true, { left: 'No malaria', right: 'Malaria' });
-      ctx.replay(null);
       const S = ctx.use({ show: ['popA', 'popS'] });
       /* A figure's two halves are its two copies, so the key is the three
          figures a reader can see: all normal, split, all sickle. */

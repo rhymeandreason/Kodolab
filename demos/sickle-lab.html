@@ -192,7 +192,7 @@
  *  nothing.
  *
  *  What ctx carries for the steps: `variant` and `onToggle` (the switch),
- *  `use`, `split`, `caption`, `replay`, `fade`, `after` / `clearTimers`, and
+ *  `use`, `split`, `caption`, `fade`, `after` / `clearTimers`, and
  *  for the village `legend`, `chart`, `scrub` and `pct`.
  * ========================================================================== */
 
@@ -246,7 +246,6 @@ shell.stage.append(divider, labelL, labelR);
 const cap = document.createElement('div');
 cap.className = 'sk-cap sk-split-only';
 cap.innerHTML = `<div class="sk-say"><p></p></div><nav>
-  <button class="sk-btn ghost" type="button" data-k="replay">Replay</button>
   <button class="sk-btn primary" type="button" data-k="next">Next</button></nav>`;
 shell.el.appendChild(cap);
 const capText = cap.querySelector('p');
@@ -258,12 +257,9 @@ const capCount = document.createElement('span');
 capCount.className = 'lshell-count';
 foot.append(capBack, capCount);
 shell.el.appendChild(foot);
-const capReplay = cap.querySelector('[data-k=replay]');
 const capNext = cap.querySelector('[data-k=next]');
 capBack.onclick = () => shell.goTo(shell.current - 1);
 capNext.onclick = () => shell.goTo(shell.current + 1);
-let replayFn = null;
-capReplay.onclick = () => replayFn && replayFn();
 
 ctx.split = (on, labels = {}) => {
   document.body.classList.toggle('sk-split', !!on);
@@ -276,7 +272,7 @@ ctx.split = (on, labels = {}) => {
   for (const el of Object.values(sides)) put(el, null);
   for (const el of Object.values(notes)) putNotes(el, []);
   ctx.bar(false);
-  if (!on) { replayFn = null; capText.textContent = ''; }
+  if (!on) capText.textContent = '';
   /* Every live box re-fits: the panel's room changed under it. */
   for (const s of Object.values(live)) if (s.api.box && s.api.box.layout) s.api.box.layout();
 };
@@ -425,7 +421,6 @@ ctx.chart = (side, o) => {
       <text x="${+x(last) + 6}" y="${+y(o.values[last]) + 4}" fill="${col}" font-weight="500">${o.text}</text>
     </svg>`;
 };
-ctx.replay = fn => { replayFn = fn; capReplay.hidden = !fn; };
 
 /* Timers a step sets die with the step, the same way its subscriptions do. */
 let timers = [];
