@@ -53,7 +53,8 @@
   .dots button[aria-current="true"] { background: var(--ink); transform: scale(1.3); }
   body[data-dark] .dots button { background: rgba(var(--paper-t), .3); }
   body[data-dark] .dots button[aria-current="true"] { background: var(--paper); }
-  body[data-dark] .chrome img, body[data-nomark] .chrome img { opacity: 0; }
+  body[data-dark] .chrome img { filter: brightness(0) invert(1); }
+  body[data-nomark] .chrome img { opacity: 0; }
 
   /* ---- 1. early users ---------------------------------------------------- */
   .s1 .frame { display: flex; flex-direction: column; justify-content: center; }
@@ -206,9 +207,9 @@
   <div class="frame">
     <div class="reel" id="reel"></div>
     <div class="text">
-      <span class="eyebrow rise">Open source</span>
-      <h2 class="rise" style="--d:.08s">Biology threshold concepts<br>in <em>3D.</em></h2>
-      <p class="lede rise" style="--d:.1s; font-size:26px">Free forever, embeddable on any page.<br> The way it should be.</p>
+      <span class="eyebrow rise">See it in 3D</span>
+      <h2 class="rise" style="--d:.08s">Biology is <br>a <em>beautiful</em> and deep subject.</h2>
+      <p class="lede rise" style="--d:.1s; font-size:26px">There's always need for new <br>learning materials to master complex threshold concepts.</p>
     </div>
   </div>
 </section>
@@ -216,7 +217,7 @@
 <!-- ============ 3. library ============ -->
 <section class="slide s3" data-name="library" data-dark>
   <div class="frame">
-    <span class="eyebrow rise">Library</span>
+    <span class="eyebrow rise">Open Source Library</span>
     <h2 class="rise" style="--d:.08s">Real structures, <em>real data.</em></h2>
     <p class="lede rise" style="--d:.16s">Proteins from the Protein Data Bank, and molecules from PubChem.</p>
     <div class="belt one" id="beltOne"></div>
