@@ -27,8 +27,10 @@
   // banner. The path is served by Vercel's edge, so it 404s under the local
   // dev server and that console line is expected. Skipped inside a frame: a
   // lesson previewed in lessons.html or the node graph, or an app on the
-  // builder's shelf, would count as a second pageview of one visit.
-  if (window.top === window) {
+  // builder's shelf, would count as a second pageview of one visit. An
+  // /embed/ page is the exception: it is only ever framed by someone else's
+  // site, so framed is the one view there is, and its referrer is the host.
+  if (window.top === window || location.pathname.indexOf('/embed/') === 0) {
     var s = document.createElement('script');
     s.defer = true;
     s.src = '/_vercel/insights/script.js';
