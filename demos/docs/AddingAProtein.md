@@ -152,7 +152,7 @@ Then `node proteins/<name>/tools/prep.js` again to write the `read` block back, 
 
 **`does` needs a word before registration.** If none of `DOES` fits, propose one when the bench is handed over, so the review settles it.
 
-**After registration, the human:** bakes the still in `stills.html` (Chrome only) and commits it. A public short URL is a `vercel.json` rewrite plus `tools/seo.js`; `docs/deploy.md`.
+**After registration, the human:** bakes the still in `stills.html` (Chrome only) and commits it. A public short URL is a `vercel.json` rewrite (both the rewrite and the 301) plus `node tools/seo.js`, which fails until `media/og/proteins/<key>.jpg` exists: the still scaled to 630 high and centred on a 1200×630 canvas of the stage paper. `docs/deploy.md`.
 
 **What every field means and who owns it is `proteins/proteins.js`'s own header — read it before editing the file.** The said/read split and why a human never types a number into it, the method vocabulary, the derived URLs, `does`, `pipeline`; `Modules.md`'s row is the field list. None of it is repeated here. What is not in either:
 
