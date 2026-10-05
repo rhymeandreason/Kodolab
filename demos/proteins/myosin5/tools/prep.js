@@ -357,6 +357,112 @@ const legs = [swing(STATES[0], STATES[1]), swing(STATES[1], STATES[2]), swing(ST
 console.log(`lever swing, motor held: Pi release ${legs[0].deg} deg, ADP release ${legs[1].deg} deg, ` +
   `whole stroke ${legs[2].deg} deg; light chain moves up to ${legs[2].tip} A`);
 
+/* ---- the nucleotide ---------------------------------------------------
+ *
+ *  NOT ATP. The pre-stroke crystal holds ADP and vanadate, a stand-in for
+ *  the phosphate cut off ATP (drawn as phosphate; the page says so); 7PM6
+ *  holds ADP; the rigor head is empty. 7PLU's ADPs are actin's, not drawn.
+ *
+ *  Two rigid pieces, ADP·Mg and Pi. Each frame carries a matrix taking the
+ *  piece from its frame-0 pose to where it sits on that frame: it rides the
+ *  pocket (the residues around it, fitted frame to frame), and over leg 1
+ *  the ADP eases onto 7PM6's own ADP, matched atom by atom. The page owns
+ *  when each leaves; the baker says which way, the most open path out.
+ */
+function hetPiece(raw, ch, names, fit) {
+  const atoms = [], serial = new Map();
+  for (const l of Bake.modelOne(raw).split('\n')) {
+    if (!l.startsWith('HETATM') || l[21] !== ch || !names.includes(l.slice(17, 20).trim())) continue;
+    const el = (l.slice(76, 78).trim() || l.slice(12, 14).trim()).toUpperCase();
+    if (el === 'H' || (l[16] !== ' ' && l[16] !== 'A')) continue;
+    serial.set(+l.slice(6, 11), atoms.length);
+    const [p] = fit.apply([P3(Bake.xyz(l))]);
+    atoms.push({ name: l.slice(12, 16).trim(), res: l.slice(17, 20).trim(),
+                 el: el === 'V' ? 'P' : el, p });
+  }
+  /* Bonds off CONECT; the metal's coordination is not drawn as a bond. */
+  const bonds = [], seen = new Set();
+  for (const l of raw.split('\n')) {
+    if (!l.startsWith('CONECT')) continue;
+    const a = serial.get(+l.slice(6, 11)); if (a === undefined) continue;
+    for (let c = 11; c + 5 <= l.length; c += 5) {
+      const b = serial.get(+l.slice(c, c + 5).trim());
+      if (b === undefined || atoms[a].el === 'MG' || atoms[b].el === 'MG') continue;
+      const k = Math.min(a, b) + ':' + Math.max(a, b);
+      if (!seen.has(k) && a !== b) { seen.add(k); bonds.push([a, b]); }
+    }
+  }
+  return { atoms, bonds };
+}
+const ident = { apply: x => x };
+const zADP = hetPiece(rawZ, PRE_CHAIN, ['ADP', 'MG'], placed.fit);
+const zPI = hetPiece(rawZ, PRE_CHAIN, ['VO4'], placed.fit);
+const sADP = hetPiece(rawS, HEAVY, ['ADP', 'MG'], onActin);
+if (!zADP.atoms.length || !zPI.atoms.length || !sADP.atoms.length) throw new Error('a nucleotide is missing');
+
+const cen = ps => ({ x: ps.reduce((a, p) => a + p.x, 0) / ps.length,
+  y: ps.reduce((a, p) => a + p.y, 0) / ps.length, z: ps.reduce((a, p) => a + p.z, 0) / ps.length });
+const ligC = cen(zADP.atoms.concat(zPI.atoms).map(a => a.p));
+const pocketIdx = body.map((_, i) => i).filter(i => !isLever[i] && dist(STATES[0][i], ligC) < 12);
+const sByName = new Map(sADP.atoms.map(a => [a.res + a.name, a.p]));
+const shared = zADP.atoms.map((a, i) => [i, sByName.get(a.res + a.name)]).filter(([, q]) => q);
+
+function follow(piece, toS) {
+  const P0 = piece.atoms.map(a => a.p), out = [];
+  const pk0 = pocketIdx.map(i => frames[0][i]);
+  for (let f = 0; f < frames.length; f++) {
+    const T = superpose(pk0, pocketIdx.map(i => frames[f][i]));
+    let Y = T.apply(P0);
+    if (toS) {
+      const t = Math.min(1, f / keys[1]);
+      const Tk = superpose(pk0, pocketIdx.map(i => frames[keys[1]][i])).apply(P0);
+      Y = Y.map((y, i) => { const q = shared.find(([k]) => k === i); if (!q) return y;
+        const d = sub3(q[1], Tk[i]); return { x: y.x + d.x * t, y: y.y + d.y * t, z: y.z + d.z * t }; });
+    }
+    const M = superpose(P0, Y);
+    const c0 = cen(P0), [w, x, y, z] = M.q;
+    const R = [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+               [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+               [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]];
+    const cY = cen(Y), Rc = rot(M.q, c0);
+    out.push({ R, t: [cY.x - Rc.x, cY.y - Rc.y, cY.z - Rc.z], rmsd: M.rmsd });
+  }
+  return out;
+}
+const adpFollow = follow(zADP, true), piFollow = follow(zPI, false);
+const landS = Math.sqrt(shared.reduce((s2, [i, q]) => {
+  const m = adpFollow[keys[1]], p0 = zADP.atoms[i].p;
+  const y = { x: m.R[0][0] * p0.x + m.R[0][1] * p0.y + m.R[0][2] * p0.z + m.t[0],
+              y: m.R[1][0] * p0.x + m.R[1][1] * p0.y + m.R[1][2] * p0.z + m.t[1],
+              z: m.R[2][0] * p0.x + m.R[2][1] * p0.y + m.R[2][2] * p0.z + m.t[2] };
+  return s2 + dist(y, q) ** 2; }, 0) / shared.length);
+console.log(`nucleotide: ADP·Mg ${zADP.atoms.length} atoms, Pi ${zPI.atoms.length}; pocket ${pocketIdx.length} residues; ` +
+  `ADP lands on 7PM6's within ${landS.toFixed(2)} A over ${shared.length} matched atoms`);
+
+/* The most open way out, on the frame a piece leaves from: of 400
+   directions, the one whose first 40 A keeps farthest from any Ca. */
+function exitDir(from, f) {
+  const all = frames[f].concat(aP);
+  let best = null;
+  for (let k = 0; k < 400; k++) {
+    const zz = 1 - 2 * (k + 0.5) / 400, r = Math.sqrt(1 - zz * zz), ph = k * 2.399963;
+    const d = { x: r * Math.cos(ph), y: r * Math.sin(ph), z: zz };
+    let worst = Infinity;
+    for (let st = 4; st <= 40; st += 2) {
+      const q = { x: from.x + d.x * st, y: from.y + d.y * st, z: from.z + d.z * st };
+      for (const a of all) worst = Math.min(worst, dist(q, a));
+    }
+    if (!best || worst > best.clear) best = { d, clear: worst };
+  }
+  return best;
+}
+const where = (m, p) => ({ x: m.R[0][0] * p.x + m.R[0][1] * p.y + m.R[0][2] * p.z + m.t[0],
+  y: m.R[1][0] * p.x + m.R[1][1] * p.y + m.R[1][2] * p.z + m.t[1],
+  z: m.R[2][0] * p.x + m.R[2][1] * p.y + m.R[2][2] * p.z + m.t[2] });
+const piExit = exitDir(cen(zPI.atoms.map(a => a.p)), 0);
+const adpExit = exitDir(where(adpFollow[keys[1]], cen(zADP.atoms.map(a => a.p))), keys[1]);
+console.log(`exit paths clear any Ca by: Pi ${piExit.clear.toFixed(1)} A, ADP ${adpExit.clear.toFixed(1)} A`);
+
 /* ---- write ------------------------------------------------------------ */
 const all = [];
 for (const fr of frames) for (const p of fr) all.push([p.x, p.y, p.z]);
@@ -377,6 +483,19 @@ for (const fr of frames) for (const p of fr) {
   buf.writeFloatLE(p.z - centre[2], o + 8); o += 12;
 }
 fs.writeFileSync(path.join(DATA, 'mv-stroke.bin'), buf);
+const shiftC = p => [Bake.r2(p.x - centre[0]), Bake.r2(p.y - centre[1]), Bake.r2(p.z - centre[2])];
+/* Matrices act on centred coordinates: R·(p+c) + t - c = R·p + (R·c + t - c). */
+const shiftM = m => { const c = { x: centre[0], y: centre[1], z: centre[2] }, Rc = where({ R: m.R, t: [0, 0, 0] }, c);
+  return [...m.R[0], ...m.R[1], ...m.R[2], Rc.x + m.t[0] - c.x, Rc.y + m.t[1] - c.y, Rc.z + m.t[2] - c.z].map(v => +v.toFixed(4)); };
+const piece = (pc, fol, ex, name) => ({ name,
+  atoms: pc.atoms.map(a => ({ el: a.el, name: a.name, p: shiftC(a.p) })), bonds: pc.bonds,
+  follow: fol.map(shiftM), exit: [ex.d.x, ex.d.y, ex.d.z].map(v => +v.toFixed(4)), clear: +ex.clear.toFixed(1) });
+fs.writeFileSync(path.join(DATA, 'mv-nucleotide.json'), JSON.stringify({
+  note: 'vanadate drawn as phosphate; 7PLU myosin is empty; exit paths are the most open, not resolved',
+  adp: piece(zADP, adpFollow, adpExit, 'ADP·Mg'),
+  pi: piece(zPI, piFollow, piExit, 'Pi'),
+  adpLandsOn7PM6: +landS.toFixed(2),
+}));
 const title = t => Bake.line1(t, 'TITLE');
 fs.writeFileSync(path.join(DATA, 'mv-stroke.json'), JSON.stringify({
   frames: frames.length, n: N, keys,

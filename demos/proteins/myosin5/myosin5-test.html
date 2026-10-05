@@ -91,6 +91,10 @@
         turns as a rigid body about where it leaves the motor; every other
         residue turns with its neighbours. Only the three marked states are
         structures.</li>
+      <li><strong>The nucleotide is what is left of ATP.</strong> The
+        pre-stroke crystal holds ADP and vanadate, a stand-in for the
+        phosphate; it is drawn as phosphate. Each leaves by the most open
+        path out of the pocket; the real route is not resolved.</li>
       <li><strong>One light chain of six.</strong> These constructs carry one
         IQ motif; myosin V's real lever is about six times longer, which is
         what turns this swing into a 36 nm step.</li>
@@ -129,21 +133,27 @@ const box = Proteinbox.create({
 const COL = { M: 0x1f5f4f, V: 0x2b8cd8, L: 0xbfa478, actin: 0x9aa0a6 };
 const NAME = { M: 'motor', V: 'lever', L: 'light chain', actin: 'actin' };
 /* Tempo: the big swing, a beat, the small one, a beat at rigor. */
-const LEG_MS = [1600, 900], HOLD_MS = 700;
+const LEG_MS = [1600, 900], HOLD_MS = 700, EXIT_MS = 700;
 const SUB = 8;
 
 let D = null, X = null;            // meta, Float32Array of frames
+let NUC = null, lig = null;         // nucleotide pieces and their meshes
+/* How far a leaving piece travels before it is out of the picture. It
+   leaves rather than fades: Pi and ADP persist (Animation.md §1). */
+const EXIT_A = 70;
+let piOut = 0, adpOut = 0;          // 0 in the site, 1 gone
 let segs = [];                      // [{lo, hi, mesh, cache:[{pos,nor}]}]
 let pos = 0;                        // 0..frames-1, fractional
 let playing = false, clock = 0;
-window.bench = { box, get pos() { return pos; }, advance, seek, get D() { return D; } };
+window.bench = { box, get pos() { return pos; }, advance, seek, get D() { return D; }, get lig() { return lig; } };
 
 Promise.all([
   fetch('data/mv-actin.json').then(r => r.json()),
   fetch('data/mv-stroke.json').then(r => r.json()),
   fetch('data/mv-stroke.bin').then(r => r.arrayBuffer()),
-]).then(([actin, meta, bin]) => {
-  D = meta; X = new Float32Array(bin);
+  fetch('data/mv-nucleotide.json').then(r => r.json()),
+]).then(([actin, meta, bin, nuc]) => {
+  D = meta; X = new Float32Array(bin); NUC = nuc;
   if (X.length !== D.frames * D.n * 3) throw new Error('mv-stroke.bin does not match its json');
   /* The box frames on everything the stroke reaches, so the myosin's whole
      path is drawn into the bake as hidden chains: one per keyframe. */
@@ -158,6 +168,7 @@ Promise.all([
   box.setData(t, { colors: { byChain: Object.fromEntries(actin.order.map(id => [id, COL.actin])) } });
   paintPanel();
   buildLive();
+  buildNucleotide();
   seek(0);
   requestAnimationFrame(tick);
 }).catch(e => console.warn('myosin5:', e.message));
@@ -227,7 +238,50 @@ function buildLive() {
   }
 }
 
+/* One setPocket for both pieces, ADP·Mg then Pi; each child is then moved
+   by its piece's matrix. setPocket draws atoms first, one mesh each, then
+   one group per bond in the order given. */
+function buildNucleotide() {
+  const pieces = [NUC.adp, NUC.pi], atoms = [], bonds = [], owner = [];
+  for (const [k, pc] of pieces.entries()) {
+    const off = atoms.length;
+    pc.atoms.forEach(a => { atoms.push({ el: a.el, p: a.p }); owner.push(k); });
+    pc.bonds.forEach(([i, j]) => bonds.push([i + off, j + off]));
+  }
+  const bondOwner = bonds.map(([i]) => owner[i]);
+  const P = box.setPocket({ atoms, bonds });
+  const kids = P.group.children;
+  if (kids.length !== atoms.length + bonds.length)
+    throw new Error(`pocket drew ${kids.length} children for ${atoms.length} atoms + ${bonds.length} bonds`);
+  lig = kids.map((c, i) => {
+    c.updateMatrix(); c.matrixAutoUpdate = false;
+    return { obj: c, base: c.matrix.clone(), piece: i < atoms.length ? owner[i] : bondOwner[i - atoms.length] };
+  });
+}
+const M4 = new THREE.Matrix4(), T4 = new THREE.Matrix4();
+function placeNucleotide() {
+  if (!lig) return;
+  const f = Math.round(pos), [k0, k1] = D.keys;
+  const pieces = [
+    { pc: NUC.adp, out: pos > k1 + 0.01 ? 1 : (Math.abs(pos - k1) < 0.01 ? adpOut : 0) },
+    { pc: NUC.pi, out: pos > k0 + 0.01 ? 1 : piOut },
+  ];
+  const mats = pieces.map(({ pc, out }) => {
+    const m = pc.follow[Math.min(f, pc.follow.length - 1)];
+    M4.set(m[0], m[1], m[2], m[9], m[3], m[4], m[5], m[10], m[6], m[7], m[8], m[11], 0, 0, 0, 1);
+    const d = EXIT_A * out * out;          // eases out of the site
+    T4.makeTranslation(pc.exit[0] * d, pc.exit[1] * d, pc.exit[2] * d);
+    return { m: new THREE.Matrix4().multiplyMatrices(T4, M4), shown: out < 1 };
+  });
+  for (const L of lig) {
+    L.obj.matrix.multiplyMatrices(mats[L.piece].m, L.base);
+    L.obj.matrixWorldNeedsUpdate = true;
+    L.obj.visible = mats[L.piece].shown;
+  }
+}
+
 function apply() {
+  placeNucleotide();
   const a = Math.floor(pos), b = Math.min(D.frames - 1, a + 1), m = pos - a;
   for (const s of segs) {
     const A = s.cache[a], B = s.cache[b];
@@ -241,10 +295,11 @@ function apply() {
   $('scrub').value = String(Math.round(1000 * pos / (D.frames - 1)));
   const [k0, k1, k2] = D.keys;
   const at = (k, tol) => Math.abs(pos - k) < tol;
-  $('beat').textContent = at(k0, 0.5) ? 'ADP·Pi bound, lever cocked.'
-    : pos < k1 - 0.5 ? 'Pi leaves; the lever swings.'
+  $('beat').textContent = at(k0, 0.5) ? (piOut > 0 ? 'Pi leaves the pocket.' : 'ADP·Pi bound, lever cocked.')
+    : at(k1, 0.5) && adpOut > 0 ? 'ADP leaves the pocket.'
+    : pos < k1 - 0.5 ? 'Pi gone, the lever swings.'
     : at(k1, 0.5) ? 'ADP still bound, gripping actin tightly.'
-    : pos < k2 - 0.5 ? 'ADP leaves; the lever swings a little further.'
+    : pos < k2 - 0.5 ? 'ADP gone, the lever swings a little further.'
     : 'Empty and locked on actin, until a new ATP lets go.';
   D.keys.forEach((k, i) => $('k' + i).setAttribute('aria-pressed', String(at(k, 0.5))));
   box.draw();
@@ -257,10 +312,15 @@ function seek(p) { pos = Math.max(0, Math.min(D.frames - 1, p)); apply(); }
 function at(ms) {
   const [k0, k1, k2] = D.keys;
   const e = t => t * t * (3 - 2 * t);
+  piOut = 0; adpOut = 0;
+  if (ms < EXIT_MS) { piOut = ms / EXIT_MS; return k0; }
+  ms -= EXIT_MS; piOut = 1;
   if (ms < LEG_MS[0]) return k0 + (k1 - k0) * e(ms / LEG_MS[0]);
   ms -= LEG_MS[0];
   if (ms < HOLD_MS) return k1;
   ms -= HOLD_MS;
+  if (ms < EXIT_MS) { adpOut = ms / EXIT_MS; return k1; }
+  ms -= EXIT_MS; adpOut = 1;
   if (ms < LEG_MS[1]) return k1 + (k2 - k1) * e(ms / LEG_MS[1]);
   return null;
 }
@@ -293,13 +353,15 @@ $('play').addEventListener('click', () => {
   if (!D) return;
   playing = !playing;
   $('play').setAttribute('aria-pressed', String(playing));
-  if (playing) { clock = 0; seek(0); }
+  if (playing) { clock = 0; piOut = adpOut = 0; seek(0); }
 });
 $('scrub').addEventListener('input', e => {
+  piOut = adpOut = 0;
   playing = false; $('play').setAttribute('aria-pressed', 'false');
   seek(+e.target.value / 1000 * (D.frames - 1));
 });
 [0, 1, 2].forEach(i => $('k' + i).addEventListener('click', () => {
+  piOut = adpOut = 0;
   playing = false; $('play').setAttribute('aria-pressed', 'false'); seek(D.keys[i]);
 }));
 $('pick').addEventListener('click', () => {
