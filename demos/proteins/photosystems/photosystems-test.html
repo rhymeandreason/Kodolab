@@ -209,79 +209,45 @@ function rows(t) {
 
 /* ---- the cofactors ----
 
-   THOUSANDS OF ATOMS, so instanced rather than setPocket: 5XNL alone is
-   ~22k atoms, and one mesh per atom is one draw call per atom. Element
-   colours are the palette's; carbon is tinted by class, so chlorophyll reads
-   green and carotenoid orange against the ribbon. Bonds are the deposition's
-   CONECT, carried by the baker. Each part's file is fetched on first use and
-   slid by the lineup's own `shift` when the lineup is showing. */
-const cofGroup = new THREE.Group();
+   Drawn by the box's setPocket, which instances above a few hundred atoms
+   (5XNL alone is ~22k). Element colours are the palette's; carbon is tinted
+   by class, so chlorophyll reads green and carotenoid orange against the
+   ribbon. Bonds are the deposition's CONECT, carried by the baker. Each
+   part's file is fetched on first use and slid by the lineup's own `shift`
+   when the lineup is showing. */
 const cofData = {};
 let showCof = false;
 const CARBON = { chlorophyll: PHO.chlorophyll, pheophytin: PHO.chlorophyll, carotenoid: PHO.carotenoid };
-const ATOM = MolPalette.atoms;
-const BALL = 0.45, STICK = 0.18;
 
 function loadCof(entry) {
   if (!cofData[entry]) cofData[entry] = fetch(`data/photosystems-${entry}-cofactors.json`).then(r => r.json());
   return cofData[entry];
 }
 
-function buildCof(parts) {
-  let atoms = 0, bonds = 0;
-  for (const { c } of parts) { atoms += c.el.length; bonds += c.bonds.length / 2; }
-  const sph = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6),
-    new THREE.MeshStandardMaterial({ roughness: .5 }), atoms);
-  const cyl = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6, 1, true),
-    new THREE.MeshStandardMaterial({ roughness: .5 }), bonds * 2);
-  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(),
-        A = new THREE.Vector3(), B = new THREE.Vector3(), mid = new THREE.Vector3(),
-        Y = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
-  let ai = 0, bi = 0;
+function pocketOf(parts) {
+  const atoms = [], bonds = [];
   for (const { c, d } of parts) {
-    const colour = i => {
-      const e = c.el[i];
-      return e === 'C' && CARBON[c.classes[c.cls[i]]] || ATOM[e] || 0x888888;
-    };
-    const at = (i, v) => v.set(c.xyz[3 * i] + d[0], c.xyz[3 * i + 1] + d[1], c.xyz[3 * i + 2] + d[2]);
-    for (let i = 0; i < c.el.length; i++, ai++) {
-      const metal = /^(Mg|Mn|Fe|Ca)$/.test(c.el[i]);
-      const r = metal ? BALL * 1.8 : BALL;
-      M.compose(at(i, A), Q.identity(), S.set(r, r, r));
-      sph.setMatrixAt(ai, M);
-      sph.setColorAt(ai, col.setHex(colour(i)));
+    const base = atoms.length;
+    for (let i = 0; i < c.el.length; i++) {
+      const tint = c.el[i] === 'C' ? CARBON[c.classes[c.cls[i]]] : undefined;
+      atoms.push({ el: c.el[i], colour: tint,
+                   p: [c.xyz[3 * i] + d[0], c.xyz[3 * i + 1] + d[1], c.xyz[3 * i + 2] + d[2]] });
     }
-    for (let k = 0; k < c.bonds.length; k += 2) {
-      const i = c.bonds[k], j = c.bonds[k + 1];
-      at(i, A); at(j, B);
-      mid.addVectors(A, B).multiplyScalar(0.5);
-      const half = A.distanceTo(B) / 2;
-      Q.setFromUnitVectors(Y, B.clone().sub(A).normalize());
-      for (const [end, idx] of [[A, i], [B, j]]) {
-        M.compose(end.clone().add(mid).multiplyScalar(0.5), Q, S.set(STICK, half, STICK));
-        cyl.setMatrixAt(bi, M);
-        cyl.setColorAt(bi++, col.setHex(colour(idx)));
-      }
-    }
+    for (let k = 0; k < c.bonds.length; k += 2) bonds.push([base + c.bonds[k], base + c.bonds[k + 1]]);
   }
-  return [sph, cyl];
+  return { atoms, bonds };
 }
 
 let cofToken = 0;
 function drawCof(t) {
   const mine = ++cofToken;
-  cofGroup.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); });
-  cofGroup.clear();
-  box.group.add(cofGroup);
-  cofGroup.visible = true;
-  if (!showCof) { box.draw(); return; }
+  if (!showCof) { box.setPocket(null); return; }
   const parts = t.meta.entry === 'lineup'
     ? t.meta.parts.map(p => ({ entry: p.entry, d: p.shift }))
     : [{ entry: t.meta.entry, d: [0, 0, 0] }];
   Promise.all(parts.map(p => loadCof(p.entry))).then(cs => {
-    if (mine !== cofToken) return;
-    for (const m of buildCof(parts.map((p, k) => ({ c: cs[k], d: p.d })))) cofGroup.add(m);
-    box.draw();
+    if (mine !== cofToken || view !== (t.meta.entry === 'lineup' ? 'lineup' : t.meta.entry)) return;
+    box.setPocket(pocketOf(parts.map((p, k) => ({ c: cs[k], d: p.d }))));
   });
 }
 

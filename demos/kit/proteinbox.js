@@ -239,6 +239,7 @@
   const BALL = 0.72;         // × the house display radius
   const FE_BALL = 2.7;       // × the shrunk carbon, for a metal
   const STICK = 0.36;        // × the FULL carbon radius; the house ratio is 0.165
+  const INSTANCE_ABOVE = 600; // atoms; see setPocket
 
   let sesOwner = null;              // the one box holding a decoded surface
 
@@ -1842,10 +1843,19 @@
        definition, so the framing radius stays the ribbon's; letting 43 atoms
        vote on it would be a bug nobody could see.
 
-       Returns `{group, materials}` — one material per element plus one per
-       bond colour — so a LESSON can fade the group in, tint it, or hide it
-       without the box growing an opinion about timing. Call with no argument
-       to clear. */
+       Returns `{group, materials, positionOf}` — one material per element
+       plus one per bond colour — so a LESSON can fade the group in, tint it,
+       or hide it without the box growing an opinion about timing.
+       `positionOf(i)` is atom i's world position now, whichever way it was
+       drawn. Call with no argument to clear.
+
+       ABOVE INSTANCE_ABOVE ATOMS IT IS INSTANCED: one sphere mesh, one for
+       metals and one stick mesh for the lot, same proportions, colours per instance. A
+       photosystem's pigments are 20k atoms, and one mesh each is 20k draw
+       calls. Below it every atom is its own mesh and `group.children[i]` is
+       atom i, which callout pages lean on; above it there is no such mesh,
+       `materials` is the three shared ones (white, so a tint multiplies every
+       instance), and `positionOf` is the only way to an atom. */
     function setPocket(p, o) {
       pocketGroup.clear();
       if (!p || !p.atoms || !p.atoms.length) return { group: pocketGroup, materials: [] };
@@ -1865,10 +1875,22 @@
       const ball = (o && o.ball) || 1;
       const R = MolLib.PALETTE.radii, C = R.C / MolLib.SCALE;
       const colourOf = el => MolLib.PALETTE.atoms[el] || 0x888888;
-      const materials = [], byEl = {};
-      const matFor = el => byEl[el] || (byEl[el] = materials[materials.push(
+      /* `colour` on an atom overrides its element's: a caller tinting the
+         carbons of one class (chlorophyll green) says so per atom, and the
+         heteroatoms keep the palette's. */
+      const tone = a => a.colour != null ? a.colour : colourOf(norm(a.el));
+      const radiusOf = el => ball * (METAL.has(norm(el)) ? BALL * C * FE_BALL
+                                                         : BALL * ((R[norm(el)] || R.C) / MolLib.SCALE));
+      const positionOf = i => {
+        const a = p.atoms[i];
+        pocketGroup.updateWorldMatrix(true, false);
+        return pocketGroup.localToWorld(new THREE.Vector3(a.p[0], a.p[1], a.p[2]));
+      };
+      if (p.atoms.length > INSTANCE_ABOVE) return instanced(p, tone, radiusOf, C * STICK, positionOf);
+      const materials = [], byKey = {};
+      const matFor = (el, hex) => byKey[el + hex] || (byKey[el + hex] = materials[materials.push(
         new THREE.MeshStandardMaterial({
-          color: colourOf(el),
+          color: hex,
           /* A metal should look like one, and 'metal' is a set rather than
              iron: a heme's Fe and the Co sitting where a Mg belongs are the
              same kind of atom in a picture, and hardcoding one of them is how
@@ -1880,7 +1902,7 @@
         const el = norm(a.el);
         const r = ball * (METAL.has(el) ? BALL * C * FE_BALL
                                         : BALL * ((R[el] || R.C) / MolLib.SCALE));
-        const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), matFor(el));
+        const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), matFor(el, tone(a)));
         m.position.set(a.p[0], a.p[1], a.p[2]);
         pocketGroup.add(m);
       }
@@ -1890,13 +1912,59 @@
         const a = p.atoms[i], b = p.atoms[j];
         if (!a || !b) continue;
         A.set(a.p[0], a.p[1], a.p[2]); B.set(b.p[0], b.p[1], b.p[2]);
-        const g = Stage.bondSplit(A, B, colourOf(norm(a.el)), colourOf(norm(b.el)),
-                                  C * STICK);
+        const g = Stage.bondSplit(A, B, tone(a), tone(b), C * STICK);
         g.traverse(o => { if (o.material && !materials.includes(o.material)) materials.push(o.material); });
         pocketGroup.add(g);
       }
       box.draw();
-      return { group: pocketGroup, materials };
+      return { group: pocketGroup, materials, positionOf };
+    }
+
+    function instanced(p, tone, radiusOf, stick, positionOf) {
+      const bonds = (p.bonds || []).filter(([i, j]) => p.atoms[i] && p.atoms[j]);
+      const ballMat = new THREE.MeshStandardMaterial({ roughness: .5 });
+      /* The small path's metal finish, so a Mn cluster reads as metal here too. */
+      const metalMat = new THREE.MeshStandardMaterial({ roughness: .35, metalness: .35 });
+      const stickMat = new THREE.MeshStandardMaterial({ roughness: .5 });
+      const isMetal = a => METAL.has(norm(a.el));
+      const nMetal = p.atoms.filter(isMetal).length;
+      const sph = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), ballMat,
+                                          Math.max(1, p.atoms.length - nMetal));
+      const met = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), metalMat, Math.max(1, nMetal));
+      sph.count = p.atoms.length - nMetal;
+      met.count = nMetal;
+      const cyl = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8, 1, true), stickMat,
+                                          Math.max(1, bonds.length * 2));
+      cyl.count = bonds.length * 2;
+      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(),
+            A = new THREE.Vector3(), B = new THREE.Vector3(), mid = new THREE.Vector3(),
+            half = new THREE.Vector3(), dir = new THREE.Vector3(),
+            Y = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
+      let ia = 0, im = 0;
+      for (const a of p.atoms) {
+        const r = radiusOf(a.el);
+        M.compose(A.fromArray(a.p), Q.identity(), S.set(r, r, r));
+        const [mesh, n] = isMetal(a) ? [met, im++] : [sph, ia++];
+        mesh.setMatrixAt(n, M);
+        mesh.setColorAt(n, col.setHex(tone(a)));
+      }
+      let k = 0;
+      for (const [i, j] of bonds) {
+        const a = p.atoms[i], b = p.atoms[j];
+        A.fromArray(a.p); B.fromArray(b.p);
+        mid.addVectors(A, B).multiplyScalar(0.5);
+        Q.setFromUnitVectors(Y, dir.subVectors(B, A).normalize());
+        const len = A.distanceTo(B) / 2;
+        /* SPLIT AT THE MIDPOINT, each half its own end's colour: Stage.bondSplit's rule. */
+        for (const [end, at] of [[A, a], [B, b]]) {
+          M.compose(half.addVectors(end, mid).multiplyScalar(0.5), Q, S.set(stick, len, stick));
+          cyl.setMatrixAt(k, M);
+          cyl.setColorAt(k++, col.setHex(tone(at)));
+        }
+      }
+      pocketGroup.add(sph, met, cyl);
+      box.draw();
+      return { group: pocketGroup, materials: [ballMat, metalMat, stickMat], positionOf };
     }
     box.setPocket = setPocket;
 
