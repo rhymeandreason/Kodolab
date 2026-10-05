@@ -123,13 +123,40 @@ Already in: **PSII 5XNL, b6f 7QRM, PSI 5L8R** (`proteins/photosystems/`, with th
 
 Ranked by what finishes a story first: **plastocyanin and ferredoxin + FNR** put every protein an electron touches, water to NADPH, in the lineup. **LHCII** is the antenna at a size a ribbon can read. The Calvin rows wait for a lesson that asks for them.
 
+## Large assemblies, repriced (2026-10-05)
+
+**Size stopped being a cost.** PSII (5XNL), b6f and PSI render fine, and `cif-lib.js` reads mmCIF, so neither chain count nor the legacy format gates anything. This second pass over PDB-101 (all 322 entries, ids taken from each article) keeps what the first pass passed over for size. Id, method, resolution and chain count read from RCSB; **not triaged**.
+
+| candidate | id | fills | chains | motion? | pairs with | file notes | MOTM |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **Ribosome, human 80S** | **6Y0G** (or 4V6X) | translation: the central dogma's missing third | 83 | PRE state; POST pair not picked | **tRNA**, **polymerase**, aaRS (Tier 3) | EM 3.2 Å, mmCIF only. 4V6X is 5.0 Å. RNA most of the mass, so the nucleic drawer carries it | 10, 121, 295 |
+| **Cytochrome c oxidase** | **1V54 + 1V55** | Complex IV: O₂ becomes water. The ETC's end | 26 each | **yes: oxidised / reduced** | **cytc**, **atp-synthase**, Complex I (Tier 3) | bovine x-ray **1.8 / 1.9 Å**, legacy `.pdb`. Sharp for 26 chains. 1OCO is the CO-bound state | 5 |
+| **Cytochrome bc1** | **1BGY** | Complex III, Q cycle | 22 | no | **b6f**, its chloroplast twin, already in | bovine x-ray 3.0 Å. 1BE3 is the same at 11 chains | 137 |
+| **Respiratory supercomplex** | **5XTH** | I + III₂ + IV as one object: the whole ETC in the membrane | 80 | no | the three rows above, **atp-synthase** | human EM 3.9 Å, mmCIF only. The lineup PSII/b6f/PSI gave photosynthesis, for respiration | 273 |
+| **Citrate synthase** | **1CTS + 2CTS** | Krebs step 1, and induced fit at domain scale | 1 each | **yes: open / closed** | **hexokinase**'s closing; **krebs-lab** | pig, x-ray 2.7 / 2.0 Å, one paper. **Cheapest row here** and the only Krebs enzyme with a lesson waiting | 93 |
+| **RNA polymerase II** | **1I6H** | transcription caught in the act: DNA in, RNA out | 12 (10 protein + DNA + RNA) | no | **polymerase** (Taq), **TBP 1YTB** | yeast x-ray 3.3 Å, legacy `.pdb`. Mixed file | 40 |
+| **Viruses: rhinovirus + TMV + ϕX174** | **4RHV**, **2TMV**, **1CD3** | three geometries: icosahedron, helix, procapsid | 4 / 2 / 7 in AU; full particle via assembly | no | **ferritin**, **HK97** | x-ray 3.0 / 2.9 / 3.5 Å, all legacy. **The ferritin trick at 60× and 2130×**: small AU, biology in the assembly. 2TMV is fibre diffraction and carries its RNA. Common cold is the hook | 20, 109, 2, 200 |
+| **HIV capsid** | 3J3Q | a cone built from one protein, hexamers + 12 pentamers | **1356** | no | the icosahedral viruses | EM, mmCIF only, 313k residues. **The real size test**; price after one icosahedron | 163 |
+| **Flagellar motor** | 8UOX | a rotary motor that is not ATP synthase, ion-driven | 204 | **CW / CCW locked states** | **atp-synthase** | *Salmonella* EM 4.6 Å, mmCIF. Students' favourite machine. Pick the partner state from MOTM 300's list (8UCS, 8UPL) | 300 |
+| **CFTR** | **5UAK + 6MSM** | cystic fibrosis: a channel that is an ABC pump | 2 each | **yes: off (dephos, no ATP) / on** | **napump**, KcsA | human EM 3.9 / 3.2 Å, legacy `.pdb`. One genetic disease every Bio 101 text names | 293 |
+| **Glycogen phosphorylase** | **1GPA** (a) + **8GPB** (b) | allosteric + phosphorylation control on one enzyme | 4 / 1 | **yes, per 1GPA's title** | **ATCase**, haemoglobin | rabbit x-ray. 8GPB not yet read | 24 |
+| **GLUT1** | 4PYP | how glucose gets into the cell glycolysis starts in | 1 | no | **hexokinase**, the next step | human x-ray 3.2 Å | 208 |
+| **lac repressor on DNA** | 1EFA | the operon, Bio 101's gene-regulation example | 5 | no; IPTG-bound partner in MOTM 39 (1TLF) | **zif268**, **1YTB** | *E. coli* x-ray 2.6 Å | 39 |
+| **HIV protease + drug** | 1HSG | structure-based drug design's first win | 2 | no | **ras/6OIM**, the other drug in a pocket | x-ray 2.0 Å, saquinavir-class inhibitor | 6 |
+
+**Ruled out on this pass:** nuclear pore 5IJN (21 Å, an envelope; the clathrin reason), V-ATPase 5VOX (6.8 Å), injectisome 7AH9 (flagellar motor tells the same story better), microtubule 3J2U (10.8 Å; 1JFF stays the tubulin row).
+
+**Build order.** Citrate synthase first: one chain, a two-state motion, and krebs-lab is waiting. Then **1V54/1V55**: Complex IV at 1.8 Å closes the ETC with cytochrome c already held, and is the redox pair cytc's own entry could not show. Then **rhinovirus**, because no virus is in the library and the bake is ferritin's. The ribosome is the most important missing object in Bio 101 and is now only a content decision.
+
+**MOTM 321-322 (new since the August sweep)** added nothing: biofilms and an anniversary retrospective.
+
 ## Tier 3 — expensive, price before committing
 
 | candidate | id | fills | scale | motion? | variance? | the cost | status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | **Complex I** | **5XTD** | the ETC lesson already queued | **45 chains**, cryo-EM 3.7 Å | no pair verified | no | the guess was right, and better than it looks: 5XTD is **human**, and **legacy `.pdb` exists** despite 45 chains. Still the stator-fit and label-travel traps `atp-synthase/tools/prep.js` documents, so its baker starts from that file. 5LDW is the mammalian class-1 equivalent at 4.27 Å if a second state is ever wanted | id verified |
 | **DNA polymerase** | **4KTQ + 3KTQ** (was 1TAU) | replication; the hand-shaped fold | 1 + DNA each | **yes — verified** | no — 4KTQ/3KTQ are one construct | DNA pipeline. The two-state story is found: Taq large fragment, **4KTQ open binary** 2.5 Å (primer/template only) and **3KTQ closed ternary** 2.3 Å (ddNTP caught in the site), each 1 protein + 2 DNA chains, essentially no gaps. The fingers close between them | id verified |
-| **Ribosome** | 4V6X | translation | **89 chains**, cryo-EM 5.0 Å | unverified | no | **the mmCIF gate is real and it is general.** 4V6X (human 80S) has no legacy `.pdb`, and neither do 4V4Q (*E. coli*, x-ray 3.46 Å), 6ZSG or 7A5F (human mitoribosome). Every ribosome probed returns 404. This is the one row whose format prediction held | id verified |
+| **Ribosome** | 4V6X | translation | **89 chains**, cryo-EM 5.0 Å | unverified | no | **Gate gone: `cif-lib.js` reads mmCIF; see Large assemblies, 6Y0G.** Was: the mmCIF gate is real and it is general.** 4V6X (human 80S) has no legacy `.pdb`, and neither do 4V4Q (*E. coli*, x-ray 3.46 Å), 6ZSG or 7A5F (human mitoribosome). Every ribosome probed returns 404. This is the one row whose format prediction held | id verified |
 | **Aminoacyl-tRNA synthetase** | **1FFY + 1ASY** | EC class **6, ligase** — empty | 2 / 4 | no | no | ids found, and better as a pair than as one: **1FFY** is IleRS with its tRNA, **class I**, 2.2 Å; **1ASY** is yeast AspRS with its tRNA, **class II**, 2.9 Å. Two unrelated folds evolved to do one job — Tier 5's Neo-2/15 argument, made by nature. Both carry legacy `.pdb`. Still the RNA pipeline gate; **1EHZ** (yeast tRNA-Phe alone, 1.93 Å) is the cheapest way to price it | id verified |
 | **Tubulin / actin** | 1JFF / **1J6Z** (not 1ATN) | cytoskeleton; a polymer that is not collagen | 2 / **1** | no | no | **1ATN is not actin** — it is actin bound to **DNase I**, and the second chain is the nuclease. Uncomplexed actin is **1J6Z, 1.54 Å, one chain**: cheaper and honest. 1JFF is αβ tubulin from zinc-induced sheets, **electron crystallography** at 3.5 Å. The subject is still the filament, not the file | id verified |
 | **CRISPR-Cas9** | 5F9R | humans engineering biology | 4 (1 protein + sgRNA + 2 DNA) | unverified | no | verified: *S. pyogenes* Cas9, x-ray 3.4 Å, legacy `.pdb` present. RNA *and* DNA in one file, so it clears the same gate as DNA polymerase and nothing more | id verified |
