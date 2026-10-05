@@ -464,7 +464,9 @@ function images(req, res, json) {
  * empty rectangle. Three benches post here: `proteins/tools/stills.html` for
  * the protein gallery, `tools/component-stills.html` for the component shelf,
  * `tools/molecule-stills.html` for library.html's molecule grid, and `set`
- * says which. The directory is chosen from that whitelist rather
+ * says which. `set: 'og'` is the one JPEG: a share card is shown by other
+ * sites on their own background and wants none of the alpha, so it takes
+ * `{ key, jpg }` and writes media/og/<key>.jpg. The directory is chosen from that whitelist rather
  * than taken from the body, so a key can never write outside one of them.
  */
 function stills(req, res, json) {
@@ -486,20 +488,21 @@ function stills(req, res, json) {
     if (!/^[A-Za-z0-9][A-Za-z0-9-]*$/.test(body.key || '')) {
       return json(400, { error: 'key must be letters, digits and dashes' });
     }
-    const m = /^data:image\/webp;base64,(.+)$/.exec(body.webp || '');
-    if (!m) return json(400, { error: 'webp must be a data:image/webp;base64 URL' });
-
     const SETS = { proteins: 'proteins/stills', components: 'media/components',
-                   molecules: 'media/molecules' };
+                   molecules: 'media/molecules', og: 'media/og' };
     const into = SETS[body.set || 'proteins'];
     if (!into) return json(400, { error: `set must be one of ${Object.keys(SETS).join(', ')}` });
+    const ext = body.set === 'og' ? 'jpg' : 'webp';
+    const m = ext === 'jpg' ? /^data:image\/jpeg;base64,(.+)$/.exec(body.jpg || '')
+      : /^data:image\/webp;base64,(.+)$/.exec(body.webp || '');
+    if (!m) return json(400, { error: `${ext} must be a data:image/${ext === 'jpg' ? 'jpeg' : 'webp'};base64 URL` });
 
     const dir = path.join(DEMOS, into);
     fs.mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, `${body.key}.webp`);
+    const file = path.join(dir, `${body.key}.${ext}`);
     const buf = Buffer.from(m[1], 'base64');
     fs.writeFileSync(file, buf);
-    console.log(`  ${into}/${body.key}.webp \u2190 ${Math.round(buf.length / 1024)} KB`);
+    console.log(`  ${into}/${body.key}.${ext} \u2190 ${Math.round(buf.length / 1024)} KB`);
     return json(200, { ok: true, bytes: buf.length });
   });
 }

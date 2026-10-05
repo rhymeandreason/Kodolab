@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<base href="/demos/enzyme/">
+<title>Bake the enzyme lesson's still</title>
+
+<!-- ===================================================================
+     THE ENZYME LESSON'S THUMBNAIL AND SHARE CARD, BAKED. The scene is
+     posed mid-reaction (Enzyme.pose), held, and left orbitable so the
+     framing is chosen by eye. Bake writes two files through the dev
+     server's /api/stills:
+
+       media/components/enzyme.webp   the shelf card: 536x358, the same
+                                      box and size as every other still
+       media/og/enzymes.jpg           the share card: the same frame at
+                                      630 high, drawn 1200 wide on paper
+
+     INTERNAL TOOL, DEV SERVER ONLY, CHROME ONLY (Safari encodes no WebP).
+     =================================================================== -->
+
+<style>
+  body{font:14px/1.5 system-ui,-apple-system,sans-serif;margin:2rem;background:#faf8f4;color:#14161a;overflow:auto}
+  h1{font-size:1.2rem;margin:0 0 .4rem}
+  p{color:#6d6f76;margin:0 0 1.2rem;max-width:60ch}
+  button{font:inherit;padding:.45rem 1rem;border:1px solid #14161a;background:#fff;border-radius:3px;cursor:pointer}
+  /* The shelf card's 3:2, at the still's own pixel size, so the backing
+     store at pixelRatio 1 IS the still. The card's paper behind it. */
+  #mount{position:relative;width:536px;height:358px;margin:1.2rem 0;border:1px solid #e4e0d7;background:#f4f2ec}
+  #mount .annot-layer{display:none}
+  #log{font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre-wrap}
+  .bad{color:#c0392b}
+</style>
+</head>
+<body>
+<h1>Enzyme still</h1>
+<p>Drag to frame, scroll to zoom, then Bake. Writes <code>media/components/enzyme.webp</code> and <code>media/og/enzymes.jpg</code>. Dev server, Chrome.</p>
+<button id="pose">Reset pose</button>
+<button id="bake">Bake</button>
+<div id="mount"></div>
+<div id="log"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../lib/annotate.js"></script>
+<script src="enzyme-lib.js"></script>
+<script src="enzyme-models.js"></script>
+<script src="enzyme-reactor.js"></script>
+<script src="enzyme.js"></script>
+<script src="enzyme-steps.js"></script>
+<script>
+const enz = Enzyme.mount(document.getElementById('mount'), { pixelRatio: 1 });
+/* The catalysis step's own camera, so the still is a frame the lesson shows. */
+const CAM = EnzymeSteps.steps.find(s => s.key === 'catalysis').camera;
+const pose = () => enz.pose(CAM);
+pose();
+document.getElementById('pose').onclick = pose;
+
+const log = (msg, bad) => {
+  const d = document.createElement('div');
+  d.textContent = msg; if (bad) d.className = 'bad';
+  document.getElementById('log').appendChild(d);
+};
+const post = body => fetch('/api/stills', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  .then(r => r.json());
+
+document.getElementById('bake').onclick = async () => {
+  const card = enz.snapshot(1);
+  const webp = card.toDataURL('image/webp', 0.85);
+  if (!/^data:image\/webp;/.test(webp)) return log('This browser encodes no WebP. Bake in Chrome.', true);
+
+  /* The same frame at 630 high, drawn wider rather than padded: the scene
+     carries on past the card's sides instead of stopping at a seam. */
+  const OG_W = 1200, OG_H = 630, k = OG_H / card.height;
+  const big = enz.snapshot(k, OG_W / k, card.height);
+  const og = document.createElement('canvas');
+  og.width = OG_W; og.height = OG_H;
+  const g = og.getContext('2d');
+  g.fillStyle = getComputedStyle(document.getElementById('mount')).backgroundColor;
+  g.fillRect(0, 0, OG_W, OG_H);
+  g.drawImage(big, 0, 0, OG_W, OG_H);
+  const jpg = og.toDataURL('image/jpeg', 0.88);
+
+  const a = await post({ set: 'components', key: 'enzyme', webp });
+  log(a.ok ? `media/components/enzyme.webp, ${Math.round(a.bytes / 1024)} KB` : `webp: ${a.error}`, !a.ok);
+  const b = await post({ set: 'og', key: 'enzymes', jpg });
+  log(b.ok ? `media/og/enzymes.jpg, ${Math.round(b.bytes / 1024)} KB` : `jpg: ${b.error} (restart the dev server if it does not know set "og")`, !b.ok);
+};
+</script>
+</body>
+</html>

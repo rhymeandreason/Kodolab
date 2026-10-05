@@ -35,14 +35,15 @@
   const denatOf = (T, p) => Math.max(smoothstep(40, 55, T), smoothstep(2.4, 4.4, Math.abs(p - PH_OPT)));
 
   function mount(el, opts = {}) {
-    const size = () => ({ w: el.clientWidth || innerWidth, h: el.clientHeight || innerHeight });
+    let sizeOverride = null;           // a snapshot drawn at a box other than the element's
+    const size = () => sizeOverride || { w: el.clientWidth || innerWidth, h: el.clientHeight || innerHeight };
 
     /* ================= Renderer & scene ================= */
     const canvas = document.createElement('canvas');
     canvas.className = 'enz-canvas';
     el.appendChild(canvas);
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setPixelRatio(opts.pixelRatio || Math.min(devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -430,7 +431,9 @@
     }
 
     /* ================= Loop ================= */
+    let frozen = false;                // a still: the scene holds, the camera still orbits
     function tick(dt) {
+      if (frozen) { updateFly(dt); controls.update(); return; }
       time += dt;
       if (cur === 'fold') {
         if (!fold.paused) fold.t += dt;
@@ -518,6 +521,37 @@
         const atEnd = tl.t >= tl.max;
         if (cur === 'fold') { if (atEnd) { fold.t = FOLD_START; fold.zoomed = false; fold.paused = false; } else fold.paused = !fold.paused; }
         if (cur === 'binding') { if (atEnd) ENTER.binding(); else bind.paused = !bind.paused; }
+      },
+      /* The thumbnail's frame: mid-reaction, the bond lit in the closed pocket.
+         Reseeded so it is the same moment on every load, then held. */
+      pose(camera) {
+        frozen = false;
+        show('catalysis', { camera });
+        reactor.rand = L.rng(99);
+        for (let n = 0; n < 1200; n++) {
+          tick(1 / 60);
+          const r = reactor.focus();
+          if (r && r.phase === 'react' && r.t > 0.7 && n > 240) break;
+        }
+        flyTo(camera, 0);
+        frozen = true;
+      },
+      /* This frame redrawn at `ratio` device pixels per CSS pixel, as a canvas.
+         `w` x `h` (CSS px) draws it in a box of another shape: same height and
+         vertical field, so a wider box shows more at the sides, not a crop. */
+      snapshot(ratio, w, h) {
+        const prev = renderer.getPixelRatio();
+        renderer.setPixelRatio(ratio);
+        if (w && h) sizeOverride = { w, h };
+        layout();
+        renderer.render(scene, camera);
+        const c = document.createElement('canvas');
+        c.width = canvas.width; c.height = canvas.height;
+        c.getContext('2d').drawImage(canvas, 0, 0);
+        renderer.setPixelRatio(prev);
+        sizeOverride = null;
+        layout();
+        return c;
       },
       setModel(m) { params.model = m; if (cur === 'binding') show('binding'); },
       setSpeed(s) { params.speed = s; if (cur === 'catalysis') reactor.rate = s; },
