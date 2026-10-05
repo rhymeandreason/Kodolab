@@ -109,7 +109,8 @@ const W = WaterSim.mount(shell.stage, {
   nWater:1, still:true, hbonds:false,
   cam:{theta:0, phi:Math.PI/2, r:9},
   viewOffset,
-  stage:{ onZoom:r=>{ S.targetR=r; } },     // manual zoom sticks
+  // manual zoom sticks; r already carries roomScale, which the frame reapplies
+  stage:{ onZoom:r=>{ S.targetR=r/roomScale(); } },
 });
 const sim=W.sim, box=W.box;
 const {scene,camera,root,cam,applyCam}=box;
