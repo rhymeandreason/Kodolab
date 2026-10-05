@@ -68,20 +68,23 @@ const S = { step:0, temperature:22, tempEnabled:false, freezeEnabled:false,
 const stepMeta=[
  {tab:'A polar molecule',
   claim:`Water is V shaped. One end is slightly negative, the other slightly positive.`,
-  body:`<p>Drag to turn it. Click a label to see why each end carries its charge.</p>`},
+  body:`<p>Two lone pairs on oxygen push the hydrogens together, bending the molecule. Bent, its charged ends cannot cancel, so water is polar. Straight CO₂ cancels out and is not.</p>
+        <p>Drag to turn it. Click a label to see why each end carries its charge.</p>`},
  {tab:'Hydrogen bonds',
-  claim:`The + H of one water molecule attracts to the − O of another.`,
+  claim:`The δ+ hydrogen of one water is pulled toward the δ− oxygen of the next. That pull is a hydrogen bond.`,
   body:`<p>Add water and watch the δ+ hydrogens find δ− oxygens. Every bond breaks and reforms with a new partner, over and over.</p>`},
  {tab:'Specific heat',
-  claim:`Water has high specific heat due to its H-bonds.`,
+  claim:`Water resists heating, because heat must break its hydrogen bonds first.`,
   body:`<p>Heat you add goes first into pulling hydrogen bonds apart, not into speeding molecules up. So a lot of heat buys only a small rise in temperature.</p>
         <p>Drag the temperature up and watch the network loosen before the molecules visibly speed up.</p>`},
  {tab:'Why ice floats',
   claim:`Unlike almost every substance, water is less dense as a solid.`,
-  body:`<p>Cool the water until it freezes, then compare the spacing to the liquid’s.</p>`},
+  body:`<p>Cool the water until it freezes, then compare the spacing to the liquid’s.</p>
+        <p>Because ice floats, a lake freezes from the top down, and the ice insulates the water beneath where life survives the winter.</p>`},
  {tab:'The universal solvent',
   claim:`Because water is polar, it dissolves ionic and polar substances extraordinarily well.`,
-  body:`<p>Add salt. Which end of each water turns toward Na⁺, and which toward Cl⁻? Then watch the freezing and boiling points move.</p>`},
+  body:`<p>Add salt. Which end of each water turns toward Na⁺, and which toward Cl⁻? Then watch the freezing and boiling points move.</p>
+        <p>Every cell’s chemistry happens dissolved in water. Nonpolar oil has no charge for water to grab, so it stays out, and that is what lets a membrane hold together.</p>`},
 ];
 
 const shell = LessonShell.create({
@@ -636,7 +639,8 @@ function renderReadout(p){
     const q=id=>shell.q('#'+id);
     if(!q('s-ratio')) return;
     q('s-ratio').textContent=`${salt.length/2} ${sim.saltSpec(SALT).formula} : ${sim.mols.length} H₂O`;
-    q('s-molal').textContent=`${p.molal.toFixed(1)} m molality`;
+    // p.molal counts free ions; molality is per formula unit
+    q('s-molal').textContent=`${(p.molal/sim.saltSpec(SALT).dissociates.length).toFixed(1)} m ${sim.saltSpec(SALT).formula}`;
     q('s-fp').textContent=`${Math.round(-p.dTf)}°C`;
     q('s-bp').textContent=`${Math.round(100+p.dTb)}°C`;
   }
