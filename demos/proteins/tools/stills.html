@@ -29,6 +29,7 @@
   /* The mount is 2x a card's 330x230 box: the still is a background-image on
      a retina screen, and a 1x bake is visibly soft next to the live canvas. */
   #mount{width:660px;height:460px;margin:1.2rem 0;border:1px solid #e4e0d7;background:#faf8f4}
+  #basis{font-family:ui-monospace,Menlo,monospace;font-size:12px;margin:0 0 1rem}
   #log{font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre-wrap}
   .bad{color:#c0392b}
 </style>
@@ -39,7 +40,12 @@
 <button id="go">Bake all</button>
 <select id="pick"></select>
 <button id="one">Bake selected</button>
+<button id="copy">Copy this view</button>
 <div id="mount"></div>
+<p id="viewnote">Drag to turn. A still has to match its card, and the card's rotation is the
+  registry's: copy the view, paste it into that protein's
+  <code>view: {by:'human', basis}</code> in <code>proteins.js</code>, reload, then bake.</p>
+<pre id="basis"></pre>
 <div id="log"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -89,19 +95,20 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
    the reload when the box on screen already IS the selection. */
 let liveBox = null;
 let liveKey = null;
+let opened = null;      // pickView() as loaded, to tell whether it was turned
 
 async function loadEntry(p) {
   if (liveBox) { liveBox.destroy(); liveBox = null; liveKey = null; }
   const v = defaultOf(p);
   const t = await fetch(dataOf(p, v.read.baked)).then(r => r.json());
 
-  /* Same options as the card, minus the reader: no orbit, and the wheel and
-     the turn are nobody's here. Everything that decides what the frame LOOKS
-     like — pad, sub, colour, rotation — has to match index.html or the still
-     jumps when the live box replaces it. */
+  /* Same options as the card, plus a turn so a human can pick the rotation
+     here. Everything else that decides what the frame LOOKS like — pad, sub,
+     colour — has to match index.html or the still jumps when the live box
+     replaces it, and the rotation does too: see `copy` below. */
   const box = Proteinbox.create({
-    mount, orbit: false, pad: 1.15, sub: 8,
-    stage: { ortho: false },
+    mount, orbit: true, pad: 1.15, sub: 8,
+    stage: { ortho: false, turn: 'trackball' },
     /* The same chain list the card draws — see index.html. A still holding a
        chain the card hides is the contract above broken in the one direction
        nobody looks at. */
@@ -132,6 +139,8 @@ async function loadEntry(p) {
   box.draw();
 
   liveBox = box; liveKey = p.key;
+  opened = JSON.stringify(box.pickView());
+  document.getElementById('basis').textContent = '';
   return box;
 }
 
@@ -141,6 +150,11 @@ async function bake(p) {
   /* THE RIBBON ON NOTHING. The renderer's context is alpha and the still keeps
      it, so the card's paper shows through and a still is not pinned to one
      background colour. WebP because PNG at this size is 400 KB a card. */
+  /* A TURN THE REGISTRY DOES NOT HOLD bakes a still the live card will not
+     match, so the card jumps when it goes live. Baked anyway, since a human
+     may be checking a candidate before pasting it, but said out loud. */
+  if (JSON.stringify(box.pickView()) !== opened)
+    say(`${p.key} — turned but not in proteins.js: the card will jump. Copy the view and paste it first.`, true);
   box.draw();                            // the buffer is only readable now
   const webp = box.canvas.toDataURL('image/webp', 0.85);
   /* A browser with no WebP ENCODER hands back a PNG under the name asked for,
@@ -168,6 +182,14 @@ for (const p of ENTRIES) {
   pickEl.appendChild(o);
 }
 const goEl = document.getElementById('go');
+document.getElementById('copy').addEventListener('click', () => {
+  if (!liveBox) return;
+  /* kit/proteinbox.js's, because the answer needs the chain group's rotation
+     as well as the camera's and only the box can see both. */
+  const text = JSON.stringify(liveBox.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  document.getElementById('basis').textContent = `${liveKey}: ${text}`;
+});
 const oneEl = document.getElementById('one');
 
 async function run(entries) {

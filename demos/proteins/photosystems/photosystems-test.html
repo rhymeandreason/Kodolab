@@ -86,6 +86,7 @@
 <script src="../../kit/ribbon.js"></script>
 <script src="../../kit/card-stage.js"></script>
 <script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
 <script>
 'use strict';
 
@@ -120,14 +121,6 @@ const box = Proteinbox.create({
   mount: $('stage'), orbit: true, pad: 1.1, sub: 6,
   stage: { ortho: false, turn: 'trackball' },
 });
-
-/* STROMA UP, the textbook's way. OPM's normal is on z and the baker measured
-   which sign the lumen is; the view puts the other one upright. */
-function viewOf(t) {
-  const up = t.meta.lumen === '+z' ? [0, 0, -1] : [0, 0, 1];
-  const hint = t.view ? t.view[0] : [1, 0, 0];
-  return FoldLib.basisFrom(up, hint);
-}
 
 const memGroup = new THREE.Group();
 let showMem = true, byRole = true;
@@ -276,7 +269,10 @@ function show(id) {
     `<a href="https://www.rcsb.org/structure/${e}" target="_blank" rel="noopener">RCSB ${e}</a>`).join('') +
     `<a href="data/photosystems-${id}.json">what this page loads</a>`;
   legend(t);
-  box.setData(t, { colors: colorsFor(t), view: viewOf(t) });
+  /* A rotation a human pasted into the registry wins over the bake's solved one. */
+  const key = { '5XNL': 'psii', '7QRM': 'b6f', '5L8R': 'psi' }[t.meta.entry];
+  const chosen = key && ProteinLib.viewOf(ProteinLib.byKey(key));
+  box.setData(t, { colors: colorsFor(t), view: chosen || t.view });
   drawMembrane(t);
   drawCof(t);
 }

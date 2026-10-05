@@ -190,8 +190,7 @@ function bake(v) {
   return { cof,
     source: `${v.id}-opm.pdb`, ssFrom: Bake.ssFrom(R), centre: T.centre,
     order: T.order, chains: T.chains, radius: T.radius, extents: F.extents,
-    view: FoldLib.basisFrom([0, 0, 1], (F.view || [[1, 0, 0]])[0])
-      .map(ax => ax.map(x => Math.round(x * 1e4) / 1e4)),
+    hint: (F.view || [[1, 0, 0]])[0],
     frame: 'membrane convention, on OPM\'s normal',
     meta: {
       entry: v.id, name: v.name, species: v.species, purpose: v.purpose,
@@ -269,7 +268,7 @@ function lineup(bakes) {
     p.shift = [Bake.r2(s[0] - c[0]), Bake.r2(s[1] - c[1]), Bake.r2(s[2])];
   }
   out.extents = Bake.frameOf(all).extents;
-  out.view = FoldLib.basisFrom([0, 0, 1], [1, 0, 0]);
+  out.hint = [1, 0, 0];
   out.meta.membrane = { half: Math.max(...parts.map(p => p.b.meta.membrane.half)), axis: 'z', mid: 0 };
   return out;
 }
@@ -289,6 +288,23 @@ function main() {
     throw new Error(`faces disagree: OEC ${lumen}, cyt f ${cytf}, PsaC ${ridge}`);
   for (const b of bakes) b.meta.lumen = lumen;
 
+  /* STROMA UP, the textbook's way, in the bake so the bench, the gallery card
+     and its still all open the same way up. OPM fixes the normal on z but not
+     its sign, so the view is set once the lumen's sign is measured above. */
+  const up = lumen === '+z' ? [0, 0, -1] : [0, 0, 1];
+  /* Where a human has pasted a basis into the registry, viewFor writes none
+     and the bench reads the registry's. The lineup has no registry entry, so
+     it always keeps the solved one. */
+  const aim = b => {
+    const solved = FoldLib.basisFrom(up, b.hint).map(ax => ax.map(x => Math.round(x * 1e4) / 1e4));
+    delete b.hint;
+    const c = CANDIDATES.find(c => c.id === b.meta.entry);
+    const V = c ? Bake.viewFor(REG.byKey(c.key), { view: solved, frame: b.frame }, REG.defaultOf(REG.byKey(c.key)))
+                : { view: solved, frame: b.frame };
+    if (V.view) b.view = V.view; else delete b.view;
+    b.frame = V.frame;
+  };
+
   const blocks = {};
   for (const [k, b] of bakes.entries()) {
     blocks[CANDIDATES[k].key] = { [b.meta.entry]: b.read };
@@ -304,7 +320,9 @@ function main() {
       `fit ${cof.fit.pairs} CA at ${cof.fit.rmsd} A, ` +
       `${(fs.statSync(path.join(DATA, file)).size / 1024).toFixed(0)} KB`);
   }
-  for (const b of [...bakes, lineup(bakes)]) {
+  const row = lineup(bakes);
+  for (const b of [...bakes, row]) aim(b);
+  for (const b of [...bakes, row]) {
     if (b.meta.entry === 'lineup') b.meta.lumen = lumen;
     const file = `photosystems-${b.meta.entry}.json`;
     fs.writeFileSync(path.join(DATA, file), JSON.stringify(b));
