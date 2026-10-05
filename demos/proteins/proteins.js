@@ -814,6 +814,7 @@
       purpose: 'rigor: the head locked on actin, lever down, pocket empty',
       species: 'chicken myosin Va, rabbit actin',
       section: 'on actin', label: 'rigor', chip: 'empty',
+      frame: 'actin',
       source: { kind: 'rcsb', id: '7PLU' },
       chains: 'A,B,C,F,G',
       roles: { A: ['myosin'], B: ['light chain'], C: ['actin'], F: ['actin'], G: ['actin'] },
@@ -828,6 +829,7 @@
       purpose: 'strong-ADP: Pi gone, ADP still held, lever most of the way down',
       species: 'chicken myosin Va, rabbit actin',
       section: 'on actin', label: 'ADP held', chip: 'ADP',
+      frame: 'actin',
       source: { kind: 'rcsb', id: '7PM6' },
       chains: 'A,B,C,F,G',
       roles: { A: ['myosin'], B: ['light chain'], C: ['actin'], F: ['actin'], G: ['actin'] },
@@ -843,6 +845,7 @@
       purpose: 'pre-stroke: ADP·Pi bound, lever cocked; the head alone, off actin',
       species: 'human myosin Vc',
       section: 'off actin', label: 'pre-stroke', chip: 'ADP·Pi',
+      frame: 'head',
       source: { kind: 'rcsb', id: '4ZG4' },
       chains: 'E',
       roles: { E: ['myosin'] },
@@ -1946,8 +1949,12 @@
       fit: { on: '7PLU', by: 'actin Cα', among: ['7PLU', '7PM6'] },
       fitWhy: 'two states on one filament; fitting on actin holds the track '
             + 'still so the head and lever are what move',
-      view: { by: 'deposited', shared: true,
-              why: 'nobody has aimed it yet' },
+      /* Picked on the bench, which draws in 7PLU's frame: the two states on
+         actin share it. 4ZG4 is another frame and nobody has aimed it. */
+      view: { by: 'human', shared: true,
+              basis: { actin: [[0.8253, 0, -0.5646],
+                               [-0.2561, 0.8912, -0.3744],
+                               [0.5032, 0.4536, 0.7355]] } },
       surface: { bake: false,
                  why: 'the claim is the lever, which a ribbon shows and an SES buries' },
       /* What moves is told apart. `lever` paints no chain here (it is a run of

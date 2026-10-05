@@ -129,6 +129,8 @@ const ME = ProteinLib.byKey('myosin5');
 const $ = id => document.getElementById(id);
 const box = Proteinbox.create({
   mount: $('stage'), orbit: true,
+  /* The registry's basis for the actin frame, which is this page's frame. */
+  view: ProteinLib.viewOf(ME, ProteinLib.variantOf(ME, '7PLU')),
   stage: { ortho: false, turn: 'trackball' }, pad: 1.1, sub: 10,
 });
 
