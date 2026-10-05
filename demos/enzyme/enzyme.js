@@ -46,6 +46,7 @@
     renderer.setClearColor(0x000000, 0);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.92;
 
     const scene = new THREE.Scene();
     // the shell's paper, so the far dust fades into the page
@@ -86,7 +87,7 @@
     const key = new THREE.DirectionalLight(0xffffff, 1.35);
     key.position.set(5, 9, 7);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0xe6e9f2, 0.55);
+    const rim = new THREE.DirectionalLight(0xeceae4, 0.55);
     rim.position.set(-7, 2, -5);
     scene.add(rim);
 
@@ -323,7 +324,7 @@
     }
     const inEnz = (v, x, y, z) => enzymeGroup.localToWorld(v.set(x, y, z));
 
-    label('Amino acid', '#8e98ae', v => chain.beads[4].getWorldPosition(v),
+    label('Amino acid', '#9a958b', v => chain.beads[4].getWorldPosition(v),
       () => cur === 'fold' && fold.t < chain.delay(4) + 0.05 && visV.chain > 0.5);
     label('Folded enzyme', COLORS.enzymeA, v => inEnz(v, 0.25, E.R + 0.05, 0.3),
       () => cur === 'fold' && fold.t > chain.duration + 0.6);
@@ -351,7 +352,7 @@
     const onEnergy = () => cur === 'energy' && visV.energy > 0.7;
     label('Reactants', COLORS.subA, v => energy.group.localToWorld(v.copy(ep.reactants)), onEnergy);
     label('Products', COLORS.subB, v => energy.group.localToWorld(v.copy(ep.products)), onEnergy);
-    label('E<sub>a</sub> without enzyme', '#8791a6', v => energy.group.localToWorld(v.copy(ep.peakUn)), onEnergy);
+    label('E<sub>a</sub> without enzyme', '#7a7366', v => energy.group.localToWorld(v.copy(ep.peakUn)), onEnergy);
     label('E<sub>a</sub> with enzyme', COLORS.catEdge, v => energy.group.localToWorld(v.copy(ep.peakCat)), onEnergy);
 
     function updateDynamicLabels() {

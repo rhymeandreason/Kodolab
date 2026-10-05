@@ -4,19 +4,19 @@ const EnzymeModels = (() => {
   const V3 = THREE.Vector3;
 
   const COLORS = {
-    enzymeA: '#5d6cf6',
-    enzymeB: '#8f9bff',
-    site: '#ffb23f',
-    siteDeep: '#ff8a3d',
-    allo: '#b98cff',
-    subA: '#16c1a0',
-    subB: '#ff7b6b',
-    comp: '#394356',
-    alloInh: '#9b5cff',
-    uncat: '#d8dee9',
-    uncatEdge: '#98a2b8',
-    cat: '#8e9aff',
-    catEdge: '#5a67f2',
+    enzymeA: '#3553a8',
+    enzymeB: '#6d86d4',
+    site: '#f0a020',
+    siteDeep: '#d8601c',
+    allo: '#9a6cc8',
+    subA: '#108a78',
+    subB: '#e0552f',
+    comp: '#2b2825',
+    alloInh: '#6a35a0',
+    uncat: '#9c9282',
+    uncatEdge: '#4f483e',
+    cat: '#6d86d4',
+    catEdge: '#3553a8',
   };
 
   /* ================= Enzyme ================= */
@@ -125,7 +125,7 @@ const EnzymeModels = (() => {
       metalness: 0,
       clearcoat: 0.6,
       clearcoatRoughness: 0.3,
-      envMapIntensity: 0.7,
+      envMapIntensity: 0.45,
       morphTargets: true,
       morphNormals: true,
     });
@@ -134,10 +134,10 @@ const EnzymeModels = (() => {
 
   /* ================= Amino-acid chain ================= */
   const AA_TYPES = [
-    { key: 'hydrophobic', color: '#a7b1c6' },
-    { key: 'polar', color: '#3cc98a' },
-    { key: 'positive', color: '#4d86ff' },
-    { key: 'negative', color: '#ff5f87' },
+    { key: 'hydrophobic', color: '#a59d8f' },
+    { key: 'polar', color: '#3f9a63' },
+    { key: 'positive', color: '#3d68b8' },
+    { key: 'negative', color: '#c44a68' },
   ];
 
   function buildChain() {
@@ -196,7 +196,7 @@ const EnzymeModels = (() => {
       group.add(m);
       return m;
     });
-    const tubeMat = new THREE.MeshStandardMaterial({ color: col('#c5cbe0'), roughness: 0.45 });
+    const tubeMat = new THREE.MeshStandardMaterial({ color: col('#d8d2c6'), roughness: 0.45 });
     const tube = new THREE.Mesh(new THREE.BufferGeometry(), tubeMat);
     tube.castShadow = true;
     group.add(tube);
@@ -351,10 +351,10 @@ const EnzymeModels = (() => {
     // Reference plane at the reactants' energy level
     const planeGeo = new THREE.PlaneGeometry(X1 - X0 + 0.8, 3.1);
     const plane = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({
-      color: col('#5a67f2'), transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide,
+      color: col(COLORS.catEdge), transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide,
     }));
     const outline = new THREE.LineSegments(new THREE.EdgesGeometry(planeGeo), new THREE.LineBasicMaterial({
-      color: col('#5a67f2'), transparent: true, opacity: 0.35,
+      color: col(COLORS.catEdge), transparent: true, opacity: 0.35,
     }));
     for (const o of [plane, outline]) { o.rotation.x = -Math.PI / 2; o.position.y = START; group.add(o); }
 
@@ -373,7 +373,7 @@ const EnzymeModels = (() => {
       g.position.z = z;
       group.add(g);
     }
-    arrow(Z.un + DEPTH / 2 + 0.22, START, f(0, H.un) + 0.04, '#6b7489');
+    arrow(Z.un + DEPTH / 2 + 0.22, START, f(0, H.un) + 0.04, '#4f483e');
     arrow(Z.cat + DEPTH / 2 + 0.25, START, f(0, H.cat) + 0.04, COLORS.catEdge);
 
     // Molecules rolling over the hills
