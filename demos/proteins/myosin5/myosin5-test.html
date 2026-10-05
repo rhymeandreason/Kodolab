@@ -8,7 +8,8 @@
 <title>Myosin V Structure in 3D — Kodolab</title>
 
 <!-- ===================================================================
-     SCRATCH, UNDER REVIEW. Not in proteins/proteins.js yet.
+     SCRATCH. Reviewed and registered as `myosin5`: the registry holds the
+     three states as deposited and the palette. The morph is this page's.
 
      WHAT IT IS FOR SETTLING:
        does the swing read     the lever turns 68 degrees on Pi release
@@ -119,8 +120,11 @@
 <script src="../../kit/ribbon.js"></script>
 <script src="../../kit/card-stage.js"></script>
 <script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
 <script>
 'use strict';
+
+const ME = ProteinLib.byKey('myosin5');
 
 const $ = id => document.getElementById(id);
 const box = Proteinbox.create({
@@ -130,7 +134,8 @@ const box = Proteinbox.create({
 
 /* Motor, lever (converter onward) and the light chain on it: what moves
    is what is told apart. Actin is present and not the subject. */
-const COL = { M: 0x1f5f4f, V: 0x2b8cd8, L: 0xbfa478, actin: 0x9aa0a6 };
+const R = ME.draw.byRole;
+const COL = { M: R.myosin, V: R.lever, L: R['light chain'], actin: R.actin };
 const NAME = { M: 'motor', V: 'lever', L: 'light chain', actin: 'actin' };
 /* Tempo: the big swing, a beat, the small one, a beat at rigor. */
 const LEG_MS = [1600, 900], HOLD_MS = 700, EXIT_MS = 700;

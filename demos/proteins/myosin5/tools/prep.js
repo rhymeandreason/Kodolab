@@ -5,7 +5,9 @@
  *
  *  Run:  node proteins/myosin5/tools/prep.js   (offline, a few seconds)
  *
- *  UNDER REVIEW. Not in proteins/proteins.js.
+ *  REVIEWED. Registered as `myosin5`: this file also writes one trace bake
+ *  per variant (mv-<id>.json) for the gallery card and the stills, and their
+ *  `read` blocks. The morph itself stays the bench's.
  *
  *  THE THREE STATES, in the order the cycle runs:
  *    4ZG4  pre-power-stroke, ADP·VO4 (a Pi mimic). HUMAN MYOSIN Vc, x-ray,
@@ -527,3 +529,70 @@ fs.writeFileSync(path.join(DATA, 'mv-stroke.json'), JSON.stringify({
            leverToActin: +actinMin.toFixed(1), leverMotorClashes: clashes },
 }));
 console.log(`wrote mv-actin.json, mv-stroke.json, mv-stroke.bin (${(buf.length / 1024).toFixed(0)} KB)`);
+
+/* ---- the registry's three, as trace bakes ------------------------------
+ *
+ *  One per variant, the shape every card reads. 7PM6 is fitted onto 7PLU by
+ *  actin and both are centred on 7PLU's centre, so flipping between them
+ *  moves only the head. 4ZG4 is outside the fit and centres on itself.
+ */
+const REG = require('../../proteins.js');
+const IO = require('../../tools/registry-io.js');
+const ME = REG.byKey('myosin5');
+const RAW = { '7PLU': rawP, '7PM6': rawS, '4ZG4': rawZ };
+const FIT = { '7PLU': ident, '7PM6': onActin, '4ZG4': ident };
+/* A fitted pair shares one solved basis, 7PLU's, or flipping between them
+   turns the molecule. */
+let sharedF = null;
+function traceBake(v, centre) {
+  const raw = RAW[v.id], only = new Set(v.chains.split(','));
+  const chains = Bake.caTrace(Bake.modelOne(raw), only, Bake.modResidues(raw));
+  for (const [id, res] of chains) chains.set(id, FIT[v.id].apply(res));
+  const T = Bake.assemble(chains, Bake.ssRanges(raw), centre);
+  const own = Bake.frameOf(T.order.flatMap(id => T.chains[id].CA));
+  const inFit = ME.fit.among.includes(v.id);
+  if (inFit && !sharedF) sharedF = own;
+  const F = inFit ? { ...sharedF, extents: own.extents } : own;
+  const V = Bake.viewFor(ME, F, v);
+  const out = { source: v.id + '.pdb', ssFrom: Bake.ssFrom(Bake.ssRanges(raw)), centre: T.centre,
+    order: T.order, chains: T.chains, radius: T.radius, extents: F.extents, frame: V.frame };
+  if (V.view) out.view = V.view;
+  if (v.pocket) {
+    const pc = hetPiece(raw, v.pocket.chain, v.pocket.het, FIT[v.id]);
+    const c = T.centre;
+    out.pocket = { atoms: pc.atoms.map(a => ({ name: a.name, el: a.el, res: a.res,
+      group: a.el === 'MG' ? 'metal' : 'ligand',
+      p: [Bake.r2(a.p.x - c[0]), Bake.r2(a.p.y - c[1]), Bake.r2(a.p.z - c[2])] })), bonds: pc.bonds };
+  }
+  const decl = Bake.declared(raw);
+  out.meta = {
+    entry: v.id, view: v.id, purpose: v.purpose,
+    method: Bake.method(raw), resolution: Bake.resolution(raw), title: Bake.line1(raw, 'TITLE'),
+    chainsInFile: Bake.chainCount(Bake.modelOne(raw)), chainsDrawn: T.order.length,
+    counts: T.order.map(id => ({ chain: id, modelled: T.chains[id].nums.length,
+                                 declared: decl[id] === undefined ? null : decl[id] })),
+    ligands: Bake.ligands(Bake.modelOne(raw)),
+    pocket: out.pocket ? { atoms: out.pocket.atoms.length, bonds: out.pocket.bonds.length } : null,
+  };
+  if (FIT[v.id] !== ident) out.meta.fitOn = ME.fit.on;
+  const read = {
+    method: out.meta.method,
+    chainsInFile: out.meta.chainsInFile,
+    residues: out.meta.counts.reduce((k, c2) => k + c2.modelled, 0),
+    declared: out.meta.counts.reduce((k, c2) => k + (c2.declared || 0), 0) || null,
+    ec: Bake.ecNumbers(raw)[0] || null,
+    baked: `mv-${v.id}.json`,
+  };
+  fs.writeFileSync(path.join(DATA, read.baked), JSON.stringify(out));
+  return { out, read };
+}
+const rigorCentre = traceBake(ME.variants.find(v => v.id === '7PLU'), null).out.centre;
+const blocks = {};
+for (const v of ME.variants) {
+  const { out, read } = traceBake(v, v.id === '4ZG4' ? null : rigorCentre);
+  blocks[v.id] = read;
+  console.log(`${v.id}  ${out.order.length} chains, ${read.residues} residues, ` +
+    `pocket ${out.meta.pocket ? out.meta.pocket.atoms + ' atoms' : 'none'}, view ${out.frame}`);
+}
+console.log(`registry  proteins.js  ${IO.write('myosin5', blocks).length} variants updated`);
+

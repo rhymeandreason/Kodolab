@@ -803,6 +803,59 @@
         baked: "rhv-protomer.json" } },
   ];
 
+  /* MYOSIN V'S THREE, chosen off proteins/myosin5/myosin5-test.html. The
+     two on actin are one construct (chicken Va, cryo-EM), 7PM6 fitted onto
+     7PLU by the filament. 4ZG4 is human Vc off actin and is registered AS
+     DEPOSITED, the head alone: the bench's pre-stroke frame (this head placed
+     on actin, 7PM6's lever carried on it) is a model, and lives on the bench
+     where its notes say so. 7PLU's three ADPs are actin's, not drawn. */
+  const MYOSIN5_VARIANTS = [
+    { id: '7PLU', default: true,
+      purpose: 'rigor: the head locked on actin, lever down, pocket empty',
+      species: 'chicken myosin Va, rabbit actin',
+      section: 'on actin', label: 'rigor', chip: 'empty',
+      source: { kind: 'rcsb', id: '7PLU' },
+      chains: 'A,B,C,F,G',
+      roles: { A: ['myosin'], B: ['light chain'], C: ['actin'], F: ['actin'], G: ['actin'] },
+      read: {
+        method: "electron microscopy",
+        chainsInFile: 10,
+        residues: 2002,
+        declared: 2074,
+        ec: null,
+        baked: "mv-7PLU.json" } },
+    { id: '7PM6',
+      purpose: 'strong-ADP: Pi gone, ADP still held, lever most of the way down',
+      species: 'chicken myosin Va, rabbit actin',
+      section: 'on actin', label: 'ADP held', chip: 'ADP',
+      source: { kind: 'rcsb', id: '7PM6' },
+      chains: 'A,B,C,F,G',
+      roles: { A: ['myosin'], B: ['light chain'], C: ['actin'], F: ['actin'], G: ['actin'] },
+      pocket: { chain: 'A', het: ['ADP', 'MG'] },
+      read: {
+        method: "electron microscopy",
+        chainsInFile: 10,
+        residues: 2001,
+        declared: 2074,
+        ec: null,
+        baked: "mv-7PM6.json" } },
+    { id: '4ZG4',
+      purpose: 'pre-stroke: ADP·Pi bound, lever cocked; the head alone, off actin',
+      species: 'human myosin Vc',
+      section: 'off actin', label: 'pre-stroke', chip: 'ADP·Pi',
+      source: { kind: 'rcsb', id: '4ZG4' },
+      chains: 'E',
+      roles: { E: ['myosin'] },
+      pocket: { chain: 'E', het: ['ADP', 'MG', 'VO4'] },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 2,
+        residues: 711,
+        declared: 764,
+        ec: null,
+        baked: "mv-4ZG4.json" } },
+  ];
+
   const FERRITIN_VARIANTS = [
     { id: 'cage', default: true,
       purpose: 'the ball: 24 subunits closed into a hollow shell',
@@ -1884,6 +1937,32 @@
       variants: FERRITIN_VARIANTS,
     },
     {
+      key: 'myosin5', name: 'Myosin V', dir: 'proteins/myosin5',
+      blurb: 'A motor that walks along actin carrying cargo. Each step is a '
+           + 'lever swinging on a head that stays bound to the filament, paid '
+           + 'for by releasing what is left of an ATP.',
+      does: 'motor',
+      pipeline: 'trace',
+      fit: { on: '7PLU', by: 'actin Cα', among: ['7PLU', '7PM6'] },
+      fitWhy: 'two states on one filament; fitting on actin holds the track '
+            + 'still so the head and lever are what move',
+      view: { by: 'deposited', shared: true,
+              why: 'nobody has aimed it yet' },
+      surface: { bake: false,
+                 why: 'the claim is the lever, which a ribbon shows and an SES buries' },
+      /* What moves is told apart. `lever` paints no chain here (it is a run of
+         the myosin chain, from the converter on); the bench reads it. */
+      /* The bench's own: the morph and its framing, which no card reads. */
+      keeps: ['mv-actin.json', 'mv-stroke.json', 'mv-stroke.bin', 'mv-nucleotide.json'],
+      draw: { byRole: {
+        myosin:        0x1f5f4f,   // deep green, the house accent
+        lever:         0x2b8cd8,   // azure: what turns, as on atp-synthase
+        'light chain': 0xbfa478,   // light tan
+        actin:         0x9aa0a6,   // grey: present, and not the subject
+      } },
+      variants: MYOSIN5_VARIANTS,
+    },
+    {
       key: 'rhinovirus', name: 'Rhinovirus', dir: 'proteins/rhinovirus',
       blurb: 'The common cold. A shell of 60 identical units around one strand '
            + 'of RNA, and each unit is four proteins cut from one longer chain.',
@@ -2425,7 +2504,7 @@
      and the reaction is the timer, not the point. */
   const DOES = ['enzyme', 'oxygen carrier', 'unknown', 'structural', 'hormone',
                 'storage', 'reporter', 'recognition', 'electron carrier',
-                'switch', 'capsid'];
+                'switch', 'capsid', 'motor'];
 
   /* HOW A VARIANT DIFFERS FROM THE HEALTHY PROTEIN, where it differs at all.
      Optional: most variants are the same protein under different conditions —
