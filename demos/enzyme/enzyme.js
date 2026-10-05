@@ -495,7 +495,7 @@
       show, flyTo, setConditions,
       get key() { return cur; },
       chainLength: chain.beads.length,
-      aaTypes: M.AA_TYPES, colors: COLORS,
+      colors: COLORS,
       tempF, phF, T_OPT, PH_OPT,
       turnovers: () => reactor.turnovers,
       crossed: () => ({ cat: energy.count, un: energy.countUn }),

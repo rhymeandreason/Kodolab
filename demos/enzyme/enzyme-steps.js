@@ -10,8 +10,6 @@
 (function (global) {
   'use strict';
 
-  const AA_NAMES = ['Hydrophobic', 'Polar', 'Positive charge', 'Negative charge'];
-
   const segmented = (name, opts, val) =>
     `<div class="segmented" data-seg="${name}">${opts.map(([v, l, c]) =>
       `<button type="button" data-v="${v}" class="${v === val ? 'is-on' : ''}">${c ? `<i class="enz-dot" style="--c:${c}"></i>` : ''}${l}</button>`).join('')}</div>`;
@@ -71,12 +69,10 @@
       body: ctx => `
         <p class="lead">Every enzyme starts as a chain of amino acids.</p>
         <p>The chain folds on its own. Hydrophobic side chains pack into the core, away from water, and the charged and polar ones stay on the surface. The shape that results is what lets the enzyme work.</p>
-        <p class="callout">Real enzymes run to hundreds of amino acids. This one is cut down to ${ctx.enz.chainLength}.</p>`,
+        <p class="callout">This lesson shows conceptual drawings. For more realistic protein folding, see <a href="/protein">Levels of Protein Structure</a>.</p>`,
       camera: { pos: [0, 1.6, 15.5], target: [0, 0, 0] },
       cameraAfter: { pos: [1.6, 2.1, 11.6], target: [0, 0, 0] },
       onEnter(ctx) {
-        ctx.controls(`
-          <div class="enz-key">${ctx.enz.aaTypes.map((t, i) => `<span><i style="--c:${t.color}"></i>${AA_NAMES[i]}</span>`).join('')}</div>`);
         scrubber(ctx);
       },
     },
@@ -111,12 +107,10 @@
       onEnter(ctx) {
         const s = ctx.enz.params.speed;
         ctx.controls(`
-          <div class="stats"><div class="stat accent"><span class="stat-label">Reactions catalysed</span><span class="stat-value" id="turnovers">${ctx.enz.turnovers()}</span><span class="stat-sub">by this one enzyme</span></div></div>
           <div class="slider">
             <div class="slider-head"><span class="label">Playback speed</span><span class="value" id="speedVal"></span></div>
             <input type="range" id="speed" min="0.25" max="3" step="0.05" value="${s}">
           </div>`);
-        counter(ctx, 'turnover', '#turnovers', ctx.enz.turnovers);
         ctx.range(ctx.q('#speed'), v => { ctx.enz.setSpeed(v); ctx.q('#speedVal').textContent = v.toFixed(2) + '×'; });
       },
     },
@@ -194,10 +188,8 @@
       onEnter(ctx) {
         const C = ctx.enz.colors;
         ctx.controls(`
-          ${segmented('inh', [['none', 'None'], ['competitive', 'Competitive', C.comp], ['allosteric', 'Allosteric', C.alloInh]], ctx.enz.params.inhibit)}
-          <div class="stats"><div class="stat"><span class="stat-label">Reactions catalysed</span><span class="stat-value" id="turnovers">${ctx.enz.turnovers()}</span></div></div>`);
+          ${segmented('inh', [['none', 'None'], ['competitive', 'Competitive', C.comp], ['allosteric', 'Allosteric', C.alloInh]], ctx.enz.params.inhibit)}`);
         bindSegmented(ctx, 'inh', v => ctx.enz.setInhibitor(v));
-        counter(ctx, 'turnover', '#turnovers', ctx.enz.turnovers);
       },
     },
   ];

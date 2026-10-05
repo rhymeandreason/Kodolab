@@ -1,5 +1,5 @@
 /* enzyme/enzyme.css: what the enzyme lesson adds to css/lesson-shell.css.
-   The callouts' colours, the amino-acid key, the activity meter and
+   The callouts' colours, the activity meter and
    the curves over the temperature and pH sliders. Shell tokens only. */
 
 .enz-canvas { display: block; touch-action: none; cursor: grab; }
@@ -12,9 +12,6 @@
 .enz-notes .annot.enz-off > * { opacity: 0; pointer-events: none; }
 
 /* ---------- panel pieces ---------- */
-.lshell-panel .enz-key { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; font-family: var(--display); font-weight: 500; font-size: 14px; color: var(--ink-2); }
-.lshell-panel .enz-key span { display: flex; align-items: center; gap: 8px; }
-.lshell-panel .enz-key i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
 .lshell-panel .segmented .enz-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 7px; vertical-align: 0; }
 .lshell-panel .segmented .is-on .enz-dot { box-shadow: 0 0 0 1.5px #fff; }
 
