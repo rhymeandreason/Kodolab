@@ -207,9 +207,8 @@
   <div class="frame">
     <div class="reel" id="reel"></div>
     <div class="text">
-      <span class="eyebrow rise">See it in 3D</span>
       <h2 class="rise" style="--d:.08s">Biology is <br>a <em>beautiful</em> and deep subject.</h2>
-      <p class="lede rise" style="--d:.1s; font-size:26px">There's always need for new <br>learning materials to master complex threshold concepts.</p>
+      <p class="lede rise" style="--d:.1s; font-size:26px">There's always need for new <br>learning materials to master <br>threshold concepts.</p>
     </div>
   </div>
 </section>
@@ -217,8 +216,7 @@
 <!-- ============ 3. library ============ -->
 <section class="slide s3" data-name="library" data-dark>
   <div class="frame">
-    <span class="eyebrow rise">Open Source Library</span>
-    <h2 class="rise" style="--d:.08s">Real structures, <em>real data.</em></h2>
+    <h2 class="rise" style="--d:.08s">Curated library of <em>real data.</em></h2>
     <p class="lede rise" style="--d:.16s">Proteins from the Protein Data Bank, and molecules from PubChem.</p>
     <div class="belt one" id="beltOne"></div>
     <div class="belt two" id="beltTwo"></div>
@@ -392,20 +390,22 @@ const Intro = (() => {
 })();
 
 /* ---- 1. the traffic chart ---------------------------------------------- */
-// Vercel Web Analytics, top countries: visitors, page views.
+// Vercel Web Analytics, last 30 days, top countries: visitors, page views.
 const TRAFFIC = [
-  { flag: '🇺🇸', name: 'United States', v: 122, pv: 705 },
-  { flag: '🇩🇪', name: 'Germany',       v: 28,  pv: 586, eu: 1 },
-  { flag: '🇸🇪', name: 'Sweden',        v: 23,  pv: 589, eu: 1 },
-  { flag: '🇳🇱', name: 'Netherlands',   v: 14,  pv: 195, eu: 1 },
-  { flag: '🇨🇦', name: 'Canada',        v: 10,  pv: 35 },
-  { flag: '🇨🇭', name: 'Switzerland',   v: 8,   pv: 122, eu: 1 },
-  { flag: '🇬🇧', name: 'United Kingdom',v: 7,   pv: 48,  eu: 1 },
-  { flag: '🇦🇹', name: 'Austria',       v: 6,   pv: 156, eu: 1 },
-  { flag: '🇫🇷', name: 'France',        v: 4,   pv: 44,  eu: 1 },
+  { flag: '🇺🇸', name: 'United States', v: 246, pv: 1300 },
+  { flag: '🇩🇪', name: 'Germany',       v: 41,  pv: 781, eu: 1 },
+  { flag: '🇸🇪', name: 'Sweden',        v: 27,  pv: 712, eu: 1 },
+  { flag: '🇳🇱', name: 'Netherlands',   v: 19,  pv: 223, eu: 1 },
+  { flag: '🇨🇦', name: 'Canada',        v: 11,  pv: 37 },
+  { flag: '🇨🇭', name: 'Switzerland',   v: 10,  pv: 144, eu: 1 },
+  { flag: '🇬🇧', name: 'United Kingdom',v: 9,   pv: 52,  eu: 1 },
+  { flag: '🇦🇹', name: 'Austria',       v: 8,   pv: 199, eu: 1 },
+  { flag: '🇫🇷', name: 'France',        v: 7,   pv: 66,  eu: 1 },
+  { flag: '🇹🇼', name: 'Taiwan',        v: 6,   pv: 12 },
   { flag: '🇦🇪', name: 'UAE',           v: 3,   pv: 72 },
-  { flag: '🇧🇬', name: 'Bulgaria',      v: 3,   pv: 26,  eu: 1 },
 ];
+// Vercel Web Analytics, all visitors: page views per visitor.
+const PAGES_PER_VISITOR = 9;
 (() => {
   const SHOWN = 5;
   const maxV = Math.max(...TRAFFIC.map(r => r.v));
@@ -416,7 +416,7 @@ const TRAFFIC = [
   const eu = TRAFFIC.filter(r => r.eu);
   const ppv = rows => sum(rows, 'pv') / sum(rows, 'v'), us = TRAFFIC[0];
   document.getElementById('euNote').textContent =
-    `European visitors view ${Math.round(ppv(eu))} pages each, ${Math.round(ppv(eu) / ppv([us]))}× the US.`;
+    `Visitors view ${PAGES_PER_VISITOR} pages on average. Europeans view ${Math.round(ppv(eu))} each.`;
   document.getElementById('euHead').textContent = `${Math.round(sum(eu, 'v') / sum(TRAFFIC, 'v') * 100)}% from Europe`;
 })();
 
