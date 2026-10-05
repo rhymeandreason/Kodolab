@@ -53,6 +53,10 @@
  *  `keepOut`, the panel's rect, which lib/annotate.js reads on its own so a
  *  callout behind the glass typesets to the free side.
  *
+ *  `ctx.after(sec, fn)` is a timeout that dies when the step does.
+ *  kit/lesson-stage.js adds an A/B split, a switch, a scrubber and boxes a
+ *  step builds and destroys, for a lesson past one scene per step.
+ *
  *  ctx.ui, for steps — each is on ctx directly as well, so ctx.q === ctx.ui.q:
  *      controls(html)  fill the slot · q(sel) / qa(sel) inside it · show(el) /
  *      hide(el) · setNext(label, visible) · range(input, onChange) paints the
@@ -200,6 +204,10 @@
     const ctx = opts.ctx || {};
     for (const k of Object.keys(ui)) if (!(k in ctx)) ctx[k] = ui[k].bind(ui);
     Object.assign(ctx, { ui, goTo: i => goTo(i) });
+    /* Timers a step sets die with the step, as its subscriptions should. */
+    let timers = [];
+    ctx.after = (sec, fn) => { timers.push(setTimeout(fn, sec * 1000)); };
+    ctx.clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
     /* ---- scenes: one box per component, shown per step --------------- */
     /* A SCENE IS A WEBGL CONTEXT, AND THEY ARE RATIONED. A browser keeps 8 to
@@ -374,6 +382,7 @@
 
     function swap(i) {
       if (current >= 0 && steps[current].onExit) steps[current].onExit(ctx);
+      ctx.clearTimers();
       current = i;
       const step = steps[i];
       els.scroll.classList.remove('swap');
@@ -442,6 +451,13 @@
       scenes: () => [...scenes.keys()],
       panelRect: () => els.panel.getBoundingClientRect(),
       narrow: () => window.innerWidth <= 760,
+      /* The free room's centre x and the bottom a control floating in it
+         clears: beside the panel on a laptop, above it when it docks. */
+      room() {
+        const r = els.panel.getBoundingClientRect();
+        return window.innerWidth <= 760 ? { x: window.innerWidth / 2, bottom: r.height }
+          : { x: (r.right + window.innerWidth) / 2, bottom: 0 };
+      },
       /* Hand this to any component's mount as `viewOffset`: half the panel's
          width on a laptop, half its height when it docks to the bottom. */
       viewOffset() {

@@ -141,18 +141,18 @@ body.is-night .lshell-progress button.is-current { background: #9fd98a; }
 .lshell-panel .controls { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
 
 /* ---------- buttons ---------- */
-.lshell-panel .btn {
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn {
   font-family: var(--display); font-weight: 500; font-size: 15px; letter-spacing: 0.02em;
   border-radius: 999px; padding: 11px 22px; border: 1px solid transparent; cursor: pointer;
   transition: transform 0.15s, background 0.2s, opacity 0.3s, border-color 0.2s;
 }
-.lshell-panel .btn.primary { background: var(--ink); color: #fff; }
-.lshell-panel .btn.primary:hover { background: #000; transform: translateY(-1px); }
-.lshell-panel .btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--line); }
-.lshell-panel .btn.ghost:hover { border-color: var(--ink-3); }
-.lshell-panel .btn.secondary { background: var(--accent); color: #fff; align-self: flex-start; }
-.lshell-panel .btn.secondary:hover { background: #245832; transform: translateY(-1px); }
-.lshell-panel .btn:disabled { opacity: 0.3; cursor: default; transform: none !important; }
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn.primary { background: var(--ink); color: #fff; }
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn.primary:hover { background: #000; transform: translateY(-1px); }
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--line); }
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn.ghost:hover { border-color: var(--ink-3); }
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn.secondary { background: var(--accent); color: #fff; align-self: flex-start; }
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn.secondary:hover { background: #245832; transform: translateY(-1px); }
+:is(.lshell-panel, .lshell-cap, .lshell-foot, .lshell-controls) .btn:disabled { opacity: 0.3; cursor: default; transform: none !important; }
 
 .lshell-panel .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .lshell-panel .choice {
@@ -342,3 +342,119 @@ body.is-night .lshell-progress button.is-current { background: #9fd98a; }
    takes the room they leave. kit/sandbox-shell.js asks for this. */
 .lshell.lshell-bare .lshell-nav,
 .lshell.lshell-bare .lshell-progress { display: none; }
+
+/* =============================================================================
+   kit/lesson-stage.js: an A/B split, a switch, a scrubber, a line under the
+   scene. All of it floats in the free room and is placed by script, because
+   that room is the panel's width.
+   ========================================================================== */
+.lshell-cap .btn, .lshell-foot .btn, .lshell-controls .btn { font-size: 14px; padding: 9px 18px; }
+.lshell .btn[hidden] { display: none; }
+
+/* The switch: the panel's .segmented, on glass. */
+.lshell-toggle {
+  position: fixed; bottom: 28px; transform: translateX(-50%); z-index: 4;
+  display: inline-flex; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--panel); backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  box-shadow: 0 18px 40px -28px rgba(20,30,20,.45);
+}
+.lshell-toggle button {
+  border: 0; padding: 8px 18px; border-radius: 999px; background: transparent; color: var(--ink-2);
+  font-family: var(--display); font-size: 14px; font-weight: 500; line-height: 18px; letter-spacing: .02em;
+  white-space: nowrap; cursor: pointer; transition: background .2s, color .2s;
+}
+.lshell-toggle button:hover:not(.is-on) { color: var(--ink); }
+.lshell-toggle button.is-on { background: var(--accent); color: #fff; }
+.lshell-toggle[hidden] { display: none; }
+
+.lshell-under {
+  position: fixed; transform: translateX(-50%); z-index: 3; width: min(440px, calc(100vw - 48px));
+  text-align: center; font-family: var(--serif); font-size: 16px; line-height: 1.45; color: #2a2c30; pointer-events: none;
+}
+.lshell-under[hidden] { display: none; }
+
+/* Two halves. The panel goes, and a caption takes its foot. */
+.lshell-box { position: absolute; inset: 0; }
+body.lshell-split .lshell-panel, body.lshell-split .lshell-hint { display: none; }
+.lshell-half { inset: 0 auto; width: 50%; }
+.lshell-half.left { left: 0; }
+.lshell-half.right { left: 50%; }
+.lshell-fade { transition: opacity 1.2s ease; }
+.lshell-split-only { display: none; }
+body.lshell-split .lshell-split-only { display: flex; }
+.lshell-divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--line); pointer-events: none; }
+.lshell-label {
+  position: absolute; top: 68px; flex-direction: column; gap: 4px; pointer-events: none;
+  font-family: var(--display); font-weight: 500; font-size: 30px; letter-spacing: -.01em; line-height: 1.1; color: var(--ink);
+  animation: lshell-fadein .8s both;
+}
+.lshell-label small { font-size: 14px; letter-spacing: .01em; color: var(--ink-2); }   /* not capitals: HbA would read HBA */
+.lshell-label.left { left: 28px; }
+.lshell-label.right { left: calc(50% + 28px); }
+/* Above the boxes, which are mounted after it. */
+.lshell-side {
+  position: absolute; z-index: 3; top: 128px; max-width: min(380px, calc(50% - 56px)); margin: 0;
+  font-family: var(--serif); font-size: 16px; line-height: 1.45; color: #2a2c30; pointer-events: none; transition: opacity .4s;
+}
+.lshell-side.left { left: 28px; }
+.lshell-side.right { left: calc(50% + 28px); }
+.lshell-note {
+  position: absolute; z-index: 3; top: 50%; transform: translate(-50%, -50%); width: min(340px, calc(50% - 80px));
+  display: flex; flex-direction: column; gap: 12px; pointer-events: none;
+}
+.lshell-note > div {
+  padding: 18px 22px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line);
+  font-family: var(--serif); font-size: 16px; line-height: 1.45; color: #2a2c30; animation: lshell-fadein .8s both;
+}
+.lshell-note.left { left: 25%; }
+.lshell-note.right { left: 75%; }
+.lshell-side[hidden], .lshell-note[hidden] { display: none; }
+
+.lshell-cap {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 4;
+  align-items: center; gap: 16px; max-width: min(820px, calc(100vw - 48px));
+  padding: 10px 10px 10px 24px; border-radius: 999px; background: var(--panel);
+  backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,.7); box-shadow: 0 30px 70px -40px rgba(20,30,20,.45);
+}
+.lshell-cap p { margin: 0; font-family: var(--serif); font-size: 16px; line-height: 1.45; color: #2a2c30; }
+.lshell-cap p:empty { display: none; }
+.lshell-say { display: flex; flex-direction: column; gap: 6px; }
+.lshell-cap nav { display: flex; gap: 6px; flex: none; }
+/* Back and the count at the left, the panel footer's order with Next in the caption. */
+.lshell-foot { position: fixed; left: 28px; bottom: 34px; z-index: 4; align-items: center; gap: 14px; }
+.lshell-foot .btn.ghost { background: var(--panel); }
+/* A step with nothing to caption drops the box and Next joins the scrubber. */
+body.lshell-bar .lshell-cap { display: none; }
+body.lshell-bar .lshell-controls { bottom: 24px !important; }
+.lshell-controls .btn { margin-left: 4px; }
+
+.lshell-controls {
+  position: fixed; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 18px;
+  padding: 6px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line);
+}
+.lshell-controls[hidden] { display: none; }
+.lshell-scrub { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+/* The panel slider's track and fill (--p), with a small dot: its 20px thumb
+   would be the biggest thing in the bar. */
+.lshell-scrub input { -webkit-appearance: none; appearance: none; width: 220px; height: 14px; margin: 0; background: transparent; cursor: pointer; }
+.lshell-scrub input::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: linear-gradient(var(--accent), var(--accent)) 0 / var(--p, 0%) 100% no-repeat, var(--line); }
+.lshell-scrub input::-moz-range-track { height: 3px; border-radius: 2px; background: linear-gradient(var(--accent), var(--accent)) 0 / var(--p, 0%) 100% no-repeat, var(--line); }
+.lshell-scrub input::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; margin-top: -3.5px; border-radius: 50%; border: 0; background: var(--accent); }
+.lshell-scrub input::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; border: 0; background: var(--accent); }
+.lshell-scrub button {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line);
+  background: #fff; color: var(--ink); cursor: pointer; font-size: 11px; line-height: 1;
+}
+.lshell-scrub button[data-k=prev], .lshell-scrub button[data-k=next] { font-size: 17px; padding-bottom: 2px; }
+.lshell-scrub button:disabled { opacity: .35; cursor: default; }
+.lshell-scrub button[hidden] { display: none; }
+
+@media (max-width: 760px) {
+  .lshell-cap { flex-direction: column; align-items: stretch; border-radius: 22px; padding: 16px 18px 12px; bottom: 0; left: 0; right: 0; transform: none; max-width: none; }
+  .lshell-cap nav { justify-content: space-between; }
+  .lshell-half { width: auto; left: 0; right: 0; height: 50%; }
+  .lshell-half.right { top: 50%; bottom: 0; }
+  .lshell-divider { left: 0; right: 0; top: 50%; width: auto; height: 1px; }
+  .lshell-label.right { left: 28px; top: calc(50% + 12px); }
+}

@@ -23,8 +23,7 @@
 <link rel="stylesheet" href="css/lesson-shell.css">
 <link rel="stylesheet" href="dna/codon.css">
 <style>
-  /* The page's own, and only what the shell's sheet has no opinion about:
-     a switch on the stage, two halves with a caption, and a card in the panel. */
+  /* The page's own; the split, switch and scrubber are kit/lesson-stage.js's. */
   .lshell-panel .ccard{max-width:100%}
   .lshell-panel .hint-text{margin-top:6px}
   /* Step 6: the three genotypes as pairs of gene copies, the carrier lit. */
@@ -42,90 +41,15 @@
     font-size:12px;color:var(--ink-2)}
   .sk-geno-key i{display:inline-block;width:10px;height:10px;border-radius:50%}
   .sk-geno-key i + i{margin-left:10px}
-  .sk-under{position:fixed;transform:translateX(-50%);z-index:3;width:min(440px,calc(100vw - 48px));
-    text-align:center;font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30;pointer-events:none}
-  .sk-under[hidden]{display:none}
-  .lshell-panel .sk-fact{margin:0 0 12px;font-size:13px;line-height:1.45;color:var(--ink-2)}
-
-  /* The switch lives on the stage, centred in the room the panel leaves, and
-     is placed by script because that room is the panel's width. Its look is
-     the shell's segmented control — pills in a tray — so the page has one
-     button vocabulary. */
-  .sk-toggle{position:fixed;bottom:28px;transform:translateX(-50%);z-index:4;
-    display:inline-flex;gap:2px;padding:4px;border:1px solid var(--line);border-radius:999px;
-    background:var(--panel);backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);
-    box-shadow:0 18px 40px -28px rgba(20,30,20,.45)}
-  .sk-toggle button{border:0;padding:8px 18px;border-radius:999px;background:transparent;color:var(--ink-2);
-    font-family:var(--display);font-size:14px;font-weight:500;line-height:18px;letter-spacing:.02em;
-    text-transform:none;white-space:nowrap;cursor:pointer;transition:background .2s,color .2s}
-  .sk-toggle button:hover:not(.is-on){color:var(--ink)}
-  .sk-toggle button.is-on{background:var(--accent);color:#fff}
-  .sk-toggle[hidden]{display:none}
 
   /* Proteinbox draws ribbon / skin / surface segments in its mount; the switch
      on this page is HbA / HbS, and two controls in one room is one too many. */
   .sk-protein .pbox-rep{display:none}
+  .lshell-panel .sk-fact{margin:0 0 12px;font-size:13px;line-height:1.45;color:var(--ink-2)}
 
-  /* Two halves. The shell's panel goes, and a caption takes its foot. */
-  body.sk-split .lshell-panel,body.sk-split .lshell-hint{display:none}
-  .sk-half{position:absolute;top:0;bottom:0;width:50%}
-  .sk-half.left{left:0}
-  .sk-half.right{left:50%}
-  .sk-fade{transition:opacity 1.2s ease}
-  .sk-divider{position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--line);pointer-events:none}
-  /* Each half's name is its heading; what follows a " · " in it is the
-     small line under it. */
-  .sk-label{position:absolute;top:68px;font-family:var(--display);font-weight:500;font-size:30px;
-    letter-spacing:-.01em;line-height:1.1;color:var(--ink);pointer-events:none;
-    flex-direction:column;gap:4px;animation:lshell-fadein .8s both}
-  /* A half's own words, under its heading; and a note that takes the place
-     of what the half has lost. */
-  .sk-side{position:absolute;z-index:3;top:128px;max-width:min(380px,calc(50% - 56px));margin:0;
-    font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30;pointer-events:none;
-    transition:opacity .4s}
-  .sk-side.left{left:28px}
-  .sk-side.right{left:calc(50% + 28px)}
-  /* Above the scene boxes, which are mounted after it. */
-  .sk-note{position:absolute;z-index:3;top:50%;transform:translate(-50%,-50%);width:min(340px,calc(50% - 80px));
-    display:flex;flex-direction:column;gap:12px;pointer-events:none}
-  .sk-note > div{padding:18px 22px;border-radius:14px;background:var(--panel);border:1px solid var(--line);
-    font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30;animation:lshell-fadein .8s both}
-  .sk-note.left{left:25%}
-  .sk-note.right{left:75%}
-  .sk-side[hidden],.sk-note[hidden]{display:none}
-  .sk-cap p:empty{display:none}
-  /* A step with nothing to caption drops the box: its Next joins the
-     scrubber, and the scrubber takes the caption's place. */
-  body.sk-bar .sk-cap{display:none}
-  body.sk-bar .sk-controls{bottom:24px !important}
-  .sk-controls .sk-btn{margin-left:4px}
-  .sk-label small{font-size:14px;letter-spacing:.01em;color:var(--ink-2)}   /* not capitals: they would turn HbA into HBA */
-  .sk-label.left{left:28px}
-  .sk-label.right{left:calc(50% + 28px)}
-  .sk-cap{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:4;
-    display:flex;align-items:center;gap:16px;max-width:min(820px,calc(100vw - 48px));
-    padding:10px 10px 10px 24px;border-radius:999px;background:var(--panel);
-    backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);
-    border:1px solid rgba(255,255,255,.7);box-shadow:0 30px 70px -40px rgba(20,30,20,.45)}
-  .sk-cap p{margin:0;font-family:var(--serif);font-size:16px;line-height:1.45;color:#2a2c30}
-  .sk-cap .sk-say{display:flex;flex-direction:column;gap:6px}
-  /* Back and the step count sit on their own at the left, the panel
-     footer's order (Back · 3 / 8 · Next) with Next in the caption. */
-  .sk-foot{position:fixed;left:28px;bottom:34px;z-index:4;align-items:center;gap:14px}
-  .sk-back{background:var(--panel)}
-  .sk-cap nav{display:flex;gap:6px;flex:none}
-  .sk-btn{font-family:var(--display);font-weight:500;font-size:14px;letter-spacing:.02em;
-    border-radius:999px;padding:9px 18px;border:1px solid transparent;cursor:pointer;
-    transition:transform .15s,background .2s,border-color .2s}
-  .sk-btn.primary{background:var(--ink);color:#fff}
-  .sk-btn.primary:hover{background:#000;transform:translateY(-1px)}
-  .sk-btn.ghost{background:transparent;color:var(--ink-2);border-color:var(--line)}
-  .sk-btn.ghost:hover{border-color:var(--ink-3)}
-  .sk-btn[hidden]{display:none}
-  .sk-btn:disabled{opacity:.3;cursor:default;transform:none}
   /* The village beat: a chart under each half's label, on one scale so the
      two compare by eye, and one card for the scrubber and the key. */
-  /* Shown as sk-split-only's flex, so stacked here: title over plot. */
+  /* Shown as lshell-split-only's flex, so stacked here: title over plot. */
   .sk-chart{position:absolute;top:96px;z-index:2;flex-direction:column;align-items:flex-start;padding:8px 12px 6px;border-radius:12px;
     background:var(--panel);border:1px solid var(--line);font-family:var(--display);color:var(--ink-2)}
   .sk-chart.left{right:calc(50% + 28px)}
@@ -133,40 +57,10 @@
   body.sk-charted .sk-chart{top:68px}
   .sk-chart h4{margin:0 0 4px;font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
   .sk-chart svg{display:block;overflow:visible;font-size:12px}
-  body.sk-split .sk-chart[hidden]{display:none}
-  .sk-controls{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:4;
-    padding:6px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
-    display:flex;align-items:center;gap:18px}
-  .sk-controls[hidden]{display:none}
-  .sk-scrub{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:12px;color:var(--ink-2);white-space:nowrap}
-  /* A thin line that fills as it plays, and a small dot to grab: the
-     browser's own handle is bigger than anything else in the bar. --p is
-     the fill, written by ctx.scrub. */
-  .sk-scrub input{-webkit-appearance:none;appearance:none;width:220px;height:14px;margin:0;background:transparent;cursor:pointer}
-  .sk-scrub input::-webkit-slider-runnable-track{height:3px;border-radius:2px;
-    background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--line) var(--p,0%))}
-  .sk-scrub input::-moz-range-track{height:3px;border-radius:2px;background:var(--line)}
-  .sk-scrub input::-moz-range-progress{height:3px;border-radius:2px;background:var(--accent)}
-  .sk-scrub input::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;margin-top:-3.5px;
-    border-radius:50%;border:0;background:var(--accent)}
-  .sk-scrub input::-moz-range-thumb{width:10px;height:10px;border-radius:50%;border:0;background:var(--accent)}
-  .sk-scrub button{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);
-    background:#fff;color:var(--ink);cursor:pointer;font-size:11px;line-height:1}
-  .sk-scrub button[data-k=prev],.sk-scrub button[data-k=next]{font-size:17px;line-height:1;padding-bottom:2px}
-  .sk-scrub button:disabled{opacity:.35;cursor:default}
+  body.lshell-split .sk-chart[hidden]{display:none}
   .sk-legend{display:flex;gap:14px;font-family:var(--display);font-size:12px;color:var(--ink-2);white-space:nowrap}
   .sk-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
   .sk-legend[hidden]{display:none}
-  .sk-split-only{display:none}
-  body.sk-split .sk-split-only{display:flex}
-  @media (max-width:760px){
-    .sk-cap{flex-direction:column;align-items:stretch;border-radius:22px;padding:16px 18px 12px;bottom:0;left:0;right:0;transform:none;max-width:none}
-    .sk-cap nav{justify-content:space-between}
-    .sk-half{width:auto;left:0;right:0;height:50%}
-    .sk-half.right{top:50%;bottom:0}
-    .sk-divider{left:0;right:0;top:50%;width:auto;height:1px}
-    .sk-label.right{left:28px;top:calc(50% + 12px)}
-  }
 </style>
 </head>
 <body>
@@ -179,6 +73,7 @@
 <script src="lib/annotate.js"></script>
 <script src="kit/card-stage.js"></script>
 <script src="kit/lesson-shell.js"></script>
+<script src="kit/lesson-stage.js"></script>
 <script src="kit/ribbon.js"></script>
 <script src="kit/tube.js"></script>
 <script src="kit/surface.js"></script>
@@ -203,16 +98,12 @@
  *  and a split screen is two boxes with a line between them, never one scene.
  *
  *  BUILT WHEN A STEP ASKS, DESTROYED WHEN NONE DOES. A browser's cap on WebGL
- *  contexts is a small number and it drops the OLDEST one silently
- *  (kit/card-stage.js), so `use({show, keep})` is the whole policy: the scenes
- *  a step shows, plus the ones it says to keep warm, and everything else gives
- *  its context back. Beats 1 and 2 keep each other, so the switch swaps
- *  instantly between them; every split beat holds two boxes and keeps
- *  nothing.
+ *  contexts is small (kit/lesson-stage.js's `use`). Beats 1 and 2 keep each
+ *  other, so the switch swaps instantly between them; every split beat holds
+ *  two boxes and keeps nothing.
  *
- *  What ctx carries for the steps: `variant` and `onToggle` (the switch),
- *  `use`, `split`, `caption`, `fade`, `after` / `clearTimers`, and
- *  for the village `legend`, `chart`, `scrub` and `pct`.
+ *  The split, switch, scrubber and boxes are kit/lesson-stage.js's. The page
+ *  adds `legend`, `chart`, `pct` and `allele` for the village.
  * ========================================================================== */
 
 const V = { HbA: SickleSteps.HBA, HbS: SickleSteps.HBS };
@@ -221,119 +112,10 @@ const shell = LessonShell.create({
   brand: 'Sickle cell',
   hint: 'Drag to orbit · Scroll to zoom',
   steps: SickleSteps.steps,
-  ctx: { state: {}, variant: 'HbA', onToggle: null },
-  onStep(step, i) {
-    document.body.dataset.beat = i + 1;
-    capNext.hidden = i >= SickleSteps.steps.length - 1;
-    capBack.disabled = i === 0;
-    capCount.textContent = `${i + 1} / ${SickleSteps.steps.length}`;
-    placeToggle();
-  },
+  ctx: { state: {} },
+  onStep(step, i) { document.body.dataset.beat = i + 1; },
 });
 const ctx = shell.ctx;
-
-/* ---- the chrome this page adds: a switch, two labels, a caption -------------- */
-
-const toggle = document.createElement('div');
-toggle.className = 'sk-toggle';
-toggle.innerHTML = `<button type="button" data-v="HbA">Normal · ${V.HbA.label}</button>
-  <button type="button" data-v="HbS">Sickle · ${V.HbS.label}</button>`;
-shell.el.appendChild(toggle);
-toggle.querySelectorAll('button').forEach(b => {
-  b.onclick = () => setVariant(b.dataset.v);
-});
-function setVariant(v) {
-  ctx.variant = v;
-  toggle.querySelectorAll('button').forEach(o => o.classList.toggle('is-on', o.dataset.v === v));
-  if (ctx.onToggle) ctx.onToggle(v);
-}
-/* Centred in the room beside the panel on a laptop, above it when the panel
-   docks to the bottom. The panel's width is the shell's, so this is read. */
-function placeToggle() {
-  const r = shell.panelRect();
-  if (shell.narrow()) { toggle.style.left = '50%'; toggle.style.bottom = (r.height + 14) + 'px'; }
-  else { toggle.style.left = ((r.right + window.innerWidth) / 2) + 'px'; toggle.style.bottom = '28px'; }
-}
-window.addEventListener('resize', placeToggle);
-ctx.toggle = on => { toggle.hidden = !on; if (on) placeToggle(); };
-
-const divider = document.createElement('div'); divider.className = 'sk-divider sk-split-only';
-const labelL = document.createElement('div'); labelL.className = 'sk-label left sk-split-only';
-const labelR = document.createElement('div'); labelR.className = 'sk-label right sk-split-only';
-shell.stage.append(divider, labelL, labelR);
-
-const cap = document.createElement('div');
-cap.className = 'sk-cap sk-split-only';
-cap.innerHTML = `<div class="sk-say"><p></p></div><nav>
-  <button class="sk-btn primary" type="button" data-k="next">Next</button></nav>`;
-shell.el.appendChild(cap);
-const capText = cap.querySelector('p');
-const capBack = document.createElement('button');
-capBack.className = 'sk-btn ghost sk-back'; capBack.type = 'button'; capBack.textContent = 'Back';
-const foot = document.createElement('div');
-foot.className = 'sk-foot sk-split-only';
-const capCount = document.createElement('span');
-capCount.className = 'lshell-count';
-foot.append(capBack, capCount);
-shell.el.appendChild(foot);
-const capNext = cap.querySelector('[data-k=next]');
-capBack.onclick = () => shell.goTo(shell.current - 1);
-capNext.onclick = () => shell.goTo(shell.current + 1);
-
-ctx.split = (on, labels = {}) => {
-  document.body.classList.toggle('sk-split', !!on);
-  const head = (el, t = '') => {
-    const [name, ...rest] = t.split(' · ');
-    el.textContent = name;
-    if (rest.length) { const sm = document.createElement('small'); sm.textContent = rest.join(' · '); el.appendChild(sm); }
-  };
-  head(labelL, labels.left); head(labelR, labels.right);
-  for (const el of Object.values(sides)) put(el, null);
-  for (const el of Object.values(notes)) putNotes(el, []);
-  ctx.bar(false);
-  if (!on) capText.textContent = '';
-  /* Every live box re-fits: the panel's room changed under it. */
-  for (const s of Object.values(live)) if (s.api.box && s.api.box.layout) s.api.box.layout();
-};
-ctx.caption = text => {
-  const t = text.replace(/\s+/g, ' ').trim();
-  if (capText.textContent !== t) capText.textContent = t;
-};
-
-const sides = {}, notes = {};
-for (const side of ['left', 'right']) {
-  const t = document.createElement('p');
-  t.className = 'sk-side ' + side; t.hidden = true;
-  const n = document.createElement('div');
-  n.className = 'sk-note ' + side; n.hidden = true;
-  shell.stage.insertBefore(t, divider); shell.stage.insertBefore(n, divider);
-  sides[side] = t; notes[side] = n;
-}
-/* Written every frame by a scrubbed step, so only a change touches the DOM. */
-const putNotes = (el, texts) => {
-  const list = (texts || []).map(t => t.replace(/\s+/g, ' ').trim());
-  const have = [...el.children].map(c => c.textContent);
-  el.hidden = !list.length;
-  if (have.join('\n') === list.join('\n')) return;
-  /* Cards already up stay put, so only a new one fades in. */
-  while (el.children.length > list.length || [...el.children].some((c, i) => c.textContent !== list[i])) el.lastElementChild.remove();
-  for (let i = el.children.length; i < list.length; i++) {
-    const d = document.createElement('div'); d.textContent = list[i]; el.appendChild(d);
-  }
-};
-const put = (el, text) => {
-  const t = text ? text.replace(/\s+/g, ' ').trim() : '';
-  if (el.textContent !== t) el.textContent = t;
-  el.hidden = !t;
-};
-ctx.side = (side, text) => put(sides[side], text);
-/* One card or several, stacked where the half's scene was. */
-ctx.sideNote = (side, texts) => putNotes(notes[side], texts == null ? [] : [].concat(texts));
-/* Next beside the scrubber, and no caption box. */
-ctx.bar = on => {
-  document.body.classList.toggle('sk-bar', !!on);
-  (on ? controls : cap.querySelector('nav')).appendChild(capNext);
-};
 
 /* The village's colours are the β6 marks' from beat 2 and 3, read off the
    crowd so a reader who learned them there does not relearn them here. */
@@ -354,72 +136,6 @@ ctx.legend = items => {
   }).join('');
 };
 
-/* The scrubber: generations on a range, and play / pause, in one card with
-   the key. It reports; the step decides what a drag or a press does. */
-const controls = document.createElement('div');
-controls.className = 'sk-controls'; controls.hidden = true;
-const scrub = document.createElement('div');
-scrub.className = 'sk-scrub';
-scrub.innerHTML = `<button type="button" data-k="prev" aria-label="Previous generation">‹</button>
-  <button type="button" data-k="play" aria-label="Play"></button>
-  <button type="button" data-k="next" aria-label="Next generation">›</button>
-  <input type="range" min="0" aria-label="Scrub"><span></span>`;
-const scrubBtn = scrub.querySelector('[data-k=play]'), scrubIn = scrub.querySelector('input'), scrubAt = scrub.querySelector('span');
-const scrubPrev = scrub.querySelector('[data-k=prev]'), scrubNext = scrub.querySelector('[data-k=next]');
-let scrubOn = {};
-scrubIn.oninput = () => scrubOn.onScrub && scrubOn.onScrub(+scrubIn.value);
-scrubBtn.onclick = () => scrubOn.onPlay && scrubOn.onPlay();
-scrubPrev.onclick = () => scrubOn.onStep && scrubOn.onStep(-1);
-scrubNext.onclick = () => scrubOn.onStep && scrubOn.onStep(1);
-controls.append(scrub);
-/* In a split it rides above the caption, whose height changes with its
-   text. With the panel up there is no caption, and it sits where the switch
-   does: centred in the room beside the panel. */
-function placeControls() {
-  if (document.body.classList.contains('sk-split')) {
-    controls.style.left = '';
-    controls.style.bottom = (window.innerHeight - cap.getBoundingClientRect().top + 12) + 'px';
-  } else {
-    const r = shell.panelRect();
-    controls.style.left = shell.narrow() ? '50%' : ((r.right + window.innerWidth) / 2) + 'px';
-    controls.style.bottom = shell.narrow() ? (r.height + 14) + 'px' : '60px';   // clear of the shell's hint
-  }
-  /* A note under the scene sits in the same room, above the controls. */
-  const r = shell.panelRect();
-  under.style.left = shell.narrow() || document.body.classList.contains('sk-split') ? '50%'
-    : ((r.right + window.innerWidth) / 2) + 'px';
-  under.style.bottom = (parseFloat(controls.style.bottom) || 60) + (controls.hidden ? 0 : 56) + 'px';
-}
-/* ctx.under(html): a callout under the 3D scene rather than in the panel,
-   for the sentence that names what the reader is looking at. */
-const under = document.createElement('div');
-under.className = 'sk-under'; under.hidden = true;
-shell.el.appendChild(under);
-ctx.under = html => { under.hidden = !html; under.innerHTML = html || ''; placeControls(); };
-new ResizeObserver(placeControls).observe(cap);
-window.addEventListener('resize', placeControls);
-cap.querySelector('.sk-say').appendChild(legend);
-shell.el.appendChild(controls);
-/* A drag the reader is making is not written back to. */
-/* o: { max, value, step, label, playing, onScrub, onPlay, onStep }. The
-   step buttons are there only for a step that says what a step is. */
-ctx.scrub = o => {
-  const was = controls.hidden;
-  controls.hidden = !o;
-  if (!o) return;
-  if (was) placeControls();
-  scrubOn = o;
-  scrubIn.max = o.max;
-  scrubIn.step = o.step || 1;
-  if (document.activeElement !== scrubIn) scrubIn.value = o.value;
-  scrubIn.style.setProperty('--p', (o.max ? scrubIn.value / o.max * 100 : 0) + '%');
-  scrubAt.textContent = o.label || '';
-  scrubBtn.textContent = o.playing ? '❚❚' : '▶';
-  scrubPrev.hidden = scrubNext.hidden = !o.onStep;
-  scrubPrev.disabled = o.value <= 0;
-  scrubNext.disabled = o.value >= o.max;
-  scrubBtn.setAttribute('aria-label', o.playing ? 'Pause' : 'Play');
-};
 
 /* A chart per half: the village's line, the pale curve a village of
    millions would follow, and a dashed level if there is a balance to reach.
@@ -428,8 +144,8 @@ ctx.scrub = o => {
 const charts = {};
 for (const side of ['left', 'right']) {
   const c = document.createElement('div');
-  c.className = 'sk-chart sk-split-only ' + side; c.hidden = true;
-  shell.stage.insertBefore(c, divider);
+  c.className = 'sk-chart lshell-split-only ' + side; c.hidden = true;
+  shell.stage.appendChild(c);
   charts[side] = c;
 }
 ctx.chart = (side, o) => {
@@ -453,10 +169,6 @@ ctx.chart = (side, o) => {
     </svg>`;
 };
 
-/* Timers a step sets die with the step, the same way its subscriptions do. */
-let timers = [];
-ctx.after = (sec, fn) => { timers.push(setTimeout(fn, sec * 1000)); };
-ctx.clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
 /* ---- the scenes ------------------------------------------------------------------ */
 
@@ -465,25 +177,6 @@ ctx.clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 const TRACE = {};
 const traces = Promise.all(Object.entries(V).map(([k, v]) =>
   fetch(v.trace).then(r => r.json()).then(t => { TRACE[k] = t; })));
-
-const SIDE = { full: null, left: 'sk-half left', right: 'sk-half right' };
-/* `sk-scene` and not the shell's own layer class: those layers belong to
-   kit/lesson-shell.js, which shows, stops and pools them, and this page hands
-   out its boxes itself so it can hold two side by side and fade one over
-   another. Wearing the shell's class puts these under rules written for
-   scenes it owns. */
-function host(side, cls) {
-  const d = document.createElement('div');
-  d.className = 'sk-scene ' + (SIDE[side] || '') + (cls ? ' ' + cls : '');
-  d.style.cssText = side === 'full' ? 'position:absolute;inset:0' : '';
-  /* An overlay that will fade in starts out, or the step opens on it fading. */
-  if (cls === 'sk-fade') { d.style.opacity = 0; d.style.pointerEvents = 'none'; }
-  /* The panel's room, the same function every component's mount takes. In a
-     split there is no panel, and the shell's function says so on its own. */
-  if (side === 'full') d.viewOffset = shell.stage.viewOffset;
-  shell.stage.insertBefore(d, divider);
-  return d;
-}
 
 /* ONE PROTEIN BOX, SWAPPED. `setData` and `setSurface` replace the ribbon and
    the skin in place, holding the old one up until the new one lands — on an
@@ -548,61 +241,30 @@ function makeProtein(h) {
   return { show, box: P, start: P.start, stop: P.stop, destroy() { notes.clear(); P.destroy(); } };
 }
 
-const MAKE = {
-  cell:    () => BloodCell.mount(host('full'), { sickle: ctx.variant === 'HbS' ? 1 : 0, viewOffset: shell.stage.viewOffset }),
-  protein: () => makeProtein(host('full')),
-  crowdA:  () => HbCrowd.mount(host('left'),  { variant: 'HbA', stick: false }),
-  crowdS:  () => HbCrowd.mount(host('right'), { variant: 'HbS', stick: true, grow: 16 }),
+const BOXES = {
+  cell:    { side: 'full', mount: h => BloodCell.mount(h, { sickle: ctx.variant === 'HbS' ? 1 : 0, viewOffset: shell.stage.viewOffset }) },
+  protein: { side: 'full', mount: h => makeProtein(h) },
+  crowdA:  { side: 'left', mount: h => HbCrowd.mount(h,  { variant: 'HbA', stick: false }) },
+  crowdS:  { side: 'right', mount: h => HbCrowd.mount(h, { variant: 'HbS', stick: true, grow: 16 }) },
   /* Cut along the length, so a sickled cell shows its fibres end-on to end-on
      (bloodcell/bloodcell.js on `cutTurn`), and the same cut on the disc for the pair. */
-  cellA:   () => BloodCell.mount(host('left',  'sk-fade'), { sickle: 0, cut: 1 }),
-  cellS:   () => BloodCell.mount(host('right', 'sk-fade'), { sickle: 1, cut: 1 }),
-  flowA:   () => BloodFlow.mount(host('left'),  { sickle: 0 }),
-  flowS:   () => BloodFlow.mount(host('right'), { sickle: 1 }),
-  malaria: () => BloodCell.mount(host('full'), { cut: 1, viewOffset: shell.stage.viewOffset }),
+  cellA:   { side: 'left', fade: true, mount: h => BloodCell.mount(h, { sickle: 0, cut: 1 }) },
+  cellS:   { side: 'right', fade: true, mount: h => BloodCell.mount(h, { sickle: 1, cut: 1 }) },
+  flowA:   { side: 'left', mount: h => BloodFlow.mount(h,  { sickle: 0 }) },
+  flowS:   { side: 'right', mount: h => BloodFlow.mount(h, { sickle: 1 }) },
+  malaria: { side: 'full', mount: h => BloodCell.mount(h, { cut: 1, viewOffset: shell.stage.viewOffset }) },
   /* Cut open like beat 4, so the parasite is on show. */
-  infA:    () => BloodCell.mount(host('left',  'sk-fade'), { sickle: 0, cut: 1 }),
-  infS:    () => BloodCell.mount(host('right', 'sk-fade'), { sickle: 0, cut: 1 }),
+  infA:    { side: 'left', fade: true, mount: h => BloodCell.mount(h, { sickle: 0, cut: 1 }) },
+  infS:    { side: 'right', fade: true, mount: h => BloodCell.mount(h, { sickle: 0, cut: 1 }) },
   /* The same seed on both sides: the villages start as the same people. */
-  popA:    () => Population.mount(host('left'),  Object.assign({ malaria: 0, colours: ALLELE }, SickleSteps.POP)),
-  popS:    () => Population.mount(host('right'), Object.assign({ malaria: 1, colours: ALLELE }, SickleSteps.POP)),
+  popA:    { side: 'left', mount: h => Population.mount(h,  Object.assign({ malaria: 0, colours: ALLELE }, SickleSteps.POP)) },
+  popS:    { side: 'right', mount: h => Population.mount(h, Object.assign({ malaria: 1, colours: ALLELE }, SickleSteps.POP)) },
 };
 
-const live = {};
-ctx.use = function use({ show = [], keep = [] }) {
-  const want = new Set([...show, ...keep]);
-  for (const k of Object.keys(live)) {
-    if (want.has(k)) continue;
-    live[k].api.destroy();
-    live[k].host.remove();
-    delete live[k];
-  }
-  for (const k of want) {
-    if (live[k]) continue;
-    const api = MAKE[k]();
-    const h = api.box ? api.box.canvas.parentElement : shell.stage.lastElementChild;
-    live[k] = { api, host: h };
-  }
-  const out = {};
-  for (const k of Object.keys(live)) {
-    const on = show.includes(k);
-    live[k].host.style.display = on ? '' : 'none';
-    /* Only a scene on stage runs a loop; a kept one holds its context and its
-       geometry and costs nothing per frame. */
-    if (on) { live[k].api.start(); if (live[k].api.box) live[k].api.box.layout(); }
-    else live[k].api.stop();
-    out[k] = live[k].api;
-  }
-  return out;
-};
-/* A faded-out overlay must not take the drag meant for the box under it. */
-ctx.fade = (name, on) => {
-  if (!live[name]) return;
-  live[name].host.style.opacity = on ? 1 : 0;
-  live[name].host.style.pointerEvents = on ? '' : 'none';
-};
-
-setVariant('HbA');
+LessonStage.attach(shell, {
+  toggle: [{ value: 'HbA', label: `Normal · ${V.HbA.label}` }, { value: 'HbS', label: `Sickle · ${V.HbS.label}` }],
+  boxes: BOXES,
+}).say.appendChild(legend);
 shell.goTo((() => {
   const m = /[?&]step=(\d+)/.exec(location.search);
   return m ? Math.max(1, Math.min(SickleSteps.steps.length, +m[1])) - 1 : 0;
