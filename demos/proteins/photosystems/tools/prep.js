@@ -85,6 +85,71 @@ function halfThickness(text) {
   return m ? +m[1] : null;
 }
 
+/* THE COFACTORS: the pigments, the redox centres, the quinones. Lipids,
+   detergents and water are left out; they are the membrane and the
+   preparation, not the machine. */
+const COFACTOR = {
+  chlorophyll: ['CLA', 'CHL', 'CL0'],          // Chl a, Chl b, Chl a' (P700's)
+  pheophytin:  ['PHO'],
+  carotenoid:  ['BCR', 'LUT', 'XAT', 'NEX', 'ZEX'],
+  quinone:     ['PL9', 'PQN'],
+  heme:        ['HEM', 'HEC'],
+  metal:       ['OEX', 'FE2', 'SF4', 'FES', 'BCT'],
+};
+const CLASS_OF = {};
+for (const [k, names] of Object.entries(COFACTOR)) for (const n of names) CLASS_OF[n] = k;
+
+/* Off the DEPOSITION, because OPM's copies of 5XNL and 7QRM carry no CONECT
+   and bonds come off CONECT, never a distance cutoff. The deposition is then
+   moved into OPM's frame by a Kabsch fit on every Cα the two share, and the
+   residual is printed: OPM only rotates and translates, so anything above a
+   hundredth of an ångström means the two files are not the same model. */
+function cofactors(dep, opm, centre) {
+  const key = l => l[21] + l.slice(22, 27);
+  const ca = t => {
+    const m = new Map();
+    for (const l of t.split('\n'))
+      if (l.startsWith('ATOM') && l.slice(12, 16) === ' CA ' && (l[16] === ' ' || l[16] === 'A'))
+        m.set(key(l), Bake.xyz(l));
+    return m;
+  };
+  const A = ca(dep), B = ca(opm), P = [], Q = [];
+  for (const [k, p] of A) if (B.has(k)) { P.push(p); Q.push(B.get(k)); }
+  const F = Bake.kabsch(P, Q);
+  const move = p => Bake.mul(F.R, p).map((x, k) => x + F.t[k] - centre[k]);
+
+  const el = [], xyz = [], cls = [], idx = new Map(), lines = dep.split('\n');
+  const classes = Object.keys(COFACTOR);
+  const counted = {};
+  for (const l of lines) {
+    if (!l.startsWith('HETATM')) continue;
+    const res = l.slice(17, 20).trim();
+    if (!CLASS_OF[res] || (l[16] !== ' ' && l[16] !== 'A')) continue;
+    idx.set(+l.slice(6, 11), el.length);
+    const e = l.slice(76, 78).trim();
+    el.push(e[0] + (e[1] || '').toLowerCase());
+    for (const x of move(Bake.xyz(l))) xyz.push(Math.round(x * 100) / 100);
+    cls.push(classes.indexOf(CLASS_OF[res]));
+    counted[key(l) + res] = res;
+  }
+  const bonds = [], seen = new Set();
+  for (const l of lines) {
+    if (!l.startsWith('CONECT')) continue;
+    const a = idx.get(+l.slice(6, 11));
+    if (a === undefined) continue;
+    for (let c = 11; c + 5 <= l.length; c += 5) {
+      const b = idx.get(+l.slice(c, c + 5));
+      if (b === undefined || a === b) continue;
+      const k = Math.min(a, b) + ':' + Math.max(a, b);
+      if (!seen.has(k)) { seen.add(k); bonds.push(Math.min(a, b), Math.max(a, b)); }
+    }
+  }
+  const molecules = {};
+  for (const res of Object.values(counted)) molecules[res] = (molecules[res] || 0) + 1;
+  return { fit: { pairs: P.length, rmsd: Math.round(F.rmsd * 1e4) / 1e4 },
+           classes, el, xyz, cls, bonds, molecules };
+}
+
 function bake(v) {
   const opm = fs.readFileSync(path.join(SRC, `${v.id}-opm.pdb`), 'utf8');
   const dep = fs.readFileSync(path.join(SRC, `${v.id}.pdb`), 'utf8');
@@ -117,7 +182,9 @@ function bake(v) {
   const F = Bake.frameOf(all);
 
   const inMem = all.filter(p => Math.abs(p[2] - mid) <= half).length;
-  return {
+  const cof = cofactors(dep, opm, T.centre);
+  if (cof.fit.rmsd > 0.01) throw new Error(`${v.id}: deposition is ${cof.fit.rmsd} A off OPM`);
+  return { cof,
     source: `${v.id}-opm.pdb`, ssFrom: Bake.ssFrom(R), centre: T.centre,
     order: T.order, chains: T.chains, radius: T.radius, extents: F.extents,
     view: FoldLib.basisFrom([0, 0, 1], (F.view || [[1, 0, 0]])[0])
@@ -148,6 +215,7 @@ function lineup(bakes) {
                 frame: 'membrane convention, OPM normal shared by all three',
                 meta: { entry: 'lineup', parts: [], chains: [], ligands: [] } };
   let x = 0;
+  const shift = [];
   const parts = bakes.map(b => {
     let lo = Infinity, hi = -Infinity;
     for (const id of b.order) for (const p of b.chains[id].CA) { lo = Math.min(lo, p[0]); hi = Math.max(hi, p[0]); }
@@ -156,6 +224,7 @@ function lineup(bakes) {
   for (const { b, lo, hi } of parts) {
     const dx = x - lo, dz = -b.meta.membrane.mid;
     const tag = CANDIDATES.find(c => c.id === b.meta.entry).tag;
+    shift.push({ entry: b.meta.entry, d: [dx, 0, dz] });
     for (const id of b.order) {
       const k = `${tag}.${id}`;
       out.order.push(k);
@@ -178,6 +247,12 @@ function lineup(bakes) {
     return q;
   });
   out.radius = Bake.r2(out.radius);
+  /* Where each part's cofactor file lands in the lineup: the same slide and
+     the same re-centring its chains got. */
+  for (const p of out.meta.parts) {
+    const s = shift.find(q => q.entry === p.entry).d;
+    p.shift = [Bake.r2(s[0] - c[0]), Bake.r2(s[1] - c[1]), Bake.r2(s[2])];
+  }
   out.extents = Bake.frameOf(all).extents;
   out.view = FoldLib.basisFrom([0, 0, 1], [1, 0, 0]);
   out.meta.membrane = { half: Math.max(...parts.map(p => p.b.meta.membrane.half)), axis: 'z', mid: 0 };
@@ -199,6 +274,16 @@ function main() {
     throw new Error(`faces disagree: OEC ${lumen}, cyt f ${cytf}, PsaC ${ridge}`);
   for (const b of bakes) b.meta.lumen = lumen;
 
+  for (const b of bakes) {
+    const cof = b.cof;
+    delete b.cof;
+    b.meta.cofactors = cof.molecules;
+    const file = `photosystems-${b.meta.entry}-cofactors.json`;
+    fs.writeFileSync(path.join(DATA, file), JSON.stringify(cof));
+    console.log(`${b.meta.entry} cofactors  ${cof.el.length} atoms, ${cof.bonds.length / 2} bonds, ` +
+      `fit ${cof.fit.pairs} CA at ${cof.fit.rmsd} A, ` +
+      `${(fs.statSync(path.join(DATA, file)).size / 1024).toFixed(0)} KB`);
+  }
   for (const b of [...bakes, lineup(bakes)]) {
     if (b.meta.entry === 'lineup') b.meta.lumen = lumen;
     const file = `photosystems-${b.meta.entry}.json`;

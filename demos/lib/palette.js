@@ -72,6 +72,8 @@
                       // substitution becomes invisible. Kept unsaturated and
                       // lighter than sulfur's goldenrod, which is the only
                       // warm neutral it could otherwise be taken for.
+      Mn: 0x7c3fbf,   // manganese — violet, deposition-only like Ca: four of
+                      // them are the water-splitting cluster in photosystem II
       P:  0xe07b1f,   // phosphorus — orange (CPK). Deliberately the warmest atom
                       // in the palette: in glycolysis the phosphate IS the energy
                       // currency, so every P a student sees is "something ATP paid
@@ -445,6 +447,7 @@
     antenna: 0x5fb35a,
     photosystemCap: 0x3f8a3c,   // the OEC and PSI's stromal ridge: the photosystem's own green, a shade down
     chlorophyll: 0x2f7d32,   // the pigment discs on the antenna: darker than the lobe they stud
+    carotenoid: 0xf09a3e,    // β-carotene and the xanthophylls: the orange they really are, lighter than phosphorus
     /* ON THE STROMA SIDE, where NADPH is made. Ferredoxin is a small
        iron-sulfur protein, an iron rust that is neither oxygen's red nor the
        carrier's teal; FNR is the enzyme with the flavin, an ochre kept clear
