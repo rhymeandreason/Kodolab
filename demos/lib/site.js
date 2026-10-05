@@ -505,7 +505,7 @@
     '.lm-panel a.lm-i:hover{color:var(--accent,#c55);background:rgba(0,0,0,.03)}' +
     '.lm-panel a.lm-i[aria-current="page"]{color:var(--text-strong,#222);font-weight:500;box-shadow:inset 2px 0 0 var(--accent,#c55)}' +
     '.lm-panel hr{margin:.45rem 0;border:0;border-top:1px solid rgba(0,0,0,.08)}' +
-    '.lm-panel .lm-site{display:flex;white-space:nowrap;padding:0 .4rem}.lm-panel .lm-site a.lm-i{padding:.42rem .6rem}';
+    '.lm-panel a.lm-i.lm-shelf{padding-left:2rem}';
 
   function lessons(cb) {
     if (window.Lessons && window.LessonUnits) return cb();
@@ -557,16 +557,21 @@
         });
         panel.appendChild(document.createElement('hr'));
       }
-      var site = document.createElement('div'); site.className = 'lm-site';
-      site.appendChild(item('Home', '/'));
-      NAV.forEach(function (n) { site.appendChild(item(n.text, n.href, n.at.test(here))); });
+      // The phone menu's list, in its order: Library's shelves indented under it.
+      panel.appendChild(item('Home', '/'));
+      NAV.forEach(function (n) {
+        panel.appendChild(item(n.text, n.href, n.at.test(here)));
+        if (n.href === '/library') SHELVES.forEach(function (sh) {
+          panel.appendChild(item(sh.text, sh.href, sh.at.test(here))).classList.add('lm-shelf');
+        });
+      });
+      panel.appendChild(document.createElement('hr'));
       var user = stored();
-      if (!user) site.appendChild(item('Sign in', '/login'));
+      if (!user) panel.appendChild(item('Sign in', '/login'));
       else {
-        if (user.teacher) site.appendChild(item('Teach', '/teach'));
-        site.appendChild(item('My apps', '/apps'));
+        if (user.teacher) panel.appendChild(item('Teach', '/teach'));
+        panel.appendChild(item('My apps', '/apps'));
       }
-      panel.appendChild(site);
     }
     function open(on) {
       panel.hidden = !on;
