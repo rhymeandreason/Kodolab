@@ -195,26 +195,21 @@ function framePts(f, lo, hi) {
   for (let i = lo; i <= hi; i++) { const o = (f * D.n + i) * 3; out.push({ x: X[o], y: X[o + 1], z: X[o + 2] }); }
   return out;
 }
+/* FRAME 0 FIRST, THE REST BETWEEN PAINTS. Each frame is a full ribbon
+   build (~65 ms), so building them all before drawing held the page blank
+   for seconds. The opening state is drawn at once; the other frames are
+   built a few per timeout (not rAF, which a background tab never fires),
+   and the controls wake when the last one lands. */
+let built = 0;
 function buildLive() {
   const cut = new Set(D.brk);
   let lo = 0;
   for (let i = 1; i <= D.n; i++) if (i === D.n || cut.has(i)) {
-    if (i - lo >= 4) segs.push({ lo, hi: i - 1, cache: [] });
+    if (i - lo >= 4) segs.push({ lo, hi: i - 1, cache: [], ref: null, ss: D.ss.slice(lo, i).split('') });
     lo = i;
   }
   for (const s of segs) {
-    const ss = D.ss.slice(s.lo, s.hi + 1).split('');
-    let ref = null;
-    for (let f = 0; f < D.frames; f++) {
-      const out = {};
-      const g = RibbonLib.build(THREE, framePts(f, s.lo, s.hi), ss, Object.assign({ sub: SUB, out }, ref ? { ref } : {}));
-      ref = out.frames;
-      const p = g.attributes.position.array, n = g.attributes.normal.array;
-      if (s.cache[0] && s.cache[0].pos.length !== p.length)
-        throw new Error(`ribbon topology changed at frame ${f}, segment ${s.lo}`);
-      s.cache.push({ pos: new Float32Array(p), nor: new Float32Array(n) });
-      if (f === 0) s.geo = g; else g.dispose();
-    }
+    buildFrame(s, 0);
     /* Each vertex takes the part of its nearest Ca, once: the topology is
        the same on every frame, so the colouring is too. */
     const pts = framePts(0, s.lo, s.hi), p = s.cache[0].pos;
@@ -236,6 +231,35 @@ function buildLive() {
     s.mesh.userData.mine = true;
     box.group.add(s.mesh);
   }
+  built = 1;
+  ready(false);
+  const more = () => {
+    const t0 = performance.now();
+    while (built < D.frames && performance.now() - t0 < 30) {
+      for (const s of segs) buildFrame(s, built);
+      built++;
+    }
+    $('c-whole').textContent = built < D.frames ? `building ${Math.round(100 * built / D.frames)}%` : `${D.swing.whole.deg}°`;
+    if (built < D.frames) setTimeout(more, 0); else ready(true);
+  };
+  setTimeout(more, 0);
+}
+/* Frames chain their ribbon frames from the one before, or a band's face
+   flips between neighbours and the lerp blends a ribbon with its inverse
+   (closure-test.html). Built strictly in order for that reason. */
+function buildFrame(s, f) {
+  const out = {};
+  const g = RibbonLib.build(THREE, framePts(f, s.lo, s.hi), s.ss,
+    Object.assign({ sub: SUB, out }, s.ref ? { ref: s.ref } : {}));
+  s.ref = out.frames;
+  const p = g.attributes.position.array, n = g.attributes.normal.array;
+  if (s.cache[0] && s.cache[0].pos.length !== p.length)
+    throw new Error(`ribbon topology changed at frame ${f}, segment ${s.lo}`);
+  s.cache[f] = { pos: new Float32Array(p), nor: new Float32Array(n) };
+  if (f === 0) s.geo = g; else g.dispose();
+}
+function ready(on) {
+  for (const id of ['play', 'scrub', 'k1', 'k2']) $(id).disabled = !on;
 }
 
 /* One setPocket for both pieces, ADP·Mg then Pi; each child is then moved
@@ -305,7 +329,7 @@ function apply() {
   box.draw();
 }
 
-function seek(p) { pos = Math.max(0, Math.min(D.frames - 1, p)); apply(); }
+function seek(p) { pos = Math.max(0, Math.min(built - 1, p)); apply(); }
 
 /* The timeline as a function of elapsed ms, so a test can drive it:
    bench.advance(ms) moves the clock without rAF. */
@@ -350,7 +374,7 @@ function tick(now) {
 }
 
 $('play').addEventListener('click', () => {
-  if (!D) return;
+  if (!D || built < D.frames) return;
   playing = !playing;
   $('play').setAttribute('aria-pressed', String(playing));
   if (playing) { clock = 0; piOut = adpOut = 0; seek(0); }

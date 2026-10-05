@@ -53,7 +53,10 @@ const RIGOR = '7PLU', STRONG = '7PM6', PRE = '4ZG4';
 const HEAVY = 'A', ELC = 'B', ACTIN = ['C', 'F', 'G'];
 const PRE_CHAIN = 'E';             // 711 of 764 modelled, against B's 705
 
-const LEG = [31, 21];              // frames per leg; leg 1 is the big swing
+/* Frames per leg. The page lerps vertices between frames, which cuts the
+   lever's arc by r(1 - cos(step/2)): at ~6 degrees a step that is 0.1 A at
+   the light chain, and every frame is a ribbon the page builds at load. */
+const LEG = [12, 4];
 const IFACE = 12;                  // A from an actin Ca: the actin face
 const CONV = 20;                   // last aligned residues: the lever helix's start
 
