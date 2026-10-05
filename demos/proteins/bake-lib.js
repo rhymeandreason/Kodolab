@@ -285,7 +285,22 @@ function chainsDeclared(text) {
    IT CLASSIFIES THE REACTION, NOT THE PROTEIN. Two enzymes with no shared
    ancestry and no shared fold carry the same number if they do the same
    chemistry, so it answers "what reaction is this" and is never evidence
-   about a structure. */
+   about a structure.
+
+   RETIRED NUMBERS ARE FOLLOWED TO THE CURRENT ONE. IUBMB moves entries
+   (all the transporting ATPases went to class 7 in 2018), and a deposition
+   keeps the number of its year: bovine 1BMF says 3.6.1.34, spinach 6FKF
+   3.6.3.14, for the one reaction now filed as 7.1.2.2. Left raw, two
+   variants of one protein disagree and the registry refuses them. Every row
+   is ExplorEnz's own "Transferred entry: … Now EC …", followed to the end
+   of the chain; add one the same way, never from memory. */
+const EC_MOVED = {
+  '3.6.1.34': '7.1.2.2',     // H+-transporting ATP synthase, via 3.6.3.14
+  '3.6.3.14': '7.1.2.2',     // H+-transporting two-sector ATPase
+  '3.6.3.9':  '7.2.2.13',    // Na+/K+-exchanging ATPase
+  '3.1.27.5': '4.6.1.18',    // pancreatic ribonuclease: a lyase now, for the cyclic phosphate
+};
+
 function ecNumbers(text) {
   const out = [];
   for (const line of text.split('\n')) {
@@ -293,7 +308,7 @@ function ecNumbers(text) {
     const m = line.match(/\bEC:\s*([\d.\-,\s]+?);?\s*$/);
     if (!m) continue;
     for (const ec of m[1].split(',')) {
-      const v = ec.trim();
+      const v = EC_MOVED[ec.trim()] || ec.trim();
       if (v && !out.includes(v)) out.push(v);
     }
   }
@@ -844,7 +859,7 @@ module.exports = {
   r2, xyz, modelOne, caTrace, ssRanges, ssFrom, declared, disulfides, ligands,
   line1, method, models, resolution, chainCount, chainsDeclared, provenance,
   modResidues,
-  ecNumbers, EC_CLASS,
+  ecNumbers, EC_MOVED, EC_CLASS,
   assemble, frameOf, viewFor, breaks,
   chainKinds, naTrace, basePairs, centrePairs, assembleNA, baseLetter, hbFor,
   kabsch, mul, det, mean,
