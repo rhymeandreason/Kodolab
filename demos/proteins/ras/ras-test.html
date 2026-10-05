@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="/demos/proteins/ras/">
+<title>Ras bench</title>
+
+<!-- ===================================================================
+     SCRATCH. The views are proteins.js's `ras` entry.
+
+     QUESTION THIS BENCH ANSWERS: is the on/off difference something a
+     student would SEE? 5P21 is fitted onto 4Q21 on the core, switches
+     excluded, so what moves when you flip is the switch loops and the
+     third phosphate, not the crystal's frame.
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>Ras</h1>
+    <p class="deck">A switch that is on with GTP and off with GDP. Superposed on
+      the core, so flipping shows the two switch loops move. Human H-Ras, and
+      one KRAS.</p>
+
+    <h2>state</h2>
+    <button class="mode" id="v-4Q21" aria-pressed="true">
+      <span class="who">off &middot; 4Q21</span><span class="chip">GDP</span></button>
+    <button class="mode" id="v-5P21" aria-pressed="false">
+      <span class="who">on &middot; 5P21</span><span class="chip">GppNHp</span></button>
+
+    <h2>cancer, and a drug</h2>
+    <button class="mode" id="v-1AGP" aria-pressed="false">
+      <span class="who">G12D &middot; 1AGP</span><span class="chip">stuck on</span></button>
+    <button class="mode" id="v-6OIM" aria-pressed="false">
+      <span class="who">G12C + sotorasib &middot; 6OIM</span><span class="chip">locked off</span></button>
+
+    <h2>look</h2>
+    <button class="mode" id="site" aria-pressed="false">close in on the site</button>
+
+    <h2>what you are looking at</h2>
+    <p class="claim" id="d-claim">&mdash;</p>
+    <p class="meta" id="d-meta">&mdash;</p>
+
+    <table>
+      <tr><td>in the site</td><td id="d-lig">&mdash;</td></tr>
+      <tr class="hi"><td>residue 12</td><td id="d-12">&mdash;</td></tr>
+      <tr><td>drug</td><td id="d-drug">&mdash;</td></tr>
+      <tr class="hi"><td>Mg held by</td><td id="d-mg">&mdash;</td></tr>
+      <tr><td>span</td><td id="d-span">&mdash;</td></tr>
+      <tr><td>modelled</td><td id="d-res">&mdash;</td></tr>
+      <tr><td>completeness</td><td id="d-pct">&mdash;</td></tr>
+      <tr><td>helix / strand</td><td id="d-frac">&mdash;</td></tr>
+      <tr class="hi"><td>switch I moves</td><td id="d-s1">&mdash;</td></tr>
+      <tr class="hi"><td>switch II moves</td><td id="d-s2">&mdash;</td></tr>
+      <tr><td>furthest residue</td><td id="d-far">&mdash;</td></tr>
+      <tr><td>superposed on</td><td id="d-fit">&mdash;</td></tr>
+      <tr><td>extents &Aring;</td><td id="d-ext">&mdash;</td></tr>
+      <tr><td>view</td><td id="d-view">&mdash;</td></tr>
+    </table>
+
+    <p class="frag" id="d-frag">&mdash;</p>
+    <p class="prov" id="d-prov">&mdash;</p>
+
+    <button class="mode" id="pick" style="margin-top:12px">copy this view</button>
+    <p class="note" id="pick-note">Turn the molecule, then copy. All four
+      share one frame, so one choice aims them all.</p>
+    <p class="src">
+      <a id="d-rcsb" href="https://www.rcsb.org/" target="_blank" rel="noopener">RCSB entry</a>
+      <a id="d-baked" href="data/">what this page loads</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script>
+'use strict';
+
+const ME = ProteinLib.byKey('ras');
+
+const box = Proteinbox.create({
+  mount: document.getElementById('stage'),
+  view: ProteinLib.viewOf(ME),
+  orbit: true,
+  stage: { ortho: false, turn: 'trackball' },
+  pad: 1.15,
+  sub: 10,
+});
+
+const $ = id => document.getElementById(id);
+const IDS = ME.variants.map(v => v.id);
+const REF = ME.fit.on;
+const said = id => ProteinLib.variantOf(ME, id);
+const views = {};
+let view = ProteinLib.defaultOf(ME).id, close = false;
+window.bench = { views, box, get view() { return view; } };
+
+const SAYS = {
+  '4Q21': {
+    claim: 'Ras off: GDP in the site, two phosphates.',
+    prov:  'H-Ras 1-166 of the G domain, GDP-bound. The resting state every signal starts from.' },
+  '5P21': {
+    claim: 'Ras on: a GTP stand-in with its third phosphate, and the two switch loops closed over it.',
+    prov:  'GppNHp swaps the bridging oxygen before the last phosphate for NH, so Ras cannot cut it and stays on.' },
+  '1AGP': {
+    claim: 'An oncogenic mutant, on: glycine 12 swapped for aspartate, beside the third phosphate.',
+    prov:  'The side chain at 12 sits where the arginine that speeds up the cut has to reach, so this Ras stays on.' },
+  '6OIM': {
+    claim: 'The G12C mutant, held off by sotorasib, a drug bonded to its own mutant cysteine.',
+    prov:  'KRAS, not H-Ras; same numbering through the G domain. The drug sits in a pocket under switch II that opens only in this mutant.' },
+};
+const AA = { GLY: 'Gly', ASP: 'Asp', CYS: 'Cys', VAL: 'Val', SER: 'Ser', LEU: 'Leu', GLN: 'Gln' };
+const one = { GLY: 'G', ASP: 'D', CYS: 'C', VAL: 'V', SER: 'S', LEU: 'L', GLN: 'Q' };
+const sub = x => { const m = x.match(/^([A-Z]{3})(\d+)([A-Z]{3})$/); return m ? `${one[m[1]]}${m[2]}${one[m[3]]}` : x; };
+const NAME = { GDP: 'GDP', GNP: 'GppNHp (GTP that cannot be cut)', MG: 'Mg²⁺', MOV: 'sotorasib' };
+
+IDS.forEach(id => {
+  fetch(`data/${said(id).read.baked}`).then(r => r.json()).then(data => {
+    views[id] = { data, stats: measure(data) };
+    if (views[view]) show(view);         // the off view reads its motion rows off the on bake
+  }).catch(e => console.warn(`ras: ${id}: ${e.message}`));
+});
+
+function measure(t) {
+  const c = t.chains[t.order[0]], nums = c.nums, n = nums.length;
+  const H = [...c.ss].filter(x => x === 'H').length;
+  const E = [...c.ss].filter(x => x === 'E').length;
+  const segs = 1 + nums.filter((v, i, a) => i && v !== a[i - 1] + 1).length;
+  const declared = t.meta.counts[0].declared;
+  return {
+    pct: declared ? `${n} of ${declared} · ${Math.round(100 * n / declared)}%` : '—',
+    frag: declared === null ? 'no SEQRES records: completeness unknown'
+        : n >= declared ? `complete: ${n} of ${declared} deposited`
+        : `fragment: ${n} of ${declared} deposited; ${nums[n - 1] + 1}-${declared} unmodelled`,
+    span: `${nums[0]}–${nums[n - 1]}`,
+    res: `${n} residues` + (segs > 1 ? ` in ${segs} segments` : ''),
+    frac: `${Math.round(100 * H / n)}% / ${Math.round(100 * E / n)}%`,
+    ext: t.extents.map(v => v.toFixed(0)).join(' × '),
+  };
+}
+
+/* The Mg, for the close-up: read off the pocket, never typed. */
+function mgAt(data) {
+  const a = data.pocket.atoms.find(x => x.group === 'metal');
+  return a ? a.p : [0, 0, 0];
+}
+
+function show(id) {
+  view = id;
+  const on = views[id];
+  if (!on) return;
+  const s = on.stats, m = on.data.meta, mo = m.motion;
+
+  $('d-claim').textContent = SAYS[id].claim;
+  $('d-prov').textContent = SAYS[id].prov;
+  $('d-meta').textContent = `${m.entry} · ${m.method}` +
+    (m.resolution ? ` · ${m.resolution.toFixed(2)} Å` : '');
+  $('d-lig').textContent = `${NAME[m.nucleotide] || m.nucleotide}, ${m.phosphates} phosphates, Mg²⁺`;
+  /* Residues in Ser17 form; the nucleotide by its ligand name. */
+  $('d-mg').textContent = m.mgHeldBy.map(x => x.replace(/^([A-Z]{3})(\d+) (\S+)/, (_, r, n, a) =>
+    r === m.nucleotide ? `${NAME[r].split(' ')[0]} ${a}` : `${r[0]}${r.slice(1).toLowerCase()}${n} ${a}`))
+    .join(', ') + ` + ${m.mgWaters} waters`;
+  $('d-span').textContent = s.span;
+  $('d-res').textContent = s.res;
+  $('d-pct').textContent = s.pct;
+  $('d-frac').textContent = s.frac;
+  $('d-frag').textContent = s.frag + (m.helixAdded ? '. ' + m.helixAdded.map(h =>
+    `${h.name} (${h.from}-${h.to}) added: missing from this file's HELIX records, ` +
+    `measured helical here (Ca i..i+3 ${h.i3[0]}-${h.i3[1]} Å)`).join('; ') : '');
+  $('d-ext').textContent = s.ext;
+
+  /* Residue 12 and the construct's substitutions, off ATOM and SEQADV. */
+  const hot = m.mutations.find(x => /^GLY12/.test(x));
+  $('d-12').textContent = `${AA[m.residue12] || m.residue12}` + (hot ? ` (${sub(hot)}, oncogenic)` : ', wild type');
+  const rest = m.mutations.filter(x => x !== hot).map(sub);
+  $('d-drug').textContent = m.drug
+    ? `${NAME[m.drug]}, bonded to ${m.covalent.map(c => c.replace(/^([A-Z]{3})(\d+) (\S+)–.*$/,
+      (_, r, n, at) => `${AA[r] || r}${n} ${at}`)).join(', ')}` + (rest.length ? `; construct also ${rest.join(' ')}` : '')
+    : 'none';
+
+  /* Each fitted view's motion is against the reference; the reference has no answer, not a zero. */
+  const om = m.motion;
+  const rng = r => `${r[0]}-${r[1]}`;
+  $('d-s1').textContent = om ? `${om.switchI.rms} Å rms · residues ${rng(om.switchI.range)}` : '—';
+  $('d-s2').textContent = om ? `${om.switchII.rms} Å rms · residues ${rng(om.switchII.range)}` : '—';
+  $('d-far').textContent = om ? `${om.furthest.residue}, by ${om.furthest.moved} Å` : '—';
+  $('d-fit').textContent = mo
+    ? `${m.fitOn} · ${m.fitOnWhat} · ${m.fitRmsd} Å` : 'nothing; this is the reference';
+  $('d-view').textContent = on.data.frame + ', shared by both states';
+
+  $('d-rcsb').href = `https://www.rcsb.org/structure/${m.entry}`;
+  $('d-rcsb').textContent = `RCSB ${m.entry}`;
+  $('d-baked').href = `data/${said(id).read.baked}`;
+
+  box.setData(on.data);
+  box.setPocket(on.data.pocket);
+  if (close) box.focus({ at: mgAt(on.data), radius: 12, ghost: 0.75 });
+}
+
+$('site').addEventListener('click', () => {
+  close = !close;
+  $('site').setAttribute('aria-pressed', String(close));
+  const on = views[view];
+  if (!on) return;
+  box.focus(close ? { at: mgAt(on.data), radius: 12, ghost: 0.75 } : null, 600);
+});
+
+$('pick').addEventListener('click', () => {
+  const text = JSON.stringify(box.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  $('pick-note').textContent = text;
+});
+
+IDS.forEach(id => {
+  $('v-' + id).setAttribute('aria-pressed', String(id === view));
+  $('v-' + id).addEventListener('click', () => {
+    IDS.forEach(b => $('v-' + b).setAttribute('aria-pressed', String(b === id)));
+    show(id);
+  });
+});
+</script>
+</body>
+</html>

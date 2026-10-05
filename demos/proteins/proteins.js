@@ -1056,6 +1056,79 @@
         baked: "cytc-3ZCF.json" } },
   ];
 
+  /* RAS: OFF, ON, A MUTANT STUCK ON, AND A MUTANT A DRUG HOLDS OFF. All four
+     are superposed on 4Q21's core with both switches excluded, so what moves
+     between them is the switch loops and the pocket, not the crystal's frame.
+
+     G12V was looked at and passed over: 4EFM is "state 1", Thr35 off the Mg
+     even with GppNHp bound, so beside 5P21 it would confound the mutation
+     with a conformational state. The other G12V files carry a dye (XY2). */
+  const RAS_VARIANTS = [
+    { id: '4Q21', default: true,
+      purpose: 'off: GDP bound, the resting state',
+      species: 'human',
+      section: 'the switch', label: 'off', chip: 'GDP',
+      source: { kind: 'rcsb', id: '4Q21' },
+      chains: 'A', state: 'healthy',
+      /* 1989, and it deposits four HELIX records and omits α5. 5P21 records it
+         at 152-164; prep.js measures it helical in 4Q21's own Ca before adding
+         it, and fails the bake if it is not. */
+      helixAdd: [{ name: '\u03B15', from: 152, to: 164 }],
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 1,
+        residues: 168,
+        declared: 189,
+        ec: null,
+        baked: "ras-4Q21.json" } },
+    { id: '5P21',
+      purpose: 'on: GppNHp, a GTP that cannot be cut, and the switches closed over it',
+      species: 'human',
+      section: 'the switch', label: 'on', chip: 'GppNHp',
+      source: { kind: 'rcsb', id: '5P21' },
+      /* REMARK 350 calls it a dimer; that is a crystal contact, and Ras
+         signals as a monomer. Chain A of the asymmetric unit. */
+      chains: 'A', state: 'healthy',
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 1,
+        residues: 166,
+        declared: 166,
+        ec: null,
+        baked: "ras-5P21.json" } },
+    { id: '1AGP',
+      purpose: 'G12D, an oncogenic mutant, stuck on',
+      species: 'human',
+      section: 'cancer, and a drug', label: 'G12D', chip: 'stuck on',
+      source: { kind: 'rcsb', id: '1AGP' },
+      /* Same state as 5P21: its LINKs put Thr35 on the Mg. Deposits
+         hydrogens, which the pocket drops so every view draws alike. */
+      chains: 'A', state: 'mutant',
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 1,
+        residues: 166,
+        declared: 166,
+        ec: null,
+        baked: "ras-1AGP.json" } },
+    { id: '6OIM',
+      purpose: 'KRAS G12C, held off by sotorasib bonded to its own mutant cysteine',
+      species: 'human',
+      section: 'cancer, and a drug', label: 'G12C + sotorasib', chip: 'locked off',
+      source: { kind: 'rcsb', id: '6OIM' },
+      /* KRAS, not H-Ras: identical numbering over the G domain, so the core
+         fit holds. Cysteine-light construct (C51S/C80L/C118S), read off
+         SEQADV and printed by the bench. */
+      chains: 'A', state: 'mutant',
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 1,
+        residues: 167,
+        declared: 183,
+        ec: null,
+        baked: "ras-6OIM.json" } },
+  ];
+
   const PROTEINS = [
     {
       key: 'atp-synthase', name: 'ATP synthase', dir: 'proteins/atp-synthase',
@@ -2060,6 +2133,30 @@
             baked: "photosystems-5L8R.json" } },
       ],
     },
+    {
+      key: 'ras', name: 'Ras', dir: 'proteins/ras',
+      blurb: 'The switch that tells a cell to divide. GTP turns it on and it '
+           + 'turns itself off by cutting GTP to GDP; a single substitution at '
+           + 'glycine 12 stops the cut, and that is behind about a fifth of '
+           + 'human cancers.',
+      /* No EC on any COMPND here, though Ras is a GTPase: what it is FOR is
+         the state, not the reaction. `switch` was added to DOES for it. */
+      does: 'switch',
+      pipeline: 'trace',
+      fit: { on: '4Q21', by: 'core Ca, switch I and II excluded' },
+      fitWhy: 'states of one switch; fitting on everything would spread the '
+            + 'switch loops across the fold and hide them',
+      view: { by: 'human', shared: true,
+              why: 'globular, so no solved basis is stable; turned on the '
+                 + 'bench, one basis for all four since they share a frame',
+              basis: [[0.8388, -0.0487, -0.5423],
+                      [-0.5338, -0.2698, -0.8014],
+                      [-0.1073, 0.9617, -0.2523]] },
+      surface: { bake: false,
+                 why: 'the claim is two loops moving, which is backbone; the '
+                    + 'drug pocket would earn one if a lesson is about it' },
+      variants: RAS_VARIANTS,
+    },
   ];
 
   const byKey = key => PROTEINS.find(p => p.key === key) || null;
@@ -2249,8 +2346,12 @@
   /* `electron carrier` is cytochrome c's: it catalyses nothing and moves one
      electron between two complexes on its heme's iron. The wishlist reserved
      the word for it. */
+  /* `switch` is Ras's: a protein whose job is to be in one of two states,
+     and be read in the on one. It hydrolyses GTP, but its files name no EC
+     and the reaction is the timer, not the point. */
   const DOES = ['enzyme', 'oxygen carrier', 'unknown', 'structural', 'hormone',
-                'storage', 'reporter', 'recognition', 'electron carrier'];
+                'storage', 'reporter', 'recognition', 'electron carrier',
+                'switch'];
 
   /* HOW A VARIANT DIFFERS FROM THE HEALTHY PROTEIN, where it differs at all.
      Optional: most variants are the same protein under different conditions —
