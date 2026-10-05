@@ -5,9 +5,10 @@
  *
  *  Run:  node proteins/photosystems/tools/prep.js   (offline, no dependencies)
  *
- *  UNDER REVIEW: the candidates live in CANDIDATES below, not in
- *  proteins/proteins.js. Nothing here is registered until the human has
- *  looked at the bench.
+ *  WHAT EACH STRUCTURE IS lives in proteins/proteins.js, under three keys
+ *  (psii, b6f, psi) sharing this folder. What is left in BAKER below is
+ *  how this script reads each file: the COMPND pattern for the core and
+ *  the tag that keeps chain ids apart in the lineup.
  *
  *  BAKED FROM THE OPM COPY, as napump is: OPM solves which way a membrane
  *  protein sits and republishes the coordinates with the normal on z and
@@ -46,18 +47,20 @@ const HERE = path.join(__dirname, '..');
 const SRC = path.join(HERE, 'data', 'src');
 const DATA = path.join(HERE, 'data');
 
+const REG = require('../../proteins.js');
+const IO = require('../../tools/registry-io.js');
+
 /* In electron-flow order, which is also the lineup's left-to-right. */
-const CANDIDATES = [
-  { id: '5XNL', key: 'psii', tag: 'II', name: 'Photosystem II', species: 'pea',
-    core: /PROTEIN D1|D2 PROTEIN|CP47|CP43/,
-    purpose: 'the whole C2S2M2 dimer: two cores ringed by LHCII, OEC on the lumen face' },
-  { id: '7QRM', key: 'b6f', tag: 'b6f', name: 'Cytochrome b6f', species: 'spinach',
-    core: /^CYTOCHROME B6$|SUBUNIT 4$/,
-    purpose: 'the dimer; no antenna, two cytochrome f heads in the lumen' },
-  { id: '5L8R', key: 'psi', tag: 'I', name: 'Photosystem I', species: 'pea',
-    core: /P700/,
-    purpose: 'one core with four LHCI on one flank, Fe-S ridge on the stroma face' },
-];
+const BAKER = {
+  psii: { tag: 'II',  core: /PROTEIN D1|D2 PROTEIN|CP47|CP43/ },
+  b6f:  { tag: 'b6f', core: /^CYTOCHROME B6$|SUBUNIT 4$/ },
+  psi:  { tag: 'I',   core: /P700/ },
+};
+const CANDIDATES = Object.entries(BAKER).map(([key, b]) => {
+  const p = REG.byKey(key), v = REG.defaultOf(p);
+  return Object.assign({ key, id: v.source.id, name: p.name, species: v.species,
+                         purpose: v.purpose }, b);
+});
 
 const EXTRINSIC = 0.6;   // share of a chain's Cα outside the bilayer
 const GAP = 30;          // Å between neighbours in the lineup
@@ -200,7 +203,19 @@ function bake(v) {
       chains: T.order.map(id => ({ chain: id, name: named[id] || null, role: roles[id],
         face: face[id] || null, modelled: T.chains[id].nums.length,
         declared: decl[id] === undefined ? null : decl[id] })),
+      counts: T.order.map(id => ({ chain: id, modelled: T.chains[id].nums.length,
+        declared: decl[id] === undefined ? null : decl[id] })),
+      ec: Bake.ecNumbers(dep)[0] || null,
       ligands: Bake.ligands(dep, null),
+    },
+    read: {
+      method: Bake.method(dep),
+      chainsInFile: Bake.chainCount(dep),
+      residues: all.length,
+      declared: T.order.every(id => decl[id] !== undefined)
+        ? T.order.reduce((k, id) => k + decl[id], 0) : null,
+      ec: Bake.ecNumbers(dep)[0] || null,
+      baked: `photosystems-${v.id}.json`,
     },
   };
 }
@@ -274,6 +289,11 @@ function main() {
     throw new Error(`faces disagree: OEC ${lumen}, cyt f ${cytf}, PsaC ${ridge}`);
   for (const b of bakes) b.meta.lumen = lumen;
 
+  const blocks = {};
+  for (const [k, b] of bakes.entries()) {
+    blocks[CANDIDATES[k].key] = { [b.meta.entry]: b.read };
+    delete b.read;
+  }
   for (const b of bakes) {
     const cof = b.cof;
     delete b.cof;
@@ -296,6 +316,8 @@ function main() {
       (b.meta.membrane ? `bilayer ±${b.meta.membrane.half} A, ` : '') + `${kb} KB`);
   }
   console.log(`lumen is ${lumen}`);
+  const touched = IO.writeMany(blocks);
+  console.log(`registry  proteins.js  ${touched.length} variants updated`);
 }
 
 if (require.main === module) main();

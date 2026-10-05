@@ -276,15 +276,23 @@ function spliceRead(src, id, read) {
 /* write(key, {id: read, …}) — one protein's variants, validated before the
    file is touched. Returns what changed, so a baker can print it. */
 function write(key, blocks) {
-  let { src, lib } = read();
-  const p = lib.byKey(key);
-  if (!p) throw new Error(`registry: no protein '${key}'`);
+  return writeMany({ [key]: blocks });
+}
 
+/* Several proteins in one validated write, for a baker that writes more than
+   one: validating after each would reject the first while the others' read
+   blocks are still empty. */
+function writeMany(byKey) {
+  let { src, lib } = read();
   const touched = [];
-  for (const [id, read_] of Object.entries(blocks)) {
-    if (!lib.variantOf(p, id)) throw new Error(`registry: '${key}' has no variant '${id}'`);
-    src = spliceRead(src, id, read_);
-    touched.push(id);
+  for (const [key, blocks] of Object.entries(byKey)) {
+    const p = lib.byKey(key);
+    if (!p) throw new Error(`registry: no protein '${key}'`);
+    for (const [id, read_] of Object.entries(blocks)) {
+      if (!lib.variantOf(p, id)) throw new Error(`registry: '${key}' has no variant '${id}'`);
+      src = spliceRead(src, id, read_);
+      touched.push(id);
+    }
   }
 
   /* Validate the RESULT, not the input: a splice that produced something the
@@ -306,4 +314,4 @@ if (require.main === module) {
   console.log(`proteins.js ok — ${lib.PROTEINS.length} proteins, ${n} variants`);
 }
 
-module.exports = { FILE, read, parse, common, validate, write, spliceRead, serialise };
+module.exports = { FILE, read, parse, common, validate, write, writeMany, spliceRead, serialise };

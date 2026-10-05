@@ -80,6 +80,17 @@ const { lib } = IO.read();
       again here because a registry can also be edited by hand. */
 for (const m of IO.validate(lib)) say(m);
 
+/* ENTRIES THAT SHARE A FOLDER POOL WHAT THEY CLAIM. The photosystems are the
+   case: three proteins one baker writes, plus a lineup that is all three's.
+   Check 8 asks each folder once, of every claim and `keeps` made in it, or
+   each entry would call the others' bakes stale. */
+const pooled = new Map();
+for (const p of lib.PROTEINS) {
+  if (!pooled.has(p.dir)) pooled.set(p.dir, { claimed: new Set(), keeps: new Set(), last: null });
+  pooled.get(p.dir).last = p.key;
+  for (const f of p.keeps || []) pooled.get(p.dir).keeps.add(f);
+}
+
 for (const p of lib.PROTEINS) {
   const dir = path.join(HERE, '..', p.dir);
   if (!fs.existsSync(dir)) { say(`${p.key}: dir ${p.dir} does not exist`); continue; }
@@ -278,14 +289,17 @@ for (const p of lib.PROTEINS) {
         intermediates a baker slices views out of, a bake measured once and
         not shown. Anything outside both lists is a stale file, and a stale
         bake from a renamed view is one a bench goes on loading. */
-  const keeps = new Set(p.keeps || []);
+  const pool = pooled.get(p.dir);
+  for (const f of claimed) pool.claimed.add(f);
+  if (pool.last !== p.key) continue;
+  const keeps = pool.keeps;
 
   /* Every file this check is about to have an opinion on, asked of git in one
      call: the ones on disk that nothing claims, and the ones `keeps` names
      that are not there. */
   const unclaimed = p.pipeline === 'own' ? [] : onDisk.filter(f =>
     f !== 'src' && !fs.statSync(path.join(data, f)).isDirectory() &&
-    !claimed.has(f) && !keeps.has(f));
+    !pool.claimed.has(f) && !keeps.has(f));
   const missing = [...keeps].filter(f => !onDisk.includes(f));
   const rel = f => path.relative(HERE, path.join(data, f));
   const ignored = gitIgnores([...unclaimed, ...missing].map(rel));

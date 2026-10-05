@@ -1923,6 +1923,109 @@
                     + 'read as side chains and no lesson asks for the shape yet' },
       variants: CYTC_VARIANTS,
     },
+    /* THE LIGHT REACTIONS' THREE MACHINES, chosen off
+       proteins/photosystems/photosystems-test.html. Three proteins, one
+       folder: one baker writes all three because the bench's point is the
+       lineup, all three in OPM's shared membrane frame at one scale, and that
+       bake belongs to none of them alone. check-proteins.js pools what
+       entries sharing a `dir` claim.
+
+       All three are PLANT, chosen over the sharper cyanobacterial structures
+       (3WU2 PSII at 1.9 Å, 1JB0 PSI, 4OGQ b6f) because the lesson is set in
+       a chloroplast: cyanobacterial PSI is a trimer, which no plant has, and
+       3WU2 has no LHCII belt. 3WU2 is the one to come back for if a lesson
+       ever zooms in on the Mn cluster. */
+    {
+      key: 'psii', name: 'Photosystem II', dir: 'proteins/photosystems',
+      blurb: 'The machine that splits water. Light lands on its antenna of '
+           + 'chlorophyll, and the energy is used to pull electrons out of '
+           + 'water, leaving oxygen behind. Every O\u2082 you breathe was made here.',
+      does: 'enzyme',
+      pipeline: 'trace',
+      page: 'photosystems/photosystems-test.html',
+      fitWhy: 'one structure, already in the membrane frame OPM solved',
+      view: { by: 'measured', shared: false,
+              why: 'baked from the OPM copy, so the bilayer normal is the file\u2019s '
+                 + 'own; the bench puts it upright, stroma up' },
+      surface: { bake: false,
+                 why: 'the claim is the antenna around the core, which the ribbon '
+                    + 'coloured by role shows and a skin would bury' },
+      /* The lineup is all three proteins' and is listed once, here. */
+      keeps: ['photosystems-5XNL-cofactors.json', 'photosystems-lineup.json'],
+      variants: [
+        { id: '5XNL', default: true,
+          purpose: 'the whole C2S2M2 dimer: two cores ringed by LHCII, the water-splitting cap on the lumen face',
+          species: 'pea',
+          source: { kind: 'rcsb', id: '5XNL' },
+          read: {
+            method: "electron microscopy",
+            chainsInFile: 56,
+            residues: 9364,
+            declared: 10006,
+            ec: "1.10.3.9",
+            baked: "photosystems-5XNL.json" } },
+      ],
+    },
+    {
+      key: 'b6f', name: 'Cytochrome b6f', dir: 'proteins/photosystems',
+      blurb: 'The middle of the chain, between the two photosystems. It takes '
+           + 'no light: it passes electrons on and uses them to pump protons '
+           + 'into the thylakoid, the gradient ATP synthase runs on.',
+      does: 'enzyme',
+      pipeline: 'trace',
+      page: 'photosystems/photosystems-test.html',
+      fitWhy: 'one structure, already in the membrane frame OPM solved',
+      view: { by: 'measured', shared: false,
+              why: 'baked from the OPM copy, so the bilayer normal is the file\u2019s '
+                 + 'own; the bench puts it upright, stroma up' },
+      surface: { bake: false,
+                 why: 'no surface claim yet; the cytochrome f and Rieske heads '
+                    + 'read as ribbon' },
+      keeps: ['photosystems-7QRM-cofactors.json'],
+      variants: [
+        { id: '7QRM', default: true,
+          purpose: 'the dimer, no antenna, cytochrome f heads in the lumen',
+          species: 'spinach',
+          source: { kind: 'rcsb', id: '7QRM' },
+          read: {
+            method: "electron microscopy",
+            chainsInFile: 16,
+            residues: 1902,
+            declared: 2116,
+            ec: "7.1.1.6",
+            baked: "photosystems-7QRM.json" } },
+      ],
+    },
+    {
+      key: 'psi', name: 'Photosystem I', dir: 'proteins/photosystems',
+      blurb: 'The second light-driven step. It re-energises the electrons '
+           + 'that arrive from b6f and hands them across the membrane to '
+           + 'ferredoxin, on their way to making NADPH.',
+      does: 'enzyme',
+      pipeline: 'trace',
+      page: 'photosystems/photosystems-test.html',
+      fitWhy: 'one structure, already in the membrane frame OPM solved',
+      view: { by: 'measured', shared: false,
+              why: 'baked from the OPM copy, so the bilayer normal is the file\u2019s '
+                 + 'own; the bench puts it upright, stroma up' },
+      surface: { bake: false,
+                 why: 'the claim is the antenna down one flank, which the ribbon '
+                    + 'coloured by role shows and a skin would bury' },
+      keeps: ['photosystems-5L8R-cofactors.json'],
+      variants: [
+        { id: '5L8R', default: true,
+          purpose: 'one core with four LHCI down one flank, the Fe-S ridge on the stroma face',
+          species: 'pea',
+          source: { kind: 'rcsb', id: '5L8R' },
+          read: {
+            method: "x-ray diffraction",
+            chainsInFile: 16,
+            residues: 3230,
+            declared: 3375,
+            ec: "1.97.1.12",
+            baked: "photosystems-5L8R.json" } },
+      ],
+    },
   ];
 
   const byKey = key => PROTEINS.find(p => p.key === key) || null;
