@@ -765,6 +765,7 @@
       section: '4RHV', label: 'the capsid', chip: '240 chains',
       source: { kind: 'rcsb', id: '4RHV' },
       assembly: true,
+      roles: { 1: ['VP1'], 2: ['VP2'], 3: ['VP3'], 4: ['VP4'] },
       read: {
         method: "x-ray diffraction",
         chainsInFile: 240,
@@ -778,6 +779,7 @@
       section: '4RHV', label: 'pentamer', chip: '20 chains',
       source: { kind: 'rcsb', id: '4RHV' },
       assembly: true,
+      roles: { 1: ['VP1'], 2: ['VP2'], 3: ['VP3'], 4: ['VP4'] },
       read: {
         method: "x-ray diffraction",
         chainsInFile: 20,
@@ -791,6 +793,7 @@
       section: '4RHV', label: 'protomer', chip: '4 chains',
       source: { kind: 'rcsb', id: '4RHV' },
       chains: '1,2,3,4',
+      roles: { 1: ['VP1'], 2: ['VP2'], 3: ['VP3'], 4: ['VP4'] },
       read: {
         method: "x-ray diffraction",
         chainsInFile: 4,
@@ -1884,9 +1887,20 @@
       key: 'rhinovirus', name: 'Rhinovirus', dir: 'proteins/rhinovirus',
       blurb: 'The common cold. A shell of 60 identical units around one strand '
            + 'of RNA, and each unit is four proteins cut from one longer chain.',
-      /* A coat, so `structural`. Not `storage`: the shell carries a genome
-         from cell to cell rather than keeping something out of harm's way. */
-      does: 'structural',
+      /* A shell that carries a genome from cell to cell: not `structural`,
+         which holds a cell or tissue up, and not `storage`, which keeps a
+         thing out of harm's way. */
+      does: 'capsid',
+      /* By VP, the picornavirus convention: VP1 blue, VP2 green, VP3 red.
+         VP4 sits inside the shell and takes the odd one out. Keyed by the
+         asymmetric unit's chain in each variant's `roles`; the box paints
+         every `<copy>.<chain>` of the assembly from it. */
+      draw: { byRole: {
+        VP1: 0x2f6fb5,
+        VP2: 0x4a9a58,
+        VP3: 0xc0473a,
+        VP4: 0xc9a227,
+      } },
       pipeline: 'trace',
       fit: null,
       fitWhy: 'three scales of one object, not states of it',
@@ -2411,7 +2425,7 @@
      and the reaction is the timer, not the point. */
   const DOES = ['enzyme', 'oxygen carrier', 'unknown', 'structural', 'hormone',
                 'storage', 'reporter', 'recognition', 'electron carrier',
-                'switch'];
+                'switch', 'capsid'];
 
   /* HOW A VARIANT DIFFERS FROM THE HEALTHY PROTEIN, where it differs at all.
      Optional: most variants are the same protein under different conditions —

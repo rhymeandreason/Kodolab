@@ -121,9 +121,8 @@ const box = Proteinbox.create({
 
 const $ = id => document.getElementById(id);
 
-/* The picornavirus convention: VP1 blue, VP2 green, VP3 red. VP4 is inside
-   the shell and gets the odd one out. */
-const VP_COLORS = { VP1: 0x2f6fb5, VP2: 0x4a9a58, VP3: 0xc0473a, VP4: 0xc9a227 };
+/* The registry's palette, which the gallery card and the stills read too. */
+const VP_COLORS = ME.draw.byRole;
 /* Samples per residue. 48k residues at the parts' 10 is a slow drag. */
 const SUB = { capsid: 4, pentamer: 8, protomer: 10 };
 
@@ -178,8 +177,7 @@ function show(id) {
     `<span><i style="background:#${c.toString(16).padStart(6, '0')}"></i>${k}</span>`).join('') : '';
 
   const opts = { sub: SUB[id] };
-  if (byVP) opts.colors = { byChain: Object.fromEntries(
-    t.order.map(k => [k, VP_COLORS[m.vpOf[k]]])) };
+  if (byVP) opts.colors = ProteinLib.colorsOf(ME, ProteinLib.variantOf(ME, id));
   box.setData(t, opts);
 }
 

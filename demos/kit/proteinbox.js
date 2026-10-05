@@ -685,12 +685,22 @@
        Meshes are found by the `userData.chain` they were tagged with, and
        anywhere under the chain group — a page that has re-parented some of
        them (a subassembly it turns) still gets them all. */
+    /* A CHAIN KEYED `<copy>.<chain>` FALLS BACK TO `<chain>`. A symmetry
+       assembly too big for one-letter ids (a virus capsid, 240 chains) is
+       baked with its copies keyed that way, and a colour for the asymmetric
+       unit's chain is a colour for every copy of it. */
+    function chainPaint(p, cid) {
+      if (!p.byChain || cid == null) return undefined;
+      const k = String(cid);
+      return p.byChain[k] || (k.includes('.') ? p.byChain[k.slice(k.indexOf('.') + 1)] : undefined);
+    }
+
     function setColors(colors) {
       paint = materialsFor(colors);
       chainGroup.traverse(m => {
         const cid = m.userData && m.userData.chain;
         if (cid === undefined || !m.isMesh) return;
-        m.material = (paint.byChain && paint.byChain[cid]) || paint.mats;
+        m.material = chainPaint(paint, cid) || paint.mats;
       });
       box.draw();
     }
@@ -839,7 +849,7 @@
         for (const m of hitRib.meshes) {
           m.visible = true;
           m.userData.gen = mine;
-          m.material = (paint.byChain && paint.byChain[m.userData.chain]) || paint.mats;
+          m.material = chainPaint(paint, m.userData.chain) || paint.mats;
           if (m.parent !== chainGroup) chainGroup.add(m);
         }
         // Re-inserted so the map's order is use order, not first-build order.
@@ -890,7 +900,7 @@
             drawn.push(...pts.map(v => v.clone()));
             const mesh = new THREE.Mesh(
               RibbonLib.build(THREE, pts, seg.ss, { sub: subNow }),
-              (mats.byChain && mats.byChain[cid]) || mats.mats);
+              chainPaint(mats, cid) || mats.mats);
             /* WHICH CHAIN THIS MESH CAME FROM, and nothing more. A page that
                has to move PART of a structure — one subassembly of a machine,
                against the rest of it — cannot otherwise find its meshes: they
@@ -981,7 +991,7 @@
       };
 
       parts.strands.forEach((sd, i) => {
-        const over = paint.byChain && paint.byChain[sd.id];
+        const over = chainPaint(paint, sd.id);
         const mesh = new THREE.Mesh(sd.geo, over ? over[0]
           : naMat('strand:' + i, MolPalette.strands[i % 2 ? 'b' : 'a']));
         mesh.userData.chain = sd.id;
