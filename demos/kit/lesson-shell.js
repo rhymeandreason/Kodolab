@@ -159,8 +159,7 @@
       e.keepOut = () => els.panel.getBoundingClientRect();
     };
     wireStage(els.stage);
-    els.hint.textContent = opts.hint || '';
-    els.hint.hidden = !opts.hint;
+    els.hint.hidden = true;                      // opts.hint is accepted and not shown
 
     const ui = {
       controls(html) { els.controls.innerHTML = html; markLive(els.controls); },
@@ -393,7 +392,8 @@
       els.title.textContent = step.title || '';
       els.body.innerHTML = typeof step.body === 'function' ? step.body(ctx) : (step.body || '');
       els.controls.innerHTML = '';
-      ui.setNext(step.nextLabel || 'Next', i < steps.length - 1);
+      const last = i === steps.length - 1;
+      ui.setNext(last ? 'Start over' : (step.nextLabel || 'Next'), !last || steps.length > 1);
       els.back.disabled = i === 0;
       els.count.textContent = `${i + 1} / ${steps.length}`;
       [...els.progress.children].forEach((b, k) => {
@@ -409,11 +409,11 @@
       /* Guarded: lib/track.js loads only for a browser holding a class code. */
       if (window.Track) Track.step(i, steps.length, step.title);
     }
-    els.next.addEventListener('click', () => goTo(current + 1));
+    els.next.addEventListener('click', () => goTo(current === steps.length - 1 ? 0 : current + 1));
     els.back.addEventListener('click', () => goTo(current - 1));
     const onKey = e => {
       if (e.target.matches('input, textarea, select')) return;
-      if (e.key === 'ArrowRight') { if (!els.next.classList.contains('is-hidden')) goTo(current + 1); }
+      if (e.key === 'ArrowRight') { if (!els.next.classList.contains('is-hidden')) goTo(current + 1); }   // goTo ignores past-the-end, so the arrow never restarts
       if (e.key === 'ArrowLeft') goTo(current - 1);
     };
     window.addEventListener('keydown', onKey);
