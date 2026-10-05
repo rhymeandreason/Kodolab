@@ -17,6 +17,7 @@ node_modules/
 # second source: they carry the membrane orientation, which is the half of
 # that bake nothing here could re-derive from a plain RCSB curl.
 !demos/proteins/napump/data/src/*.pdb
+!demos/proteins/photosystems/data/src/*-opm.pdb
 
 # Not a .pdb and so not covered above: atp-synthase's sources are 21 MB, three
 # of them mmCIF, which is the only format its human structures are published

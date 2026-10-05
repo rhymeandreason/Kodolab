@@ -184,6 +184,8 @@ let showMem = true;
 function drawMembrane(t) {
   memGroup.clear();
   box.group.add(memGroup);
+  /* setData hides every child of the box's group on a switch, this one too. */
+  memGroup.visible = true;
   const m = t.meta.membrane;
   if (!m || !showMem) { box.draw(); return; }
 

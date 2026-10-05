@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Light-reaction machines — bench</title>
+
+<!-- ===================================================================
+     SCRATCH, UNDER REVIEW. Not a lesson. The candidates are prep.js's
+     CANDIDATES table; nothing is in proteins/proteins.js yet.
+
+     WHAT IT IS FOR SETTLING:
+
+       the three        PSII, b6f, PSI from plant depositions, each in
+                        OPM's membrane frame, stroma up.
+       the lineup       all three in one bake, one membrane, one scale,
+                        in electron-flow order. Whether the size ratio is
+                        the picture a lesson wants.
+       the roles        core, antenna, extrinsic, small: two read off
+                        COMPND, one measured against the bilayer. Whether
+                        "the antenna is most of a photosystem" reads at
+                        ribbon width.
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+
+<style>
+  /* Swatches are written by the script from the same table the ribbon uses. */
+  .legend{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0 0 var(--space-3)}
+  .legend span{display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;color:var(--h-muted)}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>Light reactions</h1>
+    <p class="deck">The three membrane machines an electron passes through,
+      from water to NADPH. Plant structures, in the membrane they sit in.</p>
+
+    <h2>structure</h2>
+    <button class="mode" id="v-lineup" aria-pressed="true">
+      <span class="who">all three, one scale</span><span class="chip">lineup</span></button>
+    <button class="mode" id="v-5XNL" aria-pressed="false">
+      <span class="who">Photosystem II &middot; 5XNL</span><span class="chip">PSII</span></button>
+    <button class="mode" id="v-7QRM" aria-pressed="false">
+      <span class="who">Cytochrome b6f &middot; 7QRM</span><span class="chip">b6f</span></button>
+    <button class="mode" id="v-5L8R" aria-pressed="false">
+      <span class="who">Photosystem I &middot; 5L8R</span><span class="chip">PSI</span></button>
+
+    <h2>show</h2>
+    <button class="mode" id="c-role" aria-pressed="true">
+      <span class="who">colour by role</span><span class="chip" id="rolechip">role</span></button>
+    <button class="mode" id="mem" aria-pressed="true">
+      <span class="who">draw the bilayer</span><span class="chip" id="memchip">&plusmn;&mdash;</span></button>
+
+    <h2>what you are looking at</h2>
+    <div class="legend" id="d-legend"></div>
+    <p class="claim" id="d-claim">&mdash;</p>
+    <p class="meta" id="d-meta">&mdash;</p>
+
+    <table id="d-table"></table>
+
+    <p class="note">Core and antenna are read off each chain's COMPND name.
+      Extrinsic is measured: most of the chain's Cα outside OPM's bilayer.
+      Stroma is up. The bilayer planes are OPM's, read from the file.</p>
+
+    <p class="src" id="d-src"></p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const VIEWS = ['lineup', '5XNL', '7QRM', '5L8R'];
+const PHO = MolPalette.photosynthesis;
+
+/* Each machine's own hue, from the palette light-reactions.js draws with, so
+   the bench and the lesson's shapes cannot disagree about which is which. */
+const HUE = { '5XNL': PHO.psii, '7QRM': PHO.b6f, '5L8R': PHO.psi };
+const TAG = { II: '5XNL', b6f: '7QRM', I: '5L8R' };
+const mix = (a, b, t) => {
+  const ch = (c, s) => (c >> s) & 255;
+  return [16, 8, 0].reduce((o, s) => o | (Math.round(ch(a, s) * (1 - t) + ch(b, s) * t) << s), 0);
+};
+const ROLE = {
+  core:      h => h,
+  antenna:   () => PHO.antenna,
+  extrinsic: h => mix(h, 0xffffff, 0.45),
+  small:     h => mix(h, 0xd8d8d8, 0.7),
+};
+const ROLE_LABEL = { core: 'core', antenna: 'antenna (LHC)', extrinsic: 'extrinsic', small: 'small subunits' };
+
+const SAYS = {
+  lineup: 'All three at one scale, in the order an electron visits them. The photosystems are big because of their antennas.',
+  '5XNL': 'PSII as it sits in the membrane: a dimer, each core ringed by light-harvesting proteins, with the water-splitting cap on the lumen face.',
+  '7QRM': 'b6f has no antenna: it takes no light. Its heads in the lumen hand electrons on to plastocyanin.',
+  '5L8R': 'PSI with four light-harvesting proteins down one side, and the iron-sulfur ridge that passes electrons to ferredoxin on the stroma face.',
+};
+
+const box = Proteinbox.create({
+  mount: $('stage'), orbit: true, pad: 1.1, sub: 6,
+  stage: { ortho: false, turn: 'trackball' },
+});
+
+/* STROMA UP, the textbook's way. OPM's normal is on z and the baker measured
+   which sign the lumen is; the view puts the other one upright. */
+function viewOf(t) {
+  const up = t.meta.lumen === '+z' ? [0, 0, -1] : [0, 0, 1];
+  const hint = t.view ? t.view[0] : [1, 0, 0];
+  return FoldLib.basisFrom(up, hint);
+}
+
+const memGroup = new THREE.Group();
+let showMem = true, byRole = true;
+
+function drawMembrane(t) {
+  memGroup.clear();
+  box.group.add(memGroup);
+  /* setData hides every child of the box's group on a switch, this one too. */
+  memGroup.visible = true;
+  const m = t.meta.membrane;
+  if (!m || !showMem) { box.draw(); return; }
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const k of t.order) for (const p of t.chains[k].CA) {
+    x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]);
+    y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+  }
+  const mat = new THREE.MeshBasicMaterial({ color: 0xd8c9a8, transparent: true, opacity: 0.18,
+    side: THREE.DoubleSide, depthWrite: false });
+  const edge = new THREE.LineBasicMaterial({ color: 0xb9a67f, transparent: true, opacity: 0.55 });
+  for (const side of [1, -1]) {
+    const geo = new THREE.PlaneGeometry((x1 - x0) + 60, (y1 - y0) + 60);
+    const plane = new THREE.Mesh(geo, mat);
+    plane.position.set((x0 + x1) / 2, (y0 + y1) / 2, m.mid + side * m.half);
+    memGroup.add(plane);
+    const ring = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edge);
+    ring.position.copy(plane.position);
+    memGroup.add(ring);
+  }
+  box.draw();
+}
+
+const hueOf = (t, chain) => HUE[t.meta.entry] || HUE[TAG[chain.split('.')[0]]];
+
+function colorsFor(t) {
+  if (!byRole) return null;
+  const byChain = {};
+  for (const c of t.meta.chains) byChain[c.chain] = ROLE[c.role](hueOf(t, c.chain));
+  return { byChain };
+}
+
+const hex = n => '#' + n.toString(16).padStart(6, '0');
+
+function legend(t) {
+  const el = $('d-legend');
+  el.innerHTML = '';
+  if (!byRole) return;
+  const seen = new Set();
+  for (const c of t.meta.chains) {
+    const k = c.role + '|' + hueOf(t, c.chain);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const s = document.createElement('span');
+    const name = t.meta.entry === 'lineup' ? ({ II: 'PSII', b6f: 'b6f', I: 'PSI' })[c.chain.split('.')[0]] + ' ' : '';
+    s.innerHTML = `<i style="background:${hex(ROLE[c.role](hueOf(t, c.chain)))}"></i>${name}${ROLE_LABEL[c.role]}`;
+    el.appendChild(s);
+  }
+}
+
+function rows(t) {
+  const m = t.meta, R = [];
+  const count = role => m.chains.filter(c => c.role === role).length;
+  const res = role => m.chains.filter(c => c.role === role).reduce((k, c) => k + c.modelled, 0);
+  const total = m.chains.reduce((k, c) => k + c.modelled, 0);
+  if (m.entry === 'lineup') {
+    for (const p of m.parts) R.push([p.name, `${p.residues} res · ${p.width.toFixed(0)} Å wide`]);
+  } else {
+    R.push(['chains', `${m.chains.length}`]);
+    R.push(['modelled', `${total} residues`]);
+    R.push(['in the membrane', `${m.inMembrane} · ${Math.round(100 * m.inMembrane / m.residues)}%`]);
+    R.push(['bilayer', `±${m.membrane.half} Å`]);
+    R.push(['extents Å', t.extents.map(v => v.toFixed(0)).join(' × ')]);
+  }
+  for (const role of ['core', 'antenna', 'extrinsic', 'small']) if (count(role))
+    R.push([ROLE_LABEL[role], `${count(role)} chains · ${Math.round(100 * res(role) / total)}% of residues`]);
+  if (m.ligands && m.ligands.length) {
+    const pick = m.ligands.filter(l => /^(CLA|CHL|OEX|SF4|PQN|HEM|HEC|FES|PL9|PHO|BCR) /.test(l + ' '));
+    R.push(['cofactors', pick.join(', ') || '—']);
+  }
+  R.push(['frame', t.frame]);
+  return R;
+}
+
+const views = {};
+let view = null;
+window.bench = { views, box, get view() { return view; } };
+
+VIEWS.forEach(id => fetch(`data/photosystems-${id}.json`).then(r => r.json()).then(t => {
+  views[id] = t;
+  if (view === id) show(id);
+}).catch(e => console.warn(`photosystems: ${id} — ${e.message}`)));
+
+function show(id) {
+  view = id;
+  const t = views[id];
+  if (!t) return;
+  const m = t.meta;
+  $('d-claim').textContent = SAYS[id];
+  $('d-meta').textContent = id === 'lineup'
+    ? m.parts.map(p => p.entry).join(' · ')
+    : `${m.entry} · ${m.species} · ${m.method}` + (m.resolution ? ` · ${m.resolution.toFixed(2)} Å` : '');
+  $('d-table').innerHTML = rows(t).map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+  $('memchip').textContent = `±${m.membrane.half} Å`;
+  const ids = id === 'lineup' ? m.parts.map(p => p.entry) : [id];
+  $('d-src').innerHTML = ids.map(e =>
+    `<a href="https://www.rcsb.org/structure/${e}" target="_blank" rel="noopener">RCSB ${e}</a>`).join('') +
+    `<a href="data/photosystems-${id}.json">what this page loads</a>`;
+  legend(t);
+  box.setData(t, { colors: colorsFor(t), view: viewOf(t) });
+  drawMembrane(t);
+}
+
+const press = (pre, on) => VIEWS.forEach(v => $(pre + v).setAttribute('aria-pressed', String(v === on)));
+VIEWS.forEach(id => $('v-' + id).addEventListener('click', () => { press('v-', id); show(id); }));
+$('mem').addEventListener('click', () => {
+  showMem = !showMem;
+  $('mem').setAttribute('aria-pressed', String(showMem));
+  if (views[view]) drawMembrane(views[view]);
+});
+$('c-role').addEventListener('click', () => {
+  byRole = !byRole;
+  $('c-role').setAttribute('aria-pressed', String(byRole));
+  $('rolechip').textContent = byRole ? 'role' : 'ss';
+  if (views[view]) show(view);
+});
+
+show('lineup');
+</script>
+</body>
+</html>
