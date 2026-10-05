@@ -1,0 +1,64 @@
+/* enzyme/enzyme.css: what the enzyme lesson adds to css/lesson-shell.css.
+   The labels pinned to the scene, the amino-acid key, the activity meter and
+   the curves over the temperature and pH sliders. Shell tokens only. */
+
+.enz-canvas { display: block; touch-action: none; cursor: grab; }
+.enz-canvas:active { cursor: grabbing; }
+
+/* ---------- labels pinned to 3D points ---------- */
+.enz-labels { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.enz-label { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity 0.35s ease; will-change: transform; }
+.enz-label.on { opacity: 1; }
+.enz-label .dot {
+  position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 2.5px var(--c), 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.enz-label .stem {
+  position: absolute; left: 0; top: 0; width: 26px; height: 1.5px; background: var(--c); opacity: 0.7;
+  transform-origin: 0 50%; transform: rotate(-45deg);
+}
+.enz-label .enz-tag {
+  position: absolute; left: 16px; bottom: 16px; display: flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+  font-family: var(--display); font-weight: 500; font-size: 13px; letter-spacing: 0.02em; line-height: 1;
+  color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 20px -10px rgba(20, 30, 20, 0.35);
+}
+.enz-label .enz-tag::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.enz-label .enz-tag sub { font-size: 9px; }
+
+/* ---------- panel pieces ---------- */
+.lshell-panel .enz-key { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; font-family: var(--display); font-weight: 500; font-size: 14px; color: var(--ink-2); }
+.lshell-panel .enz-key span { display: flex; align-items: center; gap: 8px; }
+.lshell-panel .enz-key i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
+.lshell-panel .segmented .enz-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 7px; vertical-align: 0; }
+.lshell-panel .segmented .is-on .enz-dot { box-shadow: 0 0 0 1.5px #fff; }
+
+.lshell-panel .stat-value.bump { animation: enz-bump 0.45s ease; }
+@keyframes enz-bump {
+  0% { transform: scale(1); color: var(--accent); }
+  35% { transform: scale(1.12); color: var(--accent); }
+  100% { transform: scale(1); }
+}
+
+.lshell-panel .enz-meter { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.lshell-panel .enz-meter .value { font-size: 22px; }
+.lshell-panel .enz-bar { margin-top: 10px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.lshell-panel .enz-bar i { display: block; height: 100%; border-radius: inherit; transition: width 0.25s ease, background 0.25s ease; }
+.lshell-panel .enz-status { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.lshell-panel .enz-status i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.lshell-panel [data-state="good"] { background: var(--accent); }
+.lshell-panel [data-state="mid"] { background: var(--sun); }
+.lshell-panel [data-state="bad"] { background: #c8423c; }
+
+/* the curve sits over the slider track, inset by half the 20px thumb */
+.lshell-panel .enz-chart { position: relative; height: 52px; margin: 0 10px -6px; }
+.lshell-panel .enz-chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.lshell-panel .enz-chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.lshell-panel .enz-chart .area { fill: var(--accent); opacity: 0.1; }
+.lshell-panel .enz-chart .vline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent); opacity: 0.25; }
+.lshell-panel .enz-chart .mk {
+  position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 3px var(--accent);
+}

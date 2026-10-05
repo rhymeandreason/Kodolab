@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- A short URL would be a vercel.json rewrite, which does not move the file:
+     relative paths resolve against this folder either way. -->
+<base href="/demos/enzyme/">
+<script defer src="/demos/lib/site.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enzymes</title>
+<meta name="description" content="How an enzyme works: folding, the active site, induced fit, catalysis, activation energy, temperature and pH, and inhibition.">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
+<link rel="stylesheet" href="enzyme.css">
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../kit/lesson-shell.js"></script>
+<script src="enzyme-lib.js"></script>
+<script src="enzyme-models.js"></script>
+<script src="enzyme-reactor.js"></script>
+<script src="enzyme.js"></script>
+<script src="enzyme-steps.js"></script>
+<script>
+/* The shell, the Enzyme scene in its stage, and the steps. The scene takes
+   its preset from the step before onEnter builds the controls. */
+const shell = LessonShell.create({
+  brand: 'Enzymes',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: EnzymeSteps.steps,
+  ctx: { offs: [] },
+  onStep(step) { enz.show(step.key, step); },
+});
+
+const enz = Enzyme.mount(shell.stage, { viewOffset: shell.viewOffset });
+shell.ctx.enz = enz;
+
+shell.goTo((() => {
+  const m = /[?&]step=(\d+)/.exec(location.search);
+  return m ? Math.max(1, Math.min(EnzymeSteps.steps.length, +m[1])) - 1 : 0;
+})());
+</script>
+</body>
+</html>
