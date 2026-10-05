@@ -15,7 +15,7 @@
  *  conditions · inhibition. The temperature and pH model lives here, not in
  *  the steps, because the panel's chart and the scene must read one curve.
  *
- *  Loads after three r128, OrbitControls, enzyme-lib.js, enzyme-models.js and
+ *  Loads after three r128, OrbitControls, lib/annotate.js, enzyme-lib.js, enzyme-models.js and
  *  enzyme-reactor.js. Exposes window.Enzyme.
  * ========================================================================== */
 (function (global) {
@@ -283,45 +283,35 @@
     controls.addEventListener('start', () => { fly = null; userMoved = true; });
 
     /* ================= Labels ================= */
-    const labelLayer = document.createElement('div');
-    labelLayer.className = 'enz-labels';
-    labelLayer.setAttribute('aria-hidden', 'true');
-    el.appendChild(labelLayer);
+    /* The house callouts (lib/annotate.js), with the dot and leader in the
+       colour of the thing named. No cards, so no bead in the label. Which
+       labels a step shows is `isOn`; annotate.js does placement, the panel
+       keep-out and the facing fade. */
+    const notes = Annot.create(THREE, el, camera, { mode: 'on' });
+    notes.layer = el.querySelector('.annot-layer');
+    notes.layer.classList.add('enz-notes');
     const labels = [];
-    function label(html, color, getPos, isOn) {
-      const e = document.createElement('div');
-      e.className = 'enz-label';
-      e.style.setProperty('--c', color);
-      e.innerHTML = `<span class="stem"></span><span class="dot"></span><span class="enz-tag"><span>${html}</span></span>`;
-      labelLayer.appendChild(e);
-      const Lb = { el: e, pill: e.querySelector('.enz-tag'), getPos, isOn, html, color };
-      Lb.set = (h, c) => {
-        if (h !== Lb.html) { Lb.html = h; Lb.pill.firstChild.innerHTML = h; }
-        if (c && c !== Lb.color) { Lb.color = c; e.style.setProperty('--c', c); }
+    function label(text, color, getPos, isOn, facing) {
+      const v = new V3();
+      const n = notes.add({ text, at: () => getPos(v), facing, offset: [22, -22] });
+      n.el.style.setProperty('--c', color);
+      const Lb = { n, isOn, text, color };
+      Lb.set = (t, c) => {
+        if (t !== Lb.text) { Lb.text = t; n.set(t); }
+        if (c && c !== Lb.color) { Lb.color = c; n.el.style.setProperty('--c', c); }
       };
       labels.push(Lb);
       return Lb;
     }
-    const lv = new V3();
     function updateLabels() {
-      const { w, h } = size();
-      for (const Lb of labels) {
-        let on = !!Lb.isOn();
-        if (on) {
-          Lb.getPos(lv).project(camera);
-          if (lv.z > 1) on = false;
-          else Lb.el.style.transform = `translate3d(${((lv.x + 1) / 2 * w).toFixed(1)}px, ${((1 - lv.y) / 2 * h).toFixed(1)}px, 0)`;
-        }
-        Lb.el.classList.toggle('on', on);
-      }
+      for (const Lb of labels) Lb.n.el.classList.toggle('enz-off', !Lb.isOn());
+      notes.step();
     }
 
-    const fv = new V3(), fp = new V3(), fc = new V3();
-    function facing(dir, r) {
-      fv.copy(dir).applyQuaternion(enzymeGroup.quaternion);
-      fp.copy(dir).multiplyScalar(r).applyMatrix4(enzymeGroup.matrixWorld);
-      return fv.dot(fc.copy(camera.position).sub(fp).normalize()) > 0.2;
-    }
+    // which way a site faces, in world space, for annotate.js's facing fade
+    const faceP = new V3(), faceQ = new V3();
+    const facesP = () => faceP.copy(E.P).applyQuaternion(enzymeGroup.quaternion);
+    const facesQ = () => faceQ.copy(E.Q).applyQuaternion(enzymeGroup.quaternion);
     const inEnz = (v, x, y, z) => enzymeGroup.localToWorld(v.set(x, y, z));
 
     label('Amino acid', '#9a958b', v => chain.beads[4].getWorldPosition(v),
@@ -330,7 +320,7 @@
       () => cur === 'fold' && fold.t > chain.duration + 0.6);
     const siteL = label('Active site', COLORS.site,
       v => enzymeGroup.localToWorld(v.copy(E.P).multiplyScalar(E.R * 0.98).addScaledVector(E.U, 0.62)),
-      () => (cur === 'site' || cur === 'conditions') && visV.enzyme > 0.8 && facing(E.P, E.R));
+      () => (cur === 'site' || cur === 'conditions') && visV.enzyme > 0.8, facesP);
     label('Enzyme', COLORS.enzymeA, v => enzymeGroup.localToWorld(v.set(0.62, -0.5, 0.62).normalize().multiplyScalar(E.R * 0.97)),
       () => cur === 'site');
     const subL = label('Substrate', COLORS.subA, v => {
@@ -347,13 +337,13 @@
     }, () => cur === 'inhibition' && reactor.shownInhibitor());
     label('Allosteric site', COLORS.alloInh,
       v => enzymeGroup.localToWorld(v.copy(E.Q).multiplyScalar(E.R * 0.95).addScaledVector(E.QU, 0.45)),
-      () => cur === 'inhibition' && reactor.allo.state === 'away' && facing(E.Q, E.R));
+      () => cur === 'inhibition' && reactor.allo.state === 'away', facesQ);
     const ep = energy.points;
     const onEnergy = () => cur === 'energy' && visV.energy > 0.7;
     label('Reactants', COLORS.subA, v => energy.group.localToWorld(v.copy(ep.reactants)), onEnergy);
     label('Products', COLORS.subB, v => energy.group.localToWorld(v.copy(ep.products)), onEnergy);
-    label('E<sub>a</sub> without enzyme', '#7a7366', v => energy.group.localToWorld(v.copy(ep.peakUn)), onEnergy);
-    label('E<sub>a</sub> with enzyme', COLORS.catEdge, v => energy.group.localToWorld(v.copy(ep.peakCat)), onEnergy);
+    label('Eₐ without enzyme', '#7a7366', v => energy.group.localToWorld(v.copy(ep.peakUn)), onEnergy);
+    label('Eₐ with enzyme', COLORS.catEdge, v => energy.group.localToWorld(v.copy(ep.peakCat)), onEnergy);
 
     function updateDynamicLabels() {
       const r = reactor.focus();
@@ -493,7 +483,8 @@
         controls.dispose();
         renderer.dispose();
         canvas.remove();
-        labelLayer.remove();
+        notes.clear();
+        notes.layer.remove();
       },
     };
   }
