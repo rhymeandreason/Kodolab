@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<base href="/demos/proteins/myosin5/">
+<title>Myosin V Structure in 3D — Kodolab</title>
+
+<!-- ===================================================================
+     SCRATCH, UNDER REVIEW. Not in proteins/proteins.js yet.
+
+     WHAT IT IS FOR SETTLING:
+       does the swing read     the lever turns 68 degrees on Pi release
+                               and 12 more on ADP release, measured with
+                               the motor held. Is the second beat visible,
+                               or does it need its own button?
+       tempo                   LEG_MS and HOLD_MS below.
+       how much to say         leg 1 is modelled three ways (another
+                               isoform, placed on actin by fit, lever
+                               carried); the panel says so. Too much?
+
+     The actin is the proteinbox's. The myosin is a live ribbon over the
+     same group: each baked frame is built once by RibbonLib and the frames
+     between are a lerp of vertex arrays, hexokinase/closure-test.html's
+     technique and its reason (a rebuild per frame is ~100 ms here).
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+
+<style>
+  .legend{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0 0 var(--space-3)}
+  .legend span{display:inline-flex;align-items:center;gap:5px;
+    font-size:0.72rem;color:var(--h-muted)}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .notes{margin:0;padding:0 0 0 1.1em}
+  .notes li{font-size:0.78rem;line-height:1.6;color:var(--h-muted);
+    margin:0 0 var(--space-2)}
+  #scrub{width:100%;margin:var(--space-2) 0}
+  .beat{font-size:0.82rem;margin:0 0 var(--space-2);min-height:1.3em}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>Myosin V</h1>
+    <p class="deck">A motor that walks along actin carrying cargo. Each step
+      is a lever swinging on a head that stays bound to the filament, and
+      the swing is paid for by releasing what is left of an ATP.</p>
+
+    <h2>the stroke</h2>
+    <button class="mode" id="play" aria-pressed="false">
+      <span class="who">play the power stroke</span><span class="chip" id="c-whole">&mdash;</span></button>
+    <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="stroke position">
+    <p class="beat" id="beat">&mdash;</p>
+
+    <h2>the three states</h2>
+    <button class="mode" id="k0" aria-pressed="true">
+      <span class="who">pre-stroke, ADP·Pi</span><span class="chip" id="c0">&mdash;</span></button>
+    <button class="mode" id="k1" aria-pressed="false">
+      <span class="who">Pi gone, ADP held</span><span class="chip" id="c1">&mdash;</span></button>
+    <button class="mode" id="k2" aria-pressed="false">
+      <span class="who">rigor, empty</span><span class="chip" id="c2">&mdash;</span></button>
+
+    <div class="legend" id="legend"></div>
+
+    <table>
+      <tr class="hi"><td>Pi release</td><td id="d-pi">&mdash;</td></tr>
+      <tr class="hi"><td>ADP release</td><td id="d-adp">&mdash;</td></tr>
+      <tr><td>lever from</td><td id="d-lever">&mdash;</td></tr>
+      <tr><td>actin fit</td><td id="d-actin">&mdash;</td></tr>
+      <tr><td>4ZG4 placed</td><td id="d-face">&mdash;</td></tr>
+      <tr><td>lever carried</td><td id="d-conv">&mdash;</td></tr>
+      <tr><td>morph check</td><td id="d-check">&mdash;</td></tr>
+    </table>
+
+    <ul class="notes">
+      <li><strong>The second leg is measured.</strong> 7PM6 and 7PLU are one
+        construct, chicken myosin Va on actin, by cryo-EM.</li>
+      <li><strong>The first leg is modelled three ways.</strong> 4ZG4 is
+        human myosin Vc (<span id="d-ident">&mdash;</span> identical), solved
+        without actin; it is placed on the filament by the rigid block that
+        carries its actin face; and its chain stops at the converter, so
+        the lever and light chain past it are 7PM6's, carried rigidly.</li>
+      <li><strong>The in-between frames are interpolated.</strong> The lever
+        turns as a rigid body about where it leaves the motor; every other
+        residue turns with its neighbours. Only the three marked states are
+        structures.</li>
+      <li><strong>One light chain of six.</strong> These constructs carry one
+        IQ motif; myosin V's real lever is about six times longer, which is
+        what turns this swing into a 36 nm step.</li>
+    </ul>
+
+    <button class="mode" id="pick" style="margin-top:12px">copy this view</button>
+    <p class="note" id="pick-note">Turn the molecule, then copy.</p>
+    <p class="src">
+      <a href="https://www.rcsb.org/structure/7PLU" target="_blank" rel="noopener">7PLU</a>
+      <a href="https://www.rcsb.org/structure/7PM6" target="_blank" rel="noopener">7PM6</a>
+      <a href="https://www.rcsb.org/structure/4ZG4" target="_blank" rel="noopener">4ZG4</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const box = Proteinbox.create({
+  mount: $('stage'), orbit: true,
+  stage: { ortho: false, turn: 'trackball' }, pad: 1.1, sub: 10,
+});
+
+/* Motor, lever (converter onward) and the light chain on it: what moves
+   is what is told apart. Actin is present and not the subject. */
+const COL = { M: 0x1f5f4f, V: 0x2b8cd8, L: 0xbfa478, actin: 0x9aa0a6 };
+const NAME = { M: 'motor', V: 'lever', L: 'light chain', actin: 'actin' };
+/* Tempo: the big swing, a beat, the small one, a beat at rigor. */
+const LEG_MS = [1600, 900], HOLD_MS = 700;
+const SUB = 8;
+
+let D = null, X = null;            // meta, Float32Array of frames
+let segs = [];                      // [{lo, hi, mesh, cache:[{pos,nor}]}]
+let pos = 0;                        // 0..frames-1, fractional
+let playing = false, clock = 0;
+window.bench = { box, get pos() { return pos; }, advance, seek, get D() { return D; } };
+
+Promise.all([
+  fetch('data/mv-actin.json').then(r => r.json()),
+  fetch('data/mv-stroke.json').then(r => r.json()),
+  fetch('data/mv-stroke.bin').then(r => r.arrayBuffer()),
+]).then(([actin, meta, bin]) => {
+  D = meta; X = new Float32Array(bin);
+  if (X.length !== D.frames * D.n * 3) throw new Error('mv-stroke.bin does not match its json');
+  /* The box frames on everything the stroke reaches, so the myosin's whole
+     path is drawn into the bake as hidden chains: one per keyframe. */
+  const t = JSON.parse(JSON.stringify(actin)), hide = [];
+  for (const k of D.keys) {
+    const id = 'frame' + k, CA = [], nums = [];
+    for (let i = 0; i < D.n; i++) { const o = (k * D.n + i) * 3; CA.push([X[o], X[o + 1], X[o + 2]]); nums.push(i); }
+    t.order.push(id); hide.push(id);
+    t.chains[id] = { kind: 'aa', first: 0, nums, CA, ss: 'C'.repeat(D.n), helices: 0, strands: 0 };
+  }
+  window.bench.hide = new Set(hide);
+  box.setData(t, { colors: { byChain: Object.fromEntries(actin.order.map(id => [id, COL.actin])) } });
+  paintPanel();
+  buildLive();
+  seek(0);
+  requestAnimationFrame(tick);
+}).catch(e => console.warn('myosin5:', e.message));
+
+function paintPanel() {
+  const s = D.swing, m = D.modelled;
+  $('c-whole').textContent = `${s.whole.deg}°`;
+  $('d-pi').textContent = `${s.pi.deg}° · light chain moves ${s.pi.tip} Å`;
+  $('d-adp').textContent = `${s.adp.deg}° · ${s.adp.tip} Å`;
+  $('d-lever').textContent = `residue ${D.leverFrom}, measured`;
+  $('d-actin').textContent = `7PM6 on 7PLU, ${D.actinFit} Å`;
+  $('d-face').textContent = `${m.faceFit.residues} residues, ${m.faceFit.rmsd} Å`;
+  $('d-conv').textContent = `${D.carried} residues on ${m.converterFit.residues}, ${m.converterFit.rmsd} Å`;
+  $('d-check').textContent = `worst Cα step ${D.check.worstStep} Å · lever ≥ ${D.check.leverToActin} Å from actin`;
+  $('d-ident').textContent = `${Math.round(m.isoformIdentity)}%`;
+  D.states.forEach((st, i) => { $('c' + i).textContent = `${st.id} · ${st.resolution.toFixed(1)} Å`; });
+  $('legend').innerHTML = Object.keys(COL).map(k =>
+    `<span><i style="background:#${COL[k].toString(16).padStart(6, '0')}"></i>${NAME[k]}</span>`).join('');
+}
+
+/* ---- the live ribbon ------------------------------------------------- */
+function framePts(f, lo, hi) {
+  const out = [];
+  for (let i = lo; i <= hi; i++) { const o = (f * D.n + i) * 3; out.push({ x: X[o], y: X[o + 1], z: X[o + 2] }); }
+  return out;
+}
+function buildLive() {
+  const cut = new Set(D.brk);
+  let lo = 0;
+  for (let i = 1; i <= D.n; i++) if (i === D.n || cut.has(i)) {
+    if (i - lo >= 4) segs.push({ lo, hi: i - 1, cache: [] });
+    lo = i;
+  }
+  for (const s of segs) {
+    const ss = D.ss.slice(s.lo, s.hi + 1).split('');
+    let ref = null;
+    for (let f = 0; f < D.frames; f++) {
+      const out = {};
+      const g = RibbonLib.build(THREE, framePts(f, s.lo, s.hi), ss, Object.assign({ sub: SUB, out }, ref ? { ref } : {}));
+      ref = out.frames;
+      const p = g.attributes.position.array, n = g.attributes.normal.array;
+      if (s.cache[0] && s.cache[0].pos.length !== p.length)
+        throw new Error(`ribbon topology changed at frame ${f}, segment ${s.lo}`);
+      s.cache.push({ pos: new Float32Array(p), nor: new Float32Array(n) });
+      if (f === 0) s.geo = g; else g.dispose();
+    }
+    /* Each vertex takes the part of its nearest Ca, once: the topology is
+       the same on every frame, so the colouring is too. */
+    const pts = framePts(0, s.lo, s.hi), p = s.cache[0].pos;
+    const col = new Float32Array(p.length);
+    const tmp = new THREE.Color();
+    for (let v = 0; v < p.length / 3; v++) {
+      let best = Infinity, bi = 0;
+      for (let k = 0; k < pts.length; k++) {
+        const d = (pts[k].x - p[v * 3]) ** 2 + (pts[k].y - p[v * 3 + 1]) ** 2 + (pts[k].z - p[v * 3 + 2]) ** 2;
+        if (d < best) { best = d; bi = k; }
+      }
+      tmp.setHex(COL[D.part[s.lo + bi]]);
+      col[v * 3] = tmp.r; col[v * 3 + 1] = tmp.g; col[v * 3 + 2] = tmp.b;
+    }
+    s.geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const mat = Stage.bondMat(0xffffff);
+    mat.side = THREE.DoubleSide; mat.vertexColors = true;
+    s.mesh = new THREE.Mesh(s.geo, mat);
+    s.mesh.userData.mine = true;
+    box.group.add(s.mesh);
+  }
+}
+
+function apply() {
+  const a = Math.floor(pos), b = Math.min(D.frames - 1, a + 1), m = pos - a;
+  for (const s of segs) {
+    const A = s.cache[a], B = s.cache[b];
+    const P = s.mesh.geometry.attributes.position, Nn = s.mesh.geometry.attributes.normal;
+    for (let i = 0; i < A.pos.length; i++) {
+      P.array[i] = A.pos[i] + (B.pos[i] - A.pos[i]) * m;
+      Nn.array[i] = A.nor[i] + (B.nor[i] - A.nor[i]) * m;
+    }
+    P.needsUpdate = true; Nn.needsUpdate = true;
+  }
+  $('scrub').value = String(Math.round(1000 * pos / (D.frames - 1)));
+  const [k0, k1, k2] = D.keys;
+  const at = (k, tol) => Math.abs(pos - k) < tol;
+  $('beat').textContent = at(k0, 0.5) ? 'ADP·Pi bound, lever cocked.'
+    : pos < k1 - 0.5 ? 'Pi leaves; the lever swings.'
+    : at(k1, 0.5) ? 'ADP still bound, gripping actin tightly.'
+    : pos < k2 - 0.5 ? 'ADP leaves; the lever swings a little further.'
+    : 'Empty and locked on actin, until a new ATP lets go.';
+  D.keys.forEach((k, i) => $('k' + i).setAttribute('aria-pressed', String(at(k, 0.5))));
+  box.draw();
+}
+
+function seek(p) { pos = Math.max(0, Math.min(D.frames - 1, p)); apply(); }
+
+/* The timeline as a function of elapsed ms, so a test can drive it:
+   bench.advance(ms) moves the clock without rAF. */
+function at(ms) {
+  const [k0, k1, k2] = D.keys;
+  const e = t => t * t * (3 - 2 * t);
+  if (ms < LEG_MS[0]) return k0 + (k1 - k0) * e(ms / LEG_MS[0]);
+  ms -= LEG_MS[0];
+  if (ms < HOLD_MS) return k1;
+  ms -= HOLD_MS;
+  if (ms < LEG_MS[1]) return k1 + (k2 - k1) * e(ms / LEG_MS[1]);
+  return null;
+}
+function advance(ms) {
+  if (!playing) return;
+  clock += ms;
+  const p = at(clock);
+  if (p === null) { playing = false; $('play').setAttribute('aria-pressed', 'false'); seek(D.keys[2]); return; }
+  seek(p);
+}
+/* The bake spaces its frames evenly in time; at() eases each leg so it
+   starts and stops at rest. */
+let last = null;
+/* The box's keyframe chains exist only for framing. Hidden on every tick,
+   because the box builds them across several frames and re-shows a cached
+   mesh on a rebuild. */
+function hideFraming() {
+  let hid = false;
+  box.group.traverse(o => { if (o.isMesh && o.visible && window.bench.hide.has(o.userData.chain)) { o.visible = false; hid = true; } });
+  if (hid) box.draw();
+}
+function tick(now) {
+  hideFraming();
+  if (last !== null && playing) advance(now - last);
+  last = now;
+  requestAnimationFrame(tick);
+}
+
+$('play').addEventListener('click', () => {
+  if (!D) return;
+  playing = !playing;
+  $('play').setAttribute('aria-pressed', String(playing));
+  if (playing) { clock = 0; seek(0); }
+});
+$('scrub').addEventListener('input', e => {
+  playing = false; $('play').setAttribute('aria-pressed', 'false');
+  seek(+e.target.value / 1000 * (D.frames - 1));
+});
+[0, 1, 2].forEach(i => $('k' + i).addEventListener('click', () => {
+  playing = false; $('play').setAttribute('aria-pressed', 'false'); seek(D.keys[i]);
+}));
+$('pick').addEventListener('click', () => {
+  const text = JSON.stringify(box.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  $('pick-note').textContent = text;
+});
+</script>
+</body>
+</html>
