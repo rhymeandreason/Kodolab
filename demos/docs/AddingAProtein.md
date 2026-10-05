@@ -38,7 +38,7 @@ One test page, every relevant structure as a ribbon, buttons to switch. Not a le
 
 **`triage.js` answers these; what they COST is below the examples.** Most candidates answer no to all of them, and no to all of them means copy rnase, bake chain A, ship — 1LZ1 is the case, and 1CA2 is one pocket away from it. 2POR is not: triage puts its asymmetric unit at a third of the biological trimer, which is the first row below rather than the third.
 
-* **Is the entry mmCIF-only?** Then stop and say so — see the one below that ends the recipe.
+* **Is the entry mmCIF-only?** Not a blocker: `proteins/cif-lib.js` translates mmCIF into PDB-shaped text `bake-lib.js` already reads. `proteins/atp-synthase/tools/prep.js` is the worked example.
 * **Is there a nucleic-acid chain?** Not a blocker: `naTrace` / `basePairs` / `assembleNA` in `bake-lib.js` and `kit/nucleic.js` are the path, and `proteins/dna`, `proteins/trna`, `proteins/zif268` and `proteins/nucleosome` are the worked examples — duplex, folded single strand, a small mixed protein+DNA file, and the same mixed problem at twenty times the size. A mixed file's own trap is one centre solved over BOTH polymers; `zif268` is where that is written down, and the nucleosome is proof it scales rather than a second mechanism. **Pairing tolerance comes off the file's own `REMARK 2`** — `hbFor(res)` — because an N1···N3 hydrogen bond does not vary but how well a 2.8 Å model knows where the atoms are does, and one tight cutoff drew blunt data as damaged DNA.
 * **Does the entry deposit its biological assembly as MODELS?** *The biological assembly is not what the file's first model holds.*
 * **Is there a chain in the file you are not drawing?** *A partner chain is in the file.*
@@ -60,10 +60,6 @@ One test page, every relevant structure as a ribbon, buttons to switch. Not a le
 **Bake, do not parse the deposition at runtime.** A baker beside the page cuts each source down to what the bench draws and writes it to `data/` as `bake-trace.js`-shaped JSON the box takes directly.
 
 **While the protein is under review its candidates live in the baker**, as a `CANDIDATES` table at the top of `proteins/<name>/tools/prep.js`: id, chains, and one line saying what each is meant to show. Nothing goes into `proteins/proteins.js` yet, because everything in that file is a decision and none has been made. Bake generously here — a candidate that turns out to say nothing is what step 4 is for, and it is cheaper to look at one than to argue about it. **Every example bench above is POST-review and its baker shows it** — hexokinase's `proteins/hexokinase/tools/prep.js` opens `REG.byKey('hexokinase')` and takes its view table out of the registry. Copy the page, not that: yours reads its own `CANDIDATES` until the human has decided.
-
-**One candidate ends the recipe rather than complicating it, and it is invisible until a baker returns nothing.** Say so and stop; it is not a thing to work around beside a bench.
-
-* **A deposition with no legacy `.pdb`.** Every record read here is a PDB record: `HELIX` / `SHEET`, `SEQRES`, `SSBOND`, `MODRES`, `CONECT`, `MODEL`. A structure large enough to be mmCIF-only is also large enough that the bake, the framing and the lesson are all different questions from the ones this file answers.
 
 **Reading the file is `proteins/bake-lib.js`, and a new baker does not re-implement it.** The altloc rule, secondary structure read rather than detected, ss indexed by residue number, `nums` beside `first`, the centring, the solved frame, SEQRES / SSBOND / HETATM — each carries the trap it exists to prevent, and three copies is where those start to drift. What a baker writes for itself is the VIEW table and whatever its protein is about. It composes its own output object from `assemble` and `frameOf` rather than handing off to a shared writer, because the bakes are committed artefacts and a shared writer reorders every one of them the day it changes its mind about a key. Along with the trace, that baker writes a `meta` block holding every figure the panel prints: the declared length off `SEQRES`, the disulfides off `SSBOND`, the ligands off `HETATM`, the model count. A number counted in the baker is re-counted on every re-bake; the same number typed into a panel is not. Chain A unless the assembly is the point, alt-locs blank or `A` only, and the file's own `HELIX` / `SHEET` records ride along. Secondary structure is **read, never detected**: for a lesson about folding, detecting it is inventing the claim.
 
@@ -123,6 +119,7 @@ Each started as a bug that rendered beautifully, and collagen hit eight of them 
 * **The file carries no HELIX or SHEET records, or too few to say anything.** Colour by chain instead. Polyproline II is neither, so no collagen file records any, and the repo default draws a triple helix as one green rope — the braid, the entire subject, disappears. `colors:{byChain:{…}}` is for that, and the page's legend reads the same table the ribbon does. Ask what a reader has to TELL APART on this bench; if the answer is not "what it is folded into", the default palette is wrong for it.
 * **An entry is a fragment or a construct.** Say where it sits on the whole molecule — by matching, never by typing. Six of collagen's seven entries are designed peptides whose 1–30 numbering is construct-local. The baker sequence-matches each against the one entry that is a whole molecule and reports a position or `null`. **Two traps, both of which produced confident wrong answers first:** uniqueness is not enough, because a repeat protein has long runs that happen to occur once (a (Gly-Pro-Hyp)₉ peptide "located" itself in the C-terminal repeat); and LONGEST loses to coincidence (matching 1DZI by length picked a 9-residue run in an unrelated site over the 6 of `GFOGER`, putting the integrin's grip 440 residues from where it is). Score by INFORMATIVE residues instead — the ones outside the repeat's own alphabet — and require at least two.
 * **The field quotes different numbers than the file.** Collagen positions are quoted from the start of the triple-helical domain; 3HR2 numbers from its telopeptide and runs 16 ahead of every number in a paper. Find the offset (look for where Gly-X-Y actually starts), print both numbers, and check the result against something known — `GFOGER` comes out at 502, which is where the literature puts it. Serine proteases and β-lactamases have the same habit, under their own conventions.
+* **The assembly has more chains than a PDB chain column holds** (62 one-character ids). Do not rewrite column 22: trace each model on its own and key its chains `<copy>.<chain>` (`07.1`). The box paints a `<copy>.<chain>` key with `<chain>`'s colour, so one `roles` table on the asymmetric unit's chains colours every copy. `proteins/rhinovirus/` is the case: 60 models, 240 chains, 48k residues, drawn at `sub:4`. A sub-assembly (a pentamer around a five-fold) is FOUND by geometry and asserted, never picked by model number, which is only the depositor's ordering.
 * **The structure is very large or very long.** Nothing is needed from the page; `Proteinbox.fit` lifts `Stage.frame`'s solve limit and the camera's far plane off the radius it measured, and frames per AXIS. It is recorded because it was silent: one collagen molecule is 3016 Å, and clamped it opened showing a tenth of itself, unclamped it stood correctly behind the far plane and drew nothing.
 
 ### What the bench is allowed to SAY
@@ -139,7 +136,7 @@ The numbers on these pages are safe: every one is read from the bake at render t
 
 ## 5. Human reviews the bench
 
-**Hand the bench over and stop.**
+**Hand the bench over and stop.** Hand a link, what each view is for, and what to judge on it. Screenshots from the browser probe tab lag a click (rAF does not run hidden), so confirm a view loaded from the panel's numbers, not a picture.
 
 ## 6. Add selections to the registry
 
@@ -148,6 +145,14 @@ The numbers on these pages are safe: every one is read from the bake at render t
 **Now the protein goes into the registry**, selected set only — which is also what puts it on the gallery at `proteins/index.html`, since that page is nothing but the registry drawn. Move the `CANDIDATES` table out of the baker and into the registry's `variants`, and switch the baker to reading it — a few lines, and the diff is the record of what review decided. From here the registry is the single source for what a structure IS: which entries, which chains, which species, what each variant is for, and which one is the default. **Not what a bench SAYS about it** — that is page copy, written to be read under one particular stage, and it lives on the page in its `SAYS` table.
 
 Then `node proteins/<name>/tools/prep.js` again to write the `read` block back, and the checker for whichever index it went into.
+
+**What `check-proteins.js` asks of a bake**, so the first run passes: `meta.chainsInFile` and `meta.counts` (`[{chain, modelled, declared}]`) on every bake, and nothing in `data/` that is neither a variant's bake nor in the protein's `keeps`. Raw depositions need no `.gitignore` of their own; the root one covers `*.pdb` and `*.pdb1`.
+
+**A colour scheme goes in the registry from the first bake, not on the page.** The gallery card and `proteins/tools/stills.html` call `ProteinLib.colorsOf`, so a palette the bench keeps for itself never reaches the thumbnail. `draw.byRole` on the protein and `roles` on each variant is the shape; the bench reads the same table.
+
+**`does` needs a word before registration.** If none of `DOES` fits, propose one when the bench is handed over, so the review settles it.
+
+**After registration, the human:** bakes the still in `stills.html` (Chrome only) and commits it. A public short URL is a `vercel.json` rewrite plus `tools/seo.js`; `docs/deploy.md`.
 
 **What every field means and who owns it is `proteins/proteins.js`'s own header — read it before editing the file.** The said/read split and why a human never types a number into it, the method vocabulary, the derived URLs, `does`, `pipeline`; `Modules.md`'s row is the field list. None of it is repeated here. What is not in either:
 
