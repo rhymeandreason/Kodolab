@@ -5,6 +5,7 @@
  *  GET /api/log?classes=1     → every teacher's classes, for /beta (build/beta.html)
  *  GET /api/log?class=ID      → that class as api/teacher.js answers its teacher
  *  GET /api/log?apps=1        → every app built, with owner, for /beta
+ *  GET /api/log?feedback=1    → readers' notes (api/feedback.js), for /beta
  *
  *  A LOCAL TOOL. `.vercelignore` keeps this out of production, and this answers
  *  only to a request from the machine it runs on, so the two would both have to
@@ -32,6 +33,18 @@ module.exports = async function handler(req, res) {
   if (!local(req)) return res.status(403).json({ error: 'the log reads only from localhost' });
 
   if (!log.enabled()) return res.status(503).json({ error: 'DATABASE_URL is not set: nothing is logged' });
+
+  if (q.feedback) {
+    try {
+      const feedback = await log.sql()`
+        SELECT id, kind, body, email, page, mailed, created_at FROM feedback
+        ORDER BY created_at DESC LIMIT ${Math.min(Math.max(Number(q.limit) || 500, 1), 2000)}`;
+      return res.status(200).json({ feedback });
+    } catch (err) {
+      console.error('[log] feedback failed:', err.message);
+      return res.status(502).json({ error: err.message });
+    }
+  }
 
   /* Every app anyone built, newest edit first, with its owner resolved to a
      name: build/beta.html's Apps tab. */

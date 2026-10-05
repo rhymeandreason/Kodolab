@@ -9,9 +9,9 @@
  *  bench sits three folders down; a relative src resolves differently in each.
  *
  *  It owns what is true of the whole site and nothing about any one page:
- *  analytics, the four links in the top bar, and the right-hand half of the
- *  document shell's foot. Anything site-wide added later belongs here rather
- *  than in 30 files.
+ *  analytics, the four links in the top bar, the right-hand half of the
+ *  document shell's foot, and the wishlist band and feedback form. Anything
+ *  site-wide added later belongs here rather than in 30 files.
  *
  *  Only body.kodo gets a foot. A lesson on body.lshell-page is a full-window
  *  scene with no bottom edge to hang one from, and Design.md forbids a second
@@ -378,6 +378,12 @@
     x.type = 'button'; x.className = 'iconbtn aboutclose';
     x.innerHTML = '<i class="ph-bold ph-x"></i>'; x.setAttribute('aria-label', 'Close');
     panel.insertAdjacentElement('afterbegin', x);
+    // The one place a full-window lesson can be talked back to.
+    var fb = document.createElement('p');
+    fb.className = 'aboutfb';
+    fb.innerHTML = 'Something off, or a wish for this lesson? <button type="button" class="textbtn" data-feedback="wish">Tell us</button>';
+    panel.appendChild(fb);
+    fb.querySelector('button').addEventListener('click', function () { set(false); });
     function set(open) { panel.hidden = !open; b.setAttribute('aria-expanded', String(open)); }
     b.addEventListener('click', function () { set(panel.hidden); });
     x.addEventListener('click', function () { set(false); });
@@ -391,7 +397,92 @@
     bar.appendChild(b);
   }
 
-  function chrome() { nav(); foot(); about(); }
+  /* THE WISHLIST BAND, above the footer of any page a reader browses, and the
+     door to the feedback form. Not on the tools, the teacher's pages or sign-in:
+     a band asking what to build next is noise to someone mid-task. A page can
+     also opt out with data-nowish on its footer. css/feedback.css is linked
+     here; lib/feedback.js only on the first open. */
+  var NO_WISH = /^\/(build|tools|apps|login|join|teach|beta)(\/|$)/;
+  var WISH_MOL =
+    '<svg class="wb-mol" viewBox="0 0 120 120" aria-hidden="true"><g>' +
+    '<line x1="60" y1="58" x2="60" y2="18"/><line x1="60" y1="58" x2="98" y2="74"/>' +
+    '<line x1="60" y1="58" x2="24" y2="80"/><line x1="24" y1="80" x2="34" y2="108"/>' +
+    '<circle class="a-love"  cx="60" cy="58" r="13" fill="var(--hue-green)"/>' +
+    '<circle class="a-wish"  cx="60" cy="18" r="10" fill="var(--hue-blue)"/>' +
+    '<circle class="a-wrong" cx="98" cy="74" r="10" fill="var(--hue-coral)"/>' +
+    '<circle cx="24" cy="80" r="9" fill="var(--hue-amber)"/>' +
+    '<circle cx="34" cy="108" r="7" fill="var(--hue-violet)"/>' +
+    '</g></svg>';
+  var WISH =
+    '<section class="wishband" aria-labelledby="wb-h">' + WISH_MOL +
+    '<div class="wb-copy"><p class="wb-kick">Feedback</p>' +
+    '<h2 id="wb-h">What should Kodolab build next?</h2>' +
+    '<p>A molecule you want to turn over, a lesson that is missing, a mistake you spotted. Every note is read.</p></div>' +
+    '<div class="wb-chips">' +
+    '<button type="button" data-feedback="wish" style="--wb-hue:var(--hue-blue)"><i></i>I wish it had…</button>' +
+    '<button type="button" data-feedback="wrong" style="--wb-hue:var(--hue-coral)"><i></i>Something’s off</button>' +
+    '<button type="button" data-feedback="love" style="--wb-hue:var(--hue-green)"><i></i>I love this</button>' +
+    '</div></section>';
+
+  function sheet(href) {
+    if (document.querySelector('link[href="' + href + '"]')) return;
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href;
+    document.head.appendChild(l);
+  }
+
+  function wish() {
+    if (NO_WISH.test(place()) || document.body.classList.contains('teach')) return;
+    var f = document.querySelector('footer.sitefoot') ||
+            (!document.body.classList.contains('kodo') && document.querySelector('body > footer'));
+    if (!f || f.hasAttribute('data-nowish') || document.querySelector('.wishband')) return;
+    sheet('/demos/css/feedback.css');
+    // A brand page's footer holds a .wrap at the page's measure; the band sits
+    // in one of its own so it lines up with the content above.
+    if (f.querySelector(':scope > .wrap')) {
+      var w = document.createElement('div');
+      w.className = 'wrap';
+      w.innerHTML = WISH;
+      f.parentNode.insertBefore(w, f);
+    } else f.insertAdjacentHTML('beforebegin', WISH);
+    var band = document.querySelector('.wishband');
+    band.addEventListener('pointerover', function (e) {
+      var b = e.target.closest('[data-feedback]');
+      if (b) band.setAttribute('data-hot', b.getAttribute('data-feedback'));
+    });
+    band.addEventListener('pointerleave', function () { band.removeAttribute('data-hot'); });
+  }
+
+  /* Anything with data-feedback opens the form, on any page, so a lesson's own
+     button or a link in prose needs no script of its own. `#feedback` in the
+     address opens it too, which makes it something to link to. */
+  var fbLoading = null;
+  function feedback(kind) {
+    sheet('/demos/css/feedback.css');
+    if (window.KodoFeedback) return window.KodoFeedback.open(kind);
+    if (!fbLoading) {
+      fbLoading = new Promise(function (ok, no) {
+        var s = document.createElement('script');
+        s.src = '/demos/lib/feedback.js';
+        s.onload = ok; s.onerror = no;
+        document.head.appendChild(s);
+      });
+    }
+    fbLoading.then(function () { window.KodoFeedback.open(kind); }, function () {
+      fbLoading = null;
+      location.href = 'mailto:mary@kodolab.org';
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('[data-feedback]');
+    if (!t) return;
+    e.preventDefault();
+    feedback(t.getAttribute('data-feedback') || 'wish');
+  });
+  function hash() { if (location.hash === '#feedback') feedback('wish'); }
+  window.addEventListener('hashchange', hash);
+
+  function chrome() { nav(); foot(); about(); wish(); hash(); }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', chrome);

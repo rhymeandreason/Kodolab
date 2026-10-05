@@ -10,6 +10,7 @@
  *  personal inbox, and changing provider is a DNS edit under `mail` alone.
  *
  *  `Reply-To` is the apex address, because nobody should reply into a void.
+ *  Feedback overrides it with the reader's own address, so Reply answers them.
  *
  *  FAILS CLOSED, unlike `_limit.js`, and the difference is what the failure
  *  costs. A limit that cannot be counted should not take a lesson away from a
@@ -56,7 +57,7 @@ function enabled() { return !!key(); }
 /* {ok: true} or {error, kind}. `error` is for the log, never for the person: it
    carries the provider's words, which name the address and the account. `kind`
    is Resend's error name, or null when the failure was never theirs to name. */
-async function send({ to, subject, text, html }) {
+async function send({ to, subject, text, html, replyTo }) {
   const k = key();
   if (!k) {
     console.log(`[mail] no RESEND_API_KEY, so nothing was sent.\n  to: ${to}\n  ${subject}\n\n${text}\n`);
@@ -67,7 +68,7 @@ async function send({ to, subject, text, html }) {
     r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + k, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [to], reply_to: REPLY_TO, subject, text, ...(html ? { html } : {}) }),
+      body: JSON.stringify({ from: FROM, to: [to], reply_to: replyTo || REPLY_TO, subject, text, ...(html ? { html } : {}) }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (err) {

@@ -756,7 +756,7 @@ function api(url, req, res) {
   if (url !== '/api/ask' && url !== '/api/log' && url !== '/api/find' &&
       url !== '/api/extend' && url !== '/api/land' &&
       url !== '/api/app' && url !== '/api/build' && url !== '/api/teacher' && url !== '/api/auth' &&
-      url !== '/api/event')
+      url !== '/api/event' && url !== '/api/feedback')
     return json(404, { error: 'no such endpoint' });
 
   // Env and handler are both re-read per request, so pasting a key into
@@ -797,7 +797,7 @@ function api(url, req, res) {
      from the query, which the other three never do. */
   if (url === '/api/find' || url === '/api/extend' || url === '/api/land' ||
       url === '/api/app' || url === '/api/build' || url === '/api/teacher' || url === '/api/auth' ||
-      url === '/api/event') {
+      url === '/api/event' || url === '/api/feedback') {
     const file = 'api' + url.slice(4) + '.js';
     const query = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
     const cap = url === '/api/app' || url === '/api/build' ? 5e5 : 1e5;

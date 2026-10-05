@@ -769,6 +769,7 @@ body.kodo main > section { margin-bottom: clamp(3rem, 6vw, 4.5rem) }
    adds the info button to the bar's right end and the close to the panel. A panel over the scene, so the full-window layout is untouched. */
 .sitenav .aboutbtn { width: 30px; height: 30px; font-size: 18px; align-self: center }
 #lesson-about .aboutclose { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; font-size: 16px }
+#lesson-about .aboutfb { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--border-hair); font-size: var(--text-sm); color: var(--text-dim) }
 #lesson-about {
   /* Above annotate.css's cards (400) and the bar: the lesson is behind it while it is open. */
   position: fixed; top: 60px; right: var(--bar-side); z-index: 500;

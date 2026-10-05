@@ -67,6 +67,7 @@
       <div class="viewtabs" role="group" aria-label="View">
         <button type="button" aria-pressed="true" id="lessonsTab"><i class="ph-bold ph-book-open-text" aria-hidden="true"></i>Lessons<span class="chip" id="sessionCount"></span></button>
         <button type="button" aria-pressed="false" id="appsTab"><i class="ph-bold ph-cube" aria-hidden="true"></i>Apps<span class="chip" id="appCount"></span></button>
+        <button type="button" aria-pressed="false" id="feedbackTab"><i class="ph-bold ph-chat-circle-text" aria-hidden="true"></i>Feedback<span class="chip" id="feedbackCount"></span></button>
       </div>
     </div>
   </header>
@@ -89,6 +90,20 @@
           <table class="sessions">
             <thead><tr><th>App</th><th>Owner</th><th>Cohort</th><th>Created</th><th>Last edit</th><th class="num">Versions</th><th class="num">Turns</th><th class="num">Cost</th></tr></thead>
             <tbody id="apps"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="feedbackView" hidden>
+        <div class="sechead2">
+          <h3>Notes from readers</h3>
+          <span class="spacer"></span>
+          <button class="btn btn--solid" type="button" id="refreshFeedback"><i class="ph-bold ph-arrow-clockwise"></i>Refresh</button>
+        </div>
+        <div class="tablewrap">
+          <table class="sessions">
+            <thead><tr><th>Kind</th><th>Note</th><th>Page</th><th>From</th><th>When</th></tr></thead>
+            <tbody id="feedback"></tbody>
           </table>
         </div>
       </section>
@@ -183,11 +198,11 @@
     $('teacherPick').value = t || '';
     $('classTabs').innerHTML = data.classes.filter(c => c.teacher === t).map(c =>
       `<button type="button" data-id="${esc(c.id)}" aria-pressed="${c.id === classId}">${esc(c.name)}</button>`).join('');
-    $('classBar').hidden = view === 'apps' || !data.classes.length;
-    $('noClass').hidden = view === 'apps' || !!data.classes.length;
+    $('classBar').hidden = view !== 'lessons' || !data.classes.length;
+    $('noClass').hidden = view !== 'lessons' || !!data.classes.length;
     $('classTop').hidden = false;
-    document.querySelector('.dh-main').hidden = view === 'apps' || !classId;
-    $('classView').hidden = view === 'apps' || !classId;
+    document.querySelector('.dh-main').hidden = view !== 'lessons' || !classId;
+    $('classView').hidden = view !== 'lessons' || !classId;
   }
   $('teacherPick').addEventListener('change', () => {
     const c = data.classes.find(c => c.teacher === $('teacherPick').value);
@@ -393,21 +408,40 @@
       <td class="num">${a.turns || 0}</td>
       <td class="num">${a.usd != null ? '$' + Number(a.usd).toFixed(2) : ''}</td></tr>`).join('');
   }
+  /* ---- feedback: lib/feedback.js's form, newest first -------------------- */
+  const KIND = { wrong: 'Off', wish: 'Wish', love: 'Love' };
+  async function loadFeedback() {
+    const { feedback } = await api('?feedback=1');
+    $('feedbackCount').textContent = feedback.length || '';
+    $('feedback').innerHTML = feedback.map(f => `<tr>
+      <td>${esc(KIND[f.kind] || f.kind)}</td>
+      <td style="white-space:pre-wrap;max-width:36rem">${esc(f.body)}</td>
+      <td><a href="${esc(f.page)}" target="_blank" rel="noopener">${esc(f.page)}</a></td>
+      <td>${f.email ? `<a href="mailto:${esc(f.email)}">${esc(f.email)}</a>` : '<span class="dim">anonymous</span>'}${f.mailed ? '' : ' <span class="dim" title="Past the daily mail cap">not mailed</span>'}</td>
+      <td class="dim">${esc(ago(f.created_at))}</td></tr>`).join('');
+  }
   function setView(v) {
     view = v;
     $('lessonsTab').setAttribute('aria-pressed', v === 'lessons');
     $('appsTab').setAttribute('aria-pressed', v === 'apps');
     $('appsView').hidden = v !== 'apps';
+    $('feedbackTab').setAttribute('aria-pressed', v === 'feedback');
+    $('feedbackView').hidden = v !== 'feedback';
     paintClasses();
   }
   $('lessonsTab').addEventListener('click', () => setView('lessons'));
   $('appsTab').addEventListener('click', () => setView('apps'));
+  $('feedbackTab').addEventListener('click', () => setView('feedback'));
+  $('refreshFeedback').addEventListener('click', async () => {
+    const b = $('refreshFeedback'); b.disabled = true;
+    try { await loadFeedback(); } catch (e) {} finally { b.disabled = false; }
+  });
   $('refreshApps').addEventListener('click', async () => {
     const b = $('refreshApps'); b.disabled = true;
     try { await loadApps(); } catch (e) {} finally { b.disabled = false; }
   });
 
-  load().then(() => loadApps()).catch(err => { $('err').textContent = err.message; $('err').hidden = false; });
+  load().then(() => Promise.all([loadApps(), loadFeedback().catch(() => {})])).catch(err => { $('err').textContent = err.message; $('err').hidden = false; });
 })();
 </script>
 </body>

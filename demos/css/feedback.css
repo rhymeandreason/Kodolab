@@ -1,0 +1,159 @@
+/* =============================================================================
+ *  css/feedback.css — the wishlist band above a footer, and the form it opens
+ * =============================================================================
+ *  lib/site.js links this on every page it gives a band to, and the band is
+ *  where the form is usually opened from, so lib/feedback.js adds no sheet of
+ *  its own. Two shells load it (kodo.css pages and the brand pages), so it
+ *  reads brand.css's names, which both import, and inherits each shell's font.
+ * ========================================================================== */
+
+/* ---- the band ------------------------------------------------------------ */
+.wishband {
+  --wb-ink: var(--brand-ink, #14213d);
+  --wb-paper: var(--brand-paper, #faf8f4);
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  margin: clamp(2.5rem, 6vw, 4.5rem) 0 clamp(1.5rem, 3vw, 2.5rem);
+  padding: clamp(1.5rem, 3.5vw, 2.4rem) clamp(1.4rem, 4vw, 3rem);
+  border-radius: 22px;
+  background: var(--wb-ink); color: var(--wb-paper);
+  font-family: inherit; letter-spacing: normal;
+}
+/* A faint field of the five hues behind the copy, so the band reads as a
+   place rather than a banner. */
+.wishband::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .22;
+  background:
+    radial-gradient(260px 160px at 8% 110%, var(--hue-violet, #c084fc), transparent 70%),
+    radial-gradient(300px 180px at 96% -20%, var(--hue-blue, #5aa9ff), transparent 70%);
+}
+.wishband > * { position: relative }
+.wishband .wb-copy { max-width: 34rem }
+.wishband .wb-kick {
+  margin: 0 0 .35rem; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--hue-butter, #ffd166);
+}
+.wishband h2 {
+  margin: 0 0 .4rem; color: inherit;
+  font-family: var(--display, var(--font-display, inherit)); font-weight: 500;
+  font-size: clamp(1.35rem, 2.6vw, 1.9rem); line-height: 1.15; letter-spacing: -.01em;
+}
+.wishband .wb-copy p:last-child { margin: 0; font-size: 15px; line-height: 1.5; opacity: .78 }
+
+.wishband .wb-chips { display: flex; flex-direction: column; gap: .5rem; min-width: 13rem }
+.wishband .wb-chips button,
+.wishband .wb-chips a {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .62rem 1.1rem .62rem .85rem;
+  border: 1.5px solid rgba(var(--brand-paper-t, 250, 248, 244), .22); border-radius: 999px;
+  background: rgba(var(--brand-paper-t, 250, 248, 244), .06); color: inherit;
+  font: inherit; font-size: 15px; font-weight: 500; text-align: left; text-decoration: none;
+  cursor: pointer; transition: background .15s, border-color .15s, transform .25s cubic-bezier(.34, 1.56, .64, 1);
+}
+.wishband .wb-chips button:hover,
+.wishband .wb-chips button:focus-visible {
+  background: rgba(var(--brand-paper-t, 250, 248, 244), .14); border-color: var(--wb-hue); transform: translateX(4px);
+}
+.wishband .wb-chips button:focus-visible { outline: 2px solid var(--wb-hue); outline-offset: 2px }
+.wishband .wb-chips i {
+  flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--wb-hue);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--wb-hue) 25%, transparent);
+}
+.wishband .wb-chips button:first-child {
+  background: var(--wb-paper); color: var(--wb-ink); border-color: var(--wb-paper);
+}
+
+/* The molecule: the wordmark's five hues, bonded. A chip lights its atom. */
+.wishband .wb-mol { width: clamp(84px, 11vw, 132px); height: auto; overflow: visible }
+.wishband .wb-mol line { stroke: rgba(var(--brand-paper-t, 250, 248, 244), .35); stroke-width: 2.5; stroke-linecap: round }
+.wishband .wb-mol circle { transform-box: fill-box; transform-origin: center; transition: transform .35s cubic-bezier(.34, 1.56, .64, 1) }
+.wishband .wb-mol g { animation: wb-float 7s ease-in-out infinite; transform-origin: 60px 60px }
+.wishband[data-hot="wish"]  .wb-mol .a-wish,
+.wishband[data-hot="wrong"] .wb-mol .a-wrong,
+.wishband[data-hot="love"]  .wb-mol .a-love { transform: scale(1.45) }
+@keyframes wb-float { 0%, 100% { transform: rotate(-6deg) } 50% { transform: rotate(6deg) } }
+
+@media (max-width: 760px) {
+  .wishband { grid-template-columns: 1fr; }
+  .wishband .wb-mol { position: absolute; right: 1rem; top: 1rem; width: 70px; opacity: .9 }
+  .wishband .wb-copy { padding-right: 70px }
+  .wishband .wb-chips { min-width: 0 }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wishband .wb-mol g { animation: none }
+  .wishband .wb-chips button { transition: none }
+}
+
+/* ---- the form ------------------------------------------------------------ */
+html.fb-open { overflow: hidden }
+.fb { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px }
+.fb[hidden] { display: none }
+.fb-back {
+  position: absolute; inset: 0; background: rgba(var(--brand-ink-t, 20, 33, 61), .55);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  opacity: 0; transition: opacity .2s;
+}
+.fb-card {
+  --fb-hue: var(--hue-blue, #5aa9ff);
+  position: relative; width: min(520px, 100%); max-height: calc(100vh - 32px); overflow-y: auto;
+  padding: 1.8rem 1.8rem 1.5rem; border-radius: 20px;
+  background: var(--brand-paper, #faf8f4); color: var(--brand-ink, #14213d);
+  box-shadow: 0 40px 100px -30px rgba(var(--brand-ink-t, 20, 33, 61), .6);
+  font-family: inherit; font-size: 16px; line-height: 1.5; text-align: left;
+  opacity: 0; transform: translateY(12px) scale(.98);
+  transition: opacity .2s, transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+.fb.in .fb-back { opacity: 1 }
+.fb.in .fb-card { opacity: 1; transform: none }
+.fb-x {
+  position: absolute; top: 12px; right: 14px; width: 34px; height: 34px; padding: 0;
+  border: 0; border-radius: 50%; background: #fff; color: inherit; font-size: 22px; line-height: 1; cursor: pointer;
+  box-shadow: 0 2px 10px rgba(var(--brand-ink-t, 20, 33, 61), .2);
+}
+.fb h2 {
+  margin: 0 0 .3rem; color: inherit;
+  font-family: var(--display, var(--font-display, inherit)); font-weight: 500; font-size: 1.6rem; line-height: 1.15;
+}
+.fb-deck { margin: 0 0 1.1rem; color: var(--brand-mute, #6b7280); font-size: 15px }
+.fb-kinds { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .8rem }
+.fb-kinds button {
+  display: inline-flex; align-items: center; gap: .45rem; padding: .45rem .9rem .45rem .7rem;
+  border: 1.5px solid var(--brand-rule, #e4e0d7); border-radius: 999px; background: var(--brand-card, #fff);
+  color: inherit; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.fb-kinds button i { width: 9px; height: 9px; border-radius: 50%; background: var(--fb-hue) }
+.fb-kinds button[aria-checked="true"] { border-color: var(--brand-ink, #14213d); background: var(--brand-ink, #14213d); color: var(--brand-paper, #faf8f4) }
+.fb textarea, .fb-email input {
+  display: block; width: 100%; box-sizing: border-box; padding: .7rem .85rem;
+  border: 1.5px solid var(--brand-rule, #e4e0d7); border-radius: 12px; background: var(--brand-card, #fff);
+  color: inherit; font: inherit; font-size: 16px; line-height: 1.45;   /* 16px: iOS zooms on anything smaller */
+}
+.fb textarea { resize: vertical; min-height: 7.5rem }
+.fb textarea:focus, .fb-email input:focus { outline: none; border-color: var(--fb-hue); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fb-hue) 25%, transparent) }
+.fb-email { display: block; margin-top: .75rem }
+.fb-email span { display: block; margin-bottom: .3rem; font-size: 13px; color: var(--brand-mute, #6b7280) }
+.fb-foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.1rem }
+.fb-from { font-size: 12px; color: var(--brand-mute, #6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.fb-send {
+  padding: .65rem 1.5rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--brand-ink, #14213d); color: var(--brand-paper, #faf8f4); font: inherit; font-size: 15px; font-weight: 600;
+}
+.fb-send:disabled { opacity: .5; cursor: progress }
+.fb-status { min-height: 1.2em; margin: .6rem 0 0; font-size: 14px; color: var(--hue-coral, #f26b4e) }
+.fb-status:empty { display: none }
+.fb-hp, .fb-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+.fb-done { text-align: center; padding: .8rem 0 .4rem }
+.fb-done p { margin: 0 auto 1.3rem; max-width: 22rem; color: var(--brand-mute, #6b7280) }
+.fb-burst { position: relative; width: 64px; height: 64px; margin: 0 auto 1rem }
+.fb-burst i { position: absolute; left: 26px; top: 26px; width: 12px; height: 12px; border-radius: 50%; animation: fb-burst .7s cubic-bezier(.22, 1, .36, 1) forwards }
+.fb-burst i:nth-child(1) { background: var(--hue-green, #4ade80);  --x: 0px;    --y: -26px }
+.fb-burst i:nth-child(2) { background: var(--hue-coral, #f26b4e);  --x: 25px;   --y: -8px }
+.fb-burst i:nth-child(3) { background: var(--hue-blue, #5aa9ff);   --x: 15px;   --y: 21px }
+.fb-burst i:nth-child(4) { background: var(--hue-amber, #f7b733);  --x: -15px;  --y: 21px }
+.fb-burst i:nth-child(5) { background: var(--hue-violet, #c084fc); --x: -25px;  --y: -8px }
+@keyframes fb-burst { from { transform: none; opacity: 0 } to { transform: translate(var(--x), var(--y)); opacity: 1 } }
+@media (prefers-reduced-motion: reduce) {
+  .fb-card, .fb-back { transition: none }
+  .fb-burst i { animation: none; transform: translate(var(--x), var(--y)) }
+}

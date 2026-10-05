@@ -449,3 +449,24 @@ ALTER TABLE users ALTER COLUMN google_sub DROP NOT NULL;
 -- because Google's claim and a typed address differ in case. Postgres allows
 -- many nulls, so the pilot's code-only rows are unaffected.
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_key ON users (lower(email));
+
+-- =============================================================================
+--  feedback - what a reader told us from the footer or a lesson's About panel
+-- =============================================================================
+--  api/feedback.js writes it, build/beta.html's Feedback tab reads it. `email`
+--  is the one field a reader may type about themselves, it is optional, and the
+--  form says what it is for. `user_id` is set only when they were signed in.
+--  `mailed` marks the rows that went to the inbox: Resend's free 100 a day is
+--  mostly sign-in's, so past feedback's share a row waits here unread by mail.
+CREATE TABLE IF NOT EXISTS feedback (
+  id          bigserial PRIMARY KEY,
+  kind        text NOT NULL,               -- wrong · wish · love
+  body        text NOT NULL,
+  email       text,
+  page        text NOT NULL,               -- '/respiration', as lib/site.js spells a place
+  user_id     text,
+  visitor_id  uuid,
+  mailed      boolean NOT NULL DEFAULT false,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS feedback_created_idx ON feedback (created_at DESC);
