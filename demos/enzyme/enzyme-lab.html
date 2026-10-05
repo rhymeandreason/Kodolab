@@ -2,13 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- A short URL would be a vercel.json rewrite, which does not move the file:
-     relative paths resolve against this folder either way. -->
+<!-- Served at a short URL by a vercel.json rewrite, which does not move the file:
+     relative paths resolve against this folder either way. lib/site.js is
+     absolute for the same reason. -->
 <base href="/demos/enzyme/">
 <script defer src="/demos/lib/site.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Enzymes</title>
-<meta name="description" content="How an enzyme works: folding, the active site, induced fit, catalysis, activation energy, temperature and pH, and inhibition.">
+<title>How enzymes work</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="How enzymes work, in 3D: a chain folds into an active site, a substrate binds by induced fit, the activation energy drops, and heat, pH and inhibitors switch it off.">
+<link rel="canonical" href="https://www.kodolab.org/enzymes">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/enzymes">
+<meta property="og:title" content="How enzymes work">
+<meta property="og:description" content="How enzymes work, in 3D: a chain folds into an active site, a substrate binds by induced fit, the activation energy drops, and heat, pH and inhibitors switch it off.">
+<meta property="og:image" content="https://www.kodolab.org/demos/media/og/enzymes.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<!-- /seo -->
 <link rel="stylesheet" href="../css/kodo.css">
 <link rel="stylesheet" href="../css/lesson-shell.css">
 <link rel="stylesheet" href="enzyme.css">

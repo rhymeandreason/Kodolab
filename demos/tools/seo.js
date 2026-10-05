@@ -77,6 +77,8 @@ const PAGES = {
     description: 'Fermentation in 3D: where pyruvate goes without oxygen, lactate or ethanol, and why the product is beside the point and NAD+ is not.' },
   '/sickle-cell': {
     description: 'Sickle cell in 3D: one letter changes in the hemoglobin gene, a red cell sickles, a vessel jams, and one copy protects against malaria.' },
+  '/enzymes': { image: 'enzymes',
+    description: 'How enzymes work, in 3D: a chain folds into an active site, a substrate binds by induced fit, the activation energy drops, and heat, pH and inhibitors switch it off.' },
   '/tree': { image: 'massoftree',
     description: "Where a tree's mass comes from: Van Helmont's willow, photosynthesis as traffic in and out of the leaf, and the tree taken apart by origin." },
   '/lessons': { image: 'lessons',

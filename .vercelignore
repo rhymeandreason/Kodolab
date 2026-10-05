@@ -136,3 +136,7 @@ demos/attic/
 # lesson must not do — rendering-modules.md's rule is about what ships, and
 # nothing here does. Neither is linked from a lesson.
 demos/proteins/tools/triage.html
+
+# The enzyme lesson's still bench writes through the dev server's /api/stills,
+# which is not a Vercel function. What it writes deploys; the bench does not.
+demos/enzyme/enzyme-still.html
