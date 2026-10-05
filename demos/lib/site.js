@@ -9,8 +9,8 @@
  *  bench sits three folders down; a relative src resolves differently in each.
  *
  *  It owns what is true of the whole site and nothing about any one page:
- *  analytics, the four links in the top bar, the right-hand half of the
- *  document shell's foot, and the wishlist band and feedback form. Anything
+ *  analytics, the four links in the top bar, a lesson's wordmark menu, the
+ *  right-hand half of the document shell's foot, and the wishlist band and feedback form. Anything
  *  site-wide added later belongs here rather than in 30 files.
  *
  *  Only body.kodo gets a foot. A lesson on body.lshell-page is a full-window
@@ -232,8 +232,9 @@
      what the address bar holds — so the two are reduced to one before the
      patterns above see it. `/demos/proteins/index.html` and `/proteins` both
      come out as `/proteins`, and the front door as ''. */
-  function place() {
-    return location.pathname
+  function place() { return norm(location.pathname); }
+  function norm(path) {
+    return path
       .replace(/\/+$/, '')
       .replace(/^\/demos/, '')
       .replace(/\.html$/, '')
@@ -482,7 +483,111 @@
   function hash() { if (location.hash === '#feedback') feedback('wish'); }
   window.addEventListener('hashchange', hash);
 
-  function chrome() { nav(); foot(); about(); wish(); hash(); }
+  /* THE LESSON MENU. A full-window lesson carries only the wordmark, so the
+     wordmark opens a panel instead of leaving: this unit's lessons, then the
+     site's places. Same slot on both lesson chromes (`.sitenav.floating` and
+     `.lshell-brand`), so it adds nothing to the scene until it is opened. A
+     modifier click still goes home, and in someone else's frame there is no
+     menu, since the mark is not a link there either. */
+  var LM_CSS =
+    '.lmenu{position:relative;display:inline-flex;align-items:baseline;gap:.3em;pointer-events:auto}' +
+    '.lmenu .lm-caret{padding:0 .2em;border:0;background:none;cursor:pointer;color:inherit;font:inherit;line-height:1;opacity:.55}' +
+    '.lmenu .lm-caret::before{content:"";display:inline-block;width:.4em;height:.4em;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-.25em) rotate(45deg);transition:transform .15s}' +
+    '.lmenu .lm-caret:hover,.lmenu.open .lm-caret{opacity:1}' +
+    '.lmenu.open .lm-caret::before{transform:translateY(0) rotate(225deg)}' +
+    '.lm-panel{position:absolute;left:-.75rem;top:calc(100% + .6rem);z-index:40;min-width:15rem;width:max-content;max-height:calc(100vh - 5rem);overflow:auto;padding:.5rem 0;' +
+      'background:var(--surface-card,#fff);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:var(--shadow-panel,0 10px 30px -12px rgba(0,0,0,.45));' +
+      'font:400 14px/1.3 var(--sans,system-ui,sans-serif);letter-spacing:0;text-transform:none;color:var(--text-strong,#222);text-align:left}' +
+    '.lm-panel[hidden]{display:none}' +
+    '.lm-panel .lm-h{margin:0;padding:.55rem 1rem .3rem;font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--text-muted,#6b6b6b)}' +
+    '.lm-panel .lm-h a{color:inherit;text-decoration:none}.lm-panel .lm-h a:hover{color:var(--accent,#c55)}' +
+    '.lm-panel a.lm-i{display:block;padding:.42rem 1rem;color:var(--text-muted,#6b6b6b);text-decoration:none}' +
+    '.lm-panel a.lm-i:hover{color:var(--accent,#c55);background:rgba(0,0,0,.03)}' +
+    '.lm-panel a.lm-i[aria-current="page"]{color:var(--text-strong,#222);font-weight:500;box-shadow:inset 2px 0 0 var(--accent,#c55)}' +
+    '.lm-panel hr{margin:.45rem 0;border:0;border-top:1px solid rgba(0,0,0,.08)}' +
+    '.lm-panel .lm-site{display:flex;white-space:nowrap;padding:0 .4rem}.lm-panel .lm-site a.lm-i{padding:.42rem .6rem}';
+
+  function lessons(cb) {
+    if (window.Lessons && window.LessonUnits) return cb();
+    var s = document.createElement('script');
+    s.src = '/demos/lib/lessons.js';
+    s.onload = cb;
+    document.head.appendChild(s);
+  }
+
+  function lessonMenu() {
+    if (window.top !== window) return;
+    var mark = document.querySelector('.lshell-brand > .mark, .sitenav.floating > .mark');
+    if (!mark || mark.parentNode.querySelector('.sitelinks, .lmenu')) return;
+    if (!document.getElementById('lmenu-css')) {
+      var st = document.createElement('style');
+      st.id = 'lmenu-css'; st.textContent = LM_CSS;
+      document.head.appendChild(st);
+    }
+    var wrap = document.createElement('span');
+    wrap.className = 'lmenu';
+    mark.parentNode.insertBefore(wrap, mark);
+    wrap.appendChild(mark);
+    mark.setAttribute('aria-haspopup', 'true');
+    var caret = document.createElement('button');
+    caret.type = 'button'; caret.className = 'lm-caret';
+    caret.setAttribute('aria-label', 'Site menu'); caret.setAttribute('aria-expanded', 'false');
+    wrap.appendChild(caret);
+    var panel = document.createElement('div');
+    panel.className = 'lm-panel'; panel.hidden = true;
+    wrap.appendChild(panel);
+
+    function item(text, href, current) {
+      var a = document.createElement('a');
+      a.className = 'lm-i'; a.href = href; a.textContent = text;
+      if (current) a.setAttribute('aria-current', 'page');
+      return a;
+    }
+    function fill() {
+      var here = place(), L = window.Lessons || [], U = window.LessonUnits || [];
+      var me = L.filter(function (l) { return l.url && (norm(l.url) === here || (l.file && norm(l.file) === here)); })[0];
+      var unit = me && U.filter(function (u) { return u.key === me.unit; })[0];
+      panel.textContent = '';
+      if (unit) {
+        var h = document.createElement('p'); h.className = 'lm-h';
+        h.appendChild(item(unit.title, '/lessons#' + unit.key)).className = '';
+        panel.appendChild(h);
+        L.forEach(function (l) {
+          if (l.unit === unit.key && l.url && !l.soon) panel.appendChild(item(l.title, l.url, l === me));
+        });
+        panel.appendChild(document.createElement('hr'));
+      }
+      var site = document.createElement('div'); site.className = 'lm-site';
+      site.appendChild(item('Home', '/'));
+      NAV.forEach(function (n) { site.appendChild(item(n.text, n.href, n.at.test(here))); });
+      var user = stored();
+      if (!user) site.appendChild(item('Sign in', '/login'));
+      else {
+        if (user.teacher) site.appendChild(item('Teach', '/teach'));
+        site.appendChild(item('My apps', '/apps'));
+      }
+      panel.appendChild(site);
+    }
+    function open(on) {
+      panel.hidden = !on;
+      wrap.classList.toggle('open', on);
+      caret.setAttribute('aria-expanded', String(on));
+      mark.setAttribute('aria-expanded', String(on));
+    }
+    function toggle(e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+      e.preventDefault();
+      open(panel.hidden);
+    }
+    mark.addEventListener('click', toggle);
+    caret.addEventListener('click', toggle);
+    document.addEventListener('pointerdown', function (e) { if (!panel.hidden && !wrap.contains(e.target)) open(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) { open(false); caret.focus(); } });
+    fill();
+    lessons(fill);
+  }
+
+  function chrome() { nav(); lessonMenu(); foot(); about(); wish(); hash(); }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', chrome);

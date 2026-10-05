@@ -6,6 +6,8 @@
  *  by the teacher dashboard (build/teacher.html: the lesson a class link
  *  opens, and a lesson's name in the sessions table). A row with `soon` has
  *  no page yet; one without `file` is not a lesson a class can be sent to.
+ *  `window.LessonUnits` is the course's units in order, which the shelf draws
+ *  as its spine and lib/site.js's lesson menu names a lesson's unit by.
  * ========================================================================== */
 window.Lessons = [
   { key: 'water',        unit: 'chem',   url: '/water',              file: '/demos/water-lab.html',        title: 'Structure of Water',            blurb: 'Hydrogen bonds, why ice floats, and why salt falls apart in it.', still: '/demos/media/components/watersim.webp', status: 'featured', bare: true },
@@ -27,4 +29,13 @@ window.Lessons = [
   { key: 'dna',          unit: 'gene',   url: '/dna',                file: '/demos/dna-structure.html',    title: 'Structure of DNA',              blurb: 'A helix from real coordinates, part by part.', still: '/demos/proteins/stills/dna.webp', status: 'featured' },
   { key: 'replication',  unit: 'gene',   title: 'DNA Replication',              blurb: 'The fork opens and you copy the template a letter at a time: each nucleotide pairs and joins the backbone in one beat.', soon: true },
   { key: 'division',     unit: 'gene',   title: 'Mitosis & Meiosis',             blurb: 'One cell becomes two identical copies, or four that each carry half. Follow the chromosomes through both.', soon: true },
+];
+
+window.LessonUnits = [
+  { key: 'chem',  n: '01', hue: 'var(--blue)',   title: 'The chemistry of life', why: 'Why water behaves as it does, and how atoms decide what they bond to.' },
+  { key: 'macro', n: '02', hue: 'var(--coral)',  title: 'Proteins',              why: 'A chain that folds, one letter that changes a body, and a gallery of real structures to turn over.' },
+  { key: 'cell',  n: '03', hue: 'var(--amber)',  title: 'The cell',              why: 'What the membrane lets through, and what it costs to push the rest.' },
+  { key: 'energy',n: '04', hue: 'var(--violet)', title: 'Energy',                why: 'One glucose, followed from the cytosol to the last electron. Start with the overview, then open any stage.' },
+  { key: 'plant', n: '05', hue: 'var(--green)',  title: 'Plants',                why: 'Where the mass of a tree comes from, which is not the soil.' },
+  { key: 'gene',  n: '06', hue: 'var(--blue)',   title: 'Genetics',              why: 'The helix, from real coordinates, taken apart.' },
 ];

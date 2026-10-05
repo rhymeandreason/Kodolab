@@ -112,7 +112,7 @@
 
   /* ---- the course: a spine, and a shelf per unit -------------------------- */
   .course { padding: 0 0 5rem; }
-  .unit { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 2.5rem; padding: 2.8rem 0 3.2rem; position: relative; }
+  .unit { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 2.5rem; padding: 2.8rem 0 3.2rem; position: relative; scroll-margin-top: 3rem; }
   /* The spine: one hairline down the left column, a coloured dot per unit on it. */
   .unit::before { content: ''; position: absolute; left: 9px; top: 0; bottom: 0; width: 2px; background: rgba(var(--ink-t), .1); }
   .unit:first-child::before { top: 3.2rem; }
@@ -379,14 +379,7 @@
    to and the one the embed code carries and previews. `simple` names the query
    that gives the lesson's reduced view, where one exists; `bare` says the page
    drops its title bar when framed (lib/embed.js). */
-const UNITS = [
-  { key: 'chem',  n: '01', hue: 'var(--blue)',   title: 'The chemistry of life', why: 'Why water behaves as it does, and how atoms decide what they bond to.' },
-  { key: 'macro', n: '02', hue: 'var(--coral)',  title: 'Proteins',              why: 'A chain that folds, one letter that changes a body, and a gallery of real structures to turn over.' },
-  { key: 'cell',  n: '03', hue: 'var(--amber)',  title: 'The cell',              why: 'What the membrane lets through, and what it costs to push the rest.' },
-  { key: 'energy',n: '04', hue: 'var(--violet)', title: 'Energy',                why: 'One glucose, followed from the cytosol to the last electron. Start with the overview, then open any stage.' },
-  { key: 'plant', n: '05', hue: 'var(--green)',  title: 'Plants',                why: 'Where the mass of a tree comes from, which is not the soil.' },
-  { key: 'gene',  n: '06', hue: 'var(--blue)',   title: 'Genetics',              why: 'The helix, from real coordinates, taken apart.' },
-];
+const UNITS = window.LessonUnits;
 const LESSONS = window.Lessons;
 const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const EMB_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>';
@@ -425,6 +418,9 @@ function card(l, extra = '') {
       <div class="shelf">${shelf}</div>
     </section>`;
   }).join('');
+  // The units are drawn after the browser's own jump to #energy has missed them.
+  const unit = location.hash && document.getElementById(location.hash.slice(1));
+  if (unit) unit.scrollIntoView({ behavior: 'instant' });
 })();
 
 /* ---- the embed sheet: lib/embed-sheet.js ------------------------------------
