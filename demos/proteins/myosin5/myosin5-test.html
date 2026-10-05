@@ -155,21 +155,20 @@ Promise.all([
 ]).then(([actin, meta, bin, nuc]) => {
   D = meta; X = new Float32Array(bin); NUC = nuc;
   if (X.length !== D.frames * D.n * 3) throw new Error('mv-stroke.bin does not match its json');
-  /* The box frames on everything the stroke reaches, so the myosin's whole
-     path is drawn into the bake as hidden chains: one per keyframe. */
-  const t = JSON.parse(JSON.stringify(actin)), hide = [];
-  for (const k of D.keys) {
-    const id = 'frame' + k, CA = [], nums = [];
-    for (let i = 0; i < D.n; i++) { const o = (k * D.n + i) * 3; CA.push([X[o], X[o + 1], X[o + 2]]); nums.push(i); }
-    t.order.push(id); hide.push(id);
-    t.chains[id] = { kind: 'aa', first: 0, nums, CA, ss: 'C'.repeat(D.n), helices: 0, strands: 0 };
-  }
-  window.bench.hide = new Set(hide);
-  box.setData(t, { colors: { byChain: Object.fromEntries(actin.order.map(id => [id, COL.actin])) } });
+  box.setData(actin, { colors: { byChain: Object.fromEntries(actin.order.map(id => [id, COL.actin])) } });
+  /* FRAMED ON EVERYTHING THE STROKE REACHES, not on the actin the box draws:
+     every frame of the myosin plus the filament, as one sphere. focus()
+     takes coordinates in the bake's frame and survives the box's
+     chain-by-chain rebuild. */
+  const pts = [];
+  for (let i = 0; i < X.length; i += 3) pts.push([X[i], X[i + 1], X[i + 2]]);
+  for (const id of actin.order) pts.push(...actin.chains[id].CA);
+  const mid = [0, 1, 2].map(k => pts.reduce((a, p) => a + p[k], 0) / pts.length);
+  const radius = Math.max(...pts.map(p => Math.hypot(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2])));
+  box.focus({ at: mid, radius });
   paintPanel();
   buildLive();
   buildNucleotide();
-  dropFraming();
   seek(0);
   requestAnimationFrame(tick);
 }).catch(e => console.warn('myosin5:', e.message));
@@ -360,16 +359,6 @@ function advance(ms) {
 /* The bake spaces its frames evenly in time; at() eases each leg so it
    starts and stops at rest. */
 let last = null;
-/* The box's keyframe chains exist only for framing. Once the box has
-   built them (across several frames) they are taken out of the group, so
-   nothing can show them again; the framing it solved stays. */
-function dropFraming() {
-  if (box.building) { setTimeout(dropFraming, 50); return; }
-  const gone = [];
-  box.group.traverse(o => { if (o.isMesh && window.bench.hide.has(o.userData.chain)) gone.push(o); });
-  for (const o of gone) o.parent.remove(o);
-  box.draw();
-}
 function tick(now) {
   if (last !== null && playing) advance(now - last);
   last = now;
