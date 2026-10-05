@@ -169,6 +169,7 @@ Promise.all([
   paintPanel();
   buildLive();
   buildNucleotide();
+  dropFraming();
   seek(0);
   requestAnimationFrame(tick);
 }).catch(e => console.warn('myosin5:', e.message));
@@ -306,7 +307,8 @@ function placeNucleotide() {
 
 function apply() {
   placeNucleotide();
-  const a = Math.floor(pos), b = Math.min(D.frames - 1, a + 1), m = pos - a;
+  /* Clamped to what is built: frames past `built` do not exist yet. */
+  const a = Math.min(built - 1, Math.floor(pos)), b = Math.min(built - 1, a + 1), m = pos - a;
   for (const s of segs) {
     const A = s.cache[a], B = s.cache[b];
     const P = s.mesh.geometry.attributes.position, Nn = s.mesh.geometry.attributes.normal;
@@ -358,16 +360,17 @@ function advance(ms) {
 /* The bake spaces its frames evenly in time; at() eases each leg so it
    starts and stops at rest. */
 let last = null;
-/* The box's keyframe chains exist only for framing. Hidden on every tick,
-   because the box builds them across several frames and re-shows a cached
-   mesh on a rebuild. */
-function hideFraming() {
-  let hid = false;
-  box.group.traverse(o => { if (o.isMesh && o.visible && window.bench.hide.has(o.userData.chain)) { o.visible = false; hid = true; } });
-  if (hid) box.draw();
+/* The box's keyframe chains exist only for framing. Once the box has
+   built them (across several frames) they are taken out of the group, so
+   nothing can show them again; the framing it solved stays. */
+function dropFraming() {
+  if (box.building) { setTimeout(dropFraming, 50); return; }
+  const gone = [];
+  box.group.traverse(o => { if (o.isMesh && window.bench.hide.has(o.userData.chain)) gone.push(o); });
+  for (const o of gone) o.parent.remove(o);
+  box.draw();
 }
 function tick(now) {
-  hideFraming();
   if (last !== null && playing) advance(now - last);
   last = now;
   requestAnimationFrame(tick);
