@@ -101,7 +101,7 @@ Every Tier 1 file is x-ray except 1CFD (NMR), every one has legacy `.pdb`, and e
 
 The pairings are the argument. KcsA earns its place *because* napump is already registered — channel against pump, downhill against paid-for, on one bench — in a way it would not earn standing alone. Same for GroEL against prion: folding helped, next to folding gone wrong.
 
-Myosin and kinesin are the second consumer of whatever the ATP synthase rotation became, and neither is worth adding until that machinery has settled and been named. They are no longer the same bet, though: **myosin's second state exists and kinesin's does not.** The *Dictyostelium* motor domain is deposited in three nucleotide states of one construct, all under 2.2 Å, so a lever-arm tween is a matter of choosing two of them. Kinesin's only partners change the composition — a dimer, or the motor on tubulin — so there is nothing to tween against.
+Myosin is built (`myosin5`, above), and its morph is the second consumer that makes `setMorph` owed. Kinesin and myosin were never the same bet, though: **myosin's second state exists and kinesin's does not.** The *Dictyostelium* motor domain is deposited in three nucleotide states of one construct, all under 2.2 Å, so a lever-arm tween is a matter of choosing two of them. Kinesin's only partners change the composition — a dimer, or the motor on tubulin — so there is nothing to tween against.
 
 ## Myosin beyond the motor domain (2026-10-05)
 
@@ -109,15 +109,26 @@ Triaged with `triage.js`. Myosin S1 (Tier 2) stays the cheapest way to show the 
 
 | candidate | id | fills | chains | motion? | file notes | status |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Actomyosin V, on actin** | **7PLU + 7PM6** | the power stroke **on the track**: myosin bound to an actin filament, lever before and after ADP release | 10 each (2 myosin V + 2 ELC + 3 actin + 3 jasplakinolide) | **yes: rigor / strong-ADP, one construct** | chicken myosin Va motor + 1 IQ, rabbit actin; EM 3.2 / 3.0 Å, legacy `.pdb`. Myosin 747/792, actin 372/377. **H, I, J are jasplakinolide**, a cyclic peptide drug that holds the filament still, not protein; drop them. Actin carries **HIC** (methylhistidine) as MODRES: pass `modResidues`. Only one IQ of six, so the lever is a stub; the walk is a caption, the swing is measured | bench under review (`myosin5/`), stroke animated 4ZG4→7PM6→7PLU |
-| **Myosin V motor, crystal** | 1OE9 + 1W7J | the same motor off actin: nucleotide-free vs ADP·BeFₓ | 2 each | yes | chicken, x-ray 2.05 / 2.0 Å, 6 breaks in 1OE9. Sharper than the EM pair and **without the track**, which is the part that teaches | id verified; second to 7PLU |
+| **Actomyosin V, on actin** | **7PLU + 7PM6** | the power stroke **on the track**: myosin bound to an actin filament, lever before and after ADP release | 10 each (2 myosin V + 2 ELC + 3 actin + 3 jasplakinolide) | **yes: rigor / strong-ADP, one construct** | chicken myosin Va motor + 1 IQ, rabbit actin; EM 3.2 / 3.0 Å, legacy `.pdb`. Myosin 747/792, actin 372/377. **H, I, J are jasplakinolide**, a cyclic peptide drug that holds the filament still, not protein; drop them. Actin carries **HIC** (methylhistidine) as MODRES: pass `modResidues`. Only one IQ of six, so the lever is a stub; the walk is a caption, the swing is measured | **Done** (`myosin5`): 7PLU default, 7PM6 fitted by actin, 4ZG4 as deposited; the bench animates 4ZG4→7PM6→7PLU |
+| **Myosin V motor, crystal** | 1OE9 + 1W7J | the same motor off actin: nucleotide-free vs ADP·BeFₓ | 2 each | yes | chicken, x-ray 2.05 / 2.0 Å, 6 breaks in 1OE9. Sharper than the EM pair and **without the track**, which is the part that teaches | not needed: 7PM6/7PLU carry the track. Take only if a lesson wants the head alone at 2 Å |
 | **Full myosin II, switched off** | **7MF3** | the whole molecule, two heads folded back onto their own tail: how smooth muscle stops | 8 (2 heavy, 4 light, 2 tail segments) | **no on-state deposited**; off only | chicken gizzard, EM **3.4 Å**, ADP·Pi in both heads. **Heavy chain modelled 29-949 plus tail 1412-1623 of 1978**: the heads and one fold of the rod, not the whole rod. 6Z47 is the same state at 6.3 Å | id verified, triaged |
 | **Cardiac myosin, off state** | **8ACT** | the same folded-back motif in the **human heart**, the target of mavacamten (approved 2022) | 6 (2 heavy to res 906, 2 ELC, 2 RLC) | no | human β-cardiac, EM 3.6 Å, 95-97% modelled of a **heads + short S2 construct**. **M3L** (trimethyl-lysine) as MODRES | id verified, triaged |
 | **Thick filament, human heart** | 8G4L | the filament: myosin rods packed into a rope, heads on the outside, titin and MyBP-C along it | **123** | no | EM **6.4 Å**, mmCIF only. Coarse but a filament, not an envelope. Price after 7MF3 | id verified |
 
 **Ruled out:** 3JBH, 5TBY, 3J04, 1I84 (20 Å envelopes and homology models: the clathrin reason). 8Q6T (18 Å, in situ).
 
-**Pick.** **7PLU + 7PM6** is the myosin entry to build: the only pair here with both the motion and the track, one construct, ~3 Å. It replaces the S1 row's case for a lever tween. **7MF3** is the second: one molecule doing nothing on purpose, which is a regulation story beside ATCase, and it answers what the rest of myosin II looks like. 8ACT is its human, drug-relevant twin.
+**Built: `myosin5`.** What it found that the next myosin should start from:
+
+* **No myosin V pre-stroke on actin is deposited.** The bench's big swing borrows **4ZG4** (human Vc, off actin, chain stops at the converter at Vc 754), placed by the rigid block carrying its actin face and with 7PM6's lever carried on the converter. Measured with the motor held: Pi release 67.7°, ADP release 12.5°. A deposited pre-stroke on actin replaces all three modelling steps the day one appears.
+* **The lever starts at the converter, residue 693 in Va, measured** off the swing rather than typed. Any myosin morph should find it the same way (`myosin5/tools/prep.js`, `isLever`).
+* **The palette and the word are set**: `does: 'motor'`, myosin deep green, lever azure (atp-synthase's "what turns"), light chain tan, actin grey. 7MF3 and 8ACT should reuse it, with one new tone for the regulatory light chain.
+* **A clean single-construct stroke exists, off actin.** The *Dictyostelium* S1 row in Tier 2 (1VOM ADP·Vi pre-stroke, 1FMW, 1MMD) is one construct in three states, so its stroke needs no isoform or carried-lever caveat. It lacks the track and most of the lever. Worth a variant on `myosin5`'s bench only if the caveats read as too heavy.
+
+**Next: 7MF3**, one molecule doing nothing on purpose: a regulation story beside ATCase, and the answer to what the rest of myosin II looks like. Static, so no morph. **8ACT** is its human, drug-relevant twin (mavacamten holds this state), and the pair is a species/tissue contrast on one motif. 8G4L after both.
+
+### Owed: `Proteinbox.setMorph`
+
+Two pages now hand-build one player: `hexokinase/closure-test.html` and `myosin5/myosin5-test.html` each cache a ribbon per baked keyframe, lerp vertex arrays between them, and colour vertices by nearest residue. Promote it into `kit/proteinbox.js` as `box.setMorph({frames, ss, brk, part, colors})` with `seek(t)`. It would also let the box frame the whole sweep itself (myosin5 passes `focus()` a hand-sized sphere, `FILL`), and give the next two-state protein (CFTR, glycogen phosphorylase, the S1 row) a stroke for free. Cost: a shared-module change, re-testing the closure bench, and moving both pages onto it. Modules.md's rule says promote at the second consumer; this is it.
 
 ## Photosynthesis — the rest of the chain
 
