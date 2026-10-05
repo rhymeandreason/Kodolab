@@ -31,6 +31,21 @@
     ctx.offs.push(off);
   }
 
+  /* The stage scrubber (kit/lesson-stage.js) on the scene's timeline for this
+     step, repainted every frame so it follows playback. */
+  function scrubber(ctx) {
+    const paint = () => {
+      const tl = ctx.enz.timeline();
+      if (!tl) return;
+      ctx.scrub({
+        max: tl.max, value: tl.t, step: 0.01, label: tl.label, playing: tl.playing,
+        onScrub: v => ctx.enz.seek(v), onPlay: () => ctx.enz.togglePlay(),
+      });
+    };
+    ctx.offs.push(ctx.enz.on('frame', paint));
+    paint();
+  }
+
   /* An activity curve over a slider's range, its marker at the current value. */
   function chart(el, x0, x1) {
     el.innerHTML = `
@@ -61,9 +76,8 @@
       cameraAfter: { pos: [1.6, 2.1, 11.6], target: [0, 0, 0] },
       onEnter(ctx) {
         ctx.controls(`
-          <div class="enz-key">${ctx.enz.aaTypes.map((t, i) => `<span><i style="--c:${t.color}"></i>${AA_NAMES[i]}</span>`).join('')}</div>
-          <button class="btn secondary" type="button" id="refold">Replay folding</button>`);
-        ctx.q('#refold').onclick = () => ctx.enz.replayFold(this.camera);
+          <div class="enz-key">${ctx.enz.aaTypes.map((t, i) => `<span><i style="--c:${t.color}"></i>${AA_NAMES[i]}</span>`).join('')}</div>`);
+        scrubber(ctx);
       },
     },
     {
@@ -82,10 +96,9 @@
       camera: { pos: [6.0, 4.6, 8.6], target: [0, 0.3, 0] },
       onEnter(ctx) {
         ctx.controls(`
-          ${segmented('model', [['induced', 'Induced fit'], ['lock', 'Lock and key']], ctx.enz.params.model)}
-          <button class="btn secondary" type="button" id="rebind">Replay binding</button>`);
+          ${segmented('model', [['induced', 'Induced fit'], ['lock', 'Lock and key']], ctx.enz.params.model)}`);
         bindSegmented(ctx, 'model', v => ctx.enz.setModel(v));
-        ctx.q('#rebind').onclick = () => ctx.enz.replayBind();
+        scrubber(ctx);
       },
     },
     {
@@ -189,8 +202,8 @@
     },
   ];
 
-  /* Subscriptions a step makes die with it. */
-  for (const s of steps) s.onExit = ctx => { ctx.offs.forEach(f => f()); ctx.offs = []; };
+  /* Subscriptions and the scrubber a step makes die with it. */
+  for (const s of steps) s.onExit = ctx => { ctx.offs.forEach(f => f()); ctx.offs = []; ctx.scrub(null); };
 
   global.EnzymeSteps = { steps };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

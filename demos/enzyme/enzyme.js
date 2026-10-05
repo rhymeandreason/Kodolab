@@ -173,7 +173,13 @@
 
     /* ================= State ================= */
     let cur = null;
-    const fold = { t: 0, zoomed: false, after: null };
+    /* Fold and binding are the two steps with a timeline the scrubber drives.
+       `paused` is the student's; a timeline past its end keeps running (the
+       folded enzyme sways, the bound substrate holds) and only reads as done. */
+    const FOLD_START = -0.8;                       // a beat of unfolded chain first
+    const fold = { t: FOLD_START, zoomed: false, after: null, paused: false };
+    const FOLD_END = chain.duration + 0.6;         // the "Folded enzyme" label is up
+    const bind = { t: 0, T: 0, paused: false };
     const targets = { enzyme: 1, chain: 0, energy: 0 };
     const visV = { enzyme: 0, chain: 0, energy: 0 };
     const visObj = { enzyme: enzymeGroup, chain: chain.group, energy: energy.group };
@@ -394,7 +400,7 @@
         reactor.reset();
         targets.chain = 1;
         enzOp.target = 0; enzOp.v = 0;
-        fold.t = -1.0; fold.zoomed = false;
+        fold.t = FOLD_START; fold.zoomed = false; fold.paused = false;
         spin = 'fold';
       },
       site() { reactor.reset(); glowTarget = 1; spin = 'sway'; },
@@ -403,6 +409,8 @@
         reactor.rigid = params.model === 'lock';
         reactor.mode = 'bind';
         reactor.driftTarget = 1;
+        reactor.rand = L.rng(99);                  // the same approach every run, so a seek can replay it
+        bind.t = 0; bind.paused = false;
       },
       catalysis() { reactor.mode = 'cycle'; reactor.rate = params.speed; reactor.driftTarget = 1; },
       energy() { reactor.reset(); targets.enzyme = 0; targets.energy = 1; },
@@ -425,7 +433,7 @@
     function tick(dt) {
       time += dt;
       if (cur === 'fold') {
-        fold.t += dt;
+        if (!fold.paused) fold.t += dt;
         chain.setProgress(fold.t);
         const done = fold.t > chain.duration + 0.15;
         enzOp.target = done ? 0.26 : 0;
@@ -443,7 +451,9 @@
       updateFly(dt);
       controls.update();
       updateVis(dt);
-      reactor.update(dt);
+      if (cur === 'binding') {
+        if (!bind.paused) { bind.t += dt; reactor.update(dt); }
+      } else reactor.update(dt);
       updateEnzyme(dt);
       energy.update(dt);
     }
@@ -456,7 +466,25 @@
       renderer.render(scene, camera);
       updateDynamicLabels();
       updateLabels();
+      emit('frame');
     }
+
+    /* How long binding takes, measured off the reactor rather than summed from
+       its phase constants: run it dry once to the hold, then a beat more. */
+    function seekBind(t) {
+      ENTER.binding();
+      bind.paused = true;
+      while (bind.t < t) { bind.t += 1 / 60; reactor.update(1 / 60); }
+    }
+    {
+      ENTER.binding();
+      let n = 0;
+      while (!(reactor.focus() && reactor.focus().phase === 'hold') && n++ < 1200) { bind.t += 1 / 60; reactor.update(1 / 60); }
+      bind.T = bind.t + 0.6;
+      reactor.reset();
+    }
+    const BIND_PHASE = { approach: 'Diffusing in', close: 'Closing around it', hold: 'Bound', bounce: 'Missed' };
+
     layout();
     frame();
 
@@ -468,9 +496,30 @@
       tempF, phF, T_OPT, PH_OPT,
       turnovers: () => reactor.turnovers,
       crossed: () => ({ cat: energy.count, un: energy.countUn }),
-      replayFold(cam) { fold.t = -0.8; fold.zoomed = false; userMoved = false; flyTo(cam, 1.2); },
+      /* The current step's timeline for the scrubber, or null for a step with none. */
+      timeline() {
+        if (cur === 'fold') {
+          const t = clamp(fold.t - FOLD_START, 0, FOLD_END - FOLD_START), max = FOLD_END - FOLD_START;
+          return { t, max, playing: !fold.paused && t < max, label: fold.t < 0 ? 'Unfolded' : fold.t < chain.duration ? 'Folding' : 'Folded' };
+        }
+        if (cur === 'binding') {
+          const t = Math.min(bind.t, bind.T), r = reactor.focus();
+          return { t, max: bind.T, playing: !bind.paused && t < bind.T, label: r ? BIND_PHASE[r.phase] || '' : 'Waiting' };
+        }
+        return null;
+      },
+      seek(v) {
+        if (cur === 'fold') { fold.t = FOLD_START + v; fold.paused = true; if (fold.t < chain.duration) fold.zoomed = false; }
+        if (cur === 'binding') seekBind(v);
+      },
+      togglePlay() {
+        const tl = this.timeline();
+        if (!tl) return;
+        const atEnd = tl.t >= tl.max;
+        if (cur === 'fold') { if (atEnd) { fold.t = FOLD_START; fold.zoomed = false; fold.paused = false; } else fold.paused = !fold.paused; }
+        if (cur === 'binding') { if (atEnd) ENTER.binding(); else bind.paused = !bind.paused; }
+      },
       setModel(m) { params.model = m; if (cur === 'binding') show('binding'); },
-      replayBind() { if (cur === 'binding') ENTER.binding(); },
       setSpeed(s) { params.speed = s; if (cur === 'catalysis') reactor.rate = s; },
       setInhibitor(kind) { params.inhibit = kind; if (cur === 'inhibition') reactor.setInhibit(kind); },
       params,

@@ -138,6 +138,11 @@
     const sPlay = q('[data-k=play]'), sIn = q('input'), sAt = q('span'), sPrev = q('[data-k=prev]'), sNext = q('[data-k=next]');
     let on = {};
     sIn.oninput = () => on.onScrub && on.onScrub(+sIn.value);
+    /* A drag, not focus: the input keeps focus after release, and a focus test
+       left the thumb parked there while playback ran on. */
+    let dragging = false;
+    sIn.addEventListener('pointerdown', () => { dragging = true; });
+    window.addEventListener('pointerup', () => { dragging = false; });
     sPlay.onclick = () => on.onPlay && on.onPlay();
     sPrev.onclick = () => on.onStep && on.onStep(-1);
     sNext.onclick = () => on.onStep && on.onStep(1);
@@ -150,7 +155,7 @@
       on = o;
       sIn.max = o.max;
       sIn.step = o.step || 1;
-      if (document.activeElement !== sIn) sIn.value = o.value;
+      if (!dragging) sIn.value = o.value;
       sIn.style.setProperty('--p', (o.max ? sIn.value / o.max * 100 : 0) + '%');
       sAt.textContent = o.label || '';
       sPlay.textContent = o.playing ? '❚❚' : '▶';
