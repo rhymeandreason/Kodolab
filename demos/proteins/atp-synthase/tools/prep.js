@@ -71,7 +71,7 @@
  *  baked here, and data/src/ is gitignored:
  *
  *    cd proteins/atp-synthase/data/src
- *    for id in 1BMF 1H8E 2WGM; do
+ *    for id in 1BMF 1H8E 2WGM 6FKF; do
  *      curl -O https://files.rcsb.org/download/$id.pdb; done
  *    for id in 8H9S 8H9T 8H9U; do
  *      curl -O https://files.rcsb.org/download/$id.cif.gz; done

@@ -203,6 +203,8 @@
     <h2>the machine</h2>
     <button class="mode" id="v-human" aria-pressed="true">
       <span class="who">human, whole &middot; state 1</span><span class="chip">28 chains</span></button>
+    <button class="mode" id="v-chloroplast" aria-pressed="false">
+      <span class="who">spinach chloroplast, whole</span><span class="chip" data-chip="ring">&mdash;</span></button>
 
     <button class="mode" id="spin" aria-pressed="false">
       <svg viewBox="0 0 12 12" aria-hidden="true">
@@ -382,11 +384,12 @@ const ROLES = ME.draw.byRole;
 const FADE = ME.draw.fade;
 const cand = Object.fromEntries(ME.variants.map(v => [v.id, v]));
 
-const ORDER = ['human', 'head', 'open', 'dp'];
+const ORDER = ['human', 'chloroplast', 'head', 'open', 'dp'];
 const SHOWN = {
   open:  { bake: 'open' },
   dp:    { bake: 'dp' },
   human: { bake: 'human' },
+  chloroplast: { bake: 'chloroplast' },
   /* NOT A SUBSET — the same 28 chains, repainted. Drawing the head alone cut
      it out of the thing that gives it meaning, and left the rotor represented
      by gamma and nothing else, which is a stranger claim than either drawing
@@ -461,6 +464,13 @@ const SAYS = {
         + 'nucleotide and works through the β base instead. About fourteen '
         + 'residues come from β and one arginine reaches in from the '
         + 'neighbouring α — a lone β has a pocket, not chemistry.' },
+  chloroplast: {
+    claim: 'The same machine in a spinach chloroplast, head up in the stroma. '
+         + 'Compare its c-ring with the human one.',
+    prov: 'Each c subunit carries one proton across per turn, and every turn '
+        + 'makes three ATP whatever the ring\'s size. A bigger ring therefore '
+        + 'spends more protons on each ATP. The chloroplast\'s δ is not the '
+        + 'human δ: here it caps the stalk, where the human OSCP sits.' },
   human: {
     claim: 'The whole human enzyme: rotor ring in the membrane, shaft, head, '
          + 'and two tan parts that hold the head still while the shaft turns '
@@ -482,6 +492,8 @@ const UNFITTED = {
       + 'change from.',
   head: 'the same coordinates as the whole-enzyme view, with fewer chains '
       + 'drawn. Nothing is fitted because nothing moved.',
+  chloroplast: 'a different organism, so a state of nothing on this bench. '
+             + 'It shares the human view\'s convention instead: rotation axis up, head on top.',
   human: 'the only whole-enzyme view on the bench. The two structures its '
        + 'rotation was measured against are read by the baker and not kept.',
 };
@@ -587,6 +599,10 @@ ORDER.forEach(id => $('v-' + id).setAttribute('aria-pressed', String(id === OPEN
 function chip(key) {
   const t = views[key];
   const el = $('v-' + key) && $('v-' + key).querySelector('[data-chip="held"]');
+  /* THE RING'S SIZE, counted off the roles the bake carries: the number this
+     variant exists to compare. */
+  const ring = $('v-' + key) && $('v-' + key).querySelector('[data-chip="ring"]');
+  if (ring) ring.textContent = `c${Object.values(t.meta.roles).filter(r => r.subunit === 'c').length} ring`;
   if (el) {
     const held = t.meta.bound;
     el.textContent = held ? held.filter(x => x !== 'MG').join(' + ') || 'Mg only'

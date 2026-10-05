@@ -557,6 +557,39 @@
         declared: 5415,
         ec: null,
         baked: "atp-human.json" } },
+    /* THE SAME MACHINE IN A CHLOROPLAST, and the comparison is the ring: 14 c
+       subunits against the human 8, so more protons pass per turn and per ATP.
+       Not in the `states` group: a different organism is a state of nothing.
+
+       THE GREEK LETTERS DO NOT LINE UP across the two, so roles are by what a
+       subunit does. Chloroplast δ (d) caps the peripheral stalk, where the
+       human OSCP sits; the human δ is in the rotor, doing bacterial ε's job.
+       Chloroplast ε (e) is the rotor's. b and b′ (p) are the stalk. */
+    { id: 'chloroplast',
+      purpose: 'the chloroplast enzyme: a 14-subunit ring where the human one has 8',
+      species: 'spinach',
+      chains: 'A,B,C,D,E,F,g,e,d,b,p,a,G,H,I,J,K,L,M,N,O,P,Q,R,S,T',
+      source: { kind: 'rcsb', id: '6FKF' },
+      roles: {
+              'A': ['head', 'α'], 'C': ['head', 'α'], 'E': ['head', 'α'],
+              'B': ['head', 'β'], 'D': ['head', 'β'], 'F': ['head', 'β'],
+              'g': ['rotor', 'γ'], 'e': ['rotor', 'ε'],
+              'G': ['rotor', 'c'], 'H': ['rotor', 'c'], 'I': ['rotor', 'c'],
+              'J': ['rotor', 'c'], 'K': ['rotor', 'c'], 'L': ['rotor', 'c'],
+              'M': ['rotor', 'c'], 'N': ['rotor', 'c'], 'O': ['rotor', 'c'],
+              'P': ['rotor', 'c'], 'Q': ['rotor', 'c'], 'R': ['rotor', 'c'],
+              'S': ['rotor', 'c'], 'T': ['rotor', 'c'],
+              'd': ['stalk', 'δ'], 'b': ['stalk', 'b'], 'p': ['stalk', 'b′'],
+              'a': ['membrane', 'a'] },
+      axis: { from: 'G,H,I,J,K,L,M,N,O,P,Q,R,S,T', to: 'A,B,C,D,E,F' },
+      site: { take: ['ADP', 'ATP', 'MG'] },
+      read: {
+        method: "electron microscopy",
+        chainsInFile: 26,
+        residues: 5198,
+        declared: 5557,
+        ec: "7.1.2.2",
+        baked: "atp-chloroplast.json" } },
   ];
 
 
@@ -1028,7 +1061,8 @@
       key: 'atp-synthase', name: 'ATP synthase', dir: 'proteins/atp-synthase',
       story: 'proteins/atp-synthase/atp-synthase-story.html',
       blurb: 'The enzyme that makes ATP, built into the inner membrane of the '
-           + 'mitochondrion. Protons falling across the membrane spin its rotor '
+           + 'mitochondrion and the thylakoid membrane of the chloroplast. '
+           + 'Protons falling across the membrane spin its rotor '
            + 'about a hundred times a second, and each turn assembles ATP from '
            + 'ADP and phosphate.',
       does: 'enzyme',
