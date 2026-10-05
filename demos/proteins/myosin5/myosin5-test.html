@@ -164,7 +164,11 @@ Promise.all([
   for (let i = 0; i < X.length; i += 3) pts.push([X[i], X[i + 1], X[i + 2]]);
   for (const id of actin.order) pts.push(...actin.chains[id].CA);
   const mid = [0, 1, 2].map(k => pts.reduce((a, p) => a + p[k], 0) / pts.length);
-  const radius = Math.max(...pts.map(p => Math.hypot(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2])));
+  /* A sphere over the whole sweep frames for the worst turn the reader could
+     give it, which leaves the usual view small. FILL trades that margin for
+     size: below 1 a far corner of the sweep can touch the edge on some turns. */
+  const FILL = 0.78;
+  const radius = FILL * Math.max(...pts.map(p => Math.hypot(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2])));
   box.focus({ at: mid, radius });
   paintPanel();
   buildLive();
