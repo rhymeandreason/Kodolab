@@ -1060,8 +1060,15 @@
       if (!stillRaw.length) return;
       const q = chainGroup.quaternion;
       stillPts = stillRaw.map(v => v.clone().applyQuaternion(q));
-      stillMid = stillPts.reduce((acc, p) => acc.add(p), new THREE.Vector3())
-                         .multiplyScalar(1 / stillPts.length);
+      /* THE MIDDLE OF THE OUTLINE, NOT THE CENTRE OF MASS. A lopsided
+         structure (myosin's heavy head on actin, a thin lever hanging below)
+         has its centroid near the heavy end, so centring there pushes the
+         picture off to the light side and the per-axis fit then shrinks it
+         to keep the far end in. The box's midpoint centres what is seen. */
+      const lo = new THREE.Vector3(Infinity, Infinity, Infinity);
+      const hi = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+      for (const p of stillPts) { lo.min(p); hi.max(p); }
+      stillMid = lo.add(hi).multiplyScalar(0.5);
       stillR = stillHX = stillHY = 0;
       for (const p of stillPts) {
         stillR = Math.max(stillR, p.distanceTo(stillMid));
