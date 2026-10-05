@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -25,22 +25,11 @@
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"LearningResource","name":"The structure of water, and why it is such a good solvent","description":"The structure of water in 3D: hydrogen bonds, why ice floats, what temperature does to the liquid, and why salt dissolves in it.","url":"https://www.kodolab.org/water","learningResourceType":"interactive simulation","educationalLevel":"college","isAccessibleForFree":true,"teaches":["A polar molecule","Hydrogen bonds","Specific heat","Why ice floats","The universal solvent"],"provider":{"@type":"Organization","name":"Kodolab","url":"https://www.kodolab.org"}}</script>
 <!-- /seo -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
-<link rel="stylesheet" href="css/kodo.css">          <!-- design system: tokens, type, buttons -->
-<link rel="stylesheet" href="ask/chat.css">
-<link rel="stylesheet" href="css/water-tutor.css">   <!-- this lesson's on-stage chrome -->
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/lesson-shell.css">
+<link rel="stylesheet" href="water/water-lab.css">  <!-- the temperature column and the tray -->
 </head>
-<!-- The class has to land before the first paint, or a framed lesson
-     flashes its own title on the way into someone else's frame. -->
-<script src="lib/embed.js"></script>
 <body>
-<nav class="sitenav floating chrome-title">
-  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-  <span class="crumb">Water</span>
-</nav>
 <!-- seo-about: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
 <section id="lesson-about" hidden>
   <h1>The structure of water, and why it is such a good solvent</h1>
@@ -51,91 +40,107 @@
   <ol><li>A polar molecule</li><li>Hydrogen bonds</li><li>Specific heat</li><li>Why ice floats</li><li>The universal solvent</li></ol>
 </section>
 <!-- /seo-about -->
-<div id="app-sidebar">
-  <div id="stage">
-    <canvas id="gl"></canvas>
-
-    <!-- One block, on its own scrim: the lesson's name, where the student is in
-         it, and what this step is called. It sits over the model, so it carries
-         its own ground rather than relying on empty paper behind it. -->
-    <div id="titleblock">
-      <div id="brand">
-        <div id="steps"></div>
-      </div>
-      <p id="stepclaim"></p>
-    </div>
-
-    <div id="tempbar">
-      <div class="tcol">
-        <div class="tlabel hot" id="thot">100°C</div>
-        <input type="range" id="trange" min="20" max="100" value="22" step="1">
-        <div class="tlabel cold" id="tcold">20°C</div>
-      </div>
-      <div id="treadout">
-        <div class="tval" id="tval">22°C</div>
-        <div class="tdesc" id="tdesc"></div>
-      </div>
-    </div>
-
-    <div id="chips"></div>
-    <div id="saltinfo"></div>
-
-    <!-- Add a thing: one pill each, and the undo under it as plain text. Salt
-         first, so water keeps the same place when salt appears at step 5. -->
-    <div id="tray">
-      <div class="addcol" id="saltctl">
-        <button class="pill" id="addsalt">Add Salt</button>
-        <button class="textbtn" id="clearsalt">Clear</button>
-      </div>
-      <div class="addcol" id="waterctl">
-        <button class="pill" id="addwater">Add Water</button>
-        <button class="textbtn" id="remwater">Remove</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- The rail holds the tutor and nothing else: the lesson's own text is on
-       the model, as annotations, where the thing it describes is. -->
-  <div id="side">
-    <div id="askslot"></div>
-  </div>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="lib/palette.js"></script>
 <script src="lib/tokens-from-palette.js"></script>
 <script src="lib/molecules.js"></script>
 <script src="lib/scene.js"></script>
 <script src="lib/fx.js"></script>
-<script src="lib/atomkit.js"></script>
-<script src="water/watersim.js"></script>  <!-- the whole liquid: H-bonds, ice, hydration shells, temperature -->
-<script src="lib/annotate.js"></script>      <!-- callouts pinned to atoms: the lesson’s text, on the model -->
-<script src="kit/focus.js"></script>       <!-- one vocabulary for "look here": ghost the rest, light the chosen -->
-   <!-- step-1 element letters + δ badges (same as the bonding builder) -->
-<script src="ask/chat.js"></script>          <!-- the tutor drawer; DOM only, never touches the scene -->
+<script src="lib/atomkit.js"></script>      <!-- step-1 element letters + δ badges (same as the bonding builder) -->
+<script src="water/watersim.js"></script>   <!-- the whole liquid: H-bonds, ice, hydration shells, temperature -->
+<script src="lib/annotate.js"></script>     <!-- callouts pinned to atoms: the lesson’s text, on the model -->
+<script src="kit/card-stage.js"></script>
+<script src="water/watersim-mount.js"></script>
+<script src="kit/lesson-shell.js"></script>
 <script>
 "use strict";
 /* =============================================================
  *  THE CHEMISTRY OF WATER — one continuous simulation
- *  Each step adds molecules / reveals controls on the SAME sim.
+ *  The WaterSim component in the shell's stage, every step on the SAME
+ *  liquid. The page adds what only this lesson draws: step 1's charges,
+ *  angle and electrons, the callouts, the temperature column and the tray.
  * ============================================================= */
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const S = { step:0, temperature:22, tempEnabled:false, freezeEnabled:false,
+  saltEnabled:false, targetR:9 };
 
-/* ---------- scene setup (shared stage, scene.js) ---------- */
-// Stage.create owns the renderer/scene/camera/lights/orbit/resize boilerplate,
-// destructured into the same names the rest of this file already uses. This page
-// keeps its OWN builder below (outlines, hydration userData, Debug recolour/toon)
-// — only the bootstrap is shared. See SCIENCE.md §10.
-// The nav is fixed full-width, so its last child's right edge is what the pills
-// must clear. Hidden when framed, which measures 0 and clears nothing.
-{ const nav=document.querySelector('.sitenav.floating'), brand=document.getElementById('brand');
-  const clear=()=>{ const r=nav.lastElementChild.getBoundingClientRect().right;
-    brand.style.setProperty('--nav-clear', Math.max(0, r - brand.getBoundingClientRect().left + 16)+'px'); };
-  new ResizeObserver(clear).observe(nav); document.fonts.ready.then(clear); }
-const canvas = document.getElementById('gl');
-const {scene,camera,renderer,root,cam,applyCam,resize}=Stage.create(canvas,{
-  cam:{theta:0.5, phi:1.15, r:9}, onZoom:r=>{ S.targetR=r; } });   // manual zoom sticks
-// shared transient-effect system (fx.js) — bond-break flashes etc.; step() in loop()
+/* ---------- steps ---------- */
+const stepMeta=[
+ {tab:'A polar molecule',
+  claim:`Water is V shaped. One end is slightly negative, the other slightly positive.`,
+  body:`<p>Drag to turn it. Click a label to see why each end carries its charge.</p>`},
+ {tab:'Hydrogen bonds',
+  claim:`The + H of one water molecule attracts to the − O of another.`,
+  body:`<p>Add water and watch the δ+ hydrogens find δ− oxygens. Every bond breaks and reforms with a new partner, over and over.</p>`},
+ {tab:'Specific heat',
+  claim:`Water has high specific heat due to its H-bonds.`,
+  body:`<p>Heat you add goes first into pulling hydrogen bonds apart, not into speeding molecules up. So a lot of heat buys only a small rise in temperature.</p>
+        <p>Drag the temperature up and watch the network loosen before the molecules visibly speed up.</p>`},
+ {tab:'Why ice floats',
+  claim:`Unlike almost every substance, water is less dense as a solid.`,
+  body:`<p>Cool the water until it freezes, then compare the spacing to the liquid’s.</p>`},
+ {tab:'The universal solvent',
+  claim:`Because water is polar, it dissolves ionic and polar substances extraordinarily well.`,
+  body:`<p>Add salt. Which end of each water turns toward Na⁺, and which toward Cl⁻? Then watch the freezing and boiling points move.</p>`},
+];
+
+const shell = LessonShell.create({
+  brand: 'Water',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: stepMeta.map(m=>({ eyebrow:m.tab, title:m.claim, body:m.body })),
+  onStep: (step, i) => applyStep(i),
+});
+
+/* THE ROOM, LESS THE TEMPERATURE COLUMN. From step 3 the column stands beside
+   the glass, so the model centres in what is right of it. `reserve` eases, so
+   the model slides over rather than jumping when the column arrives. */
+let reserve=0, reserveTarget=0;
+function viewOffset(){
+  const o=shell.viewOffset();
+  if(!shell.narrow()) o.x-=Math.round(reserve/2);
+  return o;
+}
+
+
+const W = WaterSim.mount(shell.stage, {
+  nWater:1, still:true, hbonds:false,
+  cam:{theta:0, phi:Math.PI/2, r:9},
+  viewOffset,
+  stage:{ onZoom:r=>{ S.targetR=r; } },     // manual zoom sticks
+});
+const sim=W.sim, box=W.box;
+const {scene,camera,root,cam,applyCam}=box;
+// shared transient-effect system (fx.js) — bond-break flashes etc.
 const FXi=FX.create(THREE, root, camera);
+W.on('dissociate',(na,cl,at)=>{ FXi.spawnRing(at, FXi.colorOf(na));
+  FXi.popGlow(na, FXi.colorOf(na)); FXi.popGlow(cl, FXi.colorOf(cl)); });
+W.on('saltchange',()=>updateTempRange());
+
+/* ---------- the page's own DOM, inside the shell ---------- */
+shell.el.insertAdjacentHTML('beforeend', `
+  <div id="tempbar">
+    <div class="tcol">
+      <div class="tlabel hot" id="thot">100°C</div>
+      <input type="range" id="trange" min="20" max="100" value="22" step="1" aria-label="Temperature">
+      <div class="tlabel cold" id="tcold">20°C</div>
+    </div>
+    <div id="treadout">
+      <div class="tval" id="tval">22°C</div>
+      <div class="tdesc" id="tdesc"></div>
+    </div>
+  </div>
+  <!-- One pill each, and the undo under it as plain text. Salt first, so
+       water keeps the same place when salt appears at step 5. -->
+  <div id="tray">
+    <div class="addcol" id="saltctl">
+      <button class="pill" id="addsalt">Add Salt</button>
+      <button class="textbtn" id="clearsalt">Clear</button>
+    </div>
+    <div class="addcol" id="waterctl">
+      <button class="pill" id="addwater">Add Water</button>
+      <button class="textbtn" id="remwater">Remove</button>
+    </div>
+  </div>`);
 
 function arrow(from,to,color=0x6fe3c4){
   const dir=new THREE.Vector3().subVectors(to,from);
@@ -155,28 +160,21 @@ function ePair(center,along,color,role){
   return g;
 }
 /* ============================================================= *
- *  Persistent simulation + global state
+ *  Persistent simulation
  * ============================================================= *
  *  water/watersim.js owns everything that moves: the H-bond network, the ice
  *  lattice, the hydration shells, and the temperature continuum that ties them
- *  together. This page owns the lesson wrapped around it — the steps, the
- *  callouts, the camera and every number rendered as text. It hands the module
- *  one callback, because a snapping ionic bond is a lesson beat, not physics.
+ *  together. This page owns the lesson wrapped around it: the steps, the
+ *  callouts, the camera and every number rendered as text.
  */
-const sim = WaterSim.create(THREE, root, {
-  onDissociate:(na,cl,at)=>{ FXi.spawnRing(at, FXi.colorOf(na));
-    FXi.popGlow(na, FXi.colorOf(na)); FXi.popGlow(cl, FXi.colorOf(cl)); },
-  onSaltChange:()=>updateTempRange() });
 // the module's own builders, so this page's decorations are the same shapes as
 // the molecules they annotate
-const {atom, dashTube, salt, anyDescending, addSalt, clearSalt, assignShells,
-       ANG, HL, H1L, H2L}=sim;
+const {atom, salt, ANG, HL, H1L, H2L}=sim;
 // The solvent lesson is taught with NaCl only; KCl, MgCl₂ and the polar solutes
 // are molecule-lab.html's.
 const SALT='nacl';
 const DBG=sim.cfg;                            // live tuning; the module re-reads it every frame
 const ZOOM_SOLVENT=26;                        // camera pull-back on the solvent step (page, not physics)
-const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const hx=n=>'#'+n.toString(16).padStart(6,'0');
 // step-1 detail decorations. δ badges wear their own atom's colour (red O,
 // steel H) so the sign reads as belonging to that atom rather than as a
@@ -184,10 +182,7 @@ const hx=n=>'#'+n.toString(16).padStart(6,'0');
 const eBondColor=0xe0a92e, eLoneColor=0x444444,
       dNegColor=MolLib.PALETTE.atoms.O, dPosColor=MolLib.PALETTE.atoms.H;
 
-const first = sim.spawn(new THREE.Vector3(0,0,0));
-
-const S = { step:0, temperature:22, tempEnabled:false, freezeEnabled:false,
-  saltEnabled:false, hbondsOn:true, targetR:9 };
+const first = sim.mols[0];
 
 /* ---- step-1 molecular-detail decorations (on the first molecule) ---- */
 const detail=new THREE.Group(); first.add(detail);
@@ -286,41 +281,21 @@ function applyDetail(){
 }
 buildCharges();
 
-/* ============================================================= *
- *  Steps
- * ============================================================= */
-const stepMeta=[
- {tab:'a polar molecule',
-  claim:`Water is V shaped. One end is slightly negative, the other slightly positive.`,
-  hint:'One water molecule — H₂O'},
- {tab:'hydrogen bonds',
-  claim:`The + H of one water molecule attracts to the − O of another.`,
-  hint:'Add water molecules — hydrogen bonds link δ+ H to δ− O'},
- {tab:'specific heat',
-  claim:`Water has high specific heat due to its H-bonds.`,
-  hint:'Raise the temperature — energy first breaks hydrogen bonds'},
- {tab:'why ice floats',
-  claim:`Unlike almost every substance, water is less dense as a solid.`,
-  hint:'Cool toward 0°C — molecules lock into the open ice lattice'},
- {tab:'the universal solvent',
-  claim:`Because water is polar, it dissolves ionic and polar substances extraordinarily well.`,
-  hint:'Add salt — hydration shells form; then change temperature to shift freezing & boiling'},
-];
+/* ---------- DOM refs ---------- */
+const trayEl=document.getElementById('tray');
 
-/* ---------- DOM refs + control builders ---------- */
-const stage=document.getElementById('stage');
-const side=document.getElementById('side');
-const stepsEl=document.getElementById('steps');
-const stepClaimEl=document.getElementById('stepclaim');
-const saltinfoEl=document.getElementById('saltinfo');
-
-// temperature slider (markup lives in the HTML)
+// temperature slider
 const tempBar=document.getElementById('tempbar');
 const tinput=document.getElementById('trange'), tvalEl=document.getElementById('tval'),
       tdescEl=document.getElementById('tdesc'),
       tcoldEl=document.getElementById('tcold'), thotEl=document.getElementById('thot');
-tinput.oninput=()=>{ S.temperature=parseFloat(tinput.value); tvalEl.textContent=S.temperature+'°C'; };
-const PX_PER_DEG=3.4;   // 340px / 100°C baseline — keeps the bar proportional at any range
+function setTemp(v){ S.temperature=v; tvalEl.textContent=v+'°C';
+  W.set({temperature:S.tempEnabled?v:null}); }
+tinput.oninput=()=>setTemp(parseFloat(tinput.value));
+// 3.4 px/°C on a laptop; less where the free band is shorter than the widest
+// range (−25…110°C) needs. Set by place().
+let pxPerDeg=3.4;
+
 // absolute-temperature colour scale: dark blue (deep freeze) → cold → warm yellow → hot → magenta (near-boiling)
 // the bar's gradient is sampled from this fixed scale, so it always shows what a given
 // temperature *means* rather than just stretching cold..hot across whatever range is active
@@ -340,7 +315,7 @@ function colorAtTemp(t){
 // paint the bar for a given (possibly fractional, mid-tween) range
 function paintRange(min,max){ tinput.min=min; tinput.max=max;
   tcoldEl.textContent=Math.round(min)+'°C'; thotEl.textContent=Math.round(max)+'°C';
-  tinput.style.height=((max-min)*PX_PER_DEG)+'px';
+  tinput.style.height=((max-min)*pxPerDeg)+'px';
   const STEPS=8, stops=[];
   for(let i=0;i<=STEPS;i++){ const t=min+(max-min)*i/STEPS;
     stops.push(colorAtTemp(t)+' '+(i/STEPS*100)+'%'); }
@@ -351,7 +326,7 @@ function paintRange(min,max){ tinput.min=min; tinput.max=max;
 let rangeAnim=null;
 function setTempRange(min,max){
   const from={min:parseFloat(tinput.min)||min, max:parseFloat(tinput.max)||max};
-  S.temperature=clamp(S.temperature,min,max);
+  setTemp(clamp(S.temperature,min,max));
   if(rangeAnim) cancelAnimationFrame(rangeAnim);
   if(from.min===min && from.max===max){ paintRange(min,max); return; }
   const t0=performance.now(), dur=450, ease=x=>1-Math.pow(1-x,3);
@@ -374,47 +349,56 @@ function tempDescriptor(p){
   if(S.freezeEnabled && !salt.length && p.T<=6) return 'Densest at 4°C\nthe open lattice starts to win';
   return 'Liquid\nH-bonds forming\n& reforming';
 }
-
-// on-stage chip rail (empty since step 1 lost its display-layer toggles)
-const chipsEl=document.getElementById('chips');
 function fitDistance(){ let rad=1.6; sim.mols.forEach(w=>{ if(!w.userData.escaped) rad=Math.max(rad,w.position.length()); });
   // skip any crystal still falling in from high above — it would balloon the fit
   // radius and make the whole view zoom out until it settles into the water
   salt.forEach(m=>{ if(!m.userData.descending) rad=Math.max(rad,m.position.length()); });
   return rad*2.0+6; }
-function outerPoint(margin=1.6){
-  const n=sim.mols.length+salt.length*0.5;
-  const rad=1.6*Math.cbrt(Math.max(1,n))+margin;
-  const d=new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5);
-  if(d.lengthSq()<1e-4)d.set(1,0,0);
-  return d.normalize().multiplyScalar(rad);
-}
 
-function buildControls(){
-  // Step 1 shows one fixed, labelled molecule — no display-layer toggles. The
-  // dset flags survive for the Debug panel and for any later step that wants
-  // the dipole arrow or the electron cloud back.
-  chipsEl.innerHTML='';
-}
-// water +/- (top formula card) and salt +/clear (bottom card)
-function addWater(){ if(sim.mols.length<60){ sim.spawn(outerPoint(2.5)); if(salt.length&&!anyDescending()) assignShells(); } }
-function remWater(){ if(sim.mols.length>3){ sim.remove(); if(salt.length&&!anyDescending()) assignShells(); } }
+/* ---------- the tray ---------- */
+function addWater(){ if(sim.mols.length<60) W.set({nWater:sim.mols.length+1}); }
+function remWater(){ if(sim.mols.length>3) W.set({nWater:sim.mols.length-1}); }
 document.getElementById('addwater').onclick=addWater;
 document.getElementById('remwater').onclick=remWater;
-document.getElementById('addsalt').onclick=()=>{ if(salt.length<8) addSalt(SALT); };
-document.getElementById('clearsalt').onclick=()=>clearSalt();
+document.getElementById('addsalt').onclick=()=>{ if(salt.length<8) W.set({salt:SALT, nSalt:salt.length/2+1}); };
+document.getElementById('clearsalt').onclick=()=>W.set({nSalt:0});
 const formulaEl=document.getElementById('waterctl'), saltcardEl=document.getElementById('saltctl');
+
+/* ---------- placing the instruments ----------
+   The column stands just right of the glass, centred on the free band; the
+   tray sits under the model. Docked (narrow), the column
+   moves to the left edge and the tray sits on the panel's top edge. */
+const TOPBAR=64, BAR_GAP=28, TRAY_H=96, ROOM_W=950;
+function roomScale(){
+  if(shell.narrow()) return 1.7;
+  return Math.max(1, ROOM_W/(window.innerWidth-shell.panelRect().right-reserve));
+}
+function place(){
+  const r=shell.panelRect(), narrow=shell.narrow();
+  const top = narrow ? TOPBAR : r.top, bottom = narrow ? r.top-TRAY_H : r.bottom;
+  const band = bottom-top;
+  pxPerDeg = clamp((band-130)/135, 1, 3.4);
+  tempBar.style.left = (narrow ? 16 : r.right+BAR_GAP)+'px';
+  tempBar.style.top  = (top+band/2)+'px';
+  // The tray centres on the stage beside the glass, ignoring the column: it
+  // stands below the column, so it does not need to clear it.
+  const x=shell.room().x+'px';
+  trayEl.style.left=x;
+  trayEl.style.bottom   = narrow ? (window.innerHeight-r.top+12)+'px' : '';
+  if(S.tempEnabled) paintRange(parseFloat(tinput.min), parseFloat(tinput.max));
+}
+window.addEventListener('resize', place);
+
 
 /* ============================================================= *
  *  The lesson's text, on the model (annotate.js)
  *
- *  The rail belongs to the tutor, so what used to be a paragraph in the
- *  sidebar is a label on the atom it describes: the label says WHAT, the
- *  card says WHY, two sentences at most. Every anchor is a FUNCTION
+ *  The panel states the claim; the detail is a label on the atom it
+ *  describes: the label says WHAT, the card says WHY, two sentences at most. Every anchor is a FUNCTION
  *  returning a live world point — every molecule here is being pushed
  *  around by the sim, so a baked coordinate comes adrift on frame one.
  * ============================================================= */
-const NOTES=Annot.create(THREE, stage, camera, {mode:'on'});
+const NOTES=Annot.create(THREE, shell.stage, camera, {mode:'on'});
 const _wp=new THREE.Vector3();
 
 /* The first hydrogen bond a given donor currently holds. Bonds are recomputed
@@ -460,41 +444,24 @@ function badgeEdge(get, dir){
   };
 }
 
-/* The temperature slider's right edge, in the layer's own pixels. atPx, and
-   deliberately so: the slider is not a molecule, and both places that use it
-   are teaching something about the control the student is holding. */
-function tempBarPx(){
-  const st=NOTES.el.getBoundingClientRect(), b=tempBar.getBoundingClientRect();
-  return [b.right-st.left, b.top-st.top+b.height*0.5];
-}
-
-/* A GIVEN TEMPERATURE on the bar, not the bar's middle: "drag down to 0°C"
-   should point at the 0°C the student is being sent to. The track is the range
-   input itself, cold at the bottom, and its min/max move when salt depresses
-   the freezing point — so read them off the element rather than assuming 0–100. */
-function tempPx(degC){
-  const st=NOTES.el.getBoundingClientRect(), r=tinput.getBoundingClientRect();
-  const lo=parseFloat(tinput.min), hi=parseFloat(tinput.max);
-  const f=clamp((degC-lo)/((hi-lo)||1),0,1);
-  return [r.right-st.left, r.bottom-st.top-f*r.height];
-}
-
 function buildNotes(n){
   NOTES.clear(); saltNoted.clear();
   const w=sim.mols[0];
   if(n===0 && w){
     const O=()=>w.userData.oWorld();
-    NOTES.add({text:'slightly negative', offset:[52,-34], at:badgeEdge(()=>dO, [52,-34]),
+    NOTES.add({text:'slightly negative', offset:[28,-20], at:badgeEdge(()=>dO, [28,-20]),
       card:'Oxygen pulls the shared electrons closer than hydrogen can. That leaves this end of the molecule slightly negative.'});
-    NOTES.add({text:'slightly positive', offset:[56,30], at:badgeEdge(()=>dH1, [56,30]),
+    NOTES.add({text:'slightly positive', offset:[16,34], at:badgeEdge(()=>dH1, [16,34]),
       card:'Each hydrogen has its one electron pulled away by the oxygen. The exposed proton leaves this end slightly positive.'});
     /* The midpoint of the O–H line is INSIDE the oxygen: the sphere's radius
        (0.95) is most of the bond length (1.55), so only the sliver between the
        two surfaces is visible stick. Aim at the middle of that sliver. */
     const WO_R=0.95, WH_R=0.55, stickMid=(WO_R+(HL-WH_R))/2;
-    NOTES.add({text:'covalent bond', offset:[150,-16],
+    // On the LEFT bond, up and out: the right side already carries both
+    // charge labels, and a third there runs off a laptop-width stage.
+    NOTES.add({text:'covalent bond', offset:[-80,-90],
       at:()=>{ const o=w.userData.oWorld();
-               return _wp.copy(w.userData.hWorld(0)).sub(o).setLength(stickMid).add(o); },
+               return _wp.copy(w.userData.hWorld(1)).sub(o).setLength(stickMid).add(o); },
       card:'A shared pair of electrons creates a strong bond. Shared unevenly, so it is a <b>polar</b> covalent bond.'});
   }
   /* Step 2's callout waits: seatHBondPair() hands the sim the geometry, but the
@@ -502,15 +469,6 @@ function buildNotes(n){
      two molecules that have not done anything yet. syncHbNote() adds it once
      there is a bond under it. */
   if(n===1){ hbDonor=null; hbNoted=false; }
-  if(n===2){
-    hbDonor=null;
-    NOTES.add({text:'heat breaks H-bonds first', offset:[58,-30], at:hbAnchor,
-      card:'Energy you add goes into pulling hydrogen bonds apart before it speeds molecules up. So a lot of heat buys only a small temperature rise — water’s high specific heat.'});
-    /* atPx, deliberately: the slider is not a molecule, and "where the energy
-       goes in" is a fact about the control the student is holding. */
-    NOTES.add({text:'Increase the heat', offset:[70,0], atPx:tempBarPx,
-      card:'Drag up and watch the network loosen before the molecules visibly speed up. That lag is the specific heat.'});
-  }
   /* Step 4 says nothing about the lattice until there IS one: syncIceNotes()
      swaps the hint for the labels when the student drives the water to 0°C. */
   if(n===3) iceState=null;
@@ -547,28 +505,18 @@ function syncHbNote(){
 }
 
 /* ---- the lattice, labelled when the water is actually frozen ----
-   Until then the only callout is on the slider, because the claim this step
-   makes ("ice is the open one") is not on screen yet and a label saying so
-   over moving liquid is a caption arguing with the picture. The hint asks for
-   the one action that makes it true. Warming back up puts the hint back. */
-let iceState=null;                    // null | 'hint' | 'ice' — what is on screen now
+   Until then there is none, because the claim this step makes ("ice is the
+   open one") is not on screen yet and a label saying so over moving liquid is
+   a caption arguing with the picture. The panel asks for the freeze. */
+let iceState=null;                    // null | 'liquid' | 'ice' — what is on screen now
 function syncIceNotes(){
   if(S.step!==3) return;
   const frozen = (S.fz||0) >= 1;      // fz hits 1 at the freezing point itself
-  const want = frozen ? 'ice' : 'hint';
+  const want = frozen ? 'ice' : 'liquid';
   if(want===iceState) return;
   iceState=want;
   NOTES.clear();
-  if(!frozen){
-    /* On the bar's own 0°C caption rather than on the track: the caption is
-       where the student's eye already is, and sitting on its line lets the
-       leader run straight out to the right. */
-    // No card: it is an instruction, and the whole answer is what happens when
-    // the student follows it.
-    NOTES.add({text:'drag down to freeze', offset:[120,0],
-      atPx:()=>{ const st=NOTES.el.getBoundingClientRect(), c=tcoldEl.getBoundingClientRect();
-                 return [c.right-st.left+14, c.top-st.top+c.height*0.5]; }});
-  } else {
+  if(frozen){
     const w=sim.mols[0]; if(!w) return;
     NOTES.add({text:'open hexagonal lattice', offset:[64,-36],
       at:()=>w.userData.oWorld(),
@@ -624,14 +572,10 @@ function seatHBondPair(){
   acc.quaternion.setFromUnitVectors(H1L.clone().add(H2L).normalize(), axis.clone().negate());
 }
 
-let cur=-1;
 const stepR=[8,18,20,24,20];
 function applyStep(n){
   S.step=n;
-  // The step just reached, for the class dashboard (lib/track.js). Named, not
-  // numbered, for the same reason the buttons below are.
-  if(window.Track) Track.step(n, stepMeta.length, stepMeta[n] && stepMeta[n].tab);
-  if(n===0){ while(sim.mols.length>1) sim.remove();
+  if(n===0){ W.set({nWater:1});
     // the surviving molecule may have drifted while part of a larger cluster on
     // other steps — recentre it so it rotates in place instead of off-axis
     // …and ENTER the step front-on: O up, both H's square to the viewer, which
@@ -640,71 +584,34 @@ function applyStep(n){
     // there, so the student can turn it and come back by re-entering step 1.
     const w=sim.mols[0]; if(w){ w.position.set(0,0,0); w.userData.vel.set(0,0,0); w.rotation.set(0,0,0); }
     cam.theta=0; cam.phi=Math.PI/2; applyCam(); }
-  else { while(sim.mols.length<3) sim.spawn(new THREE.Vector3((Math.random()-.5)*4,(Math.random()-.5)*4,(Math.random()-.5)*4)); }
+  else if(sim.mols.length<3) W.set({nWater:3});
   // Steps 2 and 3 are ABOUT a hydrogen bond, and the callout names one — so
   // hand the sim a pair already in the geometry rather than hoping three
   // randomly-thrown molecules land in it. From there the physics owns them.
   if(n===1||n===2) seatHBondPair();
-  if(n===4){ while(sim.mols.length<16) sim.spawn(outerPoint(2.5)); }
-  if(n<4) clearSalt();
+  if(n===4 && sim.mols.length<16) W.set({nWater:16});
+  if(n<4) W.set({nSalt:0});
   S.tempEnabled=n>=2; S.freezeEnabled=n>=3; S.saltEnabled=n>=4;
+  if(n===4) S.temperature=30;
+  W.set({ still:n===0, solvent:n===4, hbonds:n>=1, freeze:S.freezeEnabled,
+          temperature:S.tempEnabled?S.temperature:null });
   applyDetail();
   tempBar.style.display=S.tempEnabled?'flex':'none';
   formulaEl.style.display=n>=1?'flex':'none';       // add-water only once bonding starts
   saltcardEl.style.display=n>=4?'flex':'none';
-  if(n===4) S.temperature=30;
+  if(n===4) shell.ui.controls(`<div class="stats">
+    <div class="stat wide"><span class="stat-label">Salt : water</span><span class="stat-value" id="s-ratio"></span>
+      <span class="stat-sub" id="s-molal"></span></div>
+    <div class="stat cold"><span class="stat-label">Freezes</span><span class="stat-value" id="s-fp"></span></div>
+    <div class="stat hot"><span class="stat-label">Boils</span><span class="stat-value" id="s-bp"></span></div>
+  </div>`);
   updateTempRange();
+  reserveTarget = S.tempEnabled ? tempBar.offsetWidth+BAR_GAP : 0;
+  place();
   S.targetR=Math.max(n===4?ZOOM_SOLVENT:stepR[n], fitDistance());
-  buildControls();
-  cur=n;
-  [...stepsEl.children].forEach((b,k)=>b.classList.toggle('is-on',k===n));
-  const m=stepMeta[n];
-  stepClaimEl.textContent=m.claim;
   stepT0=performance.now();
   buildNotes(n);
   NOTES.setMode('reveal'); NOTES.play();
-}
-// Named, not numbered: "hydrogen bonds" tells a student what they are about to
-// see, and 3 does not.
-stepMeta.forEach((s,i)=>{ const b=document.createElement('button');
-  b.type='button'; b.className='pill pill--ghost'; b.textContent=s.tab;
-  b.onclick=()=>applyStep(i); stepsEl.appendChild(b); });
-
-
-/* ---------- where the model sits ----------
- *  The canvas is the whole window, so closed, the model is centred with no help
- *  at all. Open, the sheet takes the right-hand strip and the model slides left
- *  to clear it.
- *
- *  The slide is the camera's view offset, not a resize: the same-sized window is
- *  taken from further right in the frustum, which moves the content left without
- *  touching the canvas, the aspect, or one pixel of the lesson's chrome.
- *  Everything that projects through the camera — annotate.js's callouts
- *  included — comes along, since the offset is in the projection matrix.
- */
-const ASK_EASE=0.16;
-const ASK_GAP=18;               // the sheet's inset from the window edge, per ask/chat.css
-let sheetW=334;
-let askShift=0;                 // 0 = centred on the window, 1 = pushed clear of the sheet
-let lastShiftPx=-1;
-function applyAskShift(){
-  const target=(ASK && ASK.el.classList.contains('on'))?1:0;
-  askShift+=(target-askShift)*ASK_EASE;
-  if(Math.abs(askShift-target)<0.002) askShift=target;
-  /* Half the sheet's real footprint, measured rather than assumed: the sheet is
-     narrower than the rail it sits in, and half of the wrong number leaves the
-     model off-centre in the space that is actually left. offsetWidth is 0 while
-     it is display:none, so the last measurement stands. */
-  if(ASK && ASK.el.offsetWidth) sheetW=ASK.el.offsetWidth+ASK_GAP;
-  const px=sheetW*0.5*askShift;
-  if(Math.abs(px-lastShiftPx)<0.25) return;
-  lastShiftPx=px;
-  // the add-a-thing pills ride the same number, so they and the model move as one
-  document.documentElement.style.setProperty('--shift', px.toFixed(1)+'px');
-  const w=stage.clientWidth, h=stage.clientHeight;
-  if(px<0.5) camera.clearViewOffset();
-  else camera.setViewOffset(w,h,px,0,w,h);   // same size, taken further right
-  camera.updateProjectionMatrix();
 }
 
 /* ---------- the nudge on Add Water ----------
@@ -720,250 +627,48 @@ function syncWaterNudge(){
     S.step>=1 && sim.mols.length<WATER_ENOUGH);
 }
 
-/* ---------- main loop ---------- */
+/* ---------- per frame ---------- */
 function renderReadout(p){
   // handwritten phase descriptor beside the temperature readout
   if(S.tempEnabled && tdescEl) tdescEl.textContent=tempDescriptor(p);
   // step-5 salt readout: ion:water ratio + calculated (colligative) phase-change points
-  if(S.step===4 && salt.length){
-    const na=salt.find(m=>m.userData.charge>0), cl=salt.find(m=>m.userData.charge<0);
-    const fp=Math.round(-p.dTf), bp=Math.round(100+p.dTb);
-    saltinfoEl.innerHTML=
-      `<b>${salt.length/2}</b> ${sim.saltSpec(SALT).formula} : <b>${sim.mols.length}</b> H₂O `
-      +`<span class="muted">· ${p.molal.toFixed(1)} m molality</span>`
-      +`&nbsp;&nbsp;<span class="muted">|</span>&nbsp;&nbsp;`
- //     +`Na⁺ <b>${na.userData.shellCount}/6</b> · Cl⁻ <b>${cl.userData.shellCount}/6</b>`
- //     +`&nbsp;&nbsp;<span class="muted">|</span>&nbsp;&nbsp;`
-      +`freezes <b class="cold">${fp}°C</b> · boils <b class="hot">${bp}°C</b> `;
-    saltinfoEl.style.display='block';
-  } else saltinfoEl.style.display='none';
+  if(S.step===4){
+    const q=id=>shell.q('#'+id);
+    if(!q('s-ratio')) return;
+    q('s-ratio').textContent=`${salt.length/2} ${sim.saltSpec(SALT).formula} : ${sim.mols.length} H₂O`;
+    q('s-molal').textContent=`${p.molal.toFixed(1)} m molality`;
+    q('s-fp').textContent=`${Math.round(-p.dTf)}°C`;
+    q('s-bp').textContent=`${Math.round(100+p.dTb)}°C`;
+  }
 }
-function loop(){
-  const want=Math.max(S.targetR, fitDistance()); // live auto-fit; manual wheel zoom (S.targetR) always wins
-  cam.r += (want - cam.r)*0.05; applyCam();
-  // The frame is a description of the scene, not a list of forces: watersim.js
-  // turns it into physics and hands back what it did, including the phase-change
-  // points the readout prints.
-  const p=sim.step({ still:S.step===0, solvent:S.step===4,
-    showHbonds:S.hbondsOn && S.step>=1,
-    tempEnabled:S.tempEnabled, temperature:S.temperature,
-    freezeEnabled:S.freezeEnabled });
+/* The component steps the sim and then draws; this runs between the two, so
+   the camera is settled here and the callouts and badges read this frame's. */
+W.on('frame', p=>{
+  // live auto-fit; manual wheel zoom (S.targetR) always wins. A stage
+  // narrower than ROOM_W backs off in proportion, so the model and the labels
+  // beside it still fit; a portrait window backs off further.
+  const want=Math.max(S.targetR, fitDistance())*roomScale();
+  cam.r += (want - cam.r)*0.05; applyCam(); camera.updateMatrixWorld();
+  if(reserve!==reserveTarget){
+    reserve += (reserveTarget-reserve)*0.12;
+    if(Math.abs(reserve-reserveTarget)<0.5) reserve=reserveTarget;
+    box.layout(); place();
+  }
   S.fz=p.fz;                    // the callouts and the phase descriptor read this
   renderReadout(p);
   FXi.step();
   // letters/badges ride just proud of their own atom's front surface — see
   // atomkit.js faceCamera(); needs the camera's final position for this frame
   if(detail.visible) kit.faceCamera(camera);
-  applyAskShift(); syncWaterNudge();
+  syncWaterNudge();
   syncHbNote(); syncIceNotes(); syncSaltNotes();
-  NOTES.step();                 // trap 1: the RENDER loop, so orbiting keeps the labels on their atoms
-  renderer.render(scene,camera); requestAnimationFrame(loop);
-}
-
-applyCam(); resize(); applyStep(0); requestAnimationFrame(loop);
-
-/* =============================================================================
- *  The tutor drawer
- * =============================================================================
- *  `ask/chat.js` owns the panel, the transcript and the network. This block is
- *  the lesson's half: what each of its own target ids MEANS on this scene.
- *  Everything below reads the lesson's existing state and calls its existing
- *  functions, so the tutor has no privileged access and cannot reach anything
- *  a student could not.
- * ========================================================================== */
-
-/* A molecular point is made by dimming, not by drawing: everything else fades
-   to a ghost for a few seconds so the thing named is the only thing lit. That
-   reuses the fade the evaporation code already applies per molecule, so nothing
-   new has to know how a water molecule is built. */
-// Stamped by its own frame request, so it pauses exactly when the lesson's loop
-// does and the state provider can tell a still scene from a stopped one.
-let lastFrame = 0;
-(function stamp() { lastFrame = performance.now(); requestAnimationFrame(stamp); })();
-
-/* kit/focus.js is the vocabulary: ghost the rest to 13% without depth-write,
-   light the chosen so they emit their OWN colour, and light a bond only when
-   both its ends are lit. A lit oxygen stays red, which is the point: the
-   highlight must never recolour chemistry. */
-const focus = Focus.create({ glow: 0.55 });
-let spotTimer = null;
-
-function unfocus() {
-  clearTimeout(spotTimer);
-  focus.clear();
-}
-
-/* Whole molecules against each other, for a group whose meaning is the group:
-   a hydration shell is six waters and their orientation, not six oxygens. */
-function spotMolecules(keep, ms = 3600) {
-  unfocus();
-  focus.among([...sim.mols, ...salt], keep);
-  spotTimer = setTimeout(unfocus, ms);
-}
-
-/* Named atoms inside named molecules. `picks` is [[molecule, [indices]], …]
-   with 0=O, 1=Ha, 2=Hb; every other molecule ghosts whole. This is the level
-   the three molecular targets actually wanted: "that oxygen", not "that
-   molecule with an oxygen in it". */
-function spotAtoms(picks, ms = 3600) {
-  unfocus();
-  const involved = picks.map(p => p[0]);
-  focus.among([...sim.mols, ...salt], involved);
-  picks.forEach(([mol, idx]) => focus.atoms(mol, idx));
-  spotTimer = setTimeout(unfocus, ms);
-}
-
-/* A ring over a control, in screen space. The controls live on the stage rather
-   than in the rail, so the drawer never covered them and this only has to say
-   "here", not move anything out of the way. */
-/* A control only exists from the step that introduces it: the temperature bar
-   appears at Specific Heat, the salt card at The Universal Solvent. Pointing at
-   one from step 1 would ring an empty rectangle, so take the student to the step
-   that has it first. */
-const uiStep = { trange: 2, addsalt: 4, addwater: 1 };
-
-const ping = Ask.ping;   // the gesture is the module's; which control is this page's
-
-/* One hydrogen bond the sim made this frame: which molecule donated, which
-   hydrogen it donated, and which molecule accepted. Read straight off the
-   matcher's own record, so the atoms lit are the atoms the bond was drawn
-   between. Null when nothing is bonded, which is a real answer on a sparse
-   scene rather than something to paper over. */
-function aHydrogenBond() {
-  for (const w of sim.mols) {
-    const b = (w.userData.hbBonds || [])[0];
-    if (b) return { donor: w, hIndex: b.h + 1, acceptor: b.acc };   // 0=O, so H is h+1
-  }
-  return null;
-}
-
-const ASK = Ask.chat({
-  rail: document.getElementById('side'),
-  slot: document.getElementById('askslot'),
-  lesson: 'water-lab',
-
-  /* Two questions a student actually arrives with, and one that shows the box
-     is worth more than a search bar: methane is nearly the same size as water
-     and is a gas at room temperature, which is hydrogen bonding's whole point
-     and lives in another lesson, so it also demonstrates being sent there. */
-  examples: [
-    'Is that the same bond the whole time?',
-    'If it dissolves everything, why not oil?',
-    'How do we make ice cream?',
-  ],
-  step: () => cur,
-  stepName: () => stepMeta[cur] ? stepMeta[cur].tab : '',
-
-  /* What the student can see, read from the readouts they are reading. The
-     temperature and the phase come off the DOM rather than off S and a second
-     copy of tempDescriptor's thresholds, so the tutor and the student are
-     quoting the same string, and a change to the descriptor reaches both.
-     Counts come from the sim, which is where a count actually lives. */
-  state() {
-    const txt = id => (document.getElementById(id)?.textContent || '').trim();
-    const st = { molecules: sim.mols.length };
-
-    // The lesson judges its own scene rather than shipping a threshold for the
-    // model to compare against. Asked to do the arithmetic, it told a student
-    // with thirteen molecules to add more; given the word, it stops.
-    const n = sim.mols.length;
-    st.crowding = n < 3 ? 'nearly empty, almost nothing to bond to'
-                : n < 8 ? 'sparse, too few neighbours for the bonding to look like much'
-                        : 'a comfortable crowd, enough for the network to show';
-
-    // Anything the render loop computes is only true while the loop is running,
-    // and a background tab pauses rAF. A paused frame would report zero bonds
-    // and no phase, which reads as "the bonds broke" rather than "nobody
-    // looked". Report those only when a frame is actually recent.
-    if (performance.now() - lastFrame < 900) {
-      const bonds = sim.mols.reduce((n, w) => n + (w.userData.hb || 0), 0);
-      st.hydrogenBonds = Math.round(bonds / 2);   // each bond is counted at both ends
-    }
-    if (S.tempEnabled) {
-      st.temperature = txt('tval');
-      const phase = txt('tdesc').split('\n')[0];   // "Frozen", "Boiling", "Liquid"…
-      if (phase) st.phase = phase;
-    }
-    if (S.saltEnabled) {
-      st.saltAdded = salt.length ? `yes, ${salt.length} ions` : 'not yet';
-      const info = txt('saltinfo');
-      if (info) st.saltReadout = info;
-    }
-    return st;
-  },
-
-  /* Return false and the drawer says so rather than pretending it acted. */
-  act(t) {
-    const id = t.id.split('/')[1];
-
-    if (t.kind === 'step') { applyStep(t.at); return true; }
-
-    if (t.kind === 'ui') {
-      // The temperature bar runs hot at the top, so its maximum is at the end a
-      // slider's value maps to LAST. Only this page can know that, so it says.
-      const o = { invert: true };
-      const need = uiStep[t.el] || 0;
-      if (cur < need) { applyStep(need); setTimeout(() => ping(t.el, o), 550); return true; }
-      return ping(t.el, o);
-    }
-
-    // The molecular three. Each needs its own step to be on screen at all, so
-    // each takes the student there first when they are somewhere else, then
-    // waits for the scene to settle before lighting anything.
-    const after = (ms, fn) => setTimeout(fn, ms);
-
-    // The oxygen alone, with its own two hydrogens ghosted. That contrast IS
-    // the claim: this end of the molecule is the negative one. Lighting the
-    // whole molecule would have said "this molecule", which nobody asked.
-    if (id === 'the-charges') {
-      if (cur > 1) applyStep(1);
-      after(cur > 1 ? 600 : 0, () => { if (sim.mols[0]) spotAtoms([[sim.mols[0], [0]]]); });
-      return true;
-    }
-
-    // The two atoms the bond runs between, one from each molecule: the donated
-    // hydrogen and the oxygen accepting it. Everything else on both molecules
-    // ghosts, so what is left lit is the bond's own geometry.
-    if (id === 'a-hydrogen-bond') {
-      if (cur < 1) applyStep(1);
-      after(cur < 1 ? 900 : 0, () => {
-        const b = aHydrogenBond();
-        if (b) spotAtoms([[b.donor, [b.hIndex]], [b.acceptor, [0]]]);
-      });
-      return true;
-    }
-
-    if (id === 'hydration-shell') {
-      if (cur !== 4) applyStep(4);
-      after(cur !== 4 ? 900 : 0, () => {
-        if (!salt.length) addSalt(SALT);
-        after(700, () => {
-          const ion = salt[0];
-          if (!ion) return;
-          // The shell the sim SEATED, not the six waters that happen to be
-          // nearest. Those are usually the same set and sometimes are not, and
-          // when they differ the nearest-six is the wrong answer: a water can
-          // sit close without being in the shell, and a seated one can drift.
-          //
-          // Seating happens when the crystal reaches the water, which is a
-          // second or two after it is dropped, so wait for it rather than
-          // lighting nothing. If it never seats, light the ion alone: still
-          // true, and still shows the student where to look.
-          let tries = 0;
-          (function whenSeated() {
-            const shell = sim.mols.filter(w => w.userData.shellIon === ion);
-            if (shell.length) return spotMolecules([ion, ...shell], 4400);
-            if (++tries < 20) return setTimeout(whenSeated, 250);
-            spotMolecules([ion], 3000);
-          })();
-        });
-      });
-      return true;
-    }
-
-    return false;
-  },
+  NOTES.step();
 });
+
+shell.goTo((() => {
+  const m = /[?&]step=(\d+)/.exec(location.search);
+  return m ? Math.max(1, Math.min(stepMeta.length, +m[1])) - 1 : 0;
+})());
 </script>
 </body>
 </html>

@@ -73,15 +73,30 @@
       onDissociate: (na, cl, at) => emit('dissociate', na, cl, at),
       onSaltChange: () => emit('saltchange') });
 
-    /* Reconcile counts toward the params; everything else is read per frame. */
+    /* Reconcile counts toward the params; everything else is read per frame.
+       Shells are reassigned only when a count moved: a set() that only
+       changes the temperature, every tick of a slider, would otherwise
+       re-pick each ion's six nearest waters mid-drag. */
     function reconcile() {
-      while (sim.mols.length < P.nWater) sim.spawn();
+      const n0 = sim.mols.length, s0 = sim.salt.length;
+      while (sim.mols.length < P.nWater) sim.spawn(sim.mols.length ? outerPoint() : undefined);
       while (sim.mols.length > P.nWater) sim.remove();
       const want = P.salt ? Math.max(0, P.nSalt | 0) : 0;
       const have = sim.salt.length / 2;
       if (want < have || (want && sim.salt.length && sim.salt[0].userData.role !== saltCation(P.salt))) sim.clearSalt();
       for (let i = sim.salt.length / 2; i < want; i++) sim.addSalt(P.salt);
-      if (sim.salt.length) sim.assignShells();
+      const moved = sim.mols.length !== n0 || sim.salt.length !== s0;
+      if (moved && sim.salt.length && !sim.anyDescending()) sim.assignShells();
+    }
+    /* A new molecule arrives at the cluster's edge, not inside it: dropped
+       into the middle of a crowd it overlaps a neighbour and the steric push
+       throws both across the box. */
+    function outerPoint() {
+      const n = sim.mols.length + sim.salt.length * 0.5;
+      const rad = 1.6 * Math.cbrt(Math.max(1, n)) + 2.5;
+      const d = new THREE.Vector3(Math.random() - .5, Math.random() - .5, Math.random() - .5);
+      if (d.lengthSq() < 1e-4) d.set(1, 0, 0);
+      return d.normalize().multiplyScalar(rad);
     }
     function saltCation(key) {
       const spec = sim.saltSpec(key);
