@@ -8,8 +8,8 @@
 <title>Rhinovirus Structure in 3D — Kodolab</title>
 
 <!-- ===================================================================
-     SCRATCH, UNDER REVIEW. The view table is CANDIDATES in tools/prep.js;
-     nothing is in proteins/proteins.js yet.
+     SCRATCH. Not a lesson. Reviewed: all three views were kept, so the
+     table they live in is proteins/proteins.js and this page reads it.
 
      WHAT IT IS FOR SETTLING:
        does the capsid read   240 chains, 48k residues. Coloured by VP the
@@ -104,11 +104,15 @@
 <script src="../../kit/ribbon.js"></script>
 <script src="../../kit/card-stage.js"></script>
 <script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
 <script>
 'use strict';
 
+const ME = ProteinLib.byKey('rhinovirus');
+
 const box = Proteinbox.create({
   mount: document.getElementById('stage'),
+  view: ProteinLib.viewOf(ME),
   orbit: true,
   stage: { ortho: false, turn: 'trackball' },
   pad: 1.1,
@@ -138,13 +142,13 @@ const SAYS = {
     prov: 'All four are cut from one polyprotein after translation.' },
 };
 
-const BUTTONS = ['capsid', 'pentamer', 'protomer'];
+const BUTTONS = ME.variants.map(v => v.id);
 const views = {};
-let view = 'capsid', byVP = true;
+let view = ProteinLib.defaultOf(ME).id, byVP = true;
 window.bench = { views, box, get view() { return view; } };
 
 BUTTONS.forEach(id => {
-  fetch(`data/rhv-${id}.json`).then(r => r.json()).then(t => {
+  fetch(`data/${ProteinLib.variantOf(ME, id).read.baked}`).then(r => r.json()).then(t => {
     views[id] = t;
     $('c-' + id).textContent = `${t.meta.chainsDrawn} chains`;
     if (view === id) show(id);
@@ -185,6 +189,7 @@ $('pick').addEventListener('click', () => {
   navigator.clipboard && navigator.clipboard.writeText(text);
   $('pick-note').textContent = text;
 });
+BUTTONS.forEach(id => $('v-' + id).setAttribute('aria-pressed', String(id === view)));
 BUTTONS.forEach(id => $('v-' + id).addEventListener('click', () => {
   BUTTONS.forEach(b => $('v-' + b).setAttribute('aria-pressed', String(b === id)));
   show(id);

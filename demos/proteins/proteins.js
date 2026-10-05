@@ -758,6 +758,48 @@
         baked: "gfp-1BFP.json" } },
   ];
 
+  const RHINOVIRUS_VARIANTS = [
+    { id: 'capsid', default: true,
+      purpose: 'the whole shell: 60 copies of one four-protein unit',
+      species: 'human rhinovirus 14',
+      section: '4RHV', label: 'the capsid', chip: '240 chains',
+      source: { kind: 'rcsb', id: '4RHV' },
+      assembly: true,
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 240,
+        residues: 48240,
+        declared: 51300,
+        ec: null,
+        baked: "rhv-capsid.json" } },
+    { id: 'pentamer',
+      purpose: 'five units around a five-fold axis, the canyon ringing it',
+      species: 'human rhinovirus 14',
+      section: '4RHV', label: 'pentamer', chip: '20 chains',
+      source: { kind: 'rcsb', id: '4RHV' },
+      assembly: true,
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 20,
+        residues: 4020,
+        declared: 4275,
+        ec: null,
+        baked: "rhv-pentamer.json" } },
+    { id: 'protomer',
+      purpose: 'the repeating unit: VP1, VP2 and VP3 outside, VP4 tucked under',
+      species: 'human rhinovirus 14',
+      section: '4RHV', label: 'protomer', chip: '4 chains',
+      source: { kind: 'rcsb', id: '4RHV' },
+      chains: '1,2,3,4',
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 4,
+        residues: 804,
+        declared: 855,
+        ec: null,
+        baked: "rhv-protomer.json" } },
+  ];
+
   const FERRITIN_VARIANTS = [
     { id: 'cage', default: true,
       purpose: 'the ball: 24 subunits closed into a hollow shell',
@@ -1837,6 +1879,24 @@
                  why: 'the shell reads as 24 parts because the ribbon is '
                     + 'see-through; an SES closes the pores' },
       variants: FERRITIN_VARIANTS,
+    },
+    {
+      key: 'rhinovirus', name: 'Rhinovirus', dir: 'proteins/rhinovirus',
+      blurb: 'The common cold. A shell of 60 identical units around one strand '
+           + 'of RNA, and each unit is four proteins cut from one longer chain.',
+      /* A coat, so `structural`. Not `storage`: the shell carries a genome
+         from cell to cell rather than keeping something out of harm's way. */
+      does: 'structural',
+      pipeline: 'trace',
+      fit: null,
+      fitWhy: 'three scales of one object, not states of it',
+      view: { by: 'deposited', shared: false,
+              why: 'nobody has aimed it; the capsid is near-spherical and a '
+                 + 'solved basis would flip between re-bakes' },
+      surface: { bake: false,
+                 why: 'the claim is the tiling, which colour by VP shows and an '
+                    + 'SES would merge into one ball' },
+      variants: RHINOVIRUS_VARIANTS,
     },
     {
       key: 'rubisco', name: 'Rubisco', dir: 'proteins/rubisco',

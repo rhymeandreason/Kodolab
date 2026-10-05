@@ -5,7 +5,9 @@
  *
  *  Run:  node proteins/rhinovirus/tools/prep.js   (offline, no deps)
  *
- *  UNDER REVIEW. The view table is CANDIDATES below, not the registry.
+ *  REVIEWED. All three views were kept; the view table is proteins/proteins.js
+ *  and this file reads it. What stays here is which FILE each scale reads and
+ *  how the pentamer is found.
  *
  *  THE ASYMMETRIC UNIT IS 1/60 OF THE PARTICLE. 4RHV.pdb holds four chains,
  *  one copy each of VP1-VP4; the capsid is assembly 1, deposited in
@@ -20,7 +22,7 @@
  *
  *  WHICH CHAIN IS WHICH VP IS READ off COMPND, never typed by chain id.
  *
- *  SOURCES (not committed; data/.gitignore names them):
+ *  SOURCES (not committed; the root .gitignore covers them):
  *    https://files.rcsb.org/download/4RHV.pdb       asymmetric unit
  *    https://files.rcsb.org/download/4RHV.pdb1.gz   assembly 1, 60 models
  * ===================================================================== */
@@ -42,14 +44,11 @@ function read(f) {
   return fs.readFileSync(at, 'utf8');
 }
 
-const CANDIDATES = [
-  { id: 'capsid',   source: '4RHV', scale: 'all',
-    purpose: 'the whole shell: 60 copies of one four-protein unit' },
-  { id: 'pentamer', source: '4RHV', scale: 'five',
-    purpose: 'five protomers around a five-fold axis, the canyon ringing it' },
-  { id: 'protomer', source: '4RHV', scale: 'one',
-    purpose: 'the repeating unit: VP1, VP2, VP3 outside, VP4 tucked under' },
-];
+const REG = require('../../proteins.js');
+const IO = require('../../tools/registry-io.js');
+const ME = REG.byKey('rhinovirus');
+/* Scale per variant id: which part of the assembly a view draws. */
+const SCALE = { capsid: 'all', pentamer: 'five', protomer: 'one' };
 
 /* VP number per chain id, off COMPND's MOLECULE/CHAIN pairs. */
 function vpOf(raw) {
@@ -107,6 +106,7 @@ function bake(v, raw, asm, vp) {
   const VP1 = Object.keys(vp).find(k => vp[k] === 'VP1');
 
   let chains, pick = null, nModels = 1;
+  v = { ...v, scale: SCALE[v.id] };
   if (v.scale === 'one') {
     chains = Bake.caTrace(Bake.modelOne(raw));
   } else {
@@ -145,7 +145,9 @@ function bake(v, raw, asm, vp) {
     method: Bake.method(raw), resolution: Bake.resolution(raw),
     title: Bake.line1(raw, 'TITLE'),
     assemblyModels: nModels, modelsDrawn: v.scale === 'one' ? 1 : (pick ? 5 : nModels),
-    chainsDrawn: T.order.length,
+    chainsDrawn: T.order.length, chainsInFile: T.order.length,
+    counts: T.order.map(id => ({ chain: id, modelled: T.chains[id].nums.length,
+                                 declared: decl[base(id)] === undefined ? null : decl[base(id)] })),
     /* Per VP, not per chain: in the capsid every VP is 60 copies of one chain. */
     vp: Object.keys(vp).sort().map(id => ({
       chain: id, name: vp[id], declared: decl[id] === undefined ? null : decl[id],
@@ -154,6 +156,17 @@ function bake(v, raw, asm, vp) {
     pentamerRadius: pick ? Bake.r2(pick.radius) : null,
     ligands: Bake.ligands(raw),
   };
+  const V = Bake.viewFor(ME, F, v);
+  if (V.view) out.view = V.view; else delete out.view;
+  out.frame = V.frame;
+  out.read = {
+    method: out.meta.method,
+    chainsInFile: T.order.length,
+    residues: T.order.reduce((k, id) => k + T.chains[id].nums.length, 0),
+    declared: T.order.reduce((k, id) => k + (decl[base(id)] || 0), 0) || null,
+    ec: Bake.ecNumbers(raw)[0] || null,
+    baked: `rhv-${v.id}.json`,
+  };
   return out;
 }
 
@@ -161,9 +174,11 @@ function main() {
   const raw = read('4RHV.pdb');
   const asm = models(read('4RHV.pdb1'));
   const vp = vpOf(raw);
-  for (const v of CANDIDATES) {
-    const out = bake(v, raw, asm, vp);
-    const file = `rhv-${v.id}.json`;
+  const blocks = {};
+  for (const v of ME.variants) {
+    const { read: r, ...out } = bake(v, raw, asm, vp);
+    const file = r.baked;
+    blocks[v.id] = r;
     fs.writeFileSync(path.join(DATA, file), JSON.stringify(out));
     const kb = (fs.statSync(path.join(DATA, file)).size / 1024).toFixed(0);
     const res = out.order.reduce((k, id) => k + out.chains[id].nums.length, 0);
@@ -172,7 +187,8 @@ function main() {
       (out.meta.pentamerRadius ? `, VP1 ring r ${out.meta.pentamerRadius} A` : ''));
   }
   console.log('vp:', JSON.stringify(vp));
+  console.log(`registry  proteins.js  ${IO.write('rhinovirus', blocks).length} variants updated`);
 }
 
 if (require.main === module) main();
-module.exports = { CANDIDATES, bake, vpOf, models };
+module.exports = { bake, vpOf, models };
