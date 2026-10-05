@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<base href="/demos/proteins/rhinovirus/">
+<title>Rhinovirus Structure in 3D — Kodolab</title>
+
+<!-- ===================================================================
+     SCRATCH, UNDER REVIEW. The view table is CANDIDATES in tools/prep.js;
+     nothing is in proteins/proteins.js yet.
+
+     WHAT IT IS FOR SETTLING:
+       does the capsid read   240 chains, 48k residues. Coloured by VP the
+                              shell should show its 60-fold tiling; if it
+                              reads as noise, the pentamer is the subject.
+       pentamer or protomer   two scales of the repeating part. The
+                              pentamer carries the canyon; the protomer is
+                              the four proteins one RNA encodes.
+       sub density            the capsid is drawn at a lower samples-per-
+                              residue than the parts, for frame rate.
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+
+<style>
+  .legend{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0 0 var(--space-3)}
+  .legend span{display:inline-flex;align-items:center;gap:5px;
+    font-size:0.72rem;color:var(--h-muted)}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .legend[hidden]{display:none}
+  .notes{margin:0;padding:0 0 0 1.1em}
+  .notes li{font-size:0.78rem;line-height:1.6;color:var(--h-muted);
+    margin:0 0 var(--space-2)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>Rhinovirus</h1>
+    <p class="deck">The common cold. A shell of 60 identical units around one
+      strand of RNA, and each unit is four proteins cut from one longer
+      chain. Human rhinovirus 14.</p>
+
+    <h2>4RHV</h2>
+    <button class="mode" id="v-capsid" aria-pressed="true">
+      <span class="who">the capsid</span><span class="chip" id="c-capsid">&mdash;</span></button>
+    <button class="mode" id="v-pentamer" aria-pressed="false">
+      <span class="who">pentamer</span><span class="chip" id="c-pentamer">&mdash;</span></button>
+    <button class="mode" id="v-protomer" aria-pressed="false">
+      <span class="who">protomer</span><span class="chip" id="c-protomer">&mdash;</span></button>
+
+    <h2>what you are looking at</h2>
+    <p class="claim" id="d-claim">&mdash;</p>
+    <p class="meta" id="d-meta">&mdash;</p>
+
+    <div class="legend" id="d-legend"></div>
+    <button class="mode" id="paint" aria-pressed="true">
+      <span class="who">colour by VP</span></button>
+
+    <table>
+      <tr><td>protomers drawn</td><td id="d-models">&mdash;</td></tr>
+      <tr><td>chains drawn</td><td id="d-chains">&mdash;</td></tr>
+      <tr><td>modelled</td><td id="d-res">&mdash;</td></tr>
+      <tr class="hi"><td>per VP</td><td id="d-vp">&mdash;</td></tr>
+      <tr class="hi"><td>extents &Aring;</td><td id="d-ext">&mdash;</td></tr>
+      <tr><td>read from</td><td id="d-src">&mdash;</td></tr>
+      <tr><td>view</td><td id="d-view">&mdash;</td></tr>
+    </table>
+
+    <p class="prov" id="d-prov">&mdash;</p>
+
+    <ul class="notes">
+      <li><strong>The asymmetric unit is one protomer.</strong> The capsid is
+        assembly 1, deposited as 60 models; the baker traces each and keys
+        its chains by model, since 240 chains do not fit a PDB chain column.</li>
+      <li><strong>The pentamer is found, not numbered.</strong> Model 1's VP1
+        and its four nearest VP1s, checked to sit on a circle.</li>
+      <li><strong>The RNA is not in the file.</strong> It is disordered inside
+        the shell, so the capsid is drawn hollow.</li>
+    </ul>
+
+    <button class="mode" id="pick" style="margin-top:12px">copy this view</button>
+    <p class="note" id="pick-note">Turn the molecule, then copy.</p>
+    <p class="src">
+      <a href="https://www.rcsb.org/structure/4RHV" target="_blank" rel="noopener">RCSB 4RHV<svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2h5.5v5.5M10 2 4.5 7.5M8 9.5H2V3.5"/></svg></a>
+      <a href="https://pdb101.rcsb.org/motm/20" target="_blank" rel="noopener">PDB-101 article<svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2h5.5v5.5M10 2 4.5 7.5M8 9.5H2V3.5"/></svg></a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script>
+'use strict';
+
+const box = Proteinbox.create({
+  mount: document.getElementById('stage'),
+  orbit: true,
+  stage: { ortho: false, turn: 'trackball' },
+  pad: 1.1,
+  sub: 10,
+});
+
+const $ = id => document.getElementById(id);
+
+/* The picornavirus convention: VP1 blue, VP2 green, VP3 red. VP4 is inside
+   the shell and gets the odd one out. */
+const VP_COLORS = { VP1: 0x2f6fb5, VP2: 0x4a9a58, VP3: 0xc0473a, VP4: 0xc9a227 };
+/* Samples per residue. 48k residues at the parts' 10 is a slow drag. */
+const SUB = { capsid: 4, pentamer: 8, protomer: 10 };
+
+const SAYS = {
+  capsid: {
+    claim: '60 copies of one four-protein unit, closed into an icosahedral '
+         + 'shell. The RNA genome sits inside.',
+    prov: 'Assembly 1 of 4RHV, merged from its 60 models.' },
+  pentamer: {
+    claim: 'Five protomers around a five-fold axis. VP1 lines the centre; the '
+         + 'groove ringing it is the canyon, where the cell receptor docks.',
+    prov: 'Twelve of these make the capsid.' },
+  protomer: {
+    claim: 'The repeating unit. VP1, VP2 and VP3 share one fold, a wedge-shaped '
+         + 'β-barrel; VP4 is a short chain on the inner face.',
+    prov: 'All four are cut from one polyprotein after translation.' },
+};
+
+const BUTTONS = ['capsid', 'pentamer', 'protomer'];
+const views = {};
+let view = 'capsid', byVP = true;
+window.bench = { views, box, get view() { return view; } };
+
+BUTTONS.forEach(id => {
+  fetch(`data/rhv-${id}.json`).then(r => r.json()).then(t => {
+    views[id] = t;
+    $('c-' + id).textContent = `${t.meta.chainsDrawn} chains`;
+    if (view === id) show(id);
+  }).catch(e => console.warn(`rhinovirus: ${id} — ${e.message}`));
+});
+
+function show(id) {
+  view = id;
+  const t = views[id];
+  if (!t) return;
+  const m = t.meta;
+  const total = t.order.reduce((k, c) => k + t.chains[c].nums.length, 0);
+  $('d-models').textContent = `${m.modelsDrawn} of ${m.assemblyModels}`;
+  $('d-chains').textContent = m.chainsDrawn;
+  $('d-res').textContent = `${total} residues`;
+  $('d-vp').textContent = m.vp.map(v => `${v.name} ${v.modelled}/${v.declared}`).join(' · ');
+  $('d-ext').textContent = t.extents.map(v => v.toFixed(0)).join(' × ');
+  $('d-src').textContent = t.source;
+  $('d-view').textContent = t.frame;
+  $('d-claim').textContent = SAYS[id].claim;
+  $('d-prov').textContent = SAYS[id].prov;
+  $('d-meta').textContent = `${m.entry} · ${m.method}`
+    + (m.resolution ? ` · ${m.resolution.toFixed(2)} Å` : '');
+
+  $('paint').setAttribute('aria-pressed', String(byVP));
+  $('d-legend').innerHTML = byVP ? Object.entries(VP_COLORS).map(([k, c]) =>
+    `<span><i style="background:#${c.toString(16).padStart(6, '0')}"></i>${k}</span>`).join('') : '';
+
+  const opts = { sub: SUB[id] };
+  if (byVP) opts.colors = { byChain: Object.fromEntries(
+    t.order.map(k => [k, VP_COLORS[m.vpOf[k]]])) };
+  box.setData(t, opts);
+}
+
+$('paint').addEventListener('click', () => { byVP = !byVP; show(view); });
+$('pick').addEventListener('click', () => {
+  const text = JSON.stringify(box.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  $('pick-note').textContent = text;
+});
+BUTTONS.forEach(id => $('v-' + id).addEventListener('click', () => {
+  BUTTONS.forEach(b => $('v-' + b).setAttribute('aria-pressed', String(b === id)));
+  show(id);
+}));
+</script>
+</body>
+</html>
