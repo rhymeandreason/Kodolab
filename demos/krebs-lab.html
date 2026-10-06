@@ -227,18 +227,37 @@
   .cycle #tnotes{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
   .link #app-sidebar{grid-template-rows:minmax(0,1fr);grid-template-columns:1fr}
   .link #stage{grid-column:1;grid-row:1}
+  /* The rail bar is z 7 and paints its own paper; the header rides over it. */
+  .sitenav.floating{z-index:8}
+  /* Drops the rail onto the wordmark's optical centre, which sits low in its
+     box: the letters have ascenders and no descenders. */
+  #railbar{padding-top:16px}
+  #allsteps{top:calc(50% + 2px)}
+  .sitenav .aboutbtn{color:var(--muted);opacity:.55;transform:translateY(-3px)}
+  .sitenav .aboutbtn:hover,.sitenav .aboutbtn[aria-expanded="true"]{opacity:1}
+  /* The stage runs up behind the rail, and the rail is see-through, so the
+     scene is never clipped at a line below the header. */
+  @media (min-width:921px){
+    #stage{grid-row:1 / -1}
+    #railbar{grid-row:1;background:none;pointer-events:none}
+    #railbar>*{pointer-events:auto}
+  }
 </style>
 </head>
 <!-- The class has to land before the first paint, or a framed lesson
      flashes its own title on the way into someone else's frame. -->
 <script src="lib/embed.js"></script>
 <body>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  <span class="crumb">The Krebs Cycle</span>
+</nav>
 <div id="app-sidebar">
   <!-- THE PATHWAY RAIL, top, spanning both columns: read left-to-right it costs
        the stage no width, which is what the molecules needed. Title absolutely
        positioned so it costs the rail no width and leaves it centred. -->
   <div id="railbar">
-    <h1 id="pagetitle">Krebs cycle</h1>
+    <div id="pagetitle" class="framed-only">Krebs cycle</div>
     <div id="rail"></div>
     <!-- THE CYCLE LIST'S DOOR, opposite the title: it is the rail written out,
          so it belongs on the rail's line. Absolutely positioned for the same
