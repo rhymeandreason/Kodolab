@@ -483,7 +483,7 @@ body.lshell-bar .lshell-controls { bottom: 24px !important; }
 
 /* =============================================================================
    kit/timeline-shell.js: the dock (play, one bar per step, speed) and the
-   track switch, both in the free room. Placed by script, which reads the
+   track switch, both centred on the page. Placed by script, which reads the
    panel's rect; these only say how they look.
    ========================================================================== */
 .lshell-dock {
@@ -522,9 +522,11 @@ body.lshell-bar .lshell-controls { bottom: 24px !important; }
 }
 .lshell-speed:hover { border-color: var(--ink-3); }
 
-/* A narrower panel: the scene and its timeline are the lesson here, and the
-   words beside them are a caption. */
-.lshell-timed .lshell-panel { width: min(360px, calc(100vw - 48px)); bottom: auto; max-height: calc(100vh - 100px); }
+/* A narrower panel, on the RIGHT: the scene and its timeline are the lesson
+   here, the words beside them a caption, and with the panel out of the left
+   the dock and the switch centre on the page. It stops above the dock. */
+.lshell-timed .lshell-panel { left: auto; right: 24px; width: min(360px, calc(100vw - 48px)); bottom: auto; max-height: calc(100vh - 76px - 108px); }
+.lshell-timed .lshell-steps { display: none; }   /* the dock is the progress */
 /* Back/Next only while paused: during playback the clock is what moves the
    steps, and the row is two buttons that do nothing the timeline does not. */
 .lshell-timed.is-playing .lshell-nav { display: none; }
@@ -532,7 +534,7 @@ body.lshell-bar .lshell-controls { bottom: 24px !important; }
 .lshell-timed .lshell-panel .title { font-size: clamp(26px, 2.2vw, 32px); margin-bottom: 14px; }
 .lshell-timed .lshell-panel .body { font-size: 16px; }
 
-/* The switch: the panel's .segmented, on glass, at the top of the free room. */
+/* The switch: the panel's .segmented, on glass, centred at the top. */
 .lshell-tracks {
   position: fixed; top: 12px; transform: translateX(-50%); z-index: 6;
   display: inline-flex; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 999px;
@@ -550,6 +552,8 @@ body.lshell-bar .lshell-controls { bottom: 24px !important; }
 .lshell-tracks button.is-on { background: var(--accent); color: #fff; box-shadow: 0 6px 14px -4px rgba(20,33,61,0.45); }
 
 @media (max-width: 760px) {
+  /* Docked to the foot like every lesson's, which the rule above outranks. */
+  .lshell-timed .lshell-panel { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 54vh; }
   .lshell-dock { gap: 10px; border-radius: 22px; }
   .lshell-lbl { display: none; }
   .lshell-tracks { top: 52px; }

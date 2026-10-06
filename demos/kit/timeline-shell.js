@@ -20,12 +20,13 @@
  *
  *  IT IS kit/lesson-shell.js, with a dock. The panel, ctx, ui, the wordmark,
  *  the dots and Back/Next are the base's, so `ctx.q` means what it means in a
- *  step-through and a step is the same object with a `dur` on it. The panel
- *  stays on the left, where every lesson keeps it. What this adds:
+ *  step-through and a step is the same object with a `dur` on it. What
+ *  differs is the layout: the panel sits on the RIGHT and shorter, so the dock
+ *  and the switch centre on the page, and the dock replaces the dots. Adds:
  *    - a clock: `t` in seconds, played at the dock's speed, stopping at the end
- *    - the dock in the free room: play/pause, one bar per step sized by its
- *      `dur` and scrubbable, and the speed
- *    - the switch, at the top of the free room, when there is more than one track
+ *    - the dock, centred at the foot: play/pause, one bar per step sized by
+ *      its `dur` and scrubbable, and the speed
+ *    - the switch, centred at the top, when there is more than one track
  *  The clock drives the steps: crossing a step's start calls the base's
  *  goTo. And the steps drive the clock: Back, Next, a dot or an arrow key
  *  pauses and seeks `t` to that step's end, its result. Space plays and pauses. Back/Next show
@@ -33,7 +34,7 @@
  *
  *  `freeRect()` is the room in viewport px ({ l, r, t, b }) between the
  *  panel, the top bar and the dock. A scene frames into it, not into the
- *  window: `viewOffset` only knows about the panel.
+ *  window: the base's `viewOffset` assumes a panel on the left.
  *
  *  `shell.time` is { t, playing, track, seek(t), play(on), setTrack(id) }.
  * ========================================================================== */
@@ -215,21 +216,23 @@
       shell.goTo(0);
     }
 
-    // ---- placement: the dock and the switch live in the room the panel leaves
+    // ---- placement: centred on the page, the panel on the right above the dock
     const TOP = 60;   // the base's top bar
+    const DOCK_MAX = 1060;
     function place() {
       const W = global.innerWidth, H = global.innerHeight;
       const r = shell.panelRect();
       if (shell.narrow()) {
         dock.style.left = '12px';
-        dock.style.right = '12px';
+        dock.style.width = (W - 24) + 'px';
         dock.style.bottom = Math.round(H - r.top + 10) + 'px';
       } else {
-        dock.style.left = Math.round(r.right + 20) + 'px';
-        dock.style.right = '24px';
+        const w = Math.min(DOCK_MAX, W - 48);
+        dock.style.left = Math.round((W - w) / 2) + 'px';
+        dock.style.width = w + 'px';
         dock.style.bottom = '24px';
       }
-      if (sw) sw.style.left = Math.round(shell.narrow() ? W / 2 : (r.right + W) / 2) + 'px';
+      if (sw) sw.style.left = Math.round(W / 2) + 'px';
       if (opts.onLayout) opts.onLayout();
     }
     function freeRect() {
@@ -237,7 +240,7 @@
       const r = shell.panelRect();
       const d = dock.getBoundingClientRect();
       const top = sw ? sw.getBoundingClientRect().bottom + 8 : TOP;
-      return { l: shell.narrow() ? 0 : r.right, r: W, t: top, b: d.top - 8 };
+      return { l: 0, r: shell.narrow() ? W : r.left, t: top, b: d.top - 8 };
     }
     new ResizeObserver(place).observe(shell.panel);
     global.addEventListener('resize', place);
