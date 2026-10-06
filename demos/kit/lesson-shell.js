@@ -11,6 +11,7 @@
  *        section: { label: 'library', href: '/library' },   // optional, beside the mark
  *        hint:  'Drag to orbit · Scroll to zoom',
  *        steps: [{ eyebrow, title, body, nextLabel, camera,
+ *                  short,             // a word or two for the dots' hover outline; else eyebrow
  *                  onEnter(ctx), onExit(ctx),
  *                  onLeave(ctx, to) -> seconds to hold before the swap }, ...],
  *        ctx:   {},                       // handed to every step; the shell adds `ui` and `goTo`
@@ -96,7 +97,10 @@
       <div class="lshell-stage"></div>
       <header class="lshell-topbar">
         <div class="lshell-brand"><a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a><a class="lshell-section" hidden></a><span class="lshell-crumb"></span></div>
-        <nav class="lshell-progress" aria-label="Lesson progress"></nav>
+        <div class="lshell-steps">
+          <nav class="lshell-progress" aria-label="Lesson progress"></nav>
+          <ol class="lshell-outline"></ol>
+        </div>
       </header>
       <aside class="lshell-panel">
         <div class="lshell-scroll">
@@ -115,7 +119,7 @@
     host.appendChild(el);
     const $ = sel => el.querySelector(sel);
     const els = {
-      stage: $('.lshell-stage'), brand: $('.lshell-brand'), progress: $('.lshell-progress'),
+      stage: $('.lshell-stage'), brand: $('.lshell-brand'), progress: $('.lshell-progress'), outline: $('.lshell-outline'),
       panel: $('.lshell-panel'), scroll: $('.lshell-scroll'),
       eyebrow: $('.eyebrow'), title: $('.title'), body: $('.body'), controls: $('.controls'),
       back: $('.lshell-nav .ghost'), next: $('.lshell-nav .primary'), count: $('.lshell-count'),
@@ -352,6 +356,11 @@
       b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`);
       b.addEventListener('click', () => goTo(i));
       els.progress.appendChild(b);
+      const li = document.createElement('li');
+      li.innerHTML = `<button type="button"><span>${i + 1}</span></button>`;
+      li.firstChild.append(s.short || s.eyebrow || s.title);
+      li.firstChild.addEventListener('click', () => goTo(i));
+      els.outline.appendChild(li);
     });
 
     /* A STEP MAY HOLD THE DOOR. `onLeave(ctx, to)` returns seconds, and the
@@ -396,7 +405,8 @@
       ui.setNext(last ? 'Start over' : (step.nextLabel || 'Next'), !last || steps.length > 1);
       els.back.disabled = i === 0;
       els.count.textContent = `${i + 1} / ${steps.length}`;
-      [...els.progress.children].forEach((b, k) => {
+      [...els.progress.children, ...els.outline.children].forEach((b, k) => {
+        k %= steps.length;
         b.classList.toggle('is-current', k === i);
         b.classList.toggle('is-done', k < i);
       });

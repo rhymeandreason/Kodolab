@@ -77,6 +77,7 @@ body.lshell-page.is-night { --bg: #232735; --on-bg: #f4f2ec; }
 .lshell-section:not([hidden]) + .lshell-crumb::before { content: '/'; opacity: 0.35; margin-right: 10px; }
 /* The drawn mark is one ink; the night scene needs it light. */
 body.is-night .lshell-brand .mark img { filter: invert(1); transition: filter 1s ease; }
+.lshell-steps { position: relative; pointer-events: auto; padding: 10px 0; }
 .lshell-progress { display: flex; gap: 6px; pointer-events: auto; }
 .lshell-progress button {
   width: 8px; height: 8px; border-radius: 4px; border: 0; padding: 0;
@@ -86,6 +87,27 @@ body.is-night .lshell-brand .mark img { filter: invert(1); transition: filter 1s
 .lshell-progress button.is-done { opacity: 0.6; }
 .lshell-progress button.is-current { width: 28px; opacity: 1; background: var(--accent); }
 body.is-night .lshell-progress button.is-current { background: #9fd98a; }
+/* Hovering the dots drops the outline: one short label per step. */
+.lshell-outline {
+  position: absolute; top: 100%; right: -10px; margin: 0; padding: 6px; list-style: none;
+  min-width: 180px; color: var(--ink);
+  background: var(--panel); backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.7); border-radius: 14px;
+  box-shadow: 0 20px 50px -30px rgba(20,30,20,0.5);
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity 0.18s, transform 0.18s, visibility 0s 0.18s;
+}
+.lshell-steps:hover .lshell-outline, .lshell-steps:focus-within .lshell-outline {
+  opacity: 1; visibility: visible; transform: none; transition: opacity 0.18s, transform 0.18s;
+}
+.lshell-outline button {
+  display: flex; gap: 10px; width: 100%; padding: 6px 10px; border: 0; border-radius: 8px;
+  background: none; font: inherit; font-size: 13px; color: var(--ink-2); text-align: left; cursor: pointer; white-space: nowrap;
+}
+.lshell-outline button span { width: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.lshell-outline button:hover { background: rgba(0,0,0,0.05); color: var(--ink); }
+.lshell-outline li.is-current button { color: var(--accent); font-weight: 600; }
+.lshell-outline li.is-current button span { color: inherit; }
 
 /* ---------- panel ---------- */
 .lshell-panel {
@@ -341,7 +363,7 @@ body.is-night .lshell-progress button.is-current { background: #9fd98a; }
 /* A shell with nowhere to go: no Back/Next, no dots, and the panel's scroll
    takes the room they leave. kit/sandbox-shell.js asks for this. */
 .lshell.lshell-bare .lshell-nav,
-.lshell.lshell-bare .lshell-progress { display: none; }
+.lshell.lshell-bare .lshell-steps { display: none; }
 
 /* =============================================================================
    kit/lesson-stage.js: an A/B split, a switch, a scrubber, a line under the
