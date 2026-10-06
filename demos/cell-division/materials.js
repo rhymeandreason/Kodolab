@@ -172,43 +172,6 @@
     };
   }
 
-  // ---------------------------------------------------------------- environment
-  // A soft studio: gradient dome + a few softboxes, prefiltered for glossy reflections.
-  CD.makeEnvironment = function (renderer) {
-    const env = new THREE.Scene();
-    const dome = new THREE.SphereGeometry(10, 32, 16);
-    const pos = dome.attributes.position;
-    const cols = [];
-    const top = new THREE.Color('#ffffff');
-    const bottom = new THREE.Color(0xd9d3c7); // the paper, a shade down, so reflections are warm
-    const tmp = new THREE.Color();
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) / 10;
-      tmp.copy(bottom).lerp(top, CD.smoothstep(-0.6, 0.7, y));
-      cols.push(tmp.r, tmp.g, tmp.b);
-    }
-    dome.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-    env.add(new THREE.Mesh(dome, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
-
-    const box = (w, h, p, k) => {
-      const m = new THREE.Mesh(
-        new THREE.PlaneGeometry(w, h),
-        new THREE.MeshBasicMaterial({ color: new THREE.Color(k, k, k), side: THREE.DoubleSide })
-      );
-      m.position.copy(p);
-      m.lookAt(0, 0, 0);
-      env.add(m);
-    };
-    box(9, 4, new THREE.Vector3(1, 7, 4), 3.2);
-    box(4, 7, new THREE.Vector3(-8, 2, 3), 1.6);
-    box(4, 6, new THREE.Vector3(8, 1, -3), 1.2);
-
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    const rt = pmrem.fromScene(env, 0.03);
-    pmrem.dispose();
-    return rt.texture;
-  };
-
   // ---------------------------------------------------------------- shared resources
   CD.initShared = function () {
     CD.tex = {
@@ -248,7 +211,7 @@
         opacity: 0.55,
         depthWrite: false,
       }),
-      centriole: new THREE.MeshStandardMaterial({ color: lin(CD.COLORS.centriole), roughness: 0.35, metalness: 0.1 }),
+      centriole: new THREE.MeshStandardMaterial({ color: lin(CD.COLORS.centriole), roughness: 0.48 }),
       halo: new THREE.SpriteMaterial({
         map: CD.tex.glow,
         color: lin(CD.COLORS.halo),

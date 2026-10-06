@@ -37,15 +37,12 @@
     constructor(def, parent) {
       this.def = def;
       this.st = {};
-      this.mat = new THREE.MeshPhysicalMaterial({
+      this.mat = new THREE.MeshStandardMaterial({
         vertexColors: true,
-        roughness: 0.36,
+        roughness: 0.48,
         metalness: 0,
-        clearcoat: 0.6,
-        clearcoatRoughness: 0.28,
         emissive: new THREE.Color(0xffffff),
         emissiveIntensity: 0,
-        envMapIntensity: 0.6,
       });
       this.tube = new CD.Tube(N, M, this.mat);
       this.mesh = this.tube.mesh;
@@ -388,10 +385,9 @@
       this.shell.renderOrder = 2;
       this.group.add(this.shell);
 
-      this.nMat = new THREE.MeshPhysicalMaterial({
+      this.nMat = new THREE.MeshStandardMaterial({
         color: CD.lin(CD.COLORS.nucleolus),
-        roughness: 0.5,
-        clearcoat: 0.3,
+        roughness: 0.48,
         transparent: true,
         opacity: 1,
       });

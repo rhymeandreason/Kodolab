@@ -48,16 +48,15 @@
 
     const scene = new THREE.Scene();
     if (!CD.mat) CD.initShared();
-    scene.environment = CD.makeEnvironment(renderer);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xe6e0d4, 0.45));
-    const key = new THREE.DirectionalLight(0xffffff, 1.05);
-    key.position.set(4, 8, 6);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight(0xfff4e6, 0.45);
-    rim.position.set(-6, 2, -5);
-    scene.add(rim);
-
     const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
+    // the enzyme lesson's studio light, parented to the camera so highlights stay put on orbit
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    scene.add(camera);
+    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    key.position.set(4, 6, 8);
+    const fill = new THREE.DirectionalLight(0x88aaff, 0.45);
+    fill.position.set(-6, -2, -4);
+    camera.add(key, key.target, fill, fill.target);
     const HOME_DIR = new V3(0.22, 0.3, 1).normalize();
     camera.position.copy(HOME_DIR).multiplyScalar(16);
 
