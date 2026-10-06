@@ -28,7 +28,7 @@ window.Lessons = [
   { key: 'photosynth',   unit: 'plant',  title: 'Photosynthesis',               blurb: 'Into the leaf, into the chloroplast: where the light lands, where the water is split, and where the sugar is made.', soon: true },
   { key: 'dna',          unit: 'gene',   url: '/dna',                file: '/demos/dna-structure.html',    title: 'Structure of DNA',              blurb: 'A helix from real coordinates, part by part.', still: '/demos/proteins/stills/dna.webp', status: 'featured' },
   { key: 'replication',  unit: 'gene',   title: 'DNA Replication',              blurb: 'The fork opens and you copy the template a letter at a time: each nucleotide pairs and joins the backbone in one beat.', soon: true },
-  { key: 'division',     unit: 'gene',   title: 'Mitosis & Meiosis',             blurb: 'One cell becomes two identical copies, or four that each carry half. Follow the chromosomes through both.', soon: true },
+  { key: 'division',     unit: 'gene',   url: '/cell-division',      file: '/demos/cell-division/cell-division-lab.html', title: 'Mitosis & Meiosis',             blurb: 'One cell becomes two identical copies, or four that each carry half. Follow the chromosomes through both.', still: '/demos/media/components/cell-division.webp', status: 'new' },
 ];
 
 window.LessonUnits = [

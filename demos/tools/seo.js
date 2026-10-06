@@ -79,6 +79,8 @@ const PAGES = {
     description: 'Sickle cell in 3D: one letter changes in the hemoglobin gene, a red cell sickles, a vessel jams, and one copy protects against malaria.' },
   '/enzymes': { image: 'enzymes',
     description: 'How enzymes work, in 3D: a chain folds into an active site, a substrate binds by induced fit, the activation energy drops, and heat, pH and inhibitors switch it off.' },
+  '/cell-division': { image: 'cell-division',
+    description: 'Mitosis and meiosis in 3D: chromosomes condense, line up and separate on one timeline you can scrub, with the cells, chromosomes and chromatids counted as they divide.' },
   '/tree': { image: 'massoftree',
     description: "Where a tree's mass comes from: Van Helmont's willow, photosynthesis as traffic in and out of the leaf, and the tree taken apart by origin." },
   '/lessons': { image: 'lessons',
