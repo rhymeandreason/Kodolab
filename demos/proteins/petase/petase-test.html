@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PETase and MHETase — bench</title>
+
+<!-- ===================================================================
+     SCRATCH. Two registry entries on one bench, petase and mhetase; what
+     each structure IS and what it draws is proteins/proteins.js.
+
+     WHAT IT IS FOR SETTLING:
+
+       the groove       6EQE against 5XH3, superposed: does one PET repeat
+                        sitting in the shallow surface groove read at all?
+       five residues    6EQE against 7SH6: FAST-PETase changes five side
+                        chains and the backbone does not move. Is "nothing
+                        moved" visible, or does it need the RMSD printed?
+       the second cut   6QGA chain A: twice the size, a lid over the site.
+                        Does it earn its own view in a lesson?
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>PET enzymes</h1>
+    <p class="deck">Two cuts that turn a plastic bottle back into its monomers, from
+      <i>Ideonella sakaiensis</i>.</p>
+
+    <h2>PETase &middot; one enzyme, superposed</h2>
+    <button class="mode" data-v="6EQE"><span class="who">wild type &middot; 6EQE</span><span class="chip">empty</span></button>
+    <button class="mode" data-v="5XH3"><span class="who">holding PET &middot; 5XH3</span><span class="chip">HEMT</span></button>
+    <button class="mode" data-v="7SH6"><span class="who">FAST-PETase &middot; 7SH6</span><span class="chip">5 changes</span></button>
+
+    <h2>MHETase &middot; the second cut</h2>
+    <button class="mode" data-v="6QGA"><span class="who">holding MHET analogue &middot; 6QGA</span><span class="chip">chain A</span></button>
+
+    <h2>closer</h2>
+    <button class="mode" id="lean" aria-pressed="false"><span class="who">lean in</span></button>
+
+    <h2>what you are looking at</h2>
+    <p class="claim" id="d-claim">&mdash;</p>
+    <p class="meta" id="d-meta">&mdash;</p>
+
+    <table>
+      <tr><td>span</td><td id="d-span">&mdash;</td></tr>
+      <tr class="hi"><td>completeness</td><td id="d-pct">&mdash;</td></tr>
+      <tr><td>HELIX / SHEET</td><td id="d-ssrec">&mdash;</td></tr>
+      <tr><td>disulfides</td><td id="d-ss">&mdash;</td></tr>
+      <tr><td>triad</td><td id="d-triad">&mdash;</td></tr>
+      <tr><td>bound</td><td id="d-lig">&mdash;</td></tr>
+      <tr><td>substitutions</td><td id="d-mut">&mdash;</td></tr>
+      <tr><td>FAST sites</td><td id="d-marks">&mdash;</td></tr>
+      <tr><td>numbering</td><td id="d-num">&mdash;</td></tr>
+      <tr class="hi"><td>fit</td><td id="d-fit">&mdash;</td></tr>
+      <tr><td>extents &Aring;</td><td id="d-ext">&mdash;</td></tr>
+      <tr><td>view</td><td id="d-view">&mdash;</td></tr>
+    </table>
+
+    <p class="prov" id="d-prov">&mdash;</p>
+    <p class="note">Ribbon colour is secondary structure. Ball-and-stick is what
+      each structure is about: the triad, the bound substrate, or FAST-PETase's
+      five changed side chains.</p>
+
+    <button class="mode" id="pick" style="margin-top:12px">copy this view</button>
+    <p class="note" id="pick-note">Turn the molecule, then copy.</p>
+
+    <p class="src">
+      <a id="d-rcsb" href="https://www.rcsb.org/" target="_blank" rel="noopener">RCSB entry</a>
+      <a id="d-baked" href="data/">what this page loads</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script>
+'use strict';
+
+const PET = ProteinLib.byKey('petase'), MHET = ProteinLib.byKey('mhetase');
+const box = Proteinbox.create({
+  mount: document.getElementById('stage'),
+  view: ProteinLib.viewOf(PET),
+  orbit: true, stage: { ortho: false, turn: 'trackball' }, pad: 1.15, sub: 10,
+});
+
+/* id -> {protein, variant}, from the registry. */
+const ALL = {};
+for (const p of [PET, MHET]) for (const v of p.variants) ALL[v.id] = { p, v };
+
+const SAYS = {
+  '6EQE': {
+    claim: 'PETase, wild type, nothing bound. The reference every other PETase view is fitted onto.',
+    prov:  'The active site sits in a shallow groove on the surface, open to a solid plastic it cannot pull inside.' },
+  '5XH3': {
+    claim: 'One repeat of PET lying in the groove, caught before it is cut.',
+    prov:  'The catalytic serine is replaced by alanine, so the enzyme binds the substrate and cannot cut it. '
+         + 'HEMT is one terephthalate with one ester on each side: the bond PETase breaks.' },
+  '7SH6': {
+    claim: 'FAST-PETase: five substitutions found by machine learning, made to work warmer and faster.',
+    prov:  'Drawn: the triad and the five changed side chains. None of the five is a triad residue, and the backbone has not moved from the wild type.' },
+  '6QGA': {
+    claim: 'MHETase, the second cut: MHET into terephthalic acid and ethylene glycol.',
+    prov:  'The bound ligand is MHET with its ester swapped for an amide, which this enzyme cannot cut. '
+         + 'One of six copies in the file; each is a monomer.' },
+};
+
+const views = {};
+let view = ProteinLib.defaultOf(PET).id, drawn = null, lean = false;
+const $ = id => document.getElementById(id);
+window.bench = { views, box, get view() { return view; } };
+
+Object.entries(ALL).forEach(([id, { v }]) => {
+  fetch(`data/${v.read.baked}`).then(r => r.json()).then(t => { views[id] = t; if (view === id) draw(); });
+});
+
+/* Framed on whatever the view draws in ball-and-stick: a tight site, or
+   FAST-PETase's five sites spread across the surface. */
+function siteOf(t) {
+  const A = t.pocket.atoms;
+  const at = [0, 1, 2].map(k => A.reduce((s, a) => s + a.p[k], 0) / A.length);
+  const far = Math.max(...A.map(a => Math.hypot(a.p[0] - at[0], a.p[1] - at[1], a.p[2] - at[2])));
+  return { at, radius: Math.max(14, far + 6), ghost: 0.35 };
+}
+
+function draw() {
+  const t = views[view];
+  if (!t) return;
+  const m = t.meta, c = m.counts[0], ch = t.chains[t.order[0]];
+  const last = ch.nums[ch.nums.length - 1];
+  $('d-claim').textContent = SAYS[view].claim;
+  $('d-prov').textContent = SAYS[view].prov;
+  $('d-meta').textContent = `${m.entry} · ${m.method}` + (m.resolution ? ` · ${m.resolution.toFixed(2)} Å` : '')
+    + (m.ec ? ` · EC ${m.ec}` : '');
+  $('d-span').textContent = `${ch.first}–${last} as filed` + (m.offset ? ` · ${ch.first + m.offset}–${last + m.offset} UniProt` : '');
+  $('d-pct').textContent = c.declared ? `${c.modelled} of ${c.declared} · ${Math.floor(100 * c.modelled / c.declared)}%` : '—';
+  $('d-ssrec').textContent = `${m.helices} / ${m.strands}`;
+  $('d-ss').textContent = m.ss.length ? `${m.ss.length} · ${m.ss.join(' ')}` : 'none in file';
+  $('d-triad').textContent = m.triad.map(x => x.res[0] + x.res.slice(1).toLowerCase() + x.num + (x.changed ? ' (mutated)' : '')).join(' · ');
+  $('d-lig').textContent = m.bound.length ? m.bound.join(', ') : 'nothing in the site';
+  $('d-mut').textContent = m.mutations.length
+    ? m.mutations.map(x => `${x.from}${x.num}${x.to}`).join(' · ') : 'none (wild type)';
+  $('d-marks').textContent = m.marks.length ? m.marks.map(x => (x.res || '?') + x.num).join(' · ') : '—';
+  $('d-num').textContent = m.offset ? `file + ${m.offset} = UniProt (off DBREF)` : 'UniProt';
+  $('d-fit').textContent = m.fitOn ? `Cα onto ${m.fitOn}: ${m.fitRmsd} Å over ${m.fitAtoms} residues`
+    : ALL[view].p.fit ? 'reference frame' : 'not fitted, one structure';
+  $('d-ext').textContent = t.extents.map(v => v.toFixed(0)).join(' × ');
+  $('d-view').textContent = t.frame;
+  $('d-rcsb').href = `https://www.rcsb.org/structure/${m.entry}`;
+  $('d-rcsb').textContent = `RCSB ${m.entry}`;
+  $('d-baked').href = `data/${ALL[view].v.read.baked}`;
+
+  document.querySelectorAll('[data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === view)));
+  $('d-marks').parentElement.style.opacity = m.marks.length ? 1 : .4;
+
+  /* `keep` between superposed PETase views only: the old ribbon stays up
+     until the new one is whole, so nothing seems to move but what did. */
+  const same = drawn && ALL[drawn].p === ALL[view].p && ALL[view].p.fit;
+  box.setData(t, { view: ProteinLib.viewOf(ALL[view].p, ALL[view].v), keep: !!same });
+  drawn = view;
+  box.setPocket(t.pocket);
+  box.focus(lean ? siteOf(t) : null, 0);
+}
+
+document.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { view = b.dataset.v; draw(); }));
+$('lean').addEventListener('click', () => {
+  lean = !lean;
+  $('lean').setAttribute('aria-pressed', String(lean));
+  const t = views[view]; if (t) box.focus(lean ? siteOf(t) : null, 600);
+});
+$('pick').addEventListener('click', () => {
+  const text = JSON.stringify(box.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  $('pick-note').textContent = text;
+});
+</script>
+</body>
+</html>

@@ -1230,6 +1230,77 @@
         baked: "ras-6OIM.json" } },
   ];
 
+  /* The two enzymes Ideonella sakaiensis lives on PET with, one folder. All
+     three PETase entries are fitted onto 6EQE by Ca, matched by UniProt
+     number: 5XH3 numbers its construct from 1 and the baker reads the offset
+     off DBREF. `pocket.triad` is UniProt-numbered and asserted by the baker;
+     `pocket.draw` is what each view shows in ball-and-stick. */
+  const PETASE_VARIANTS = [
+    { id: '6EQE', default: true,
+      purpose: 'wild type, the empty groove',
+      species: 'Ideonella sakaiensis',
+      source: { kind: 'rcsb', id: '6EQE' },
+      /* 0.92 A, deposits riding hydrogens; the pocket drops them so every
+         view draws alike. Chosen over 5XJH (1.54 A) on resolution. */
+      chains: 'A',
+      pocket: { triad: { S: 160, D: 206, H: 237 }, draw: ['triad'] },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 1,
+        residues: 265,
+        declared: 298,
+        ec: "3.1.1.101",
+        baked: "petase-6EQE.json" } },
+    { id: '5XH3',
+      purpose: 'one PET repeat (HEMT) in the groove, held before the cut',
+      species: 'Ideonella sakaiensis',
+      source: { kind: 'rcsb', id: '5XH3' },
+      /* S160A removes the serine that attacks the ester, so the substrate
+         stays whole; R132G rides along. Both off SEQADV. */
+      chains: 'A', state: 'mutant',
+      pocket: { triad: { S: 160, D: 206, H: 237 }, ligands: ['856'], draw: ['triad', 'ligand'] },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 1,
+        residues: 261,
+        declared: 261,
+        ec: "3.1.1.101",
+        baked: "petase-5XH3.json" } },
+    { id: '7SH6',
+      purpose: 'FAST-PETase: five substitutions, triad untouched, backbone unmoved',
+      species: 'Ideonella sakaiensis',
+      source: { kind: 'rcsb', id: '7SH6' },
+      /* Engineered for heat and speed (Lu et al. 2022). The five sites are
+         read off this file's SEQADV, never typed. */
+      chains: 'A', state: 'mutant',
+      pocket: { triad: { S: 160, D: 206, H: 237 }, draw: ['triad', 'mark'] },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 1,
+        residues: 261,
+        declared: 292,
+        ec: "3.1.1.101",
+        baked: "petase-7SH6.json" } },
+  ];
+
+  const MHETASE_VARIANTS = [
+    { id: '6QGA', default: true,
+      purpose: 'the second cut, holding an MHET analogue it cannot break',
+      species: 'Ideonella sakaiensis',
+      source: { kind: 'rcsb', id: '6QGA' },
+      /* MHETA: MHET with the ester swapped for an amide. Six monomers in the
+         asymmetric unit; chain A. Its C224-C529 disulfide flanks the triad. */
+      chains: 'A',
+      pocket: { triad: { S: 225, D: 492, H: 528 }, ligands: ['J1K'], draw: ['triad', 'ligand'] },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 6,
+        residues: 558,
+        declared: 596,
+        ec: "3.1.1.102",
+        baked: "mhetase-6QGA.json" } },
+  ];
+
   const PROTEINS = [
     {
       key: 'atp-synthase', name: 'ATP synthase', dir: 'proteins/atp-synthase',
@@ -2316,6 +2387,40 @@
                  why: 'the claim is two loops moving, which is backbone; the '
                     + 'drug pocket would earn one if a lesson is about it' },
       variants: RAS_VARIANTS,
+    },
+    {
+      key: 'petase', name: 'PETase', dir: 'proteins/petase',
+      blurb: 'An enzyme from a bacterium found outside a bottle-recycling plant, '
+           + 'that cuts the ester bonds holding PET plastic together. Its active '
+           + 'site is an open groove on the surface, because the plastic is a '
+           + 'solid it cannot pull inside.',
+      does: 'enzyme',
+      pipeline: 'trace',
+      fit: { on: '6EQE', by: 'Ca, matched by UniProt number' },
+      fitWhy: 'states of one enzyme: empty, holding substrate, engineered',
+      view: { by: 'human', shared: true,
+              why: 'globular, so no solved basis is stable; turned on the bench '
+                 + 'to face the groove, one basis for all three',
+              basis: [[-0.9071, 0.0989, -0.4091],
+                      [0.4137, 0.0305, -0.9099],
+                      [-0.0775, -0.9946, -0.0686]] },
+      surface: { bake: false,
+                 why: 'the open groove is a surface claim; worth a bake for '
+                    + '5XH3 if a lesson is about the substrate lying in it' },
+      variants: PETASE_VARIANTS,
+    },
+    {
+      key: 'mhetase', name: 'MHETase', dir: 'proteins/petase',
+      blurb: 'The second enzyme in eating PET. It splits the fragment PETase '
+           + 'leaves into the two small molecules the plastic was made from.',
+      does: 'enzyme',
+      pipeline: 'trace',
+      page: 'petase/petase-test.html',
+      fitWhy: 'one structure',
+      view: { by: 'deposited', shared: false,
+              why: 'the solved basis stands until a human picks one' },
+      surface: { bake: false, why: 'the claim is the site, shown by the triad and ligand' },
+      variants: MHETASE_VARIANTS,
     },
   ];
 
