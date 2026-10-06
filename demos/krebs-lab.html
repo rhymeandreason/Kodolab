@@ -578,7 +578,7 @@ const carrierKey=n=>n==='NAD+'?'NAD':n==='FADH₂'?'FADH2':n;
  * the three effectively irreversible steps, which are also the three the cell
  * regulates — the point, not a coincidence. */
 const STEPS=[
-  { n:'Link', stage:1, reagent:'NAD', need:'Load NAD⁺',
+  { n:'Pyruvate', stage:1, reagent:'NAD', need:'Load NAD⁺',
     species:['acetylcoa'], enz:'Pyruvate dehydrogenase complex',
     hook:'Pyruvate Oxidation', rev:false,
     // …and what the button off its review beat says. "Next" is right for a step
@@ -2045,7 +2045,7 @@ function drawRail(){
     const isNum = typeof st.n==='number';
     b.className='rnum '+state+(isNum?'':' rbridge');
     b.textContent=st.n;
-    b.setAttribute('aria-label', isNum?`Step ${st.n}`:String(st.n));
+    b.setAttribute('aria-label', isNum?`Step ${st.n}`:st.hook);
     if(state==='cur') b.setAttribute('aria-current','step');
     b.onclick=()=>goToStep(idx);
     railEl.appendChild(b);
