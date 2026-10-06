@@ -6,13 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cellular respiration — Kodolab</title>
 <!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
-<meta name="description" content="Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.">
+<meta name="description" content="Cellular respiration as one flowchart: follow a glucose from glycolysis through pyruvate oxidation and the Krebs cycle to the electron transport chain, and see where the ATP comes from.">
 <link rel="canonical" href="https://www.kodolab.org/respiration">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kodolab">
 <meta property="og:url" content="https://www.kodolab.org/respiration">
 <meta property="og:title" content="Cellular respiration — Kodolab">
-<meta property="og:description" content="Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.">
+<meta property="og:description" content="Cellular respiration as one flowchart: follow a glucose from glycolysis through pyruvate oxidation and the Krebs cycle to the electron transport chain, and see where the ATP comes from.">
 <meta property="og:image" content="https://www.kodolab.org/demos/media/og/pyruvate-oxidation.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -293,7 +293,7 @@
   <span><i class="swatch sw-co2"></i> carbon leaving</span>
 </div>
 <figure>
-<svg class="chart" viewBox="-40 0 660 1548" role="img" aria-label="A tall vertical flowchart: glucose is split by glycolysis in the cytoplasm into two pyruvate molecules; each pyruvate runs its own lane through the link reaction and the Krebs cycle inside the mitochondrion, releasing carbon dioxide; both lanes hand their electron carriers to one electron transport chain, which makes about 26 ATP; oxygen feeds into the left of that chain as the final electron acceptor and leaves out the right side as water. The total is about 30 ATP per glucose.">
+<svg class="chart" viewBox="-40 0 660 1548" role="img" aria-label="A tall vertical flowchart: glucose is split by glycolysis in the cytoplasm into two pyruvate molecules; each pyruvate runs its own lane through pyruvate oxidation and the Krebs cycle inside the mitochondrion, releasing carbon dioxide; both lanes hand their electron carriers to one electron transport chain, which makes about 26 ATP; oxygen feeds into the left of that chain as the final electron acceptor and leaves out the right side as water. The total is about 30 ATP per glucose.">
       <defs>
         <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
@@ -367,17 +367,19 @@
       <line class="flow" x1="188" y1="300" x2="188" y2="368" marker-end="url(#m)"></line>
       <line class="flow" x1="388" y1="300" x2="388" y2="368" marker-end="url(#m)"></line>
 
-      <!-- ===== link step ===== -->
+      <!-- ===== pyruvate oxidation ===== -->
       <rect class="box" x="103" y="370" width="170" height="84" rx="8"></rect>
       <rect id="k-link" class="box" x="303" y="370" width="170" height="84" rx="8"></rect>
-      <text class="ttl" x="188" y="396" text-anchor="middle">LINK STEP</text>
-      <line class="rule" x1="117" y1="407" x2="259" y2="407"></line>
-      <text class="sub" x="188" y="424" text-anchor="middle">→ acetyl-CoA</text>
-      <text class="sub" x="188" y="442" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
-      <text class="ttl" x="388" y="396" text-anchor="middle">LINK STEP</text>
-      <line class="rule" x1="317" y1="407" x2="459" y2="407"></line>
-      <text class="sub" x="388" y="424" text-anchor="middle">→ acetyl-CoA</text>
-      <text class="sub" x="388" y="442" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
+      <text class="ttl" x="188" y="389" text-anchor="middle">PYRUVATE</text>
+      <text class="ttl" x="188" y="406" text-anchor="middle">OXIDATION</text>
+      <line class="rule" x1="117" y1="414" x2="259" y2="414"></line>
+      <text class="sub" x="188" y="430" text-anchor="middle">→ acetyl-CoA</text>
+      <text class="sub" x="188" y="447" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
+      <text class="ttl" x="388" y="389" text-anchor="middle">PYRUVATE</text>
+      <text class="ttl" x="388" y="406" text-anchor="middle">OXIDATION</text>
+      <line class="rule" x1="317" y1="414" x2="459" y2="414"></line>
+      <text class="sub" x="388" y="430" text-anchor="middle">→ acetyl-CoA</text>
+      <text class="sub" x="388" y="447" text-anchor="middle"><tspan class="n">1</tspan> NADH</text>
       <line class="co2-l" x1="101" y1="412" x2="62" y2="412" marker-end="url(#mc)"></line>
       <ellipse cx="28" cy="405" rx="40" ry="28" fill="url(#co2-glow)"></ellipse>
       <image href="media/molecules/co2.webp" x="-2" y="385" width="60" height="38"></image>
@@ -703,11 +705,11 @@
   /* The phases in scroll order. The index is what the class log and the tutor
      get as the step (api/_targets.js's `at`), so progress compares across sessions. */
   const ORDER = ['cell', 'fly', 'mito', 'chemi', 'etc'];
-  const SAID  = { cell: 'glycolysis in the cytoplasm', fly: 'pyruvate flying to a mitochondrion', mito: 'the link step and Krebs cycle inside the mitochondrion',
+  const SAID  = { cell: 'glycolysis in the cytoplasm', fly: 'pyruvate flying to a mitochondrion', mito: 'pyruvate oxidation and the Krebs cycle inside the mitochondrion',
                   chemi: 'the carriers arriving at the inner membrane', etc: 'the electron transport chain, driven by hand' };
   /* The same phases said for a teacher, which is what the class dashboard
      prints. SAID is for the tutor and reads mid-sentence; these are headings. */
-  const NAMED = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs',
+  const NAMED = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Pyruvate oxidation & Krebs',
                   chemi: 'Carriers', etc: 'Electron transport' };
   let phase = null;
   function go(p, snap) {
@@ -744,7 +746,7 @@
     new MutationObserver(place).observe(card, { attributes: true, attributeFilter: ['class'] });
   }
   chartBadge('#k-glyco', 'edge', { src: 'glycolysis-lab.html?view=inset', title: 'glycolysis' });
-  chartBadge('#k-link', 'corner', { src: 'link-step.html?enzyme=off', title: 'link step' });
+  chartBadge('#k-link', 'corner', { src: 'link-step.html?enzyme=off', title: 'pyruvate oxidation' });
   chartBadge('#k-atp', 'corner', { title: 'ATP', open: () => molModal.show({ views: { idealized: 'atpSkel', measured: 'atp' },
     say: 'The cell spends it by breaking off the last phosphate, and makes it again the other way.' }) });
   chartBadge('#k-krebs', 'corner', { src: 'krebs-lab.html?view=cycle&view=inset', title: 'Krebs cycle' });
@@ -861,13 +863,13 @@
       choices: ['In the cytoplasm', 'In the mitochondrial matrix', 'Across the inner mitochondrial membrane', 'In the nucleus'], a: 0,
       why: 'Glycolysis runs in the cytoplasm. Only its product, pyruvate, enters the mitochondrion.' },
     { q: 'The CO₂ you breathe out comes mostly from which stages?',
-      choices: ['Glycolysis', 'The link step and the Krebs cycle', 'The electron transport chain', 'ATP synthase'], a: 1,
-      why: 'Each pyruvate loses one carbon at the link step and two more in the Krebs cycle. The chain moves electrons and protons, not carbon.' },
+      choices: ['Glycolysis', 'Pyruvate oxidation and the Krebs cycle', 'The electron transport chain', 'ATP synthase'], a: 1,
+      why: 'Each pyruvate loses one carbon in pyruvate oxidation and two more in the Krebs cycle. The chain moves electrons and protons, not carbon.' },
     { q: 'What do NADH and FADH₂ carry to the electron transport chain?',
       choices: ['ATP', 'Oxygen', 'High-energy electrons', 'Carbon dioxide'], a: 2,
       why: 'They are electron carriers. Their electrons pass down the chain, and that flow is what pumps protons.' },
     { q: 'Where is most of the ATP from one glucose made?',
-      choices: ['Glycolysis', 'The Krebs cycle', 'By ATP synthase, powered by the proton gradient', 'The link step'], a: 2,
+      choices: ['Glycolysis', 'The Krebs cycle', 'By ATP synthase, powered by the proton gradient', 'Pyruvate oxidation'], a: 2,
       why: 'Glycolysis and Krebs make four ATP between them. The rest comes from protons flowing back through ATP synthase.' },
     { q: 'What is the final electron acceptor at the end of the chain?',
       choices: ['NAD⁺', 'Oxygen', 'Glucose', 'ATP'], a: 1,

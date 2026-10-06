@@ -7,7 +7,7 @@
  *  page it was. Everything here posts to api/event.js by beacon and never
  *  waits on an answer, so its worst failure is a row that does not land.
  *
- *      Track.step(2, 5, 'Link step & Krebs');           // the step a page reached
+ *      Track.step(2, 5, 'Pyruvate oxidation & Krebs');           // the step a page reached
  *      Track.event('complete');
  *      Track.event('quiz', { score, total, answers });
  *

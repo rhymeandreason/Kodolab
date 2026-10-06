@@ -505,14 +505,14 @@
 /* ---------- shared stage (kit/stagekit.js over scene.js) + effects (fx.js) ----
  * The fit is this page's own for glycolysis's reason: it measures LANE LAYOUTS
  * and the reserves are chrome only this lesson has. */
-/* ?view=link: the link step alone (link-step.html). One step, no rail, no
+/* ?view=link: pyruvate oxidation alone (link-step.html). One step, no rail, no
  * sidebar, no tally; the stage stops on the step's review beat. */
 const LINK=/[?&]view=link\b/.test(location.search);
 document.documentElement.classList.toggle('link',LINK);
-if(LINK) document.title='The link step';
-/* ?view=cycle: the eight steps without the link step. Opens on acetyl-CoA, the
+if(LINK) document.title='Pyruvate oxidation';
+/* ?view=cycle: the eight steps without pyruvate oxidation. Opens on acetyl-CoA, the
  * pools start one NAD⁺ short so a turn still ends on empty, and every count
- * and note leaves the link step out. */
+ * and note leaves pyruvate oxidation out. */
 const CYCLE=/[?&]view=cycle\b/.test(location.search);
 document.documentElement.classList.toggle('cycle',CYCLE);
 const FIRST=CYCLE?1:0;
@@ -580,7 +580,7 @@ const carrierKey=n=>n==='NAD+'?'NAD':n==='FADH₂'?'FADH2':n;
 const STEPS=[
   { n:'Link', stage:1, reagent:'NAD', need:'Load NAD⁺',
     species:['acetylcoa'], enz:'Pyruvate dehydrogenase complex',
-    hook:'Link Step', rev:false,
+    hook:'Pyruvate Oxidation', rev:false,
     // …and what the button off its review beat says. "Next" is right for a step
     // inside the cycle; this one ENDS the bridge, and the click after it is the
     // student entering the pathway the page is named for.
@@ -598,7 +598,7 @@ const STEPS=[
     spot:{ at:'decarb', say:'Take the first carbon off' },
     takeaway:`One carbon leaves as CO₂`,
     msg:`<b>Pyruvate dehydrogenase</b> strips a CO₂ from pyruvate and hands the
-      remaining two carbons to <b>coenzyme A</b>. Makes NADH. This is the <b>link step</b>
+      remaining two carbons to <b>coenzyme A</b>. Makes NADH. This is <b>pyruvate oxidation</b>, the link
       between glycolysis (cytosol) and the cycle (mitochondrial matrix) — and
       the step that commits carbon to being burned rather than stored.` },
 
@@ -656,8 +656,8 @@ const STEPS=[
     couple:{ up:false, cin:'NAD+', cout:'NADH', tone:'n' },
     spot:{ at:'decarb', say:'Take the last carbon off' },
     takeaway:`5C → 4C`,
-    msg:`<b>α-Ketoglutarate dehydrogenase</b> does the same chemistry as the
-      link step — same kind of complex, same CO₂, same NADH — and hands the
+    msg:`<b>α-Ketoglutarate dehydrogenase</b> does the same chemistry as
+      pyruvate oxidation — same kind of complex, same CO₂, same NADH — and hands the
       four carbons left to coenzyme A as <b>succinyl-CoA</b>. From here the cycle
       only rebuilds oxaloacetate.` },
 
@@ -743,7 +743,7 @@ const STEPS=[
 const STAGES=[
   // Stage 0 is a STATE, not a group: where the page opens and Restart returns.
   { n:0 },
-  { n:1, block:'The link step',  label:'Link: pyruvate → acetyl-CoA', delta:'−1 C' },
+  { n:1, block:'Pyruvate oxidation',  label:'Pyruvate → acetyl-CoA', delta:'−1 C' },
   { n:2, block:'Build',       label:'Build: 2C + 4C → 6C',           delta:'4C → 6C' },
   { n:3, block:'Burn',        label:'Burn: two CO₂ leave',           delta:'−2 C' },
   { n:4, block:'Bank',        label:'Bank: ATP and FADH₂',           delta:'+1 ATP' },
@@ -1432,7 +1432,7 @@ const BRIDGE_STEPS=CYCLE?[]:STEPS.filter(s=>typeof s.n!=='number');
 const sumOver=(list,k)=>list.reduce((n,s)=>n+(s[k]||0),0);
 const fromRing=k=>sumOver(RING_STEPS,k);
 const fromBridge=k=>sumOver(BRIDGE_STEPS,k);
-const BRIDGE_NAME='the link step';
+const BRIDGE_NAME='pyruvate oxidation';
 const sourceNote=k=>{
   const r=fromRing(k), b=fromBridge(k);
   if(!r && !b) return '';
@@ -1760,7 +1760,7 @@ const NOTE_ROWS=[
   ['NADH','nadh'], ['FADH₂','fadh2'], ['ATP','made'], ['CO₂','co2'],
 ];
 const TALLY_NOTES=[
-  {k:'bridge', head:'Link Step', sub:'per pyruvate', n:k=>fromBridge(k)},
+  {k:'bridge', head:'Pyruvate Oxidation', sub:'per pyruvate', n:k=>fromBridge(k)},
   {k:'turn',   head:'One turn',           sub:'of the cycle', n:k=>fromRing(k)},
   {k:'total',  head:'Total per glucose',  sub:`${LAPS} pyruvate, ${LAPS} turns`,
    n:k=>(fromBridge(k)+fromRing(k))*LAPS},
@@ -1821,7 +1821,7 @@ const enzMetaEl=document.getElementById('enzmeta');
 const enzNoteEl=document.getElementById('enznote');
 // ALWAYS ON. The blob is what the step's catalyst does, not a view of it, and
 // a lesson about enzymes that opens with them switched off argues the reverse.
-// ?enzyme=off hides it alone, for a host framing the link step
+// ?enzyme=off hides it alone, for a host framing pyruvate oxidation
 const showEnz=!INSET && !/[?&]enzyme=off\b/.test(location.search);
 const enzOf=()=>{ const i=focusStep(); return (!intro && i<nSteps) ? STEPS[i] : null; };
 const enzLive=()=>showEnz && !!enzOf() && !tallyOn();
@@ -2280,7 +2280,7 @@ const Handoff=(()=>{
       worth less. Cash them all in and these two turns are worth about
       <b>${worth} ATP</b> against the <b>${atp}</b> the cycle made itself. That
       gap is the answer to “why bother”${bridge ? `, and ${bridge} of the ${nadh} NADH were
-      made by the link step before the ring even started` : ''}.</p>`
+      made by pyruvate oxidation before the ring even started` : ''}.</p>`
     +`<p class="hob">Nothing here used oxygen. The cycle still stops without it,
       because the chain has to empty these carriers before they can be filled
       again — which is what turn two needed.</p>`;

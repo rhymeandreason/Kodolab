@@ -49,7 +49,7 @@ A class in the teacher dashboard (`/teach`) has a lesson code, shown on its Less
 **What a lesson does to report progress.** Views and time come free from track.js. Progress, completion, quiz and survey are the page's to send, guarded because track.js is absent for most visitors:
 
 ```js
-window.Track && Track.step(2, 5, 'Link step & Krebs');                   // step index, how many, what the student just read
+window.Track && Track.step(2, 5, 'Pyruvate oxidation & Krebs');                   // step index, how many, what the student just read
 window.Track && Track.event('complete');                                // once
 window.Track && Track.event('quiz',     { score, total, answers: [{ q, answer, correct }] });
 window.Track && Track.event('survey',   { answers: { clear: 4, confusing: '…', share: 'Yes' } });

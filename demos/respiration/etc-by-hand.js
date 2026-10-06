@@ -20,7 +20,7 @@
 (function (global) {
 'use strict';
 
-/* One glucose's carriers: 2 NADH from the link step and 6 from Krebs at complex I;
+/* One glucose's carriers: 2 NADH from pyruvate oxidation and 6 from Krebs at complex I;
    then glycolysis's 2 NADH last, which reach ubiquinone by the glycerol-phosphate
    shuttle (feed's `shuttle`, a turn of II); 2 FADH₂ from Krebs. */
 const GLUCOSE = { NADH: 10, FADH2: 2 }, SHUTTLED = 2;

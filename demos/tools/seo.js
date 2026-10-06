@@ -66,7 +66,7 @@ const PAGES = {
       steps: ['Hexokinase traps glucose', 'Phosphoglucose isomerase', 'Phosphofructokinase-1, the committed step', 'Aldolase splits the sugar', 'Triose-phosphate isomerase', 'Glyceraldehyde-3-phosphate dehydrogenase makes NADH', 'Phosphoglycerate kinase, the first ATP', 'Phosphoglycerate mutase', 'Enolase', 'Pyruvate kinase, the second ATP'],
     } },
   '/respiration': { image: 'pyruvate-oxidation',
-    description: 'Cellular respiration as one flowchart: follow a glucose from glycolysis through the link step and Krebs cycle to the electron transport chain, and see where the ATP comes from.' },
+    description: 'Cellular respiration as one flowchart: follow a glucose from glycolysis through pyruvate oxidation and the Krebs cycle to the electron transport chain, and see where the ATP comes from.' },
   '/krebs': { image: 'krebs',
     description: 'The Krebs cycle in 3D: pyruvate oxidation, then eight steps round the ring drawn as the real molecules, and where each carbon goes.' },
   '/electron-transport': { image: 'etc',

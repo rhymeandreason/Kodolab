@@ -43,7 +43,7 @@ const CHAPTERS = [
     chapter: 'Cellular Respiration',
     page: 'demos/respiration-lab.html',
     covers: 'the whole of aerobic respiration in one chart: glycolysis in the cytoplasm, '
-          + 'pyruvate into the mitochondrion, the link step and Krebs cycle giving off CO2 and loading NADH and FADH2, '
+          + 'pyruvate into the mitochondrion, pyruvate oxidation and the Krebs cycle giving off CO2 and loading NADH and FADH2, '
           + 'the electron transport chain, the proton gradient, ATP synthase, oxygen as the final electron acceptor, '
           + 'where the ~30 ATP per glucose come from' },
 

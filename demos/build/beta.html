@@ -246,7 +246,7 @@
     const l = LESSONS.find(l => l.key === lessonKey) || {};
     return `${location.origin}${fileForm ? l.file : l.url}?class=${current.class.code}`;
   };
-  const LEGACY = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Link step & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
+  const LEGACY = { cell: 'Glycolysis', fly: 'Into the mitochondrion', mito: 'Pyruvate oxidation & Krebs', chemi: 'Carriers', etc: 'Electron transport' };
   const SURVEY_Q = { clear: 'How clear was this lesson? (1-5)', confusing: 'What was confusing?', again: 'Would you use a lesson like this to study?',
     textbook: 'Helpful compared to a textbook diagram?', video: 'Helpful compared to a video?', useAgain: 'Would use this app again?', share: 'Would share with a friend learning Biology?' };
   const mins = s => s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
