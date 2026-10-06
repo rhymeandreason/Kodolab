@@ -15,9 +15,12 @@
  *  tokens, because `kit/proteinbox.css` and the stage draw from those and a
  *  bench must not repaint the molecule to repaint its panel.
  *
- *  A BENCH LINKS THIS SHEET AND kit/proteinbox.css, and nothing else. This one
- *  first: it carries the reset, the spacing and radius scales and the timing,
- *  so the page has no site sheet under it.
+ *  A BENCH LINKS css/kodo.css, THEN THIS, THEN kit/proteinbox.css. kodo.css is
+ *  there for the wordmark bar (`.sitenav.floating` over the stage, as on the
+ *  story pages) and nothing below it reads kodo's tokens: this sheet carries
+ *  its own reset, spacing, radius and timing, and every bench measures the same
+ *  with kodo.css switched off. Keep it that way, so the panel cannot drift when
+ *  the site sheet changes.
  *
  *  WHAT A PAGE STILL OWNS. Anything that carries its own claim: prion adds a
  *  `.disease` variant to the button and the chip because its whole subject is
