@@ -119,13 +119,10 @@ const EnzymeModels = (() => {
     geo.morphAttributes.position = [closed, pinched, denat].map(a => new THREE.BufferAttribute(a, 3));
     geo.morphAttributes.normal = [closed, pinched, denat].map(normalsFor);
 
-    const mat = new THREE.MeshPhysicalMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
-      roughness: 0.42,
+      roughness: 0.48,
       metalness: 0,
-      clearcoat: 0.6,
-      clearcoatRoughness: 0.3,
-      envMapIntensity: 0.45,
       morphTargets: true,
       morphNormals: true,
     });
@@ -187,8 +184,8 @@ const EnzymeModels = (() => {
 
     const group = new THREE.Group();
     const beadGeo = new THREE.SphereGeometry(0.14, 22, 16);
-    const mats = AA_TYPES.map(t => new THREE.MeshPhysicalMaterial({
-      color: col(t.color), roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.2,
+    const mats = AA_TYPES.map(t => new THREE.MeshStandardMaterial({
+      color: col(t.color), roughness: 0.48,
     }));
     const beads = types.map(t => {
       const m = new THREE.Mesh(beadGeo, mats[t]);
@@ -196,7 +193,7 @@ const EnzymeModels = (() => {
       group.add(m);
       return m;
     });
-    const tubeMat = new THREE.MeshStandardMaterial({ color: col('#d8d2c6'), roughness: 0.45 });
+    const tubeMat = new THREE.MeshStandardMaterial({ color: col('#d8d2c6'), roughness: 0.5 });
     const tube = new THREE.Mesh(new THREE.BufferGeometry(), tubeMat);
     tube.castShadow = true;
     group.add(tube);
@@ -249,8 +246,8 @@ const EnzymeModels = (() => {
     }));
   }
 
-  const molMat = hex => new THREE.MeshPhysicalMaterial({
-    color: col(hex), roughness: 0.28, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.18,
+  const molMat = hex => new THREE.MeshStandardMaterial({
+    color: col(hex), roughness: 0.6, metalness: 0,
   });
   const MAT = { subA: molMat(COLORS.subA), subB: molMat(COLORS.subB), comp: molMat(COLORS.comp), allo: molMat(COLORS.alloInh) };
   const sphereCache = {};
@@ -327,8 +324,8 @@ const EnzymeModels = (() => {
         depth: DEPTH, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3, curveSegments: 4,
       });
       geo.translate(0, 0, -DEPTH / 2);
-      const m = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({
-        color: col(hex), roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.3,
+      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+        color: col(hex), roughness: 0.48,
       }));
       m.position.z = z;
       m.castShadow = m.receiveShadow = true;

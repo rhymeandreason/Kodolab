@@ -46,8 +46,6 @@
     renderer.setPixelRatio(opts.pixelRatio || Math.min(devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
     renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.92;
 
     const scene = new THREE.Scene();
     // the shell's paper, so the far dust fades into the page
@@ -59,38 +57,14 @@
     const controls = new THREE.OrbitControls(camera, canvas);
     Object.assign(controls, { enableDamping: true, dampingFactor: 0.08, enablePan: false, minDistance: 4.5, maxDistance: 30, rotateSpeed: 0.7, zoomSpeed: 0.8 });
 
-    (function buildEnvironment() {
-      const pm = new THREE.PMREMGenerator(renderer);
-      const env = new THREE.Scene();
-      const geo = new THREE.SphereGeometry(40, 32, 16);
-      const top = new THREE.Color(0xfbfaf6), bottom = new THREE.Color(0x9c9a92), c = new THREE.Color();
-      const cols = [];
-      for (let i = 0; i < geo.attributes.position.count; i++) {
-        c.copy(bottom).lerp(top, smoothstep(-30, 30, geo.attributes.position.getY(i)));
-        cols.push(c.r, c.g, c.b);
-      }
-      geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-      env.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ side: THREE.BackSide, vertexColors: true })));
-      const softbox = (w, h, pos, k) => {
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(k, k, k), side: THREE.DoubleSide }));
-        m.position.copy(pos);
-        m.lookAt(0, 0, 0);
-        env.add(m);
-      };
-      softbox(24, 24, new V3(8, 34, 14), 2.4);
-      softbox(14, 10, new V3(32, 6, 12), 1.4);
-      softbox(12, 8, new V3(-30, 2, -14), 0.9);
-      scene.environment = pm.fromScene(env, 0.04).texture;
-      pm.dispose();
-    })();
-
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d4c8, 0.35));
-    const key = new THREE.DirectionalLight(0xffffff, 1.35);
-    key.position.set(5, 9, 7);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight(0xeceae4, 0.55);
-    rim.position.set(-7, 2, -5);
-    scene.add(rim);
+    // lib/scene.js's studio light, brighter, parented to the camera so highlights stay put on orbit
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    scene.add(camera);
+    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    key.position.set(4, 6, 8);
+    const fill = new THREE.DirectionalLight(0x88aaff, 0.45);
+    fill.position.set(-6, -2, -4);
+    camera.add(key, key.target, fill, fill.target);
 
     // Blurred contact shadows: cleaner on paper than shadow maps
     function shadowTexture(draw) {
@@ -111,14 +85,6 @@
       scene.add(m);
       return m;
     }
-    const roundShadow = shadowPlane(shadowTexture(g => {
-      const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-      gr.addColorStop(0, 'rgba(255,255,255,0.5)');
-      gr.addColorStop(0.45, 'rgba(255,255,255,0.2)');
-      gr.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = gr;
-      g.fillRect(0, 0, 256, 256);
-    }), 7, 7);
     const slabShadow = shadowPlane(shadowTexture(g => {
       g.filter = 'blur(14px)';
       g.fillStyle = 'rgba(255,255,255,0.5)';
@@ -229,9 +195,6 @@
       glow.material.opacity = glowV * (0.3 + 0.12 * Math.sin(time * 2.4));
       glow.scale.setScalar(1.7 + 0.2 * Math.sin(time * 2.4));
 
-      roundShadow.material.opacity = visV.enzyme * (0.4 + 0.6 * enzOp.v);
-      roundShadow.scale.setScalar(Math.max(0.001, visV.enzyme * (1 + 0.15 * cond.denat)));
-      roundShadow.position.x = enzymeGroup.position.x;
       slabShadow.material.opacity = visV.energy;
       slabShadow.scale.setScalar(Math.max(0.001, visV.energy));
     }
