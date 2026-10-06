@@ -158,7 +158,9 @@ Then `node proteins/<name>/tools/prep.js` again to write the `read` block back, 
 
 **`does` needs a word before registration.** If none of `DOES` fits, propose one when the bench is handed over, so the review settles it.
 
-**After registration, the human:** bakes the still in `stills.html` (Chrome only) and commits it. A public short URL is a `vercel.json` rewrite (both the rewrite and the 301) plus `node tools/seo.js`, which fails until `media/og/proteins/<key>.jpg` exists: the still scaled to 630 high and centred on a 1200×630 canvas of the stage paper. `docs/deploy.md`.
+**After registration, bake the still yourself** in `proteins/tools/stills.html`: open it in the built-in browser, pick the key, *Bake selected*, then look at `proteins/stills/<key>.webp` before committing it. "Chrome only" means a Chromium encoder, which the built-in browser is; Safari has no WebP encoder and the page refuses there. **The pane must be showing**: chains build one per animation frame, and a hidden pane gets none, so the page's wait runs out and it writes a half-built ribbon with no error. The rotation is the human's (`view.basis`), the bake is not.
+
+**A public short URL** is a `vercel.json` rewrite (both the rewrite and the 301) plus `node tools/seo.js`, which fails until `media/og/proteins/<key>.jpg` exists: the still scaled to 630 high and centred on a 1200×630 canvas of the stage paper. `docs/deploy.md`.
 
 **What every field means and who owns it is `proteins/proteins.js`'s own header — read it before editing the file.** The said/read split and why a human never types a number into it, the method vocabulary, the derived URLs, `does`, `pipeline`; `Modules.md`'s row is the field list. None of it is repeated here. What is not in either:
 
