@@ -496,9 +496,11 @@ body.lshell-bar .lshell-controls { bottom: 24px !important; }
 .lshell-play {
   flex: none; width: 42px; height: 42px; border: 0; border-radius: 50%; padding: 0;
   display: grid; place-items: center; background: var(--ink); color: #fff; cursor: pointer;
-  transition: transform 0.15s, background 0.2s;
+  box-shadow: 0 8px 18px -6px rgba(20,33,61,0.55);
+  transition: transform 0.2s cubic-bezier(.2,.7,.2,1), background 0.2s, box-shadow 0.2s;
 }
-.lshell-play:hover { background: #000; }
+/* Rises toward the pointer, as the switch's chosen pill stands off its tray. */
+.lshell-play:hover { background: #000; transform: scale(1.07); box-shadow: 0 12px 24px -8px rgba(20,33,61,0.6); }
 .lshell-play:active, .lshell-speed:active { transform: scale(0.96); }
 .lshell-timeline {
   flex: 1; min-width: 0; display: flex; gap: 3px; padding: 8px 0 4px; cursor: pointer;
@@ -507,8 +509,11 @@ body.lshell-bar .lshell-controls { bottom: 24px !important; }
 .lshell-seg { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 .lshell-bar { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; transition: height 0.2s; }
 .lshell-timeline:hover .lshell-bar, .lshell-timeline.is-scrubbing .lshell-bar { height: 6px; margin: -1px 0; }
-.lshell-bar i { display: block; height: 100%; background: var(--ink-3); transform-origin: left center; transform: scaleX(0); will-change: transform; }
-.lshell-seg.is-current .lshell-bar i { background: var(--accent); }
+.lshell-bar i { display: block; height: 100%; background: var(--ink-2); transform-origin: left center; transform: scaleX(0); will-change: transform; }
+/* The playhead's bar runs the shell's green into the brand's bright one, so it
+   reads as live without a second flat green that would claim to be the
+   primary. The fill is scaled, so the whole ramp shows at any progress. */
+.lshell-seg.is-current .lshell-bar i { background: linear-gradient(90deg, var(--accent), var(--hue-green)); }
 .lshell-lbl {
   font-family: var(--display); font-weight: 500; font-size: 10.5px; letter-spacing: 0.03em; text-transform: uppercase;
   color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.3s;
