@@ -19,6 +19,7 @@
  *      });
  *      Component.mount(shell.stage, ...)  // one component: it goes in shell.stage
  *      shell.goTo(0);
+ *      shell.setSteps(list)               // a second track through the same scene; then goTo
  *
  *  MORE THAN ONE COMPONENT IS MORE THAN ONE BOX, and the shell hands them out:
  *
@@ -87,7 +88,7 @@
   'use strict';
 
   function create(opts = {}) {
-    const steps = opts.steps || [];
+    let steps = opts.steps || [];
     const host = opts.host || document.body;
     document.body.classList.add('lshell-page');
 
@@ -350,18 +351,33 @@
     }).observe(els.stage, { childList: true });
 
     let current = -1;
-    steps.forEach((s, i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`);
-      b.addEventListener('click', () => goTo(i));
-      els.progress.appendChild(b);
-      const li = document.createElement('li');
-      li.innerHTML = `<button type="button"><span>${i + 1}</span></button>`;
-      li.firstChild.append(s.short || s.eyebrow || s.title);
-      li.firstChild.addEventListener('click', () => goTo(i));
-      els.outline.appendChild(li);
-    });
+    function drawProgress() {
+      els.progress.innerHTML = els.outline.innerHTML = '';
+      steps.forEach((s, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`);
+        b.addEventListener('click', () => goTo(i));
+        els.progress.appendChild(b);
+        const li = document.createElement('li');
+        li.innerHTML = `<button type="button"><span>${i + 1}</span></button>`;
+        li.firstChild.append(s.short || s.eyebrow || s.title);
+        li.firstChild.addEventListener('click', () => goTo(i));
+        els.outline.appendChild(li);
+      });
+    }
+    drawProgress();
+    /* A NEW LIST OF STEPS ON THE SAME SHELL, for a page with two tracks through
+       one scene (mitosis and meiosis). The current step exits, the dots are
+       redrawn, and nothing is shown until the page calls goTo: the page knows
+       which step the new list starts on. */
+    function setSteps(list) {
+      if (current >= 0 && steps[current].onExit) steps[current].onExit(ctx);
+      ctx.clearTimers();
+      steps = list;
+      current = -1;
+      drawProgress();
+    }
 
     /* A STEP MAY HOLD THE DOOR. `onLeave(ctx, to)` returns seconds, and the
        shell waits that long before swapping — for a step whose last gesture
@@ -444,7 +460,8 @@
     new MutationObserver(trimStats).observe(els.panel, { subtree: true, childList: true, characterData: true });
 
     const shellApi = {
-      el, stage: els.stage, panel: els.panel, ui, ctx, steps,
+      el, stage: els.stage, panel: els.panel, ui, ctx,
+      get steps() { return steps; }, setSteps,
       /* The panel query, on the shell as well as on `ctx.ui`. A page's own
          `on('frame')` is wired at module scope, where there is no ctx and the
          shell is the only handle in reach, and reaching for `shell.q` there is

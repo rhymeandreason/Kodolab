@@ -1,0 +1,16 @@
+/* cell-division-lab.html: the panel's three counts and the key. Every swatch
+   reads a token tokens-from-palette.js publishes, so a key and the scene it
+   names cannot drift. */
+/* Cells holds one digit, so it gives up room to the two long labels. */
+.lshell-panel .stats.cd-stats { grid-template-columns: 0.6fr 1.2fr 1.2fr; gap: 8px; }
+.cd-stats .stat { padding: 10px; }
+.cd-stats .stat-label { font-size: 10px; letter-spacing: 0.06em; }
+.cd-stats .stat-value { font-size: 20px; }
+
+.cd-key { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.cd-key span { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+.cd-key i { flex: none; display: inline-block; }
+.cd-key .bar { width: 18px; height: 8px; border-radius: 4px; background: var(--c); }
+.cd-key .dot { width: 9px; height: 9px; margin: 0 4.5px; border-radius: 50%; background: var(--c); }
+.cd-key .line { width: 18px; height: 2px; background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 7px); }
+.cd-key .ring { width: 13px; height: 13px; margin: 0 2.5px; border-radius: 50%; border: 2px solid var(--c); }

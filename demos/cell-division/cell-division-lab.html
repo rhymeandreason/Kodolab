@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base href="/demos/cell-division/">
+<script defer src="/demos/lib/site.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cell division: mitosis and meiosis</title>
+<meta name="description" content="Mitosis and meiosis in 3D: chromosomes condense, line up, separate and divide, on one scrubbable timeline.">
+<link rel="stylesheet" href="../css/kodo.css">
+<link rel="stylesheet" href="../css/lesson-shell.css">
+<link rel="stylesheet" href="cell-division.css">
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../lib/palette.js"></script>
+<script src="../lib/tokens-from-palette.js"></script>
+<script src="../kit/lesson-shell.js"></script>
+<script src="../kit/timeline-shell.js"></script>
+<script src="core.js"></script>
+<script src="materials.js"></script>
+<script src="objects.js"></script>
+<script src="scenarios.js"></script>
+<script src="cell-division.js"></script>
+<script>
+/* The lesson is the timeline shell, the cell-division scene in its stage, and
+   the phase tables in scenarios.js as the steps. The scene builds both
+   tables; the shell only needs their names, lengths and words. */
+const defs = { mitosis: CD.buildMitosis(), meiosis: CD.buildMeiosis() };
+const stepsOf = def => def.phases.map(p => ({
+  eyebrow: def.label, title: p.name, short: p.short, dur: p.dur, body: `<p>${p.desc}</p>`,
+}));
+
+const KEY = `
+  <div class="cd-key">
+    <span><i class="bar" style="--c:var(--division-maternal)"></i>From the mother</span>
+    <span><i class="bar" style="--c:var(--division-paternal)"></i>From the father</span>
+    <span><i class="dot" style="--c:var(--division-kinetochore)"></i>Kinetochore</span>
+    <span><i class="line" style="--c:var(--division-microtubule)"></i>Microtubules</span>
+    <span><i class="ring" style="--c:var(--division-envelope)"></i>Nuclear envelope</span>
+    <span><i class="ring" style="--c:var(--division-membrane)"></i>Cell membrane</span>
+  </div>`;
+const STATS = `
+  <div class="stats cd-stats">
+    <div class="stat"><span class="stat-label">Cells</span><span class="stat-value" id="n-cells"></span></div>
+    <div class="stat"><span class="stat-label">Chromosomes</span><span class="stat-value" id="n-chrom"></span><span class="stat-sub">per cell</span></div>
+    <div class="stat"><span class="stat-label">Chromatids</span><span class="stat-value" id="n-tids"></span><span class="stat-sub">per cell</span></div>
+  </div>`;
+
+let cd = null;
+/* "6" when every cell holds the same, "3 + 3" while they differ. */
+const each = list => (list.every(n => n === list[0]) ? String(list[0]) : list.join(' + '));
+function paintCounts() {
+  const c = cd.state().counts;
+  const put = (id, v) => { const e = shell.q(id); if (e && e.textContent !== v) e.textContent = v; };
+  put('#n-cells', String(c.cells));
+  put('#n-chrom', each(c.chromosomes));
+  put('#n-tids', each(c.chromatids));
+}
+
+const shell = TimelineShell.create({
+  brand: 'Cell Division',
+  tracks: [
+    { id: 'mitosis', label: defs.mitosis.label, steps: stepsOf(defs.mitosis) },
+    { id: 'meiosis', label: defs.meiosis.label, steps: stepsOf(defs.meiosis) },
+  ],
+  onTrack(track) { cd.set({ mode: track.id }); },
+  onTime(t) { if (cd) { cd.set({ t }); paintCounts(); } },
+  onStep(step, i, ctx) { ctx.controls(STATS + KEY); paintCounts(); },
+  onLayout() { if (cd) cd.reframe(); },
+});
+
+cd = CellDivision.mount(shell.stage, { mode: 'mitosis', room: shell.freeRect, defs });
+shell.goTo(0);
+</script>
+</body>
+</html>

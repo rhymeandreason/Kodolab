@@ -410,6 +410,30 @@
       proton:null,
     },
 
+    /* ---- cell division (cell-division/) ----
+       THE TWO PARENTS ARE A PAIR OF COLOURS, NOT TWO ORGANELLES: every
+       homolog from the mother is one hue and from the father the other, the
+       textbook's red and blue, so crossing over is visible as a stripe of the
+       other colour on a chromatid. Only the nucleolus takes an organelle
+       colour from above. */
+    division: {
+      maternal:0xf26b4e, paternal:0x5aa9ff,
+      kinetochore:0xffd166,   // a protein plate on the centromere, in the chiasma's butter
+      chiasma:0xffd166,
+      /* The spindle is slate, not organelles.centrosome's green: green
+         microtubules across the whole cell read as a second subject. So
+         the animal cell's centrosome and this one differ, on purpose. */
+      microtubule:0x8f9dbd, kfiber:0x8496bd, centriole:0x4d5b80, halo:0xffcf85,
+      /* The membrane and the envelope are teal and violet, not organelles.plasma
+         and .nucleus: a dividing cell is two translucent shells around
+         coloured chromosomes, and the house salmon and blue sat too close to
+         the mother's coral and the father's blue. `tint` is the face, `rim`
+         the edge, `deep` and `pore` the darkest, `edge` the envelope's torn rim. */
+      membrane:  0x5ab6c9, membraneTint:0xe4f5f7, membraneDeep:0x2a8aa1,
+      envelope:  0x8c7be3, envelopeTint:0xf1edff, envelopePore:0x5f4fc6, envelopeEdge:0xc5b6ff,
+      ring:0xf08c6c,          // the actin-myosin ring, warm against the teal membrane it pinches
+    },
+
     radii: { O:0.95, H:0.55, C:0.85, N:0.90, S:1.05, Na:0.70, Cl:1.24, K:0.85, P:1.00,
              Mg:0.60 },
   };

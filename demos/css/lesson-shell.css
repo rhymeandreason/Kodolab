@@ -480,3 +480,77 @@ body.lshell-bar .lshell-controls { bottom: 24px !important; }
   .lshell-divider { left: 0; right: 0; top: 50%; width: auto; height: 1px; }
   .lshell-label.right { left: 28px; top: calc(50% + 12px); }
 }
+
+/* =============================================================================
+   kit/timeline-shell.js: the dock (play, one bar per step, speed) and the
+   track switch, both in the free room. Placed by script, which reads the
+   panel's rect; these only say how they look.
+   ========================================================================== */
+.lshell-dock {
+  position: fixed; bottom: 24px; z-index: 5;
+  display: flex; align-items: center; gap: 16px; padding: 8px 14px 8px 8px;
+  background: var(--panel); backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.7); border-radius: 999px;
+  box-shadow: 0 30px 70px -40px rgba(20,30,20,0.45), 0 1px 0 rgba(0,0,0,0.03);
+}
+.lshell-play {
+  flex: none; width: 42px; height: 42px; border: 0; border-radius: 50%; padding: 0;
+  display: grid; place-items: center; background: var(--ink); color: #fff; cursor: pointer;
+  transition: transform 0.15s, background 0.2s;
+}
+.lshell-play:hover { background: #000; }
+.lshell-play:active, .lshell-speed:active { transform: scale(0.96); }
+.lshell-timeline {
+  flex: 1; min-width: 0; display: flex; gap: 3px; padding: 8px 0 4px; cursor: pointer;
+  user-select: none; -webkit-user-select: none; touch-action: none; outline: none;
+}
+.lshell-seg { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.lshell-bar { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; transition: height 0.2s; }
+.lshell-timeline:hover .lshell-bar, .lshell-timeline.is-scrubbing .lshell-bar { height: 6px; margin: -1px 0; }
+.lshell-bar i { display: block; height: 100%; background: var(--ink-3); transform-origin: left center; transform: scaleX(0); will-change: transform; }
+.lshell-seg.is-current .lshell-bar i { background: var(--accent); }
+.lshell-lbl {
+  font-family: var(--display); font-weight: 500; font-size: 10.5px; letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.3s;
+}
+.lshell-seg.is-done .lshell-lbl { color: var(--ink-2); }
+.lshell-seg.is-current .lshell-lbl { color: var(--accent); }
+.lshell-speed {
+  flex: none; min-width: 46px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: #fff; color: var(--ink); cursor: pointer;
+  font-family: var(--display); font-weight: 500; font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.lshell-speed:hover { border-color: var(--ink-3); }
+
+/* A narrower panel: the scene and its timeline are the lesson here, and the
+   words beside them are a caption. */
+.lshell-timed .lshell-panel { width: min(360px, calc(100vw - 48px)); bottom: auto; max-height: calc(100vh - 100px); }
+/* Back/Next only while paused: during playback the clock is what moves the
+   steps, and the row is two buttons that do nothing the timeline does not. */
+.lshell-timed.is-playing .lshell-nav { display: none; }
+.lshell-timed .lshell-scroll { padding: 28px 28px 14px; }
+.lshell-timed .lshell-panel .title { font-size: clamp(26px, 2.2vw, 32px); margin-bottom: 14px; }
+.lshell-timed .lshell-panel .body { font-size: 16px; }
+
+/* The switch: the panel's .segmented, on glass, at the top of the free room. */
+.lshell-tracks {
+  position: fixed; top: 12px; transform: translateX(-50%); z-index: 6;
+  display: inline-flex; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--panel); backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border-color: rgba(255,255,255,0.75);
+  box-shadow: 0 1px 1px rgba(20,33,61,0.03), 0 10px 28px -8px rgba(20,33,61,0.12), 0 28px 56px -28px rgba(20,33,61,0.14);
+}
+.lshell-tracks button {
+  border: 0; padding: 7px 18px; border-radius: 999px; background: transparent; color: var(--ink-2);
+  font-family: var(--display); font-size: 14px; font-weight: 500; line-height: 18px; letter-spacing: 0.02em;
+  white-space: nowrap; cursor: pointer; transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.lshell-tracks button:hover:not(.is-on) { color: var(--ink); }
+/* The chosen pill stands up off the tray. */
+.lshell-tracks button.is-on { background: var(--accent); color: #fff; box-shadow: 0 6px 14px -4px rgba(20,33,61,0.45); }
+
+@media (max-width: 760px) {
+  .lshell-dock { gap: 10px; border-radius: 22px; }
+  .lshell-lbl { display: none; }
+  .lshell-tracks { top: 52px; }
+}

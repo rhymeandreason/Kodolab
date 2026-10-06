@@ -53,6 +53,8 @@
   for (const [t, v] of Object.entries(P.plantTissue))
     for (const [part, n] of Object.entries(v)) css.setProperty('--plant-' + t + '-' + part, hex(n));
 
+  for (const [k, n] of Object.entries(P.division)) css.setProperty('--division-' + k, hex(n));
+
   // legacy bare-element names
   for (const [el, n] of Object.entries(P.atoms)) css.setProperty('--' + el, hex(n));
 })(typeof window !== 'undefined' ? window : globalThis);
