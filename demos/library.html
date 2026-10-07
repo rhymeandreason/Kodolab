@@ -265,7 +265,7 @@ GallerySearch.mount($('find'), {
       key: 'p:' + p.key, name: p.name, el: protCards[i], hint: 'protein',
       text: [p.does, p.blurb, defaultOf(p).species].filter(Boolean).join(' ') })),
     ...MOLS.map((m, i) => ({
-      key: 'm:' + m.key, name: m.spec.name, alias: m.spec.short, el: molCards[i], hint: 'molecule',
+      key: 'm:' + m.key, name: m.spec.short || m.spec.name, alias: m.spec.name, el: molCards[i], hint: 'molecule',
       text: [m.spec.class, MolShelf.groupOf(m.spec.domain), m.spec.formula].filter(Boolean).join(' ') })),
   ],
   onPick: key => { location.href = byKey.get(key).href; },

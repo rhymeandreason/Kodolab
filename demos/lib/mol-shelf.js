@@ -10,7 +10,7 @@
  *  baked by tools/molecule-stills.html.
  *
  *  Card CSS is the page's, not this file's: both pages style `.card`,
- *  `.stage`, `.name`, `.formula` and `.fact` at their own sizes.
+ *  `.stage`, `.name`, `.full`, `.formula` and `.fact` at their own sizes.
  * ===================================================================== */
 (function (global) {
   'use strict';
@@ -49,8 +49,12 @@
     el.className = 'card';
     el.innerHTML = `
       <div class="stage" style="background-image:url(media/molecules/${m.key}.webp)"></div>
-      <div class="body"><h3 class="name"></h3><p class="formula"></p><div class="facts"></div></div>`;
-    el.querySelector('.name').textContent = s.name;
+      <div class="body"><h3 class="name"></h3><p class="full"></p><p class="formula"></p><div class="facts"></div></div>`;
+    /* THE NAME A STUDENT SAYS. "NADH", not "Nicotinamide adenine dinucleotide
+       (reduced)": the short form is the title and the full name sits under it. */
+    const full = el.querySelector('.full');
+    el.querySelector('.name').textContent = s.short || s.name;
+    if (s.short && s.short !== s.name) full.textContent = s.name; else full.remove();
     el.querySelector('.formula').textContent = s.formula || '';
     const fx = el.querySelector('.facts');
     for (const f of [s.class, `${s.atoms.length} atoms`]) {
