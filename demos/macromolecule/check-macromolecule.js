@@ -190,6 +190,63 @@ console.log('\n== 5b. a built chain is straight, and nothing in it intersects');
   ok(span > 10, `the chain is extended: CA1..CA4 spans ${span.toFixed(2)} A (a bent chain came to 8.84)`);
 }
 
+console.log('\n== 5d. the amide is planar, and the helix bonds to itself');
+{
+  // Build a chain in one fold, every join asked for it, and keep what react()
+  // moves: the amide H and the carbonyl O are the two atoms the plane is made of.
+  const build = (keys, fold) => {
+    const res = [{ spec:un(M[keys[0]]), q:[0,0,0,1], p:[0,0,0] }];
+    for(let i = 1; i < keys.length; i++){
+      const prev = res[i-1], g = un(M[keys[i]]);
+      const r = Peptide.pose(prev.spec, g, null, fold), o = Peptide.react(prev.spec, g, r);
+      prev.spec = o.host;
+      res.push({ spec:o.guest, q:qm(prev.q, r.quat), p:vadd(qrot(prev.q, r.pos), prev.p) });
+    }
+    const at = (k, name) => {
+      const i = res[k].spec.names.indexOf(name);
+      return i < 0 ? null : vadd(qrot(res[k].q, res[k].spec.atoms[i].pos), res[k].p);
+    };
+    return { res, at };
+  };
+  const deg = r => r * 180/Math.PI;
+
+  // O=C-N-Ca is 0 in a trans amide. Left as the free acid's conformer, the O
+  // sat 45 degrees off it in a strand and inside the next N in a helix.
+  for(const fold of ['strand', 'helix']){
+    const { res, at } = build(['glycine','alanine','serine','cysteine'], fold);
+    let worst = 0;
+    for(let k = 0; k + 1 < res.length; k++)
+      worst = Math.max(worst, Math.abs(deg(Peptide.torsion(at(k,'O'), at(k,'C'), at(k+1,'N'), at(k+1,'CA')))));
+    ok(worst < 0.5, `${fold}: every carbonyl O is in its amide plane (worst O=C-N-CA ${worst.toFixed(2)} deg)`);
+  }
+
+  // THE HELIX'S HYDROGEN BONDS, which nothing places. Real ones hold O...N near
+  // 2.9 A and H...O near 2.0; a pair of torsions that misses them builds a
+  // spiral that is not an alpha-helix.
+  const N8 = Array(8).fill('alanine');
+  const { res, at } = build(N8, 'helix');
+  let on = [], oh = [];
+  for(let i = 0; i + 4 < res.length; i++){
+    const H = at(i+4,'H') || at(i+4,'H2');
+    on.push(d(at(i,'O'), at(i+4,'N'))); oh.push(d(at(i,'O'), H));
+  }
+  const rng = a => `${Math.min(...a).toFixed(2)}-${Math.max(...a).toFixed(2)}`;
+  ok(on.every(x => x > 2.7 && x < 3.1), `helix: O(i)...N(i+4) ${rng(on)} A, every turn`);
+  ok(oh.every(x => x > 1.8 && x < 2.2), `helix: O(i)...H(i+4) ${rng(oh)} A`);
+  let min = Infinity;
+  for(let i = 0; i < res.length; i++) for(let j = i+1; j < res.length; j++)
+    for(let a = 0; a < res[i].spec.atoms.length; a++)
+      for(let b = 0; b < res[j].spec.atoms.length; b++){
+        if(j === i+1 && (a === Spec.role(res[i].spec,'carboxyl').keep
+                         || b === Spec.role(res[j].spec,'amino').keep)) continue;
+        min = Math.min(min, d(vadd(qrot(res[i].q, res[i].spec.atoms[a].pos), res[i].p),
+                              vadd(qrot(res[j].q, res[j].spec.atoms[b].pos), res[j].p)));
+      }
+  // The H-bond itself is the closest contact a helix has, so the floor is set
+  // just under it rather than at the strand's 1.9.
+  ok(min > 1.75, `helix: eight alanines, closest non-bonded ${min.toFixed(2)} A`);
+}
+
 console.log('\n== 5a. every solver names the atom that bonds');
 {
   /* plane.js measures the latch AT that atom and falls back to the molecule's

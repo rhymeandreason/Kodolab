@@ -55,7 +55,7 @@
    * refinement program restrains a protein to. The amide C–N is shorter than a
    * single C–N (1.47 Å) because the bond has partial double character, which is
    * also why the unit is planar and why ω is a constant rather than a rotor. */
-  const CN  = 1.329, NCA = 1.458, CAC = 1.525, NH = 1.01;
+  const CN  = 1.329, NCA = 1.458, CAC = 1.525, NH = 1.01, CO = 1.231;
   const ANG_CA_C_N = 116.2 * Math.PI/180,
         ANG_C_N_CA = 121.7 * Math.PI/180;
 
@@ -75,6 +75,18 @@
   const OMEGA = Math.PI;                        // trans
   const PHI   = -139 * Math.PI/180;             // β-strand
   const PSI   =  135 * Math.PI/180;
+
+  /* THE TWO FOLDS A CHAIN IS ASKED FOR, as the φ/ψ pair that defines each. The
+   * strand is the default above. The α-helix is the mean over deposited
+   * helices (Barlow & Thornton 1988, −62°, −41°), not Pauling's −57°/−47°: on
+   * these bond lengths the textbook pair puts O···N at 2.72 Å, short of the
+   * 2.9 Å real helices hold. Nothing places that hydrogen bond, C=O of i to
+   * N–H of i+4; it falls out of the two torsions, and check-macromolecule.js
+   * measures that it does. */
+  const FOLD = {
+    strand:{ phi:PHI, psi:PSI },
+    helix: { phi:-62 * Math.PI/180, psi:-41 * Math.PI/180 },
+  };
 
   const sub = (a,b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
   const add = (a,b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]];
@@ -193,12 +205,17 @@
    * chain's own torsions, and where the remaining N–H sits. Those are internal
    * to a rigid residue and cannot be set by placing it.
    *
+   * `fold` names a FOLD entry, strand when omitted. It sets the host's ψ and
+   * the guest's φ, so a chain is one fold only if every join is asked for it.
+   *
    * Returns { pos, quat, clash, bondAt, waterAt, omega, phi, psi } — the two
    * `At` points so a page can put the flare on the bond and the water where the
    * leaving atoms met, rather than at a transform origin that is in the middle
    * of nothing.
    */
-  function pose(host, guest, donor){
+  function pose(host, guest, donor, fold){
+    const F = FOLD[fold || 'strand'];
+    if(!F) throw new Error(`peptide.js: no fold '${fold}'`);
     const hc = free(host, donor || 'carboxyl'), ga = free(guest,'amino');
     if(!hc || !ga) return null;
     const P = (s,i) => s.atoms[i].pos;
@@ -233,7 +250,7 @@
     //      hydroxyl's position no longer decides anything. A side-chain donor
     //      has no ψ — that torsion is a χ, and nothing fixes it — so it takes
     //      the extended value, which is what an unconstrained chain does.
-    const psi = (hc.key === 'carboxyl' ? PSI : Math.PI);
+    const psi = (hc.key === 'carboxyl' ? F.psi : Math.PI);
     const Nat = nerf(hN, hA, hC, CN, ANG_CA_C_N, psi);
     // 4-5. Where the guest's Cα has to point: the C–N–Cα angle, twisted to ω.
     const CAt = nerf(hA, hC, Nat, NCA, ANG_C_N_CA, OMEGA);
@@ -250,7 +267,7 @@
     // onto its own backbone nitrogen and pins the N–Cα torsion near −65°; the
     // extended chain's −139° is a shape it cannot take, and forcing it renders
     // a proline nobody could build. Every other residue takes the default.
-    const phi = (guest.pepPhi != null ? guest.pepPhi * Math.PI/180 : PHI);
+    const phi = (guest.pepPhi != null ? guest.pepPhi * Math.PI/180 : F.phi);
     const cur = torsion(hC, Nat, put(q, gA), put(q, gC));
     q = qnorm(qmul(qAxis(sub(CAt, Nat), phi - cur), q));
 
@@ -281,8 +298,22 @@
       return { index:keptH, pos: add(qrot(qconj(q), sub(w, Nat)), gN) };
     })();
 
+    /* THE CARBONYL O IS IN THE SAME PLANE, for the same reason, on the host's
+     * side. A free amino acid's =O sits wherever its carboxylate conformer put
+     * it (alanine's N–Cα–C–O is 0°), and the bond is built at ψ, so leaving it
+     * there tilts it out of the amide plane by however far ψ is from 180°: 45°
+     * in a strand, and in a helix straight into the next residue's N, 0.86 Å.
+     * It goes opposite the C's two heavy neighbours, at a C=O's own length,
+     * which is also what aims it down the helix at the N–H four residues on. */
+    const carbonylO = (() => {
+      const o = bondedTo(host, hc.keep)
+        .find(i => host.atoms[i].el === 'O' && !hc.leaves.includes(i));
+      if(o === undefined) return null;
+      return { index:o, pos: add(mul(unit(add(unit(sub(hA, hC)), unit(sub(Nat, hC)))), -CO), hC) };
+    })();
+
     return {
-      pos, quat:q, amideH,
+      pos, quat:q, amideH, carbonylO,
       // The atom that bonds, in the GUEST's own frame — plane.js measures the
       // latch there rather than at the origin. An amino acid's origin is its
       // Cα, about 1.5 Å off, so the origin test nearly works and the gap only
@@ -292,7 +323,7 @@
       // Against the free amino acid's sp3 position it reports a clash on most
       // pairs — correctly, but about a molecule that does not exist once the
       // bond has formed.
-      clash: clashOf(host, guest, q, pos, amideH, hc.key),
+      clash: clashOf(host, guest, q, pos, amideH, hc.key, carbonylO),
       bondAt: mul(add(hC, Nat), 0.5),
       // The water assembles between the two groups that gave it up: the host's
       // –OH and the guest's H, which is where a student is looking.
@@ -320,7 +351,7 @@
    * ~1.5 Å the correct poses come out at, so it separates a drawing problem
    * from a snug fit rather than flagging every join. */
   const CLASH = 1.6;
-  function clashOf(host, guest, q, pos, moved, donor){
+  function clashOf(host, guest, q, pos, moved, donor, movedHost){
     // The DONOR role, not always the backbone's: a γ linkage sheds the side
     // chain's oxygen and hydrogen, and excluding the backbone's instead
     // reports a clash against two atoms that are no longer there.
@@ -329,11 +360,12 @@
     let min = Infinity, at = null;
     for(let i = 0; i < host.atoms.length; i++){
       if(gone.h.has(i)) continue;
+      const hp = (movedHost && movedHost.index === i) ? movedHost.pos : host.atoms[i].pos;
       for(let j = 0; j < guest.atoms.length; j++){
         if(gone.g.has(j) || (i === hc.keep && j === ga.keep)) continue;
         const local = (moved && moved.index === j) ? moved.pos : guest.atoms[j].pos;
         const g2 = add(qrot(q, local), pos);
-        const d = len(sub(host.atoms[i].pos, g2));
+        const d = len(sub(hp, g2));
         if(d < min){ min = d; at = [i, j]; }
       }
     }
@@ -343,8 +375,8 @@
   /* What the two residues become, in the peptide bond's own roles. The C-N
    * bond is BETWEEN them and belongs to whatever draws the chain.
    *
-   * Pass the pose and the guest's surviving N-H is moved to where an amide
-   * puts it. Optional only so that a caller asking "what does this reaction
+   * Pass the pose and the guest's surviving N-H and the host's C=O are moved
+   * to where an amide puts them. Optional only so that a caller asking "what does this reaction
    * remove" does not have to solve a geometry first; a page drawing the result
    * always has one. */
   function react(host, guest, p){
@@ -356,11 +388,16 @@
         ? out.guest.names.indexOf(guest.names[i]) : -1;
       if(n >= 0) out.guest.atoms[n] = { el:'H', pos:p.amideH.pos.slice() };
     }
+    if(p && p.carbonylO){
+      const n = out.host.names && host.names
+        ? out.host.names.indexOf(host.names[p.carbonylO.index]) : -1;
+      if(n >= 0) out.host.atoms[n] = { el:'O', pos:p.carbonylO.pos.slice() };
+    }
     return out;
   }
 
   const API = { pose, isResidue, free, role, alphaOf, torsion, clashOf, nerf,
-                strip, react, CN, NCA, CAC, NH, OMEGA, PHI, PSI, CLASH };
+                strip, react, CN, NCA, CAC, NH, OMEGA, PHI, PSI, FOLD, CLASH };
   if(typeof module === 'object' && module.exports) module.exports = API;
   global.Peptide = API;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
