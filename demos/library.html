@@ -78,7 +78,7 @@
       <h1>The <em>library</em></h1>
     </div>
     <div>
-      <p class="lede"><b>A growing library of 3D biology that powers our lessons and build tool.</b> 3D simulations, scenes, proteins and molecules.</p>
+      <div id="find"></div>
       <!-- Labels are written at render from the lists they count. -->
       <nav class="jump" id="tally" aria-label="Jump to a section">
         <a href="#components" data-n="comp"></a>
@@ -126,6 +126,7 @@
       <div class="uhead"><div><h2>Molecules</h2><p class="why">Every molecule the lessons draw, each held to its chemistry by a test.</p></div><a class="go" href="/molecules" id="go-mol">All molecules <span aria-hidden="true">&rarr;</span></a></div>
       <div class="grid mols" id="mol-grid"></div>
     </section>
+    <p class="find-none" id="none" hidden></p>
   </div>
 </main>
 
@@ -162,6 +163,7 @@
 <script src="https://unpkg.com/smiles-drawer@2.4.1/dist/smiles-drawer.min.js"></script>
 <script src="lib/diagram-2d.js"></script>
 <script src="diagram/diagram.js"></script>
+<script src="lib/gallery-search.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -230,16 +232,56 @@ function proteinCard(p) {
 const rows2 = id => 2 * getComputedStyle($(id)).gridTemplateColumns.split(' ').length;
 const SHELF = { prots: rows2('prot-grid'), mols: rows2('mol-grid') };
 
-for (const p of PROTEINS.slice(0, SHELF.prots)) $('prot-grid').appendChild(proteinCard(p));
+/* Every card is built so a search can reach past the shelf; the ones beyond
+   it wait hidden until a query matches them. */
+const protCards = PROTEINS.map((p, i) => {
+  const el = proteinCard(p);
+  if (i >= SHELF.prots) { el.dataset.past = '1'; el.hidden = true; }
+  $('prot-grid').appendChild(el);
+  return el;
+});
 
 /* Molecules: the shelf's cards are links into molecules.html, which opens the
    one named in the hash. The live context lives there, not here. */
 const MOLS = MolShelf.list();
-for (const m of MOLS.slice(0, SHELF.mols)) {
+const molCards = MOLS.map((m, i) => {
   const el = MolShelf.card(m, document.createElement('a'));
   el.href = `/molecules#${m.key}`;
+  if (i >= SHELF.mols) { el.dataset.past = '1'; el.hidden = true; }
   $('mol-grid').appendChild(el);
-}
+  return el;
+});
+
+/* ---- search: the whole library, not only the shelves ---------------------
+   A component answers to its name, then its blurb, features and rung; a
+   protein and a molecule as on their own pages. Picking one follows its card. */
+const text = el => [...el.querySelectorAll('.blurb, .feats li, .rung')].map(n => n.textContent).join(' ');
+GallerySearch.mount($('find'), {
+  placeholder: 'Search the library: membrane, hemoglobin, glucose…',
+  items: [
+    ...[...document.querySelectorAll('#comp-grid .card')].map((el, i) => ({
+      key: 'c' + i, name: el.querySelector('.name').textContent, el, hint: 'component', text: text(el) })),
+    ...PROTEINS.map((p, i) => ({
+      key: 'p:' + p.key, name: p.name, el: protCards[i], hint: 'protein',
+      text: [p.does, p.blurb, defaultOf(p).species].filter(Boolean).join(' ') })),
+    ...MOLS.map((m, i) => ({
+      key: 'm:' + m.key, name: m.spec.name, alias: m.spec.short, el: molCards[i], hint: 'molecule',
+      text: [m.spec.class, MolShelf.groupOf(m.spec.domain), m.spec.formula].filter(Boolean).join(' ') })),
+  ],
+  onPick: key => { location.href = byKey.get(key).href; },
+  onFilter: shown => {
+    /* No query: back to the shelves, two rows each. */
+    if (!shown) for (const el of document.querySelectorAll('[data-past]')) el.hidden = true;
+    for (const sec of document.querySelectorAll('main .unit'))
+      sec.hidden = !!shown && ![...sec.querySelectorAll('.card')].some(c => !c.hidden);
+  },
+  empty: $('none'),
+});
+const byKey = new Map([
+  ...[...document.querySelectorAll('#comp-grid .card')].map((el, i) => ['c' + i, el]),
+  ...PROTEINS.map((p, i) => ['p:' + p.key, protCards[i]]),
+  ...MOLS.map((m, i) => ['m:' + m.key, molCards[i]]),
+]);
 
 /* The masthead's doors, labelled from the three lists they count. */
 const COUNTS = { comp: [nComp, 'components'],

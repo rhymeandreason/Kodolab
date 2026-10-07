@@ -1,8 +1,8 @@
 /* =====================================================================
  *  gallery-search.js — a collection page's search: filters the grid as
  *  you type, suggests the best few, and picking one opens it.
- *  Pairs with css/library.css's `.find`. Used by proteins/index.html and
- *  molecules.html.
+ *  Pairs with css/library.css's `.find`. Used by library.html,
+ *  proteins/index.html and molecules.html.
  *
  *  GallerySearch.mount(root, { placeholder, items, onPick, onFilter, empty })
  *    items:    [{ key, name, alias?, text, hint, el }]. `name` and `alias`
