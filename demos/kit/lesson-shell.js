@@ -94,7 +94,11 @@
        authored list less any step whose `hidden` says so. */
     let authored = opts.steps || [];
     const isHidden = s => (typeof s.hidden === 'function' ? !!s.hidden() : !!s.hidden);
-    let steps = authored.filter(s => !isHidden(s));
+    /* Hiding never empties a lesson: a page of nothing but hidden steps is a
+       blank panel with Back and Next, so then nothing is hidden, and the step
+       says for itself why it has nothing to show. */
+    const walkable = list => { const v = list.filter(s => !isHidden(s)); return v.length ? v : list; };
+    let steps = walkable(authored);
     const host = opts.host || document.body;
     document.body.classList.add('lshell-page');
 
@@ -381,7 +385,7 @@
       if (current >= 0 && steps[current].onExit) steps[current].onExit(ctx);
       ctx.clearTimers();
       authored = list;
-      steps = list.filter(s => !isHidden(s));
+      steps = walkable(list);
       current = -1;
       drawProgress();
     }
@@ -392,7 +396,7 @@
        nearest step before it. */
     function refresh() {
       const at = steps[current];
-      const next = authored.filter(s => !isHidden(s));
+      const next = walkable(authored);
       if (next.length === steps.length && next.every((s, k) => s === steps[k])) return;
       steps = next;
       drawProgress();

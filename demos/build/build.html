@@ -62,8 +62,8 @@
   <form method="dialog"><button class="btn btn--tint" type="submit">Done</button></form></div>
 </dialog>
 
-<!-- The answer key: build/quiz-key.js fills it from what the app's quiz posts. -->
-<dialog class="beta quizkey" id="quizModal" aria-label="Check the answer key"></dialog>
+<!-- The quiz's questions: build/quiz-key.js fills it from what the app's quiz posts. -->
+<dialog class="beta quizkey" id="quizModal" aria-label="Quiz questions"></dialog>
 
 <div class="notice" id="notice" hidden></div>
 
@@ -241,11 +241,11 @@
     paintErrors();
   }
 
-  /* ---- the quiz's answer key ----
-   * The builder is where a teacher reads the key: the app's quiz shows a bar
-   * here and nowhere else, and its questions open in a dialog over the
-   * builder (build/quiz-key.js). Marking one correct is a text edit that
-   * writes the question's hash into its own literal, one version per save. */
+  /* ---- the quiz's questions ----
+   * The app's quiz shows a bar here and nowhere else, and its questions open
+   * in a dialog over the builder (build/quiz-key.js). Switching one off is a
+   * text edit that writes `active: false` into its own literal, one version
+   * per save. */
   const quizKey = QuizKey.create({
     dialog: $('quizModal'),
     source: () => app.html,

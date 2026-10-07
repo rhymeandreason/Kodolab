@@ -6,8 +6,8 @@
  *
  *      steps: [ ..., Quiz.step({ scene: () => L, questions: [...] }) ]
  *
- *  The step is `hidden` while no question is checked, so a student never
- *  meets a quiz with nothing in it. Underneath, the step mounts:
+ *  The step is `hidden` while every question is switched off, so a student
+ *  never meets a quiz with nothing in it. Underneath, the step mounts:
  *
  *      Quiz.mount(el, {
  *        id: 'check',              // keeps answers across Back/Next; default 'quiz'
@@ -25,30 +25,21 @@
  *  wrong, the part they hit gets its library note, so a wrong click still
  *  teaches what that thing was.
  *
- *  THE ANSWER KEY IS THE TEACHER'S, NOT THE MODEL'S. A model drafts the
- *  questions and cannot yet be trusted with a right answer, so a question
- *  reaches a student only once a teacher has passed it. Passing writes
- *  `approved: '<hash>'` into the question's own object literal, through the
- *  builder's text edit; the hash covers q, choices, answer, find and why. A
- *  question edited after it was passed hashes differently and is a draft
- *  again, so a model rewriting the page cannot carry an approval onto a key
- *  nobody read, and copying the field does nothing.
- *
- *  THE KEY IS CHECKED IN THE BUILDER, NOT HERE. When the builder answers the
- *  frame's `app-quiz-hello`, the panel keeps showing what a student sees and
- *  adds one bar: how many questions wait, and a button that posts the whole
- *  list (`app-quiz-open`) for build.html's dialog to lay out. The app stays
- *  the app; the teacher's tool is the builder's chrome. `?quiz=review` is the
- *  other door, for a bench or an eval with no builder: drafts become playable,
- *  tagged as drafts. Anywhere else a draft does not exist.
+ *  EVERY QUESTION IS ON UNTIL THE TEACHER TURNS IT OFF. The builder is where
+ *  they do it: when it answers the frame's `app-quiz-hello`, the quiz adds
+ *  one bar over what a student sees, and its button posts the whole list
+ *  (`app-quiz-open`) for build.html's dialog to lay out. Turning one off
+ *  writes `active: false` into the question's own object literal, through the
+ *  builder's text edit. `?quiz=review` plays the inactive ones too, for a
+ *  bench or an eval with no builder.
  *
  *  The score is reported once per attempt as the `quiz` event `/teach`
  *  already renders (docs/api.md, "Class codes"): straight to `Track` on a
  *  hand-built lesson, or posted to the parent from a sandboxed app, where
  *  build/app.html relays it.
  *
- *  `Quiz.approval(source, q, hash)` is the builder's half: the {find, replace}
- *  pair that writes the hash, or with a null hash takes it out.
+ *  `Quiz.activation(source, q, on)` is the builder's half: the {find, replace}
+ *  pair that writes or removes `active: false`.
  *  Node-loadable, no DOM at load.
  * ========================================================================== */
 (function (global) {
@@ -56,15 +47,6 @@
 
   const REACH = 56;            // px from a part's anchor that still counts as clicking it
   const DRAG = 5;              // px of pointer travel that makes a click an orbit
-
-  /* FNV-1a, 32 bit, base 36. Not security: a fingerprint of the words a
-     teacher read, so changing them unpasses the question. */
-  function hashOf(q) {
-    const s = JSON.stringify([q.q, q.choices || null, q.answer == null ? null : q.answer, q.find || null, q.why || null]);
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-    return (h >>> 0).toString(36);
-  }
 
   const kindOf = q => (q.find ? 'find' : 'choice');
 
@@ -120,9 +102,9 @@
       for (const q of P.questions || []) {
         const why = valid(q, sceneOf(q));
         if (why) { console.warn(`Quiz: dropped "${q && q.q}": ${why}`); continue; }
-        all.push(Object.assign({}, q, { kind: kindOf(q), hash: hashOf(q), passed: q.approved === hashOf(q) }));
+        all.push(Object.assign({}, q, { kind: kindOf(q), on: q.active !== false }));
       }
-      shown = review === 'link' ? all : all.filter(q => q.passed);
+      shown = review === 'link' ? all : all.filter(q => q.on);
       if (!kept.has(P.id) || kept.get(P.id).n !== shown.length) kept.set(P.id, { n: shown.length, i: 0, answers: [], done: false });
     }
     const S = () => kept.get(P.id);
@@ -194,51 +176,112 @@
       paint();
     }
 
+    /* ---- where it draws ----
+       Two layouts, chosen per question. A click-the-part question lives in
+       the panel beside the model it is answered on. A multiple-choice
+       question needs no model, so it and the score take the window as one
+       centred card, with the scene and panel hidden. A quiz with only choices
+       never shows a scene at all, which is also what a quiz-only app is. */
+    const shellEl = el.closest && el.closest('.lshell');
+    let host = null;
+    function place(mode) {
+      if (!shellEl) return root.parentNode !== el && el.appendChild(root);
+      if (mode === 'card') {
+        if (!host) {
+          host = document.createElement('div');
+          host.className = 'quiz-cardhost';
+          host.innerHTML = '<div class="quiz-card"></div>';
+          shellEl.appendChild(host);
+          /* Arriving on a card is not a change of layout: no fade. */
+          if (!shellEl.classList.contains('is-quiz-card')) { shellEl.classList.add('quiz-snap'); setTimeout(() => shellEl.classList.remove('quiz-snap'), 60); }
+        }
+        if (root.parentNode !== host.firstChild) host.firstChild.appendChild(root);
+        host.scrollTop = 0;
+      } else if (root.parentNode !== el) el.appendChild(root);
+      shellEl.classList.toggle('is-quiz-card', mode === 'card');
+    }
+
     /* ---- painting ---- */
     const dots = () => '<div class="quiz-dots">' + shown.map((_, k) => {
       const a = S().answers[k];
       return `<i class="${a ? (a.correct ? 'right' : 'wrong') : ''}${k === S().i ? ' now' : ''}"></i>`;
     }).join('') + '</div>';
+    const LETTERS = 'ABCDEFGH';
+    const canBack = () => !!(P.back && (!P.canBack || P.canBack()));
+    const backBtn = () => (canBack() ? '<button type="button" class="quiz-back">&larr; Back to the lesson</button>' : '');
+    const verdict = (q, a, cls = '') => {
+      const right = q.kind === 'find' ? partName(q) : q.choices[q.answer];
+      return `<p class="${cls} quiz-verdict ${a.correct ? 'right' : 'wrong'}"><strong>${a.correct ? 'Right.' : 'Not quite.'}</strong> `
+        + (a.correct ? '' : q.kind === 'find' ? `That was the ${esc(a.answer)}; this is the ${esc(right)}. ` : '')
+        + esc(q.why || '') + '</p>';
+    };
+
+    function paintChoice(q, a) {
+      const s = S();
+      /* Short answers sit two by two; any long one puts them in a column. */
+      const wide = q.choices.some(c => String(c).length > 32);
+      let h = `<div class="quiz-top"><span class="quiz-eyebrow">${esc(P.title || 'Quick check')}</span>${dots()}<span class="quiz-n">${s.i + 1} of ${shown.length}</span></div>`
+        + (q.on ? '' : '<span class="quiz-tag">Inactive</span>')
+        + `<h2 class="quiz-q">${esc(q.q)}</h2>`
+        + `<div class="quiz-choices${wide ? ' wide' : ''}">` + q.choices.map((c, k) => {
+          const cls = !a ? '' : k === q.answer ? ' right' : k === a.value ? ' wrong' : ' dim';
+          return `<button type="button" class="quiz-choice${cls}" data-k="${k}"${a ? ' disabled' : ''}><span class="quiz-key">${LETTERS[k]}</span><span>${esc(c)}</span></button>`;
+        }).join('') + '</div>';
+      h += a ? `<div class="quiz-after">${verdict(q, a)}<button type="button" class="btn primary quiz-go">${s.i + 1 < shown.length ? 'Next question' : 'See your score'}</button></div>`
+             : '<p class="quiz-keys">Press A to ' + LETTERS[q.choices.length - 1] + ' to answer.</p>';
+      return h + `<div class="quiz-foot">${backBtn()}</div>`;
+    }
+
+    function paintFind(q, a) {
+      const s = S();
+      let h = `<div class="quiz-head">${dots()}<span class="quiz-n">${s.i + 1} of ${shown.length}</span></div>`
+        + (q.on ? '' : '<span class="quiz-tag">Inactive</span>')
+        + `<p class="quiz-q">${esc(q.q)}</p>`;
+      if (!a) h += '<p class="quiz-hint">Click it on the model. Drag to turn it first if you need to.</p>'
+        + '<p class="quiz-hint quiz-miss" hidden>Nothing there. Click right on the part.</p>';
+      else h += verdict(q, a, 'callout')
+        + `<button type="button" class="btn primary quiz-go">${s.i + 1 < shown.length ? 'Next question' : 'See your score'}</button>`;
+      return h;
+    }
 
     function paintQuestion() {
       const s = S(), q = shown[s.i], a = s.answers[s.i];
-      const scene = sceneOf(q);
-      let h = `<div class="quiz-head">${dots()}<span class="quiz-n">${s.i + 1} of ${shown.length}</span></div>`
-        + (q.passed ? '' : '<span class="quiz-tag">Draft</span>')
-        + `<p class="quiz-q">${esc(q.q)}</p>`;
-      if (q.kind === 'choice') {
-        h += '<div class="choices quiz-choices">' + q.choices.map((c, k) => {
-          const cls = !a ? '' : k === q.answer ? ' right' : k === a.value ? ' wrong' : ' dim';
-          return `<button type="button" class="choice${cls}" data-k="${k}"${a ? ' disabled' : ''}>${esc(c)}</button>`;
-        }).join('') + '</div>';
-      } else if (!a) {
-        h += '<p class="quiz-hint">Click it on the model. Drag to turn it first if you need to.</p>'
-          + '<p class="quiz-hint quiz-miss" hidden>Nothing there. Click right on the part.</p>';
-      }
-      if (a) {
-        const right = q.kind === 'find' ? partName(q) : q.choices[q.answer];
-        h += `<p class="callout quiz-verdict ${a.correct ? 'right' : 'wrong'}"><strong>${a.correct ? 'Right.' : 'Not quite.'}</strong> `
-          + (a.correct ? '' : q.kind === 'find' ? `That was the ${esc(a.answer)}; this is the ${esc(right)}. ` : '')
-          + esc(q.why || '') + '</p>'
-          + `<button type="button" class="btn primary quiz-go">${s.i + 1 < shown.length ? 'Next question' : 'See your score'}</button>`;
-      }
-      root.innerHTML = h;
-      root.querySelectorAll('.choice[data-k]').forEach(b => b.onclick = () => answer(+b.dataset.k === q.answer, +b.dataset.k, q.choices[+b.dataset.k]));
+      const scene = q.kind === 'find' ? sceneOf(q) : null;
+      place(q.kind === 'find' ? 'panel' : 'card');
+      root.className = 'quiz ' + (q.kind === 'find' ? 'is-panel' : 'is-card');
+      root.innerHTML = q.kind === 'find' ? paintFind(q, a) : paintChoice(q, a);
+      root.querySelectorAll('.quiz-choice[data-k]').forEach(b => b.onclick = () => pick(+b.dataset.k));
       const go = root.querySelector('.quiz-go');
-      if (go) go.onclick = () => { if (s.done) s.scored = true; else s.i++; if (scene && scene.clearNotes) scene.clearNotes(); paint(); };
+      if (go) { go.onclick = () => { if (s.done) s.scored = true; else s.i++; if (scene && scene.clearNotes) scene.clearNotes(); paint(); }; if (q.kind !== 'find') go.focus({ preventScroll: true }); }
       if (q.kind === 'find' && !a) listen(q);
     }
+    function pick(k) {
+      const q = shown[S().i];
+      if (!q || q.kind !== 'choice' || S().answers[S().i] || k < 0 || k >= q.choices.length) return;
+      answer(k === q.answer, k, q.choices[k]);
+    }
+    /* A to D, or 1 to 4, while a choice is on screen. */
+    const onKey = e => {
+      if (!root.classList.contains('is-card') || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target.matches && e.target.matches('input, textarea, select')) return;
+      const k = /^[1-8]$/.test(e.key) ? +e.key - 1 : LETTERS.indexOf(e.key.toUpperCase());
+      if (k >= 0 && e.key.length === 1) { pick(k); e.preventDefault(); }
+    };
+    document.addEventListener('keydown', onKey);
 
     function paintScore() {
       const s = S(), score = s.answers.filter(a => a.correct).length;
-      root.innerHTML = `<p class="quiz-score">${score}<small> / ${shown.length}</small></p>`
+      place('card');
+      root.className = 'quiz is-card';
+      root.innerHTML = `<div class="quiz-top"><span class="quiz-eyebrow">${esc(P.title || 'Quick check')}</span></div>`
+        + `<p class="quiz-score">${score}<small> of ${shown.length}</small></p>`
         + '<ol class="quiz-review">' + shown.map((q, k) => {
           const a = s.answers[k];
           return `<li class="${a.correct ? 'right' : 'wrong'}"><span class="quiz-q-sm">${esc(q.q)}</span>`
             + `<span class="quiz-a">${a.correct ? '' : '<s>' + esc(a.answer) + '</s> '}`
             + esc(q.kind === 'find' ? partName(q) : q.choices[q.answer]) + '</span></li>';
         }).join('') + '</ol>'
-        + '<button type="button" class="btn ghost quiz-again">Try again</button>';
+        + `<div class="quiz-foot">${backBtn()}<button type="button" class="btn primary quiz-again">Try again</button></div>`;
       root.querySelector('.quiz-again').onclick = () => { kept.set(P.id, { n: shown.length, i: 0, answers: [], done: false }); paint(); };
     }
 
@@ -246,26 +289,31 @@
        frame by postMessage. */
     const sheet = () => ({ type: 'app-quiz-list', id: P.id, questions: all.map(q => ({
       q: q.q, kind: q.kind, choices: q.choices || null, answer: q.answer == null ? null : q.answer,
-      part: q.kind === 'find' ? partName(q) : null, why: q.why || '', hash: q.hash, passed: q.passed })) });
+      part: q.kind === 'find' ? partName(q) : null, why: q.why || '', on: q.on })) });
     const post = m => { try { global.parent.postMessage(m, '*'); } catch (_) {} };
 
     /* The teacher's bar, over what a student sees. */
     function bar() {
       if (review !== 'builder' || !all.length) return '';
-      const n = all.length - shown.length;
-      return `<div class="quiz-bar${n ? '' : ' done'}"><span>${n ? `<strong>${n} of ${all.length}</strong> need${n === 1 ? 's' : ''} your check before students see ${n === 1 ? 'it' : 'them'}.` : `All ${all.length} checked.`}</span>`
-        + `<button type="button" class="quiz-open">${n ? 'Check key' : 'Review'}</button></div>`;
+      const off = all.length - shown.length;
+      return `<div class="quiz-bar"><span><strong>${shown.length} of ${all.length}</strong> question${all.length === 1 ? '' : 's'} active${off ? `; ${off} hidden from students` : ''}.</span>`
+        + '<button type="button" class="quiz-open">Edit questions</button></div>';
     }
 
     function paint() {
       unlisten();
       if (review === 'builder') post(sheet());
-      if (!shown.length) root.innerHTML = bar() + `<p class="quiz-hint">${review === 'builder' ? 'Nothing here for students until you check a question.' : 'Your teacher has not checked these questions yet.'}</p>`;
+      if (!shown.length) {
+        place('card'); root.className = 'quiz is-card';
+        root.innerHTML = bar() + `<p class="quiz-hint">${review === 'builder' ? 'Every question is off, so students do not see this quiz.' : 'There are no questions in this quiz yet.'}</p>`;
+      }
       else if (S().scored) paintScore();
       else { if (S().i >= shown.length) S().i = 0; paintQuestion(); }
       if (shown.length && bar()) root.insertAdjacentHTML('afterbegin', bar());
       const o = root.querySelector('.quiz-open');
       if (o) o.onclick = () => post(Object.assign(sheet(), { type: 'app-quiz-open' }));
+      const bk = root.querySelector('.quiz-back');
+      if (bk) bk.onclick = () => P.back();
     }
 
     const rerender = () => { load(); paint(); };
@@ -282,37 +330,43 @@
       },
       on(ev, fn) { (subs[ev] = subs[ev] || []).push(fn); return () => { subs[ev] = subs[ev].filter(f => f !== fn); }; },
       start() {}, stop() {}, pump() {},
-      destroy() { unlisten(); live.delete(rerender); root.remove(); },
+      destroy() {
+        unlisten(); live.delete(rerender); document.removeEventListener('keydown', onKey);
+        root.remove(); if (host) host.remove();
+        if (shellEl) shellEl.classList.remove('is-quiz-card', 'quiz-snap');
+      },
     };
     return api;
   }
 
   /* ---- the step: what a page writes ----
-     A whole step, so the page cannot forget the part that matters: with no
-     question checked there is nothing to take, and the step is not in the
-     lesson at all. Review brings it back. */
-  const passedOf = qs => (qs || []).filter(q => q && q.approved && q.approved === hashOf(q));
+     A whole step, so the page cannot forget the part that matters: with every
+     question off there is nothing to take, and the step is not in the lesson
+     at all. Review brings it back. */
+  const activeOf = qs => (qs || []).filter(q => q && q.active !== false);
   function step(o = {}) {
     let quiz = null;
-    return {
+    const me = {
       eyebrow: o.eyebrow || 'Check yourself', title: o.title || 'Quick check', body: o.body || '',
       short: 'Quiz',
-      hidden: () => !review && !passedOf(o.questions).length,
+      hidden: () => !review && !activeOf(o.questions).length,
       onEnter(ctx) {
         ctx.ui.controls('<div class="quiz-host"></div>');
-        quiz = mount(ctx.ui.q('.quiz-host'), o);
+        const at = () => (global.LessonShell && global.LessonShell.current ? global.LessonShell.current.steps.indexOf(me) : -1);
+        quiz = mount(ctx.ui.q('.quiz-host'), Object.assign({ title: me.title, back: () => ctx.goTo(at() - 1), canBack: () => at() > 0 }, o));
         if (o.onMount) o.onMount(quiz);
       },
       onExit() { if (quiz) quiz.destroy(); quiz = null; },
     };
+    return me;
   }
 
-  /* ---- the builder's half: write the hash into the question's literal ----
+  /* ---- the builder's half: switch a question in its own literal ----
      Finds the question's text as a string literal exactly once, walks out to
      the object literal holding it, and returns that literal with any old
-     `approved` replaced. A scanner, not a parser: it knows strings, template
+     `active` set: removed when on, `active: false` when off. A scanner, not a parser: it knows strings, template
      literals and comments, which is all a generated page's data uses. */
-  function approval(src, q, hash) {
+  function activation(src, q, on) {
     const lits = [];
     for (const quote of ["'", '"', '`']) {
       const body = q.replace(/\\/g, '\\\\').split(quote).join('\\' + quote);
@@ -338,13 +392,13 @@
     if (!spans.length) return null;
     const [a, b] = spans[0];            // the innermost: closed first
     const find = src.slice(a, b);
-    const bare = find.replace(/\s*approved\s*:\s*(['"`])[^'"`]*\1\s*,?/, '');
-    const replace = hash == null ? bare : '{ approved: \'' + hash + '\',' + (/^\{\s/.test(bare) ? '' : ' ') + bare.slice(1);
+    const bare = find.replace(/\s*active\s*:\s*(true|false)\s*,?/, '');
+    const replace = on ? bare : '{ active: false,' + (/^\{\s/.test(bare) ? '' : ' ') + bare.slice(1);
     return { find, replace };
   }
 
   /* A quiz is copy, not a picture of anything: no rung, no size. */
-  const Quiz = { mount, step, approval, hash: hashOf,
+  const Quiz = { mount, step, activation,
     SCALE: { rung: null, form: null, unit: null, exag: {}, down: {}, sceneUnits: [] } };
   global.Quiz = Quiz;
   if (typeof module === 'object' && module.exports) module.exports = Quiz;

@@ -924,7 +924,7 @@ Good for: the shape of one molecule, a functional group pointed at, comparing tw
 
 **Scale**: none. A quiz is copy, not a picture of anything.
 
-**Reach for it only when the request asks for a quiz, a check, a test or questions.** It is one step, the last of a step-through, and never on a sandbox. Write the step with `Quiz.step`, never a step of your own around `Quiz.mount`: until the teacher has checked a question the step is not in the lesson at all, and only `Quiz.step` knows that.
+**Reach for it only when the request asks for a quiz, a check, a test or questions.** It is one step, the last of a step-through, and never on a sandbox. Write the step with `Quiz.step`, never a step of your own around `Quiz.mount`: the teacher can switch questions off, and with all of them off the step is not in the lesson at all, which only `Quiz.step` knows.
 
 ```js
 steps: [
@@ -943,11 +943,13 @@ steps: [
 
 `eyebrow` and `title` are optional; the defaults are right. On a page with `shell.scene`, `scene` is that handle (`scene: () => cell`).
 
+**The quiz draws its own layout, so give it no copy and no camera.** A choice question and the score fill the window as a card with the scene put away; a `find` comes back to the panel beside the model. **A request for only a quiz is a page of one step, `Quiz.step` and nothing else:** `data-use="Quiz"`, no mount, no `scene`, and every question a choice.
+
 **A question about a part on stage is a `find`, not a choice.** The student clicks the part on the model, by the anchor names the component's section lists, and whatever they click is labelled, so a wrong answer still shows them what that thing was. "Which layer…", "where does…", "click the…" are all finds. A choice is for what the scene cannot point at: a cause, a comparison, a number.
 
 Three to five questions, each answerable from what this page showed. Three or four choices, one right, with distractors a student who skimmed would pick. `answer` is the index of the right choice. `why` is one sentence, not a repeat of the question.
 
-**Never write `approved` on a question.** The teacher passes each question in the builder and that writes it; a student sees only passed questions, and any question you edit goes back to unchecked. Write the key as if a biology teacher will check it, because one will.
+**Never write `active` on a question.** The teacher switches questions off in the builder and that writes it. Students see the answer key you write as it stands, so write it as if a biology teacher will read it.
 
 The score reaches the teacher's dashboard on its own: never send it yourself.
 

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Quiz only</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Quiz"></script>
+<script>
+/* An app that is only a quiz: one Quiz.step, no component, so every question
+   is a choice and the page is the card on paper. */
+const Q = [
+  { q: 'Which organelle makes most of a cell\'s ATP?', choices: ['Nucleus', 'Mitochondrion', 'Golgi apparatus', 'Ribosome'], answer: 1,
+    why: 'Its inner membrane holds the electron transport chain and ATP synthase.' },
+  { q: 'Why does a red blood cell burst in pure water?',
+    choices: ['Water moves in by osmosis and it has no wall to resist the pressure', 'Salt rushes out and the membrane dissolves', 'Its haemoglobin unfolds and swells', 'Water is actively pumped in'], answer: 0,
+    why: 'The cell is hypertonic to pure water, so water enters, and only a cell wall could push back.' },
+  { q: 'Which molecule carries amino acids to the ribosome?', choices: ['mRNA', 'tRNA', 'rRNA', 'DNA'], answer: 1,
+    why: 'Each tRNA has an anticodon on one end and its amino acid on the other.' },
+];
+const shell = LessonShell.create({ brand: 'Cell biology check', steps: [Quiz.step({ questions: Q, title: 'Unit 2 check' })] });
+shell.goTo(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<!-- requests
+1. Make a 5 question quiz on cellular respiration for my class.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cellular Respiration Quiz</title>
+<style></style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Quiz"></script>
+<script>
+const shell = LessonShell.create({
+  brand: 'Cellular Respiration',
+  steps: [
+    Quiz.step({
+      questions: [
+        {
+          q: 'Where does glycolysis occur in eukaryotic cells?',
+          choices: ['Mitochondrial matrix', 'Cytosol', 'Inner mitochondrial membrane', 'Intermembrane space'],
+          answer: 1,
+          why: 'Glycolysis breaks down glucose in the cytosol before pyruvate enters the mitochondrion.'
+        },
+        {
+          q: 'What is the primary role of oxygen in aerobic respiration?',
+          choices: ['To donate electrons to complex I', 'To act as the final electron acceptor in the electron transport chain', 'To directly phosphorylate ADP into ATP', 'To oxidize acetyl-CoA in the Krebs cycle'],
+          answer: 1,
+          why: 'Oxygen accepts low-energy electrons and protons at complex IV to form water, preventing the chain from backing up.'
+        },
+        {
+          q: 'How does ATP synthase generate ATP during oxidative phosphorylation?',
+          choices: ['By using the energy of a proton gradient flowing back into the matrix', 'By hydrolyzing NADH molecules in the cytosol', 'By actively pumping protons into the intermembrane space', 'By splitting water molecules in the matrix'],
+          answer: 0,
+          why: 'Protons moving down their electrochemical gradient turn the ATP synthase rotor, driving the phosphorylation of ADP.'
+        },
+        {
+          q: 'What happens to the carbon atoms originally present in glucose during aerobic respiration?',
+          choices: ['They are converted into amino acids', 'They are released as carbon dioxide (CO₂)', 'They are reduced to lactate', 'They form the structural backbone of ATP'],
+          answer: 1,
+          why: 'Decarboxylation reactions in pyruvate oxidation and the Krebs cycle release the carbon atoms as CO₂ gas.'
+        },
+        {
+          q: 'Why does NADH yield more ATP than FADH₂ during electron transport?',
+          choices: ['NADH donates electrons at Complex I, resulting in more protons being pumped across the membrane', 'FADH₂ cannot transfer electrons to mobile shuttles', 'NADH directly binds to ATP synthase to turn the catalytic head', 'FADH₂ bypasses the electron transport chain entirely'],
+          answer: 0,
+          why: 'NADH enters at complex I and drives pumping across three complexes, whereas FADH₂ enters at complex II and bypasses the first proton pump.'
+        }
+      ]
+    })
+  ]
+});
+shell.goTo(0);
+</script>
+</body>
+</html>

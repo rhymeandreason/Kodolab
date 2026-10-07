@@ -15,11 +15,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../kit/app.js" data-shell="steps" data-use="Leaf,Quiz"></script>
 <script>
-/* The bench for quiz/quiz.js, on Leaf. Two questions are passed here by
-   computing their hash, which a real page never does: the teacher's press in
-   the builder writes it as a literal. The third is a draft, so it shows only
-   from a review link. `?quiz=review` plays drafts too; the teacher's key
-   check is the builder's dialog, benched in build/quiz-key-test.html. */
+/* The bench for quiz/quiz.js, on Leaf. The third question is switched off,
+   so it shows only from a review link: `?quiz=review` plays it too. The
+   teacher's switches are the builder's dialog, benched in
+   build/quiz-key-test.html. */
 const Q = [
   { q: 'Most of a leaf\'s photosynthesis happens in which layer?',
     choices: ['Upper epidermis', 'Palisade mesophyll', 'Spongy mesophyll', 'Cuticle'], answer: 1,
@@ -30,8 +29,7 @@ const Q = [
     choices: ['Store water', 'Let CO₂ reach every cell', 'Reflect light', 'Hold the leaf rigid'], answer: 1,
     why: 'Gas from the stomata diffuses through the spaces to the chloroplasts.' },
 ];
-Q[0].approved = Quiz.hash(Q[0]);
-Q[1].approved = Quiz.hash(Q[1]);
+Q[2].active = false;
 
 const review = /quiz=review/.test(location.search);
 let quiz = null;
@@ -40,7 +38,7 @@ const shell = LessonShell.create({
   hint: 'Drag to orbit',
   steps: [{
     eyebrow: 'quiz/quiz.js', title: 'Quick check',
-    body: `<p class="foot">${review ? 'Review link: drafts included. <a href="?">Student view</a>' : 'Student view. <a href="?quiz=review">Include drafts</a>'}</p>`,
+    body: `<p class="foot">${review ? 'Review link: inactive included. <a href="?">Student view</a>' : 'Student view. <a href="?quiz=review">Include inactive</a>'}</p>`,
     onEnter(ctx) { ctx.ui.controls('<div id="quiz"></div>'); quiz = Quiz.mount(ctx.ui.q('#quiz'), { scene: L, questions: Q }); window.quiz = quiz; },
     onExit() { quiz && quiz.destroy(); },
   }],

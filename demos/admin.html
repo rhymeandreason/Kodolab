@@ -385,9 +385,13 @@
         <div class="path">../contribute.html <span class="badge">featured</span></div>
         <div class="desc">How to add to the library with a coding agent, served at /contribute. Four ways in, local setup, a starter prompt, and how review works. The front door's palette; linked from its About and footer</div>
       </a>
+      <a class="card ugc" href="tests/gen-quiz-only-test.html">
+        <div class="path">tests/gen-quiz-only-test.html <span class="badge">UGC</span></div>
+        <div class="desc">Quiz eval: &ldquo;a 5 question quiz on cellular respiration&rdquo;. A page of one <code>Quiz.step</code> and no component: the card on paper.</div>
+      </a>
       <a class="card ugc" href="tests/gen-quiz-test.html">
         <div class="path">tests/gen-quiz-test.html <span class="badge">UGC</span></div>
-        <div class="desc">Quiz eval: &ldquo;how a leaf takes in CO2 and loses water, ending with a short quiz&rdquo;. Leaf, ending in <code>Quiz.step</code>; all drafts, so a student sees no quiz step. Key check: build/quiz-key-test.html</div>
+        <div class="desc">Quiz eval: &ldquo;how a leaf takes in CO2 and loses water, ending with a short quiz&rdquo;. Leaf, ending in <code>Quiz.step</code>; every question active. Teacher dialog: build/quiz-key-test.html</div>
       </a>
       <a class="card ugc" href="tests/gen-quiz-cell-test.html">
         <div class="path">tests/gen-quiz-cell-test.html <span class="badge">UGC</span></div>
@@ -989,11 +993,15 @@
       </a>
       <a class="card test" href="quiz/quiz-test.html">
         <div class="path">quiz/quiz-test.html <span class="badge">test</span></div>
-        <div class="desc">Test bench for quiz/quiz.js on Leaf: a choice and a click-the-part question, one draft hidden from students. <code>?quiz=review</code> plays the draft too</div>
+        <div class="desc">Test bench for quiz/quiz.js on Leaf: a choice and a click-the-part question, one question inactive. <code>?quiz=review</code> plays it too</div>
+      </a>
+      <a class="card test" href="quiz/quiz-only-test.html">
+        <div class="path">quiz/quiz-only-test.html <span class="badge">test</span></div>
+        <div class="desc">An app that is only a quiz: one <code>Quiz.step</code>, no component, so every question is the centred card on paper</div>
       </a>
       <a class="card test" href="build/quiz-key-test.html">
         <div class="path">build/quiz-key-test.html <span class="badge">test</span></div>
-        <div class="desc">The builder's answer-key dialog (build/quiz-key.js) on a generated quiz, no database: Save applies the pairs here and reloads the frame</div>
+        <div class="desc">The builder's quiz dialog (build/quiz-key.js), an Active switch per question, on a generated quiz, no database: Save applies the pairs here and reloads the frame</div>
       </a>
       <a class="card test" href="graph/graph-shell-test.html">
         <div class="path">graph/graph-shell-test.html <span class="badge">test</span></div>

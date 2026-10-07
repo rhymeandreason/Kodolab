@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Answer key bench</title>
+<title>Quiz dialog bench</title>
 <base href="/demos/build/">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
 <link rel="stylesheet" href="../css/kodo.css">
@@ -20,14 +20,14 @@
 <body>
 <div><iframe id="f" sandbox="allow-scripts allow-same-origin"></iframe></div>
 <aside>
-  <h3>Answer key bench</h3>
+  <h3>Quiz dialog bench</h3>
   <p>A generated page in a frame, answered as the builder answers it, and the builder's dialog. No database: Save applies the pairs here and reloads the frame.</p>
   <select id="page"><option>gen-quiz-test</option><option>gen-quiz-cell-test</option></select>
   <p id="stat"></p>
   <h4>Last save</h4><pre id="out">(nothing saved yet)</pre>
   <h4>Request box</h4><pre id="req">(empty)</pre>
 </aside>
-<dialog class="beta quizkey" id="quizModal" aria-label="Check the answer key"></dialog>
+<dialog class="beta quizkey" id="quizModal" aria-label="Quiz questions"></dialog>
 <script src="../quiz/quiz.js"></script>
 <script src="quiz-key.js"></script>
 <script>
@@ -51,7 +51,7 @@
   addEventListener('message', e => {
     const d = e.data; if (!d || !/^app-quiz/.test(d.type)) return;
     if (d.type === 'app-quiz-hello') return $('f').contentWindow.postMessage({ type: 'app-quiz-review', on: true }, '*');
-    if (d.questions) { key.take(d); $('stat').textContent = `${d.questions.filter(q => q.passed).length} of ${d.questions.length} checked`; }
+    if (d.questions) { key.take(d); $('stat').textContent = `${d.questions.filter(q => q.on).length} of ${d.questions.length} active`; }
   });
   async function load() { src = await (await fetch(`../tests/${$('page').value}.html`)).text(); key.reset(); frame(); }
   $('page').addEventListener('change', load);

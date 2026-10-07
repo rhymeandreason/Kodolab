@@ -169,7 +169,7 @@ module.exports = async function handler(req, res) {
       /* The history line names the passage that changed, not the count: what
        * a student looks for when going back is the sentence they remember. */
       const first = edits[0].find.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ').slice(0, 60);
-      /* A quiz key passed by the teacher is a code edit, and its find is an
+      /* A quiz question switched on or off is a code edit, and its find is an
        * object literal: the client names it instead. */
       const named = typeof body.summary === 'string' && body.summary.trim().slice(0, 80);
       const v = await apps.addVersion(id, {
