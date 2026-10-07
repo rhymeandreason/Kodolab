@@ -32,6 +32,9 @@
  *    unit, bond, label(p)      words
  *    lead, done, more, round   the note: before anything joins, all joined,
  *                              part joined, in the second view
+ *    diagram(A, fresh)         an SVG string for the panel under the stage,
+ *                              redrawn on every join, break and view change.
+ *                              `fresh` is the stick just made, or null
  *
  *  Card functions get the assembly as their last argument, for `dim`,
  *  `sticks` and `chain()`. Nothing in a card reads a page global.
@@ -84,7 +87,7 @@
     return best && best.r;
   }
 
-  /* `el`: canvas, stage, note, seq, rail, choose, reveal, reset. */
+  /* `el`: canvas, stage, note, seq, rail, choose, reveal, reset, diagram. */
   function create(opts){
     const CARDS = opts.cards, el = opts.el;
     const canvas = el.canvas, stageEl = el.stage, noteEl = el.note, seqEl = el.seq;
@@ -108,28 +111,8 @@
       // NO ORBIT — the pointer is projected onto the z = 0 plane the monomers
       // are dragged on, which only means anything face-on.
       orbit:false,
-      boxes:()=>{
-        /* THE CARD'S BOX IS THE WHOLE BUILD, not just the deal — it is sized for
-         * the finished molecule, so the camera never moves while the student is
-         * working. A stage that reframes on every join moves the tabletop out
-         * from under the hand that is still on it. The second view, and a card
-         * with no box, are framed to their content: nobody is holding them. */
-        if(dim !== '3d' && card.box) return [card.box];
-        /* IN WORLD SPACE, atom by atom, because that is what the camera sees:
-         * the root carries both the turn and the shift that keeps the molecule
-         * centred under it, and a box measured before those puts the fit an
-         * offset away from the thing it is framing. */
-        const b = new THREE.Box3(), w = new THREE.Vector3();
-        for(const p of P.pieces)
-          for(let i = 0; i < p.spec.atoms.length; i++)
-            b.expandByPoint(L.root.localToWorld(w.copy(P.atomAt(p, i))));
-        if(b.isEmpty()) return [card.box || { x:0, y:0, rxz:30, hy:20 }];
-        const c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
-        // Margin, because a box is measured to atom CENTRES and an atom is drawn
-        // with a radius, and a tail that ends exactly at the frame edge reads as
-        // cut off rather than as finished.
-        return [{ x:c.x, y:c.y, rxz:Math.max(sz.x, sz.z)/2 + 7, hy:sz.y/2 + 7 }];
-      },
+      onResize:()=>fit(),
+      boxes:frameBoxes,
       // A slow turn in the second view, because a still three-quarter view of a
       // molecule reads as another drawing. Only there: the build is a plane the
       // pointer is projected onto, and turning it would put the two out of step.
@@ -139,10 +122,54 @@
     });
     A.L = L;
 
+    function frameBoxes(){
+      /* THE CARD'S BOX IS THE WHOLE BUILD, not just the deal — it is sized for
+       * the finished molecule, so the camera never moves while the student is
+       * working. A stage that reframes on every join moves the tabletop out
+       * from under the hand that is still on it. The second view, and a card
+       * with no box, are framed to their content: nobody is holding them. */
+      if(dim !== '3d' && card.box) return [card.box];
+      /* IN WORLD SPACE, atom by atom, because that is what the camera sees:
+       * the root carries both the turn and the shift that keeps the molecule
+       * centred under it, and a box measured before those puts the fit an
+       * offset away from the thing it is framing. */
+      const b = new THREE.Box3(), w = new THREE.Vector3();
+      for(const p of P.pieces)
+        for(let i = 0; i < p.spec.atoms.length; i++)
+          b.expandByPoint(L.root.localToWorld(w.copy(P.atomAt(p, i))));
+      if(b.isEmpty()) return [card.box || { x:0, y:0, rxz:30, hy:20 }];
+      const c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
+      // Margin, because a box is measured to atom CENTRES and an atom is drawn
+      // with a radius (under 2 units). More than that is a smaller molecule.
+      return [{ x:c.x, y:c.y, rxz:Math.max(sz.x, sz.z)/2 + 3, hy:sz.y/2 + 3 }];
+    }
+
+    /* FRAMED ABOVE THE DIAGRAM. Stage.frame is symmetric about the camera's
+     * target, so reserving the panel's band at the bottom would cost the same
+     * band again at the top, empty. Instead the target drops by half the band,
+     * which lifts the box half a band above it: the band reserved below then
+     * makes the two sides equal, and the molecule gets everything above the
+     * panel. Two passes, because the band's world size depends on
+     * the distance the fit is solving for. The panel is a fixed band, so this
+     * is the same for a whole card and a join never moves the camera. */
+    function fit(){
+      const R = card.diagram && el.diagram && el.diagram.offsetTop
+        ? stageEl.clientHeight - el.diagram.offsetTop : 0;
+      L.cam.target.y = 0;
+      if(!R){ L.fit(); return; }
+      const boxes = frameBoxes();
+      for(let k = 0; k < 2; k++){
+        const t = -(R / 2) * L.worldPerPx();
+        L.cam.target.y = t;
+        L.fit(boxes.map(b => ({ ...b, y:(b.y || 0) - t })),
+              { reservePx:{ bottom:R } });
+      }
+    }
+
     /* ---- the sandbox -------------------------------------------------------- */
     const P = MacroPlane.create({
       canvas, camera:L.camera, root:L.root, motion:L.motion, stageEl,
-      tagDrop: 10,
+      tagDrop: 4,
       build: spec => Stage.buildMolecule(flat(spec), { center:false }),
       // Every rebuild redraws the mesh, so the halos are put back by the same
       // hand rather than being restored by callers.
@@ -205,8 +232,9 @@
       host.spent.add(donor); guest.spent.add(acceptor);
       const moved = carryMoves(host, guest, at.pose, hs, gs, 'flat');
       respec(host); respec(guest);
-      stick(host, guest, donor, acceptor, moved);
+      const s = stick(host, guest, donor, acceptor, moved);
       if(!quiet){
+        drawDiagram(s);
         if(L.fx) L.fx.condense(at.bondAt, at.waterAt, { size:1.1 });
         water(at.waterAt, 'out');
         say();
@@ -238,6 +266,7 @@
       const mid = P.centreOf(a).lerp(P.centreOf(b), 0.5);
       if(L.fx) L.fx.spawnRing(mid, MolLib.PALETTE.bonds.condense, null, 0.6);
       water(mid, 'in');
+      drawDiagram(null);
     }
 
     /* A piece's spec is DERIVED from the one it started as, every time, minus
@@ -293,8 +322,10 @@
       const m = new THREE.Mesh(stickGeo, new THREE.MeshStandardMaterial(
         { color:MolLib.PALETTE.bonds.condense, roughness:.5 }));
       L.root.add(m);
-      sticks.push({ m, host, guest, donor, acceptor, moved });
+      const s = { m, host, guest, donor, acceptor, moved };
+      sticks.push(s);
       placeSticks();
+      return s;
     }
     const _d = new THREE.Vector3(), _up = new THREE.Vector3(0,1,0);
     function placeSticks(){
@@ -427,6 +458,14 @@
       return [];
     }
     A.chain = chain;
+
+    /* The flat drawing under the stage, when the card has one. Not redrawn on
+     * a drag: nothing it shows changes until a bond does. */
+    function drawDiagram(fresh){
+      if(!el.diagram) return;
+      el.diagram.style.display = card.diagram ? 'block' : 'none';
+      el.diagram.innerHTML = card.diagram ? card.diagram(A, fresh) : '';
+    }
 
     const said = (x, c) => typeof x === 'function' ? x(c, card, A) : x;
     function say(){
@@ -595,8 +634,9 @@
           decor = card.views.decorate(A) || [];
           for(const o of decor) L.root.add(o);
         }
+        drawDiagram(null);
         morphing = false;
-        say(); L.fit();
+        say(); fit();
       };
       L.motion.seq([{ dur:1.1, ease:'inOutCubic', onUpdate:put }, { call:land }], { tag:'reveal' });
     }
@@ -727,6 +767,7 @@
         p.tag.textContent = card.label(p);
       });
       if(card.prejoin) prejoin();
+      drawDiagram(null);
       // One bar, two jobs: a card offers named BUILDS or a choice of MONOMER
       // for one slot. No card wants both.
       const opts = card.builds ? card.builds.map(b => [b.key, b.label])
@@ -747,7 +788,7 @@
       }
       syncRail();
       say();
-      L.fit();
+      fit();
     }
 
     /* ---- the card rail ------------------------------------------------------- */

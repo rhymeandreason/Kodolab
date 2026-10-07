@@ -594,6 +594,22 @@ console.log('\n== 11. the flat build, and what it keeps');
      'a spec with no layout is refused rather than flattened by force');
 }
 
+console.log('\n== 12. the drawn side chain is the one in the spec');
+{
+  // protein-lab's diagram condenses each side chain off the bond graph. These
+  // are what a textbook writes; a re-baked spec that renumbered or lost a bond
+  // order would draw a different formula, and nothing on screen would say so.
+  const D = require('./peptide-diagram.js');
+  const WANT = { glycine:'H', alanine:'CH₃', serine:'CH₂OH', cysteine:'CH₂SH',
+                 glutamate:'CH₂CH₂COOH', glutamine:'CH₂CH₂CONH₂' };
+  for(const [k, w] of Object.entries(WANT))
+    ok(D.label(D.sideChain(M[k])) === w, `${k}: drawn as ${D.label(D.sideChain(M[k]))}`);
+  const pro = D.sideChain(M.proline);
+  ok(pro.ring && pro.parts.length === 3, 'proline: three CH2 closing back onto its own N');
+  ok(/<svg[\s\S]*<\/svg>/.test(D.svg(AA.map(k => [{ spec:M[k], prev:false, next:null }]))),
+     `every amino acid in the library draws (${AA.length})`);
+}
+
 console.log(fails
   ? `\nFAIL: ${fails} of ${checks} checks`
   : `\nPASS: ${checks} checks — every peptide pose lands at ${Peptide.CN} A and omega 180; `

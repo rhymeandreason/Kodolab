@@ -22,6 +22,11 @@
           two torsions built, so a strand shows none and a helix shows
           one per turn's worth of residues.
 
+     UNDER THE STAGE, THE SAME CHAIN AS A TEXTBOOK DRAWS IT
+     (macromolecule/peptide-diagram.js), redrawn on every join, so the
+     boxed C(=O)-N(-H) on paper and the bond on the model are read
+     against each other.
+
      Ends where hemoglobin-lab.html begins: a helix is the second level,
      and that lesson folds one chain into the third.
      =================================================================== -->
@@ -45,6 +50,7 @@
       <div class="chain"></div><div class="ends"></div></div>
     <button id="reset">Start over</button>
     <button id="dim3d"></button>
+    <div id="diagram"></div>
     <div id="note"></div>
   </div>
 </div>
@@ -63,6 +69,7 @@
 <script src="macromolecule/spec.js"></script>
 <script src="macromolecule/peptide.js"></script>
 <script src="macromolecule/plane.js"></script>
+<script src="macromolecule/peptide-diagram.js"></script>
 <script src="macromolecule/assembly.js"></script>
 <script>
 "use strict";
@@ -78,6 +85,7 @@ const PEPTIDE = {
   chains:true, ends:'N-terminus → C-terminus',
   unit:'residue', bond:'peptide bond',
   label:p => p.spec.name,
+  diagram,
   poseIn:(h, g, donor, round) => Peptide.pose(h, g, donor, round ? 'helix' : 'strand'),
   /* EVERY CARBOXYL THE HOST STILL HAS, and the nearest one wins: glutamate
    * has two, and which takes the bond is decided by where the student drags,
@@ -89,6 +97,32 @@ const PEPTIDE = {
       .map(donor => Peptide.pose(h, g, donor)));
   },
 };
+
+/* THE STAGE, DRAWN FLAT. One fragment per separate piece, left to right as
+ * they lie on the stage, each walked N to C along the bonds. A glutamate that
+ * bonded through both carboxyls is a branch the straight drawing cannot hold,
+ * so its second branch is drawn as a fragment of its own. */
+function diagram(A, fresh){
+  const guests = new Set(A.sticks.map(s => s.guest));
+  const queue = A.P.pieces.filter(p => !guests.has(p))
+    .sort((a, b) => a.mol.position.x - b.mol.position.x);
+  const frags = [], where = new Map();
+  while(queue.length){
+    const frag = [];
+    for(let p = queue.shift(); p; ){
+      const out = A.sticks.filter(s => s.host === p);
+      out.slice(1).forEach(s => queue.push(s.guest));
+      where.set(p, [frags.length, frag.length]);
+      frag.push({ spec:p.base, prev:guests.has(p), next:out[0] ? out[0].donor : null });
+      p = out[0] && out[0].guest;
+    }
+    frags.push(frag);
+  }
+  // In the folded view the chain is one piece, so a residue's place in
+  // A.chain() is its place in the drawing.
+  const hbonds = A.dim === '3d' ? helixBonds.map(b => [b.acceptor.owner, b.donor.owner]) : [];
+  return PeptideDiagram.svg(frags, { fresh:fresh && where.get(fresh.host), hbonds });
+}
 
 /* THE HELIX'S HYDROGEN BONDS, FOUND. Every backbone N–H is a donor and every
  * carbonyl O an acceptor, and kit/hbond.js decides which pairs are bonded by
@@ -110,6 +144,9 @@ function hbonds(A){
   return [draw.group];
 }
 
+/* Each card's box is its deal, edge to edge: every piece's home plus its own
+ * half-width (about 7). Any chain the deal can build is shorter than the row
+ * it was dealt in, so the frame never has to grow mid-build. */
 const CARDS = [
   { ...PEPTIDE,
     key:'bond', n:1, title:'The peptide bond', sub:'which ends react',
@@ -119,7 +156,7 @@ const CARDS = [
      * as a bug. */
     monomers:['glycine', 'alanine', 'serine', 'cysteine'],
     home:{ glycine:[-21, 9], alanine:[-7, -10], serine:[9, 9], cysteine:[22, -10] },
-    box:{ x:0, y:0, rxz:32, hy:22 },
+    box:{ x:0, y:0, rxz:30, hy:17 },
     lead:'Push two of them together. Only one pairing of ends does anything. '
        + 'Find which, and watch what comes off.',
     done:c => `<b>${c.length} residues</b>, joined N to C. Four different monomers, so this `
@@ -134,7 +171,7 @@ const CARDS = [
     key:'glutathione', n:2, title:'Glutathione', sub:'γ-Glu-Cys-Gly',
     monomers:['glutamate', 'cysteine', 'glycine'],
     home:[[-20, 8], [4, -10], [24, 8]],
-    box:{ x:0, y:0, rxz:32, hy:22 },
+    box:{ x:2, y:-1, rxz:30, hy:16 },
     lead:'Glutamate has <b>two</b> &ndash;COOH: one on the backbone, one on the end of its '
        + 'side chain. Cysteine will take either. Only one of them makes glutathione.',
     done:(c, card, A) => {
@@ -159,7 +196,7 @@ const CARDS = [
     key:'collagen', n:3, title:'Collagen', sub:'Gly-Pro-Pro',
     monomers:['glycine', 'proline', 'proline'],
     home:[[-22, 8], [2, -10], [22, 8]],
-    box:{ x:0, y:0, rxz:32, hy:22 },
+    box:{ x:0, y:-1, rxz:30, hy:16 },
     lead:'The collagen repeat: glycine, then two prolines, over and over. '
        + 'Watch what proline does to the chain.',
     done:c => c.length < 3
@@ -200,7 +237,8 @@ MacroAssembly.create({ cards:CARDS, el:{
   canvas:document.getElementById('gl'),     stage:document.getElementById('stage'),
   note:document.getElementById('note'),     seq:document.getElementById('seq'),
   rail:document.getElementById('cards'),    choose:document.getElementById('choose'),
-  reveal:document.getElementById('dim3d'),  reset:document.getElementById('reset') } });
+  reveal:document.getElementById('dim3d'),  reset:document.getElementById('reset'),
+  diagram:document.getElementById('diagram') } });
 </script>
 </body>
 </html>

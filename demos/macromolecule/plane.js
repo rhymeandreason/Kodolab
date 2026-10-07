@@ -396,7 +396,7 @@
 
     /* Pin each piece's tag to the molecule it names. Called from afterFrame:
      * projection reads a matrix that is only refreshed on render. */
-    const _v = new THREE.Vector3();
+    const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _down = new THREE.Vector3();
     function placeTags(){
       const r = canvas.getBoundingClientRect();
       for(const p of pieces){
@@ -404,18 +404,26 @@
         /* UNDER THE MOLECULE, NOT OVER IT. A tag pinned to the centre sits on
          * top of the atoms it names and hides the group the student is aiming
          * at. Which screen row is "under" depends on the molecule and on the
-         * camera, so it is measured: every heavy atom is projected and the tag
-         * goes below the lowest one.
+         * camera, so it is measured: the tag goes below the lowest EDGE of any
+         * sphere, hydrogens included. Below the lowest heavy-atom centre put it
+         * over a hanging H and half of every sphere, by more the closer the
+         * camera came.
          *
          * Projected in WORLD space — the piece's coordinates are the root's,
-         * and the root may be turned. */
+         * and the root may be turned. Centred on the heavy atoms only, so an H
+         * sticking out sideways does not pull the name off the molecule. */
+        _down.setFromMatrixColumn(camera.matrixWorld, 1).negate();
+        const meshes = p.mol.userData.atomMeshes || [];
         let cx = 0, low = -Infinity, n = 0;
         for(let i = 0; i < p.spec.atoms.length; i++){
-          if(p.spec.atoms[i].el === 'H') continue;
-          _v.copy(atomAt(p, i)); root.localToWorld(_v); _v.project(camera);
-          const x = (_v.x*0.5+0.5) * r.width, y = (-_v.y*0.5+0.5) * r.height;
-          cx += x; n++;
+          _v.copy(atomAt(p, i)); root.localToWorld(_v);
+          const rad = meshes[i] ? meshes[i].scale.x : 0;
+          _w.copy(_v).addScaledVector(_down, rad).project(camera);
+          const y = (-_w.y*0.5+0.5) * r.height;
           if(y > low) low = y;
+          if(p.spec.atoms[i].el === 'H') continue;
+          _v.project(camera);
+          cx += (_v.x*0.5+0.5) * r.width; n++;
         }
         if(!n){ _v.copy(centreOf(p)); root.localToWorld(_v); _v.project(camera);
                 cx = (_v.x*0.5+0.5) * r.width; low = (-_v.y*0.5+0.5) * r.height; n = 1; }
