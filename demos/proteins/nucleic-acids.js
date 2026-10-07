@@ -255,6 +255,83 @@
             baked: 'polymerase-3KTQ.json' } },
       ],
     },
+    {
+      key: 'cas9', name: 'Cas9', dir: 'proteins/cas9', kind: 'complex',
+      does: 'enzyme',
+      blurb: 'The CRISPR nuclease: a protein that carries a strand of RNA and '
+           + 'cuts whatever DNA that RNA pairs with. Change the guide and you '
+           + 'change the target.',
+      /* THREE STATES OF ONE PROTEIN, all fitted onto 5F9R by the baker on the
+         part that holds still (RuvC + PI), so a switch shows the REC lobe and
+         HNH moving rather than three crystals' origins. One frame, so one
+         basis when a human picks it. */
+      pipeline: 'trace',
+      /* WHICH STRAND IS WHICH is what a reader has to tell apart, so the
+         nucleic chains are coloured by role, each a key of MolPalette.strands.
+         Guide and target take the two backbone hues so the heteroduplex reads
+         as two strands; the displaced strand takes the neutral. The protein
+         keeps the ss palette. */
+      draw: { byRole: { guide: 'b', target: 'a', nontarget: 'one' } },
+      view: { by: 'human',
+              basis: [[-0.1713, -0.1876, -0.9672],
+                      [-0.3631, 0.9246, -0.115],
+                      [0.9159, 0.3315, -0.2265]] },
+      variants: [
+        { id: '5F9R',
+          purpose: 'guide paired to target DNA, ready to cut',
+          default: true,
+          species: 'Streptococcus pyogenes',
+          label: 'bound to target DNA', chip: '4 chains',
+          chains: { B: { is: 'Cas9' }, A: { is: 'guide RNA', role: 'guide' },
+                    C: { is: 'target DNA strand', role: 'target' },
+                    D: { is: 'non-target DNA strand', role: 'nontarget' } },
+          source: { kind: 'rcsb', id: '5F9R' },
+          read: {
+            method: 'x-ray diffraction',
+            chains: 4,
+            nucleotides: 164,
+            residues: 1362,
+            pairs: 57,
+            wobble: 0,
+            modified: 0,
+            baked: 'cas9-5F9R.json' } },
+        { id: '4ZT0',
+          purpose: 'guide loaded, no DNA yet',
+          species: 'Streptococcus pyogenes',
+          label: 'guide RNA loaded', chip: '2 chains',
+          chains: { A: { is: 'Cas9' }, B: { is: 'guide RNA', role: 'guide' } },
+          source: { kind: 'rcsb', id: '4ZT0' },
+          read: {
+            method: 'x-ray diffraction',
+            chains: 2,
+            nucleotides: 72,
+            residues: 1364,
+            pairs: 16,
+            wobble: 1,
+            modified: 0,
+            baked: 'cas9-4ZT0.json' } },
+        /* `apo`: the empty half of the comparison, so its bake holds no
+           nucleic chain on purpose. It stays here beside the states it is
+           fitted with rather than in proteins.js, which would split one frame
+           across two indexes. */
+        { id: '4CMP',
+          purpose: 'empty: no guide, REC lobe swung open',
+          apo: true,
+          species: 'Streptococcus pyogenes',
+          label: 'apo, no guide', chip: '1 chain',
+          chains: { A: { is: 'Cas9' } },
+          source: { kind: 'rcsb', id: '4CMP' },
+          read: {
+            method: 'x-ray diffraction',
+            chains: 1,
+            nucleotides: 0,
+            residues: 1144,
+            pairs: 0,
+            wobble: 0,
+            modified: 0,
+            baked: 'cas9-4CMP.json' } },
+      ],
+    },
   ];
 
   const KINDS = ['dna', 'rna', 'complex'];
@@ -328,6 +405,23 @@
     return t.order.filter(id => !skip.includes(id)).join(',');
   };
 
+  /* THE COLOURS A PICTURE OF THIS VARIANT WEARS, for kit/proteinbox.js's
+     `colors`: each chain with a `role` the entry's `draw.byRole` names, in
+     MolPalette.strands. Null where nothing is named, so the box keeps its
+     defaults. The bench, the card and the still all ask this, so they cannot
+     disagree about which strand is magenta. */
+  const colorsOf = (s, v) => {
+    const e = typeof s === 'string' ? byKey(s) : s;
+    const at = v || defaultOf(e);
+    const by = e && e.draw && e.draw.byRole;
+    const pal = typeof MolPalette !== 'undefined' && MolPalette.strands;
+    if (!by || !pal || !at || !at.chains) return null;
+    const byChain = {};
+    for (const [id, c] of Object.entries(at.chains))
+      if (c.role && pal[by[c.role]] !== undefined) byChain[id] = pal[by[c.role]];
+    return Object.keys(byChain).length ? { byChain } : null;
+  };
+
   /* The bake's path, from the entry and the variant — so a bench names a
      structure and not a file, and a renamed bake is one edit here. */
   const bakedPath = (s, id) => {
@@ -345,7 +439,7 @@
 
   global.NucleicAcids = { STRUCTURES, KINDS, byKey, variantOf, defaultOf,
                           bakedPath, urls, withProtein, viewOf,
-                          partnersOf, drawnOf };
+                          partnersOf, drawnOf, colorsOf };
   if (typeof module === 'object' && module.exports)
     module.exports = global.NucleicAcids;
 })(typeof window !== 'undefined' ? window : globalThis);

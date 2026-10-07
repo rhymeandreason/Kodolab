@@ -113,7 +113,7 @@ async function loadEntry(p) {
        chain the card hides is the contract above broken in the one direction
        nobody looks at. */
     chains: isNA(p) ? NucleicAcids.drawnOf(p, null, t) : null,
-    colors: isNA(p) ? null : ProteinLib.colorsOf(p, ProteinLib.defaultOf(p)),
+    colors: isNA(p) ? NucleicAcids.colorsOf(p) : ProteinLib.colorsOf(p, ProteinLib.defaultOf(p)),
     /* THE SAME `viewOf` index.html ASKS, which is the whole contract above:
        everything deciding what the frame looks like has to match the card or
        the still jumps when the live box replaces it. Passing null for a

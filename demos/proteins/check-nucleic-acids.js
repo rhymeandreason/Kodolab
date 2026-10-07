@@ -97,9 +97,11 @@ for (const s of lib.STRUCTURES) {
     const want = aa.length ? 'complex' : null;
     if (want && s.kind !== want)
       say(`${at}: kind '${s.kind}' but the bake has ${aa.length} protein chain(s)`);
+    if (na.length && v.apo)
+      say(`${at}: marked apo but the bake has nucleic chains`);
     if (!aa.length && s.kind === 'complex')
       say(`${at}: kind 'complex' but the bake has no protein chain`);
-    if (!na.length)
+    if (!na.length && !v.apo)
       say(`${at}: no nucleic chain in the bake — does this belong in proteins.js?`);
 
     /* A CHOSEN ROTATION IS NEVER BAKED, which is the rule that keeps re-aiming

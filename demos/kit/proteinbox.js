@@ -695,12 +695,22 @@
       return p.byChain[k] || (k.includes('.') ? p.byChain[k.slice(k.indexOf('.') + 1)] : undefined);
     }
 
+    /* What a mesh wears under `paint`. A nucleic mesh keeps its own default
+       (`userData.na`): a strand takes only a byChain override, as a single
+       material, and a rung never changes. Handing either the ribbon's
+       per-ss set is what blanked DNA on a cached switch back. */
+    function paintFor(m) {
+      const over = chainPaint(paint, m.userData.chain);
+      if (m.userData.na) return (m.userData.chain != null && over) ? over[0] : m.userData.na;
+      return over || paint.mats;
+    }
+
     function setColors(colors) {
       paint = materialsFor(colors);
       chainGroup.traverse(m => {
         const cid = m.userData && m.userData.chain;
         if (cid === undefined || !m.isMesh) return;
-        m.material = chainPaint(paint, cid) || paint.mats;
+        m.material = paintFor(m);
       });
       box.draw();
     }
@@ -849,7 +859,7 @@
         for (const m of hitRib.meshes) {
           m.visible = true;
           m.userData.gen = mine;
-          m.material = chainPaint(paint, m.userData.chain) || paint.mats;
+          m.material = paintFor(m);
           if (m.parent !== chainGroup) chainGroup.add(m);
         }
         // Re-inserted so the map's order is use order, not first-build order.
@@ -995,6 +1005,7 @@
         const mesh = new THREE.Mesh(sd.geo, over ? over[0]
           : naMat('strand:' + i, MolPalette.strands[i % 2 ? 'b' : 'a']));
         mesh.userData.chain = sd.id;
+        mesh.userData.na = naMat('strand:' + i, MolPalette.strands[i % 2 ? 'b' : 'a']);
         mesh.userData.gen = gen;
         made.push(mesh);
         chainGroup.add(mesh);
@@ -1008,6 +1019,7 @@
           /* Tagged like a ribbon chain: `keep` sweeps by generation, and an
              untagged mesh is one it will never remove. */
           m.userData.gen = gen;
+          m.userData.na = m.material;
           made.push(m);
           chainGroup.add(m);
           keep(bag[b]);

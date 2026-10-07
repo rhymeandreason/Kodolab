@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<base href="/demos/proteins/cas9/">
+<title>Cas9 bench — Kodolab</title>
+
+<!-- ===================================================================
+     SCRATCH, UNDER REVIEW. Three states of SpCas9, all fitted onto the
+     R-loop (5F9R) by tools/prep.js, so switching shows what moved.
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="../../css/kodo.css">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+<style>
+  #legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3);
+            margin: var(--space-2) 0 0; font-size: 0.75rem; color: var(--h-muted); }
+  .sw { display: inline-flex; align-items: center; gap: .35em; }
+  .sw i { width: .8em; height: .8em; border-radius: 2px; display: inline-block; }
+  #facts td:last-child { text-align: left; font-weight: 400; font-size: 0.78rem;
+                         padding-left: var(--space-3); overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  <a class="crumb" href="/proteins">proteins</a>
+</nav>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>Cas9</h1>
+    <p class="deck">The CRISPR nuclease, from empty to holding a guide to
+      gripping its target DNA. Three crystals, one frame.</p>
+
+    <h2>state</h2>
+    <div id="views"></div>
+
+    <h2>colour</h2>
+    <div id="legend"></div>
+
+    <h2>what you are looking at</h2>
+    <p class="claim" id="lede">Loading…</p>
+    <table id="facts"></table>
+
+    <button class="mode" id="pick" style="margin-top:12px">copy this view</button>
+    <p class="note" id="pick-note">Turn the molecule, then copy.</p>
+
+    <p class="src">
+      <a id="d-rcsb" href="https://www.rcsb.org/" target="_blank" rel="noopener"><span id="d-rcsb-label">RCSB entry</span><svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2h5.5v5.5M10 2 4.5 7.5M8 9.5H2V3.5"/></svg></a>
+      <a href="data/">what this page loads</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/nucleic.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../nucleic-acids.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+/* The registry's variants, in its order: the story runs empty, loaded, bound,
+   so they are shown reversed from how the index lists them. */
+const ENTRY = NucleicAcids.byKey('cas9');
+const VIEWS = ENTRY.variants.slice().reverse();
+
+/* Strand colours are the registry's (NucleicAcids.colorsOf), so this bench,
+   the gallery card and the still agree. */
+const ROLE_NAME = { guide: 'guide RNA', target: 'target DNA', nontarget: 'non-target DNA' };
+const hex = c => '#' + c.toString(16).padStart(6, '0');
+
+const box = Proteinbox.create({ mount: $('stage'), orbit: true, sub: 10,
+                                stage: { ortho: false, turn: 'trackball' } });
+const cache = {};
+let current = null;
+
+function show(id) {
+  current = id;
+  VIEWS.forEach(v => $('v-' + v.id).setAttribute('aria-pressed', String(v.id === id)));
+  (cache[id] ? Promise.resolve(cache[id])
+    : fetch('data/' + NucleicAcids.variantOf(ENTRY, id).read.baked).then(r => r.json()).then(t => (cache[id] = t)))
+    .then(t => { if (current === id) render(t); })
+    .catch(e => { $('lede').textContent = 'No bake. Run: node proteins/cas9/tools/prep.js (' + e.message + ')'; });
+}
+
+function render(t) {
+  const v = NucleicAcids.variantOf(ENTRY, t.entry);
+  const colors = NucleicAcids.colorsOf(ENTRY, v);
+  box.setData(t, { colors: colors || undefined, view: NucleicAcids.viewOf(ENTRY) || undefined });
+
+  const m = t.meta;
+  const roleOf = Object.fromEntries(Object.entries(t.roles));
+  const rows = [
+    ['Entry', t.entry + ', ' + t.what],
+    ['Method', t.method + ', ' + t.resolution + ' A'],
+    ...m.counts.map(k => [ROLE_NAME[roleOf[k.chain]] || 'Cas9',
+      'chain ' + k.chain + ', ' + k.modelled + ' of ' + k.declared + ' modelled'
+      + (t.chains[k.chain].seq ? '  ' + t.chains[k.chain].seq : '')]),
+    ['Base pairs', t.pairs.length + (t.guideTarget != null ? ', ' + t.guideTarget + ' guide:target' : '')],
+    ['Fit', m.fitOn ? 'onto ' + m.fitOn + ' on ' + m.fitOnWhat + ', ' + m.fitRmsd + ' A rmsd'
+                    : 'reference'],
+    ...(m.domainShift ? [['Moved (CA rms)', Object.entries(m.domainShift)
+      .map(([d, s]) => d + ' ' + s.rms + ' A').join(', ')]] : []),
+    ['Not drawn', m.ligandsDropped.length ? m.ligandsDropped.join(', ') : 'none'],
+    ['Extents', t.extents.join(' x ') + ' A'],
+    ['View', t.frame],
+  ];
+  $('facts').innerHTML = rows.map(([k, v]) => '<tr><td>' + k + '</td><td>' + v + '</td></tr>').join('');
+  $('lede').textContent = t.what + '.';
+  $('d-rcsb').href = 'https://www.rcsb.org/structure/' + t.entry;
+  $('d-rcsb-label').textContent = 'RCSB ' + t.entry;
+
+  $('legend').innerHTML =
+    ['C', 'H', 'E'].map(c => '<span class="sw"><i style="background:var(--ss-' + c + ')"></i>'
+      + ({ C: 'coil', H: 'helix', E: 'strand' })[c] + '</span>').join('')
+    + Object.entries(v.chains).filter(([id, c]) => c.role).map(([id, c]) =>
+      '<span class="sw"><i style="background:' + hex(colors.byChain[id]) + '"></i>' + ROLE_NAME[c.role] + '</span>').join('');
+}
+
+$('views').innerHTML = VIEWS.map(v =>
+  '<button class="mode" id="v-' + v.id + '" aria-pressed="false"><span class="who">'
+  + v.label + ' &middot; ' + v.id + '</span></button>').join('');
+VIEWS.forEach(v => $('v-' + v.id).addEventListener('click', () => show(v.id)));
+
+$('pick').addEventListener('click', () => {
+  const text = JSON.stringify(box.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  $('pick-note').textContent = text;
+});
+
+show(NucleicAcids.defaultOf(ENTRY).id);
+</script>
+</body>
+</html>

@@ -217,7 +217,7 @@
           mount: mbox, orbit: true, pad: 1.1, sub: 10,
           stage: { ortho: false, turn: 'trackball', zoom: true },
           chains: isNA(p) ? NucleicAcids.drawnOf(p, null, t) : null,
-          colors: isNA(p) ? null : ProteinLib.colorsOf(p, ProteinLib.defaultOf(p)),
+          colors: isNA(p) ? NucleicAcids.colorsOf(p) : ProteinLib.colorsOf(p, ProteinLib.defaultOf(p)),
           view: (isNA(p) ? NucleicAcids : ProteinLib).viewOf(p),
           data: t,
         }));
