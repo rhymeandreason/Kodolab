@@ -148,8 +148,14 @@
   .card h3 a { text-decoration: none; }
   .card h3 a::after { content: ''; position: absolute; inset: 0; }   /* the whole card is the link */
   .card p { margin: 0; font-family: var(--serif); font-style: italic; font-size: .9rem; line-height: 1.38; color: var(--ink-2); }
+  .card .foot { display: flex; justify-content: flex-end; margin-top: auto; padding-top: .6rem; }
+  /* Sits above the card-wide link, so it is clickable. */
+  .emb { position: relative; z-index: 1; cursor: pointer; font: 600 11.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); background: none; border: 1.5px solid rgba(var(--ink-t), .18); border-radius: 999px; padding: .42em .8em; transition: color .15s, border-color .15s; display: inline-flex; align-items: center; gap: .35em; white-space: nowrap; }
+  .emb:hover { color: var(--ink); border-color: var(--ink); }
+  .emb svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
 
-  /* Phones: two across, as the homepage does. */
+  /* Phones: two across, as the homepage does. Embedding is a teacher's desk
+     job, so the button goes and a card is picture, name and line. */
   @media (max-width: 560px) {
     .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
     .card { border-radius: 12px; }
@@ -160,6 +166,7 @@
     .card .body { padding: .65rem .7rem .8rem; gap: .3rem; }
     .card h3 { font-size: .95rem; }
     .card p { font-size: .78rem; }
+    .card .foot { display: none; }
     .hub h3 { font-size: 1.3rem; }
     .hub .body { padding: 1rem 1.1rem; }
   }
@@ -362,6 +369,7 @@
    drops its title bar when framed (lib/embed.js). */
 const UNITS = window.LessonUnits;
 const LESSONS = window.Lessons;
+const EMB_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>';
 const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
 function teaser(l) {
@@ -377,6 +385,7 @@ function card(l, extra = '') {
     <div class="body">
       <h3><a href="${l.url}">${esc(l.title)}</a></h3>
       <p>${esc(l.blurb)}</p>
+      ${l.noEmbed ? '' : `<div class="foot"><button class="emb" type="button" data-embed="${l.key}" aria-label="Embed code for ${esc(l.title)}">${EMB_ICON}Embed</button></div>`}
     </div>
     ${l.path && l.path < 3 ? `<span class="arrow" aria-hidden="true">${l.path === 1 ? '<span>with O₂</span>' : ''}</span>` : ''}
   </article>`;
