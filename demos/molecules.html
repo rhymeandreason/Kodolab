@@ -75,7 +75,7 @@
       <h1>Molecules</h1>
     </div>
     <div>
-      <p class="lede">Every molecule the lessons and generated apps draw, grouped by where it is used. <b>Open one to turn it.</b></p>
+      <div id="find"></div>
       <p class="meta" id="tally">&mdash;</p>
     </div>
   </div>
@@ -83,6 +83,7 @@
 
 <main>
   <div class="wrap" id="mol-groups"></div>
+  <div class="wrap"><p class="find-none" id="none" hidden></p></div>
 </main>
 
 <footer>
@@ -120,6 +121,7 @@
 <script src="lib/mol-shelf.js"></script>
 <script src="lib/mol-card.js"></script>
 <script src="lib/embed-sheet.js"></script>
+<script src="lib/gallery-search.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -129,6 +131,7 @@ const BY_KEY = new Map(MOLS.map(m => [m.key, m]));
 /* One section per domain file, headed the way library.html heads one. */
 const groups = $('mol-groups');
 let grid = null, lastDomain = null;
+const cards = new Map();
 for (const m of MOLS) {
   if (m.spec.domain !== lastDomain) {
     const sec = document.createElement('section');
@@ -141,9 +144,29 @@ for (const m of MOLS) {
   }
   const el = MolShelf.card(m, document.createElement('article'));
   el.addEventListener('click', () => openModal(m));
+  cards.set(m.key, el);
   grid.appendChild(el);
 }
 $('tally').textContent = `${MOLS.length} molecules`;
+
+/* ---- search ------------------------------------------------------------- */
+/* A molecule answers to its name and its short form (G6P, ATP), then to its
+   class, its group's heading and its formula. A group with no match left
+   hides its heading too. */
+GallerySearch.mount($('find'), {
+  placeholder: 'Search molecules: glucose, ATP, amino acid…',
+  items: MOLS.map(m => ({
+    key: m.key, name: m.spec.name, alias: m.spec.short, el: cards.get(m.key),
+    hint: MolShelf.groupOf(m.spec.domain),
+    text: [m.spec.class, MolShelf.groupOf(m.spec.domain), m.spec.formula].filter(Boolean).join(' '),
+  })),
+  onPick: key => openModal(BY_KEY.get(key)),
+  onFilter: shown => {
+    for (const sec of groups.children)
+      sec.hidden = !!shown && ![...sec.querySelectorAll('.card')].some(c => !c.hidden);
+  },
+  empty: $('none'),
+});
 
 /* ---- the molecule modal: lib/mol-card.js inside a backdrop ---------------- */
 const modal = $('modal');

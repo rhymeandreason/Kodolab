@@ -158,3 +158,21 @@ footer a { text-decoration: none; }
 footer .dots i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 4px; }
 
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+
+/* ---- a collection's search: lib/gallery-search.js ---------------------- */
+/* The pill's round end reads as indented; pull it out so it lines up with the tally. */
+.find { position: relative; max-width: 30em; margin-left: -6px; }
+.find input { width: 100%; box-sizing: border-box; font: 400 1.05rem var(--sans); color: var(--ink); background: var(--brand-card, #fff);
+  border: 1.5px solid rgba(var(--ink-t), .2); border-radius: 999px; padding: .75em 1.1em .75em 2.7em; outline: none; transition: border-color .15s; }
+.find input:focus { border-color: var(--ink); }
+.find .ico { position: absolute; left: 1em; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); pointer-events: none;
+  fill: none; stroke: var(--ink-3); stroke-width: 2.2; stroke-linecap: round; }
+.find:focus-within .ico { stroke: var(--ink); }
+.find ul { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + .4rem); margin: 0; padding: .35rem; list-style: none;
+  background: var(--brand-card, #fff); border: 1.5px solid rgba(var(--ink-t), .15); border-radius: 14px; box-shadow: 0 10px 30px rgba(var(--ink-t), .12); }
+.find li { display: flex; justify-content: space-between; gap: 1rem; padding: .55em .8em; border-radius: 9px; cursor: pointer; font: 500 .95rem var(--sans); color: var(--ink); }
+.find li small { font-weight: 400; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.find li[aria-selected="true"] { background: var(--paper-2); }
+.find mark { background: none; color: inherit; font-weight: 700; }
+.find-none { font-family: var(--serif); font-style: italic; color: var(--ink-3); }
+.grid .card[hidden], .unit[hidden] { display: none; }
