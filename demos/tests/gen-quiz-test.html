@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- requests
+1. A step-through lesson on how a leaf takes in CO2 and loses water, ending with a short quiz for my class.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gas Exchange and Transpiration in a Leaf</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Leaf,Quiz"></script>
+<script>
+let L;
+const shell = LessonShell.create({
+  brand: 'Leaf Anatomy & Transpiration',
+  hint: 'Drag to orbit · Scroll to zoom',
+  ctx: { state: {} },
+  steps: [
+    {
+      eyebrow: 'Leaf Architecture',
+      title: 'Layers built for photosynthesis',
+      body: '<p class="lead">A leaf is arranged in distinct tissue layers to capture sunlight while managing gas exchange.</p><p>The upper epidermis is coated in a waxy cuticle to prevent uncontrolled evaporation. Directly below sits the palisade mesophyll, packed with chloroplasts to intercept light.</p>',
+      nextLabel: 'See gas exchange',
+      onEnter(ctx) {
+        L.notes(false);
+        L.set({ explode: 0.35, aperture: 1, flows: { co2: 0, o2: 0, vapour: 0, sap: 0 } });
+        ctx.ui.showPanel(L, { notes: ['cuticle', 'palisade', 'spongy', 'bundle'] });
+      }
+    },
+    {
+      eyebrow: 'Carbon Intake',
+      title: 'Taking in CO₂ through stomata',
+      body: '<p class="lead">Photosynthesis requires carbon dioxide, which diffuses into the leaf through microscopic pores called stomata.</p><p>Stomata are situated primarily on the lower epidermis to reduce direct solar heating. Once inside, CO₂ diffuses through the air spaces of the spongy mesophyll to reach photosynthetic cells.</p>',
+      nextLabel: 'See water loss',
+      onEnter(ctx) {
+        L.notes(['stoma']);
+        L.set({ explode: 0, aperture: 1, flows: { co2: 1, o2: 1, vapour: 0, sap: 0 } });
+        ctx.ui.showPanel(L, { notes: ['stoma', 'spongy'], layers: ['co2', 'o2'] });
+      }
+    },
+    {
+      eyebrow: 'Transpiration',
+      title: 'The unavoidable exit of water vapour',
+      body: '<p class="lead">Whenever stomata open to admit CO₂, water vapour inevitably escapes.</p><p>Liquid sap travels through xylem in the vascular bundle, wets the spongy cell surfaces, and evaporates into the air spaces before diffusing out through open stomata.</p>',
+      nextLabel: 'Explore the trade-off',
+      onEnter(ctx) {
+        L.notes(['bundle', 'stoma']);
+        L.set({ explode: 0, aperture: 1, flows: { co2: 1, o2: 1, vapour: 1, sap: 1 } });
+        ctx.ui.showPanel(L, { notes: ['bundle', 'stoma'], layers: ['vapour', 'sap'] });
+      }
+    },
+    {
+      eyebrow: 'The Trade-off',
+      title: 'Balancing carbon gain against desiccation',
+      body: '<p class="lead">Guard cells regulate pore aperture to balance photosynthetic carbon uptake against lethal dehydration.</p><p>Adjust the aperture slider below to see how closing stomata halts water loss but simultaneously stops carbon dioxide from entering.</p>',
+      nextLabel: 'Take the quiz',
+      onEnter(ctx) {
+        L.notes(false);
+        L.set({ explode: 0, aperture: 1, flows: { co2: 1, o2: 1, vapour: 1, sap: 1 } });
+        ctx.ui.controls('<div class="slider"><div class="slider-head"><span class="label">Stomatal Aperture</span><span class="value" id="ap-val">100%</span></div><input type="range" id="aperture" min="0" max="1" step="0.05" value="1"></div>');
+        const valEl = ctx.ui.q('#ap-val');
+        ctx.ui.range(ctx.ui.q('#aperture'), v => {
+          valEl.textContent = Math.round(v * 100) + '%';
+          L.set({ aperture: v }, { snap: true });
+        });
+      }
+    },
+    Quiz.step({
+      scene: () => L,
+      questions: [
+        {
+          q: 'Where do carbon dioxide and water vapour primarily cross the leaf surface?',
+          find: 'stoma',
+          why: 'Stomata in the lower epidermis provide the regulated entry and exit pores for gas and water vapour diffusion.'
+        },
+        {
+          q: 'Click the tissue layer containing the highest concentration of chloroplasts for light absorption.',
+          find: 'palisade',
+          why: 'Palisade mesophyll cells are vertically arranged columns packed with chloroplasts directly beneath the upper epidermis.'
+        },
+        {
+          q: 'What is the immediate physiological consequence of a plant closing its stomata during a drought?',
+          choices: [
+            'CO₂ uptake stops, halting photosynthesis while conserving water',
+            'Photosynthesis accelerates because water is retained',
+            'Oxygen intake stops, preventing cellular respiration',
+            'The cuticle thickens to allow more sunlight penetration'
+          ],
+          answer: 0,
+          why: 'Closing guard cells halts transpirational water loss, but also cuts off the diffusion pathway for carbon dioxide.'
+        },
+        {
+          q: 'How does water reach the spongy mesophyll air spaces before evaporating?',
+          find: 'bundle',
+          why: 'The vascular bundle carries liquid water through xylem vessels into the leaf interior.'
+        }
+      ]
+    })
+  ]
+});
+L = Leaf.mount(shell.stage, { viewOffset: shell.viewOffset });
+shell.goTo(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Quiz bench</title>
+<style>
+  /* A bench is one screen, not a sequence. */
+  .lshell-nav, .lshell-progress { display: none; }
+  .lshell-scroll { padding-bottom: 32px; }
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Leaf,Quiz"></script>
+<script>
+/* The bench for quiz/quiz.js, on Leaf. Two questions are passed here by
+   computing their hash, which a real page never does: the teacher's press in
+   the builder writes it as a literal. The third is a draft, so it shows only
+   from a review link. `?quiz=review` plays drafts too; the teacher's key
+   check is the builder's dialog, benched in build/quiz-key-test.html. */
+const Q = [
+  { q: 'Most of a leaf\'s photosynthesis happens in which layer?',
+    choices: ['Upper epidermis', 'Palisade mesophyll', 'Spongy mesophyll', 'Cuticle'], answer: 1,
+    why: 'Its column-shaped cells are packed with chloroplasts and stand right under the light.' },
+  { q: 'Click the vein that brings water up from the roots.', find: 'bundle',
+    why: 'The xylem in the vein carries water in; the phloem carries sugar out.' },
+  { q: 'What do the air spaces in the spongy mesophyll do?',
+    choices: ['Store water', 'Let CO₂ reach every cell', 'Reflect light', 'Hold the leaf rigid'], answer: 1,
+    why: 'Gas from the stomata diffuses through the spaces to the chloroplasts.' },
+];
+Q[0].approved = Quiz.hash(Q[0]);
+Q[1].approved = Quiz.hash(Q[1]);
+
+const review = /quiz=review/.test(location.search);
+let quiz = null;
+const shell = LessonShell.create({
+  brand: 'Quiz', section: { label: 'library', href: '/library' },
+  hint: 'Drag to orbit',
+  steps: [{
+    eyebrow: 'quiz/quiz.js', title: 'Quick check',
+    body: `<p class="foot">${review ? 'Review link: drafts included. <a href="?">Student view</a>' : 'Student view. <a href="?quiz=review">Include drafts</a>'}</p>`,
+    onEnter(ctx) { ctx.ui.controls('<div id="quiz"></div>'); quiz = Quiz.mount(ctx.ui.q('#quiz'), { scene: L, questions: Q }); window.quiz = quiz; },
+    onExit() { quiz && quiz.destroy(); },
+  }],
+});
+const L = Leaf.mount(shell.stage, { viewOffset: shell.viewOffset });
+window.leaf = L;
+shell.goTo(0);
+</script>
+</body>
+</html>

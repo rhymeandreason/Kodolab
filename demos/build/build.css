@@ -587,3 +587,59 @@ body:not(.fresh) .bar > .burger { display: none }
 @media (max-width: 560px) {
   body.fresh .bar.nav-open { background: var(--surface-page); box-shadow: var(--shadow-panel); z-index: 50; }
 }
+
+/* ---- the quiz's answer key (build/quiz-key.js) ------------------------ */
+/* One question per row, its key in view and the tick on the right, the way a
+   teacher marks a sheet. The list scrolls; the head and the save stay put. */
+dialog.beta.quizkey { width: min(680px, calc(100vw - 32px)); max-width: none; max-height: min(86vh, 900px); padding: 0;
+  display: none; flex-direction: column; overflow: hidden; }
+dialog.beta.quizkey[open] { display: flex; }
+.qk-head { display: flex; align-items: flex-start; gap: 20px; padding: 22px 24px 16px; border-bottom: 1px solid var(--border-hair); }
+.qk-head h2 { margin: 0 0 4px; font-size: 19px; }
+.qk-head p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-dim); }
+.qk-tally { flex: none; font-size: 13px; color: var(--text-muted); white-space: nowrap; padding-top: 2px; }
+.qk-tally strong { font-size: 22px; font-weight: 600; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+
+.qk-list { list-style: none; margin: 0; padding: 4px 24px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }  /* auto, not 0: Safari collapses a 0 basis to nothing when the dialog has no fixed height */
+.qk-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 14px; padding: 18px 0; border-bottom: 1px solid var(--border-hair); }
+.qk-row:last-child { border-bottom: 0; }
+.qk-n { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 600;
+  background: color-mix(in srgb, var(--text-muted) 14%, transparent); color: var(--text-dim); }
+.qk-row.on .qk-n { background: var(--accent); color: var(--text-inverse); }
+.qk-body { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.qk-q { margin: 0; font-size: 15.5px; font-weight: 600; line-height: 1.4; color: var(--text-strong); }
+
+.qk-choices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.qk-choices li { display: flex; align-items: baseline; gap: 8px; padding: 6px 10px; border-radius: 8px; font-size: 14px; color: var(--text-muted); }
+.qk-choices li::before { content: ''; flex: none; width: 14px; }
+.qk-choices li.right { color: var(--text-strong); font-weight: 600; background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.qk-choices li.right::before { display: none; }
+.qk-choices li.right i { flex: none; width: 14px; color: var(--accent); }
+.qk-find { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 14px; color: var(--text-body);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.qk-find i { flex: none; color: var(--accent); align-self: center; }
+.qk-find strong { color: var(--text-strong); }
+
+.qk-why { margin: 0; font-family: var(--font-editorial); font-size: 13.5px; line-height: 1.5; color: var(--text-dim); }
+.qk-why span { display: block; font-family: var(--font-ui); font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
+.qk-ask { align-self: flex-start; margin-left: -6px; font-size: 12.5px; }
+
+/* The tick: a pill that fills when the key is right. */
+.qk-tick { align-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px 6px 8px; border-radius: 999px;
+  border: 1px solid var(--border-hair); font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; white-space: nowrap; user-select: none; }
+.qk-tick:hover { border-color: var(--accent); color: var(--accent); }
+.qk-tick input { appearance: none; -webkit-appearance: none; margin: 0; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid currentColor; display: grid; place-items: center; }
+.qk-tick input:checked { background: var(--accent); border-color: var(--accent); }
+.qk-tick input:checked::after { content: ''; width: 7px; height: 4px; margin-top: -2px; border: solid var(--text-inverse); border-width: 0 0 2px 2px; transform: rotate(-45deg); }
+.qk-tick input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.qk-row.on .qk-tick { background: var(--accent); border-color: var(--accent); color: var(--text-inverse); }
+.qk-row.on .qk-tick input:checked { background: var(--text-inverse); border-color: var(--text-inverse); }
+.qk-row.on .qk-tick input:checked::after { border-color: var(--accent); }
+
+.qk-foot { display: flex; align-items: center; gap: 8px; padding: 14px 24px; border-top: 1px solid var(--border-hair); background: var(--surface-card); }
+.qk-foot .spacer { flex: 1; }
+@media (max-width: 560px) {
+  .qk-row { grid-template-columns: 1fr; }
+  .qk-n { display: none; }
+  .qk-tick { justify-self: start; }
+}

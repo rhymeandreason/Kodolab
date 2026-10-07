@@ -13,7 +13,9 @@
  *        steps: [{ eyebrow, title, body, nextLabel, camera,
  *                  short,             // a word or two for the dots' hover outline; else eyebrow
  *                  onEnter(ctx), onExit(ctx),
- *                  onLeave(ctx, to) -> seconds to hold before the swap }, ...],
+ *                  onLeave(ctx, to) -> seconds to hold before the swap,
+ *                  hidden }, ...],      // true or a function: the step drops out
+ *                                       // of the walk; shell.refresh() re-reads it
  *        ctx:   {},                       // handed to every step; the shell adds `ui` and `goTo`
  *        onStep: (step, i) => {},         // after the panel is filled, before onEnter
  *      });
@@ -88,7 +90,11 @@
   'use strict';
 
   function create(opts = {}) {
-    let steps = opts.steps || [];
+    /* `authored` is the page's list; `steps` is what a student walks, the
+       authored list less any step whose `hidden` says so. */
+    let authored = opts.steps || [];
+    const isHidden = s => (typeof s.hidden === 'function' ? !!s.hidden() : !!s.hidden);
+    let steps = authored.filter(s => !isHidden(s));
     const host = opts.host || document.body;
     document.body.classList.add('lshell-page');
 
@@ -374,9 +380,34 @@
     function setSteps(list) {
       if (current >= 0 && steps[current].onExit) steps[current].onExit(ctx);
       ctx.clearTimers();
-      steps = list;
+      authored = list;
+      steps = list.filter(s => !isHidden(s));
       current = -1;
       drawProgress();
+    }
+    /* A STEP CAN DROP OUT OR COME BACK while the page runs: a quiz nobody has
+       checked is no step at all for a student, and the builder turning review
+       on brings it back. `refresh()` re-reads every `hidden` and keeps the
+       student on the step they are on; if that one went, they land on the
+       nearest step before it. */
+    function refresh() {
+      const at = steps[current];
+      const next = authored.filter(s => !isHidden(s));
+      if (next.length === steps.length && next.every((s, k) => s === steps[k])) return;
+      steps = next;
+      drawProgress();
+      if (current < 0) return;
+      let i = steps.indexOf(at);
+      if (i >= 0) {
+        current = i; paintNav(i);
+        document.dispatchEvent(new CustomEvent('lessonshell:step', { detail: { i, n: steps.length } }));
+        return;
+      }
+      i = Math.max(0, authored.slice(0, authored.indexOf(at)).filter(s => steps.includes(s)).length - 1);
+      if (at && at.onExit) at.onExit(ctx);
+      current = -1;
+      if (steps.length) swap(i);
+      else document.dispatchEvent(new CustomEvent('lessonshell:step', { detail: { i: -1, n: 0 } }));
     }
 
     /* A STEP MAY HOLD THE DOOR. `onLeave(ctx, to)` returns seconds, and the
@@ -404,6 +435,18 @@
       swap(i);
     }
 
+    function paintNav(i) {
+      const step = steps[i], last = i === steps.length - 1;
+      ui.setNext(last ? 'Start over' : (step.nextLabel || 'Next'), !last || steps.length > 1);
+      els.back.disabled = i === 0;
+      els.count.textContent = `${i + 1} / ${steps.length}`;
+      [...els.progress.children, ...els.outline.children].forEach((b, k) => {
+        k %= steps.length;
+        b.classList.toggle('is-current', k === i);
+        b.classList.toggle('is-done', k < i);
+      });
+    }
+
     function swap(i) {
       if (current >= 0 && steps[current].onExit) steps[current].onExit(ctx);
       ctx.clearTimers();
@@ -417,15 +460,7 @@
       els.title.textContent = step.title || '';
       els.body.innerHTML = typeof step.body === 'function' ? step.body(ctx) : (step.body || '');
       els.controls.innerHTML = '';
-      const last = i === steps.length - 1;
-      ui.setNext(last ? 'Start over' : (step.nextLabel || 'Next'), !last || steps.length > 1);
-      els.back.disabled = i === 0;
-      els.count.textContent = `${i + 1} / ${steps.length}`;
-      [...els.progress.children, ...els.outline.children].forEach((b, k) => {
-        k %= steps.length;
-        b.classList.toggle('is-current', k === i);
-        b.classList.toggle('is-done', k < i);
-      });
+      paintNav(i);
       /* Before onStep and onEnter: a step flies the camera of the component
          it is about to show, and sets params on one that has to be running. */
       if (scenes.size) apply(step.scene ? [].concat(step.scene) : (shown || []));
@@ -461,7 +496,7 @@
 
     const shellApi = {
       el, stage: els.stage, panel: els.panel, ui, ctx,
-      get steps() { return steps; }, setSteps,
+      get steps() { return steps; }, setSteps, refresh,
       /* The panel query, on the shell as well as on `ctx.ui`. A page's own
          `on('frame')` is wired at module scope, where there is no ctx and the
          shell is the only handle in reach, and reaching for `shell.q` there is

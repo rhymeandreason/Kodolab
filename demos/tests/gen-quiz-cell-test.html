@@ -1,0 +1,222 @@
+<!doctype html>
+<!-- requests
+1. Make my students an app about osmosis in red blood cells with a quiz at the end.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Osmosis in Red Blood Cells</title>
+<style>
+  .readout-box {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="BloodCell,Quiz"></script>
+<script>
+let cell;
+
+const shell = LessonShell.create({
+  brand: 'Osmosis & Cell Tonicity',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [
+    {
+      eyebrow: 'Isotonic Environment',
+      title: 'The Resting Biconcave Disc',
+      body: '<p class="lead"><strong>In normal blood plasma, water moves in and out of the cell at equal rates.</strong></p><p>A healthy red blood cell is a biconcave disc packed with haemoglobin. Because plasma is <em>isotonic</em> to the cell interior, there is no net movement of water, preserving the resting volume and flexible shape necessary to squeeze through narrow capillaries.</p>',
+      nextLabel: 'Add Salt',
+      onEnter(ctx) {
+        cell.set({ tonicity: 0, spill: 0, cut: 1 });
+        cell.notes(['dimple', 'haemoglobin']);
+        ctx.ui.controls(`
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Solution</div>
+              <div class="stat-value" data-live id="env-label">Isotonic (0.9% NaCl)</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Cell Volume</div>
+              <div class="stat-value" data-live id="vol-val">--</div>
+            </div>
+          </div>
+        `);
+      },
+      onExit() {
+        cell.notes(false);
+      }
+    },
+    {
+      eyebrow: 'Hypertonic Solution',
+      title: 'Water Loss & Crenation',
+      body: '<p class="lead"><strong>In a concentrated brine solution, water exits the cell down its gradient.</strong></p><p>Because solute concentration outside is higher than inside, the concentration of free water is lower outside. Water rapidly leaves through the lipid membrane. Because the lipid bilayer surface area is fixed, the deflating membrane buckles into prickly spikes called <em>crenations</em>.</p>',
+      nextLabel: 'Dilute Solution',
+      onEnter(ctx) {
+        cell.set({ tonicity: 1, spill: 0, cut: 1 });
+        ctx.ui.controls(`
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Solution</div>
+              <div class="stat-value" data-live id="env-label">Hypertonic (Brine)</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Cell Volume</div>
+              <div class="stat-value" data-live id="vol-val">--</div>
+            </div>
+          </div>
+        `);
+      }
+    },
+    {
+      eyebrow: 'Hypotonic Solution',
+      title: 'Water Influx & Swelling',
+      body: '<p class="lead"><strong>In a dilute environment, water moves inward and inflates the cell.</strong></p><p>When extracellular solute concentration is low, free water enters the cytosol. The dimple pops outward as the cell swells toward a spherical geometry, the maximum possible volume for its fixed membrane area.</p>',
+      nextLabel: 'Pure Water',
+      onEnter(ctx) {
+        cell.set({ tonicity: -0.65, spill: 0, cut: 1 });
+        ctx.ui.controls(`
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Solution</div>
+              <div class="stat-value" data-live id="env-label">Hypotonic (Dilute)</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Cell Volume</div>
+              <div class="stat-value" data-live id="vol-val">--</div>
+            </div>
+          </div>
+        `);
+      }
+    },
+    {
+      eyebrow: 'Extreme Hypotonicity',
+      title: 'Osmotic Lysis',
+      body: '<p class="lead"><strong>Without a rigid cell wall, animal cells rupture under osmotic swelling.</strong></p><p>In pure water, continuous water influx exceeds what the membrane envelope can enclose. The bilayer ruptures (lyses), haemoglobin spills out into the surroundings, and an empty membranous ghost remains.</p>',
+      nextLabel: 'Try It Yourself',
+      onEnter(ctx) {
+        cell.set({ tonicity: -1, spill: 1, cut: 1 });
+        ctx.ui.controls(`
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">State</div>
+              <div class="stat-value" data-live id="env-label">Lysis (Burst)</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Cell Volume</div>
+              <div class="stat-value" data-live id="vol-val">--</div>
+            </div>
+          </div>
+        `);
+      }
+    },
+    {
+      eyebrow: 'Interactive Experiment',
+      title: 'Adjust Extracellular Tonicity',
+      body: '<p class="lead"><strong>Drag the slider to test the full continuum of tonicity.</strong></p><p>Observe how volume and cell morphology respond in real time as the external solute concentration changes from pure water to concentrated brine.</p>',
+      nextLabel: 'Take Quiz',
+      onEnter(ctx) {
+        cell.set({ tonicity: 0, spill: 0, cut: 1 });
+        ctx.ui.controls(`
+          <div class="slider">
+            <div class="slider-head">
+              <span class="label">Solution Tonicity</span>
+              <span class="value" data-live id="tonicity-readout">Isotonic (0.00)</span>
+            </div>
+            <input type="range" id="tonicity-slider" min="-1" max="1" step="0.05" value="0">
+          </div>
+          <div class="stats readout-box">
+            <div class="stat">
+              <div class="stat-label">Cell Volume</div>
+              <div class="stat-value" data-live id="vol-val">--</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Morphology</div>
+              <div class="stat-value" data-live id="shape-val">Discocyte</div>
+            </div>
+          </div>
+        `);
+        const input = ctx.ui.q('#tonicity-slider');
+        ctx.ui.range(input, v => {
+          const val = parseFloat(v);
+          const willSpill = val < -0.85 ? ((-0.85 - val) / 0.15) : 0;
+          cell.set({ tonicity: val, spill: willSpill, cut: 1 }, { snap: true });
+          
+          const readout = ctx.ui.q('#tonicity-readout');
+          const shape = ctx.ui.q('#shape-val');
+          if (readout) {
+            if (val < -0.3) readout.textContent = `Hypotonic (${val.toFixed(2)})`;
+            else if (val > 0.3) readout.textContent = `Hypertonic (+${val.toFixed(2)})`;
+            else readout.textContent = `Isotonic (${val.toFixed(2)})`;
+          }
+          if (shape) {
+            if (val < -0.85) shape.textContent = 'Lysed Ghost';
+            else if (val < -0.3) shape.textContent = 'Spherocyte';
+            else if (val > 0.3) shape.textContent = 'Crenated';
+            else shape.textContent = 'Normal Disc';
+          }
+        });
+      }
+    },
+    Quiz.step({
+      scene: () => cell,
+      questions: [
+        {
+          q: 'Click the internal protein packed inside this cell that carries oxygen.',
+          find: 'haemoglobin',
+          why: 'Haemoglobin fills the interior of mature red blood cells to transport oxygen.'
+        },
+        {
+          q: 'What happens to a red blood cell placed in a hypertonic (high salt) solution?',
+          choices: [
+            'Water enters and the cell lyses',
+            'Water leaves and the cell crenates',
+            'Salt enters until the cell doubles in volume',
+            'No net water movement occurs'
+          ],
+          answer: 1,
+          why: 'Water moves down its concentration gradient out of the cell, causing the membrane to buckle and crenate.'
+        },
+        {
+          q: 'Why does a red blood cell burst in pure water while a plant cell remains intact?',
+          choices: [
+            'Plant cells actively pump all incoming water out',
+            'Red blood cell membranes lack phospholipid bilayers',
+            'Plant cells have a rigid cell wall that exerts turgor pressure',
+            'Red blood cells have higher internal ion resistance'
+          ],
+          answer: 2,
+          why: 'The rigid cellulose wall of a plant cell resists expansion and creates wall pressure, whereas an animal cell membrane ruptures.'
+        },
+        {
+          q: 'Click the biconcave depression that provides the resting red blood cell with a high surface-area-to-volume ratio.',
+          find: 'dimple',
+          why: 'The dimple gives the discocyte flexibility and high surface area for rapid gas exchange.'
+        }
+      ]
+    })
+  ]
+});
+
+cell = BloodCell.mount(shell.stage, {
+  viewOffset: shell.viewOffset,
+  tonicity: 0,
+  cut: 1,
+  spill: 0
+});
+
+cell.on('frame', s => {
+  const volEl = document.querySelector('#vol-val');
+  if (volEl && s && s.volume !== undefined) {
+    volEl.textContent = Math.round(s.volume) + ' µm³';
+  }
+});
+
+shell.goTo(0);
+</script>
+</body>
+</html>

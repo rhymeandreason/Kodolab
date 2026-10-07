@@ -351,12 +351,13 @@ parent.postMessage({type:'app-thumb',data:data,meta:words()},'*');return true;
 
   /* Puts the page in the iframe and returns the errors it relays, as a live
    * array the caller drains between turns. */
-  function mount(iframe, html, onError, onThumb, onEdit) {
+  function mount(iframe, html, onError, onThumb, onEdit, onQuiz) {
     const errors = [];
     const listener = e => {
       if (e.source !== iframe.contentWindow || !e.data) return;
       if (e.data.type === 'app-thumb') { if (onThumb) onThumb(e.data.data, e.data.meta); return; }
       if (/^app-(edit|select|outline)/.test(e.data.type)) { if (onEdit) onEdit(e.data); return; }
+      if (/^app-quiz/.test(e.data.type)) { if (onQuiz) onQuiz(e.data, iframe); return; }
       if (e.data.type !== 'app-error') return;
       errors.push(e.data.message);
       if (onError) onError(e.data.message, errors);

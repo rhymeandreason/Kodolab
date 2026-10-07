@@ -889,6 +889,8 @@ window.Annot = (function () {
  *      c.note('pump', { text:'…', card:'…' });  // the page's own words, same anchor
  *      c.notes(['channel.K', 'pump']);          // exactly these; false clears
  *      c.anchors();                             // names, with the library text
+ *      c.box.notebook.point('pump');            // its world point now, a copy
+ *      c.box.notebook.facing('stoma');          // its world facing, or null
  *  `facings` is the optional twin of `anchors`: name → function returning the
  *  world direction that part faces, for the parts where being on the far side
  *  of the model should fade the callout out. Most parts have none.
@@ -945,8 +947,16 @@ window.Notebook = (function () {
       const present = typeof a === 'function' ? !!a() : true;
       return Object.assign({ name: k, present }, library[k] || {});
     });
+    /* A part's world point now, as a copy the caller may project, or null
+       when it is not on stage. quiz/quiz.js reads a click with it. */
+    const point = name => { const a = anchors[name]; const p = a && (typeof a === 'function' ? a() : a); return p ? p.clone() : null; };
+    const facing = name => (facings[name] ? facings[name]().clone() : null);
     function step() { if (layer) layer.step(); }
-    return { note, unnote, notes, clear, list, step, get layer() { return layer; } };
+    /* On the box, so anything holding a component's handle reaches its parts
+       through `c.box` without every mount forwarding one more call. */
+    const api = { note, unnote, notes, clear, list, point, facing, step, get layer() { return layer; } };
+    box.notebook = api;
+    return api;
   }
 
   return { create };

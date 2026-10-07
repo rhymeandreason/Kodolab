@@ -62,6 +62,9 @@
   <form method="dialog"><button class="btn btn--tint" type="submit">Done</button></form></div>
 </dialog>
 
+<!-- The answer key: build/quiz-key.js fills it from what the app's quiz posts. -->
+<dialog class="beta quizkey" id="quizModal" aria-label="Check the answer key"></dialog>
+
 <div class="notice" id="notice" hidden></div>
 
 <!-- The first screen. The form inside it is the only form on the page: when the
@@ -195,6 +198,8 @@
 <script src="wordmark.js"></script>
 <script src="apps-client.js"></script>
 <script src="shelf.js"></script>
+<script src="../quiz/quiz.js"></script>
+<script src="quiz-key.js"></script>
 <script>
 (() => {
   'use strict';
@@ -231,8 +236,25 @@
      * saved edit remounts the page, and clearing here would take the pane out
      * from under the student between the save and the first swap. */
     outlineAt = -1; paintOutline();
-    errors = Apps.mount(frame, html, () => paintErrors(), saveThumb, fromEditor);
+    quizKey.reset();
+    errors = Apps.mount(frame, html, () => paintErrors(), saveThumb, fromEditor, fromQuiz);
     paintErrors();
+  }
+
+  /* ---- the quiz's answer key ----
+   * The builder is where a teacher reads the key: the app's quiz shows a bar
+   * here and nowhere else, and its questions open in a dialog over the
+   * builder (build/quiz-key.js). Marking one correct is a text edit that
+   * writes the question's hash into its own literal, one version per save. */
+  const quizKey = QuizKey.create({
+    dialog: $('quizModal'),
+    source: () => app.html,
+    save: (edits, summary) => saveText(edits, summary),
+    ask: text => { const box = $('request'); box.value = text; box.focus(); box.setSelectionRange(text.length, text.length); },
+  });
+  function fromQuiz(msg) {
+    if (msg.type === 'app-quiz-hello') { frame.contentWindow.postMessage({ type: 'app-quiz-review', on: true }, '*'); return; }
+    if (msg.type === 'app-quiz-list' || msg.type === 'app-quiz-open') quizKey.take(msg);
   }
 
   /* ---- text mode ---------------------------------------------------------
@@ -392,13 +414,13 @@
     if (msg.type === 'app-edit-edits') saveText(msg.edits);
   }
 
-  async function saveText(edits) {
+  async function saveText(edits, summary) {
     if (!edits || !edits.length) { setTextMode(false); return; }
     setBusy(true);
     try {
-      const r = await Apps.api('../../api/app', { method: 'POST', token, body: { action: 'text', id: app.id, edits } });
+      const r = await Apps.api('../../api/app', { method: 'POST', token, body: { action: 'text', id: app.id, edits, summary } });
       app.n = r.n; app.html = r.html;
-      extra[r.n] = `${r.edits} passage${r.edits === 1 ? '' : 's'}, by hand`;
+      extra[r.n] = summary || `${r.edits} passage${r.edits === 1 ? '' : 's'}, by hand`;
       open = String(r.n);
       show(r.html);
       paintApp(); loadVersions();

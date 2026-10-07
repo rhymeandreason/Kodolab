@@ -183,7 +183,7 @@ Every component declares a **rung** (how big) and a **form** (how many) in its o
 molecules · macromolecule · membrane · organelle · cell · tissue · organ · organism · population
 ```
 
-**A page composing normally cannot get this wrong**: each `mount()` gets its own box and its own camera, so components at different rungs simply live in different boxes. Nothing at the `population` rung yet; Graph and Diagram sit on no rung, because a chart and a notation are not in the world.
+**A page composing normally cannot get this wrong**: each `mount()` gets its own box and its own camera, so components at different rungs simply live in different boxes. Nothing at the `population` rung yet; Graph, Diagram and Quiz sit on no rung, because a chart, a notation and a question are not in the world.
 
 **At the cell rung, AnimalCell and PlantCell are the defaults.** They are what a reader pictures when they hear "a cell", and between them they carry a nucleus, organelles, a wall and a vacuole. BloodCell is a specialist with none of that, so it comes out when the subject really is blood, or as a second example after a general cell has made the point.
 
@@ -919,6 +919,39 @@ M.set({ mode: '2d' });          // the student watches it lie down; set({ mode: 
 Anchors for `note()`: every atom by the spec's own name (`C1`, `O5`, `HO4`), plus `center`; a note follows its atom down into the 2D layout. Names are the ones `highlight` takes, so a step marks an atom and notes it with one string. Layers for `show()`: `hydrogens` (the C-H ones). No views: nothing on one molecule is out of frame, and `lookAt()` moves nothing.
 
 Good for: the shape of one molecule, a functional group pointed at, comparing two molecules in two boxes (glucose beside galactose, palmitate beside palmitoleate), the model beside its diagram. Not for: a reaction, a liquid, a protein (Proteinbox), a chain of monomers (Condense joins two), or anything at a scale where a molecule is a dot.
+
+## Quiz — a check the student answers, on the scene where it can be
+
+**Scale**: none. A quiz is copy, not a picture of anything.
+
+**Reach for it only when the request asks for a quiz, a check, a test or questions.** It is one step, the last of a step-through, and never on a sandbox. Write the step with `Quiz.step`, never a step of your own around `Quiz.mount`: until the teacher has checked a question the step is not in the lesson at all, and only `Quiz.step` knows that.
+
+```js
+steps: [
+  /* ...the lesson's steps... */
+  Quiz.step({
+    scene: () => L,          // the component a `find` is answered on; a function, since L is mounted after the steps
+    questions: [
+      { q: 'Where does CO₂ enter the leaf?', choices: ['Stoma', 'Cuticle', 'Xylem'], answer: 0,
+        why: 'One sentence the student reads after answering, right or wrong.' },
+      { q: 'Click the layer where most photosynthesis happens.', find: 'palisade',
+        why: 'Its columns are packed with chloroplasts, under the light.' },
+    ],
+  }),
+],
+```
+
+`eyebrow` and `title` are optional; the defaults are right. On a page with `shell.scene`, `scene` is that handle (`scene: () => cell`).
+
+**A question about a part on stage is a `find`, not a choice.** The student clicks the part on the model, by the anchor names the component's section lists, and whatever they click is labelled, so a wrong answer still shows them what that thing was. "Which layer…", "where does…", "click the…" are all finds. A choice is for what the scene cannot point at: a cause, a comparison, a number.
+
+Three to five questions, each answerable from what this page showed. Three or four choices, one right, with distractors a student who skimmed would pick. `answer` is the index of the right choice. `why` is one sentence, not a repeat of the question.
+
+**Never write `approved` on a question.** The teacher passes each question in the builder and that writes it; a student sees only passed questions, and any question you edit goes back to unchecked. Write the key as if a biology teacher will check it, because one will.
+
+The score reaches the teacher's dashboard on its own: never send it yourself.
+
+Good for: the end of a lesson a teacher asked to check. Not for: teaching (a question that introduces something new belongs in a step's copy), a poll, or a free-text answer.
 
 ## Copy
 

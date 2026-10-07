@@ -1,0 +1,50 @@
+/* quiz/quiz.css — the quiz in the lesson shell's panel. Tokens are the
+   shell's; right is its accent, wrong is kodo's ember. */
+.quiz { --right: var(--accent); --wrong: var(--ember-500); display: flex; flex-direction: column; gap: 14px; }
+
+.quiz-head { display: flex; align-items: center; justify-content: space-between; }
+.quiz-dots { display: flex; gap: 6px; }
+.quiz-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.quiz-dots i.now { box-shadow: 0 0 0 2px var(--ink-3); background: #fff; }
+.quiz-dots i.right { background: var(--right); }
+.quiz-dots i.wrong { background: var(--wrong); }
+.quiz-n { font-family: var(--display); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.quiz-q { margin: 0; font-family: var(--display); font-size: 19px; font-weight: 500; line-height: 1.3; color: var(--ink); }
+.quiz-hint { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.quiz-miss { color: var(--wrong); }
+
+/* One column: an answer is a phrase, and two columns of phrases wrap badly. */
+.lshell-panel .quiz-choices { grid-template-columns: 1fr; }
+.lshell-panel .quiz-choices .choice { text-align: left; font-size: 16px; padding: 13px 16px; }
+.lshell-panel .quiz-choices .choice:disabled { cursor: default; transform: none; }
+.lshell-panel .quiz-choices .choice.right { border-color: var(--right); background: var(--accent-soft); color: var(--right); }
+.lshell-panel .quiz-choices .choice.wrong { border-color: var(--wrong); background: color-mix(in srgb, var(--wrong) 8%, #fff); color: var(--wrong); }
+.lshell-panel .quiz-choices .choice.dim { opacity: 0.45; }
+
+.lshell-panel .quiz-verdict { margin: 0; }
+.lshell-panel .quiz-verdict.wrong { border-color: var(--wrong); background: color-mix(in srgb, var(--wrong) 6%, #fff); }
+.quiz .btn { align-self: flex-start; }
+
+.quiz-score { margin: 0; font-family: var(--display); font-size: 48px; font-weight: 500; line-height: 1; color: var(--ink); }
+.quiz-score small { font-size: 24px; color: var(--ink-3); }
+.quiz-review { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.quiz-review li { display: flex; flex-direction: column; gap: 2px; padding: 8px 0 8px 14px; border-bottom: 1px solid var(--line); border-left: 3px solid var(--right); }
+.quiz-review li.wrong { border-left-color: var(--wrong); }
+.quiz-q-sm { color: var(--ink-2); font-size: 14px; line-height: 1.35; }
+.quiz-a { font-weight: 600; font-size: 15px; color: var(--ink); }
+.quiz-a s { font-weight: 400; color: var(--ink-3); text-decoration-color: var(--wrong); }
+
+/* A draft played from a review link. */
+.quiz-tag { align-self: flex-start; font-family: var(--display); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--sun) 25%, #fff); color: #7a5a06; }
+
+/* The teacher's bar, in the builder only: what waits, and the door to the
+   builder's dialog. Quiet, so the panel still reads as the student's. */
+.quiz-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 9px 10px 9px 14px; border-radius: 12px;
+  background: color-mix(in srgb, var(--sun) 16%, #fff); color: #5e4605; font-size: 13px; line-height: 1.35; }
+.quiz-bar span { flex: 1 1 12em; }
+.quiz-bar strong { font-weight: 600; }
+.quiz-bar button { flex: none; font: 500 13px var(--display); padding: 7px 12px; border-radius: 999px; border: 0; cursor: pointer;
+  background: #5e4605; color: #fff; }
+.quiz-bar.done { background: var(--accent-soft); color: var(--accent); }
+.quiz-bar.done button { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px currentColor; }

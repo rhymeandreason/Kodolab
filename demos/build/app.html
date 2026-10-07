@@ -40,7 +40,11 @@
       app = r;
       document.title = r.title || 'App';
       $('title').textContent = r.title || '';
-      Apps.mount($('frame'), r.html);
+      /* A quiz in the app reports its score the way a lesson does
+         (quiz/quiz.js); the frame cannot reach Track, so it posts here. */
+      Apps.mount($('frame'), r.html, null, null, null, m => {
+        if (m.type === 'app-quiz' && window.Track) Track.event('quiz', { score: m.score, total: m.total, answers: m.answers });
+      });
       const token = Apps.tokenFor(r.id);
       if (token) { $('edit').hidden = false; $('edit').href = Apps.link('edit', r.id); }
       $('remix').hidden = false;

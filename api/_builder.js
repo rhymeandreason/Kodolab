@@ -320,6 +320,10 @@ function validate(html, names) {
 
   const mounted = new Set();
   for (const m of src.matchAll(/\b([A-Z][A-Za-z]+)\.mount\(/g)) mounted.add(m[1]);
+  /* A component may offer a whole step instead (`Quiz.step`), which mounts it
+   * when entered; only a component the reference has counts, since `.step(`
+   * is also what a sim's own tick is called. */
+  for (const m of src.matchAll(/\b([A-Z][A-Za-z]+)\.step\(/g)) if (known.has(m[1])) mounted.add(m[1]);
   for (const n of mounted) {
     if (!known.has(n)) { problems.push(`mounts ${n}, which the reference does not describe`); continue; }
     if (app.length && !declared.includes(n)) problems.push(`mounts ${n} but data-use does not name it, so its scripts never load`);

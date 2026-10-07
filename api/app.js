@@ -12,7 +12,7 @@
  *       title   {title}
  *       thumb   {thumb, meta}          → the scene as a JPEG data URL and the words on
  *                                       the card in front of it, for the shelf; token required
- *       text    {edits}                → the student's own text edits, applied as a version
+ *       text    {edits, summary?}      → the student's own text edits, applied as a version
  *  GET  /api/app?ids=a,b,c            → title, thumb, thumb_meta and last-edited, for the shelf
  *  GET  /api/app?mine=1               → the same, for every app the class or teacher code owns
  *
@@ -169,9 +169,12 @@ module.exports = async function handler(req, res) {
       /* The history line names the passage that changed, not the count: what
        * a student looks for when going back is the sentence they remember. */
       const first = edits[0].find.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ').slice(0, 60);
+      /* A quiz key passed by the teacher is a code edit, and its find is an
+       * object literal: the client names it instead. */
+      const named = typeof body.summary === 'string' && body.summary.trim().slice(0, 80);
       const v = await apps.addVersion(id, {
         kind: 'text', html: out.html,
-        summary: `“${first}”${edits.length > 1 ? ` and ${edits.length - 1} more` : ''}`,
+        summary: named || `“${first}”${edits.length > 1 ? ` and ${edits.length - 1} more` : ''}`,
       });
       return res.status(200).json({ id, n: v.n, html: out.html, edits: edits.length });
     }

@@ -117,6 +117,7 @@
     'graph/graph.js',
     'diagram/diagram.js',
     'molecule/molecule.js',  // after lib/molview.js, card-stage.js and every mol-*
+    'quiz/quiz.js',
     'kit/lesson-shell.js',   // the base every template is built on
     'kit/sandbox-shell.js',  // last: a template reads what the shell defined
   ];
@@ -216,6 +217,7 @@
                  'lib/mol-pathways.js', 'lib/mol-krebs.js', 'lib/mol-carriers.js',
                  'lib/mol-sugars.js', 'lib/mol-glycans.js', 'lib/mol-lipids.js',
                  'lib/mol-nucleic.js', 'lib/molview.js', 'molecule/molecule.js'],
+    Quiz:       ['quiz/quiz.js'],
   };
 
   /* Which domain file registers each molecule key, so a page's data-mol can
@@ -252,7 +254,7 @@
 
   const CSS = { Proteinbox: ['kit/proteinbox.css'], Graph: ['graph/graph.css'],
                 RespirationReaction: ['respiration/respiration.css'],
-                Diagram: ['diagram/diagram.css'] };
+                Diagram: ['diagram/diagram.css'], Quiz: ['quiz/quiz.css'] };
 
   /* The list a page's data-use resolves to, or an Error naming what is wrong
      with it. Exported so the builder can answer the same question offline. */
