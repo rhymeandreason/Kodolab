@@ -99,6 +99,23 @@
     box-shadow:0 40px 100px -30px rgba(var(--brand-ink-t),.6)}
   @media (max-width:800px){ .pmodal .pcard{height:auto;max-height:100%} }
 
+  /* The search: suggestions under the field, and the grid filters as you type. */
+  /* The pill's round end reads as indented; pull it out so it lines up with the tally. */
+  .find { position: relative; max-width: 30em; margin-left: -6px; }
+  .find input { width: 100%; box-sizing: border-box; font: 400 1.05rem var(--sans); color: var(--ink); background: var(--brand-card, #fff);
+    border: 1.5px solid rgba(var(--ink-t), .2); border-radius: 999px; padding: .75em 1.1em .75em 2.7em; outline: none; transition: border-color .15s; }
+  .find input:focus { border-color: var(--ink); }
+  .find .ico { position: absolute; left: 1em; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); pointer-events: none;
+    fill: none; stroke: var(--ink-3); stroke-width: 2.2; stroke-linecap: round; }
+  .find:focus-within .ico { stroke: var(--ink); }
+  .find ul { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + .4rem); margin: 0; padding: .35rem; list-style: none;
+    background: var(--brand-card, #fff); border: 1.5px solid rgba(var(--ink-t), .15); border-radius: 14px; box-shadow: 0 10px 30px rgba(var(--ink-t), .12); }
+  .find li { display: flex; justify-content: space-between; gap: 1rem; padding: .55em .8em; border-radius: 9px; cursor: pointer; font: 500 .95rem var(--sans); color: var(--ink); }
+  .find li small { font-weight: 400; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .find li[aria-selected="true"] { background: var(--paper-2); }
+  .find mark { background: none; color: inherit; font-weight: 700; }
+  .grid .card[hidden] { display: none; }
+  .none { font-family: var(--serif); font-style: italic; color: var(--ink-3); }
 </style>
 </head>
 <body>
@@ -123,7 +140,12 @@
       <h1>Proteins</h1>
     </div>
     <div>
-      <p class="lede">Proteins are what your genes are for, and their shape is the job they do. <b>Open one to turn it.</b></p>
+      <div class="find" role="search">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+        <input id="q" type="search" placeholder="Search proteins: hemoglobin, oxygen, motor…" autocomplete="off" spellcheck="false"
+          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugg" aria-label="Search proteins">
+        <ul id="sugg" role="listbox" hidden></ul>
+      </div>
       <!-- Counted from the registry at render, so it cannot drift from the cards. -->
       <p class="meta" id="tally">&mdash;</p>
     </div>
@@ -131,7 +153,7 @@
 </section>
 
 <main>
-  <div class="wrap"><div class="grid gallery" id="grid"></div></div>
+  <div class="wrap"><div class="grid gallery" id="grid"></div><p class="none" id="none" hidden></p></div>
 </main>
 
 <footer>
@@ -229,7 +251,8 @@ function card(p) {
 }
 
 const grid = $('grid');
-for (const p of ENTRIES) grid.appendChild(card(p));
+const cards = new Map();
+for (const p of ENTRIES) { const el = card(p); cards.set(p.key, el); grid.appendChild(el); }
 
 /* THE TALLY, COUNTED AT RENDER, and it names the two registries separately
    rather than adding them up: "2 complexes" tells a reader some of these
@@ -241,6 +264,86 @@ $('tally').textContent =
   `${ProteinLib.PROTEINS.length} proteins`
   + (nComplex ? ` · ${nComplex} complexes` : '')
   + ` · ${variants} structures`;
+
+/* ---- search: filter the grid, suggest the best few ----------------------- */
+/* What a protein answers to: its name first, then what it does, its blurb and
+   its species, so "oxygen" finds hemoglobin and "digest" finds chymotrypsin. */
+const norm = t => (t || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+const index = ENTRIES.map(p => ({
+  p, name: norm(p.name),
+  rest: norm([p.does, p.blurb, defaultOf(p).species].filter(Boolean).join(' ')),
+}));
+
+function score(e, words) {
+  let s = 0;
+  for (const w of words) {
+    if (e.name.startsWith(w) || e.name.includes(' ' + w)) s += 4;
+    else if (e.name.includes(w)) s += 3;
+    else if (e.rest.includes(w)) s += 1;
+    else return 0;
+  }
+  return s;
+}
+
+const q = $('q'), sugg = $('sugg'), none = $('none');
+let hits = [], active = -1;
+
+function hiName(name, words) {
+  const n = norm(name);
+  let at = -1, len = 0;
+  for (const w of words) { const i = n.indexOf(w); if (i >= 0) { at = i; len = w.length; break; } }
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  return at < 0 ? esc(name) : esc(name.slice(0, at)) + '<mark>' + esc(name.slice(at, at + len)) + '</mark>' + esc(name.slice(at + len));
+}
+
+function search() {
+  const words = norm(q.value).split(/\s+/).filter(Boolean);
+  hits = words.length
+    ? index.map(e => [e, score(e, words)]).filter(x => x[1]).sort((a, b) => b[1] - a[1]).map(x => x[0].p)
+    : [];
+  const shown = new Set(hits.map(p => p.key));
+  for (const [k, el] of cards) el.hidden = words.length > 0 && !shown.has(k);
+  none.hidden = !words.length || hits.length > 0;
+  none.textContent = `Nothing matches “${q.value.trim()}”.`;
+  active = hits.length ? 0 : -1;
+  sugg.innerHTML = hits.slice(0, 6).map((p, i) =>
+    `<li role="option" id="s-${p.key}" data-key="${p.key}" aria-selected="${i === active}">
+      <span>${hiName(p.name, words)}</span><small>${defaultOf(p).species || ''}</small></li>`).join('');
+  showSugg(hits.length > 0);
+}
+
+function showSugg(on) {
+  sugg.hidden = !on;
+  q.setAttribute('aria-expanded', on);
+  q.setAttribute('aria-activedescendant', on && active >= 0 ? 's-' + hits[active].key : '');
+}
+
+function move(d) {
+  const n = sugg.children.length; if (!n) return;
+  active = (active + d + n) % n;
+  [...sugg.children].forEach((li, i) => li.setAttribute('aria-selected', i === active));
+  showSugg(true);
+}
+
+function pick(key) {
+  const p = ENTRIES.find(e => e.key === key); if (!p) return;
+  showSugg(false);
+  openModal(p);
+}
+
+q.addEventListener('input', search);
+q.addEventListener('focus', () => { if (q.value.trim()) search(); });
+q.addEventListener('blur', () => setTimeout(() => showSugg(false), 120));
+q.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); sugg.hidden ? search() : move(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+  else if (e.key === 'Enter' && !sugg.hidden && active >= 0) { e.preventDefault(); pick(hits[active].key); }
+  else if (e.key === 'Escape' && !sugg.hidden) { e.stopPropagation(); showSugg(false); }
+});
+sugg.addEventListener('mousedown', e => {
+  const li = e.target.closest('li'); if (!li) return;
+  e.preventDefault(); pick(li.dataset.key);
+});
 
 /* ---- the modal: proteins/protein-card.js inside a backdrop ---------------- */
 const modal = $('modal');
