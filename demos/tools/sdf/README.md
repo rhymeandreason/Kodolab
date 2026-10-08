@@ -41,6 +41,16 @@ by `src.sdf` exists.
 | `proline.sdf` | 145742 | `0002394E00000001` | `manual` | `sdf2spec.js` throws on it |
 | `glutamine.sdf` | 5961 | `0000174900000002` | **`lost`** | does *not* rebuild the spec |
 | `glutamate.sdf` | 33032 | `0000810800000001` | **`lost`** | does *not* rebuild the spec |
+| `valine.sdf` | 6287 | `0000188F00000002` | `exact` | |
+| `histidine.sdf` | 6274 | `0000188200000001` | `exact` | |
+| `leucine.sdf` | 6106 | `000017DA00000001` | `exact` | |
+| `threonine.sdf` | 6288 | `0000189000000001` | `exact` | |
+| `tyrosine.sdf` | 6057 | `000017A900000001` | `exact` | |
+| `isoleucine.sdf` | 6306 | `000018A200000001` | `exact` | |
+| `asparagine.sdf` | 6267 | `0000187B00000002` | `exact` | |
+| `phenylalanine.sdf` | 6140 | `000017FC00000001` | `exact` | |
+| `arginine.sdf` | 6322 | `000018B200000004` | `exact` | |
+| `methionine.sdf` | 6137 | `000017F90000000E` | `exact` | |
 
 Verified 2026-07-30, `atp.sdf` added 2026-08-12, `phosphate.sdf` 2026-09-02, `datp.sdf` 2026-09-05. Seven of eleven rebuild exactly; the three that do not are
 each a different problem, and the two marked `lost` are the ones to be careful

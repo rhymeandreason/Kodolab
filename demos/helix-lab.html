@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The &alpha;-helix</title>
+
+<!-- ===================================================================
+     THE HELIX, on macromolecule-builder.html's stage. One card: the same
+     chain in two folds. Nothing places the hydrogen bonds: they are FOUND
+     (kit/hbond.js) on whatever the two torsions built, so a strand shows
+     none and a helix shows one per turn's worth of residues.
+
+     Follows protein-lab.html, which builds the chain. Ends where
+     hemoglobin-lab.html begins: a helix is the second level, and that
+     lesson folds one chain into the third.
+     =================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="macromolecule/assembly.css">
+<style>
+  #note a{color:inherit}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="gl"></canvas>
+    <nav id="cards"></nav>
+    <div id="choose"></div>
+    <div id="seq"><div class="label">the chain</div>
+      <div class="chain"></div><div class="ends"></div></div>
+    <button id="reset">Start over</button>
+    <button id="dim3d"></button>
+    <div id="diagram"></div>
+    <div id="note"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/palette.js"></script>
+<script src="lib/tokens-from-palette.js"></script>
+<script src="lib/molecules.js"></script>
+<script src="lib/mol-aminoacids.js"></script>
+<script src="lib/mol-small.js"></script>
+<script src="lib/scene.js"></script>
+<script src="lib/fx.js"></script>
+<script src="kit/motion.js"></script>
+<script src="kit/stagekit.js"></script>
+<script src="kit/hbond.js"></script>
+<script src="macromolecule/spec.js"></script>
+<script src="macromolecule/peptide.js"></script>
+<script src="macromolecule/plane.js"></script>
+<script src="macromolecule/sidechain.js"></script>
+<script src="macromolecule/peptide-diagram.js"></script>
+<script src="macromolecule/assembly.js"></script>
+<script>
+"use strict";
+
+const S = MolLib.SCALE;
+const { un, nearestSite } = MacroAssembly;
+
+/* The peptide reaction, read off each residue's own `condense:` roles. */
+const PEPTIDE = {
+  // WHICH carboxyl reacted. Every residue here has one; glutamate has two.
+  donor:at => at.pose.donor, acceptor:'amino',
+  chains:true, ends:'N-terminus → C-terminus',
+  unit:'residue', bond:'peptide bond',
+  label:p => p.spec.name,
+  diagram,
+  poseIn:(h, g, donor, round) => Peptide.pose(h, g, donor, round ? 'helix' : 'strand'),
+  /* EVERY CARBOXYL THE HOST STILL HAS, and the nearest one wins: glutamate
+   * has two, and which takes the bond is decided by where the student drags,
+   * not by a fixed order that would put it somewhere nobody pointed. */
+  solve:(host, guest) => {
+    const h = un(host), g = un(guest);
+    return nearestSite(host, guest, ['carboxyl', 'gamma']
+      .filter(donor => MacroSpec.free(h, donor))
+      .map(donor => Peptide.pose(h, g, donor)));
+  },
+};
+
+/* THE STAGE, DRAWN FLAT. One fragment per separate piece, left to right as
+ * they lie on the stage, each walked N to C along the bonds. A glutamate that
+ * bonded through both carboxyls is a branch the straight drawing cannot hold,
+ * so its second branch is drawn as a fragment of its own. */
+function diagram(A, fresh){
+  const guests = new Set(A.sticks.map(s => s.guest));
+  const queue = A.P.pieces.filter(p => !guests.has(p))
+    .sort((a, b) => a.mol.position.x - b.mol.position.x);
+  const frags = [], where = new Map();
+  while(queue.length){
+    const frag = [];
+    for(let p = queue.shift(); p; ){
+      const out = A.sticks.filter(s => s.host === p);
+      out.slice(1).forEach(s => queue.push(s.guest));
+      where.set(p, [frags.length, frag.length]);
+      frag.push({ spec:p.base, prev:guests.has(p), next:out[0] ? out[0].donor : null });
+      p = out[0] && out[0].guest;
+    }
+    frags.push(frag);
+  }
+  // In the folded view the chain is one piece, so a residue's place in
+  // A.chain() is its place in the drawing.
+  const hbonds = A.dim === '3d' ? helixBonds.map(b => [b.acceptor.owner, b.donor.owner]) : [];
+  return PeptideDiagram.svg(frags, { fresh:fresh && where.get(fresh.host), hbonds });
+}
+
+/* THE HELIX'S HYDROGEN BONDS, FOUND. Every backbone N–H is a donor and every
+ * carbonyl O an acceptor, and kit/hbond.js decides which pairs are bonded by
+ * distance and angle, the same criterion water-lab uses. The page never says
+ * i to i+4; if the torsions stopped building a helix, the dashes would go. */
+let helixBonds = [];
+function helixNote(c, tail){
+  const n = helixBonds.length;
+  const gap = n ? Math.abs(helixBonds[0].donor.owner - helixBonds[0].acceptor.owner) : 0;
+  return '<b>An &alpha;-helix.</b> Only the turnable bonds at each &alpha;-carbon changed. '
+    + `Each C=O now points at the N&ndash;H ${gap} residues on: <b>${n} hydrogen bonds</b>, `
+    + 'dashed. ' + tail + ' Next: <a href="hemoglobin-lab.html">hemoglobin</a>.';
+}
+function hbonds(A){
+  const c = A.chain(), donors = [], acceptors = [];
+  c.forEach((p, k) => {
+    const n = p.spec.names, at = i => A.P.atomAt(p, i).toArray();
+    const N = MacroSpec.role(un(p), 'amino').keep;
+    for(const h of ['H', 'H2']) if(n.includes(h))
+      donors.push({ h:at(n.indexOf(h)), root:at(N), owner:k, id:k + h });
+    if(n.includes('O')) acceptors.push({ p:at(n.indexOf('O')), owner:k, id:k + 'O', capacity:1 });
+  });
+  helixBonds = HBond.find(donors, acceptors, { maxDist:2.5 * S, order:'best' });
+  const draw = HBond.create(THREE, { radius:0.055 * S, gap:0.26 * S });
+  draw.set(helixBonds);
+  return [draw.group];
+}
+
+/* SIDE CHAINS TURNED TO FIT, in the helix only. Each residue arrives as a rigid
+ * free amino acid, and in a coil residue i sits beside i+3 and i+4: left as
+ * fetched, a glutamine puts an H 1.05 Å from the backbone a turn below.
+ * macromolecule/sidechain.js turns the side chains' single bonds until nothing
+ * touches; the backbone, and so the fold, never moves. Cleared first, so every
+ * fold packs from the same start. */
+function settle(A, at, view){
+  if(view !== '3d') return;
+  const c = A.chain();
+  for(const p of c){
+    const spec = A.specIn(p, '3d');
+    for(const ch of SideChain.chis(spec)) for(const i of ch.moves) delete p.moved['3d'][spec.names[i]];
+  }
+  const out = SideChain.pack(c.map(p => {
+    const t = at.get(p);
+    return { spec:A.specIn(p, '3d'), quat:t.quat, pos:t.pos.map(v => v / S) };
+  }));
+  c.forEach((p, i) => Object.assign(p.moved['3d'], out[i]));
+}
+
+const CARDS = [
+  { ...PEPTIDE,
+    /* THE SAME CHAIN, TWO FOLDS. Dealt already joined, because this card is
+     * about the shape and not about making it. */
+    key:'helix', n:1, title:'The helix', sub:'two angles, one fold',
+    home:Array(8).fill([0, 0]),
+    prejoin:true,
+    // Backbone carboxyls only. Glutamate offers its side chain's too, and a
+    // chain joined through it is not a backbone that can coil.
+    solve:(host, guest) => nearestSite(host, guest, [Peptide.pose(un(host), un(guest), 'carboxyl')]),
+    views:{ to:'Fold into a helix', back:'Unfold to a strand', decorate:hbonds, settle },
+    lead:'',
+    more:'Join it back into one chain to fold it.',
+    /* TWO SEQUENCES, ONE FOLD. All alanine is the classic helix-former. The
+     * mixed one puts alanine at i, i+3, i+4, i+7, which a coil of about 3.6
+     * residues a turn stacks down one face, with polar side chains around the
+     * rest: an amphipathic helix. Leucine would make that face properly
+     * nonpolar; the library has no leucine yet, and alanine's methyl is the
+     * nonpolar side chain it has. */
+    builds:[
+      { key:'ala', label:'All alanine', set:{
+          monomers:Array(8).fill('alanine'),
+          done:c => `<b>${c.length} alanines</b> as an extended strand. Each residue's C=O and N&ndash;H `
+                  + 'point out to the side, at nothing on this chain. Fold it.',
+          round:c => helixNote(c, 'Alanine is a strong helix-former, but most sequences can '
+                  + 'coil: try the mixed one.'),
+        } },
+      { key:'mixed', label:'Mixed sequence', set:{
+          monomers:['alanine', 'glutamate', 'glutamine', 'alanine',
+                    'alanine', 'glutamate', 'serine', 'alanine'],
+          done:c => `<b>${c.length} amino acids</b>, ${new Set(c.map(p => p.key)).size} kinds, `
+                  + 'as an extended strand. Fold it, and watch the side chains.',
+          round:c => {
+            const ala = c.map((p, i) => p.key === 'alanine' ? i + 1 : 0).filter(Boolean);
+            return helixNote(c, 'Those bonds are all backbone, so any sequence can coil; each '
+              + `side chain turned to fit. Drag to turn it: alanines ${ala.join(', ')} make one `
+              + 'nonpolar face.');
+          },
+        } },
+    ],
+  },
+];
+
+MacroAssembly.create({ cards:CARDS, el:{
+  canvas:document.getElementById('gl'),     stage:document.getElementById('stage'),
+  note:document.getElementById('note'),     seq:document.getElementById('seq'),
+  rail:document.getElementById('cards'),    choose:document.getElementById('choose'),
+  reveal:document.getElementById('dim3d'),  reset:document.getElementById('reset'),
+  diagram:document.getElementById('diagram') } });
+</script>
+</body>
+</html>

@@ -6,8 +6,8 @@
 <title>Building a protein</title>
 
 <!-- ===================================================================
-     FROM AMINO ACIDS TO A FOLD, on macromolecule-builder.html's stage.
-     Four cards, each one claim:
+     FROM AMINO ACIDS TO A SEQUENCE, on macromolecule-builder.html's stage.
+     Six cards, each one claim:
 
        1. THE PEPTIDE BOND. Only carboxyl meets amino, a water leaves,
           and the chain grows one way. Direction is what is left after
@@ -17,18 +17,21 @@
           formed is decided by where the student dragged.
        3. COLLAGEN. Proline's ring pins its own phi, and the chain bends
           where the others run straight.
-       4. THE HELIX. The same chain in two folds. Nothing places the
-          hydrogen bonds: they are FOUND (kit/hbond.js) on whatever the
-          two torsions built, so a strand shows none and a helix shows
-          one per turn's worth of residues.
+       4. MET-ENKEPHALIN. Five residues are a whole signal, read N to C.
+       5. SICKLE CELL. The first seven of the beta chain, then one swap at
+          position 6: a charged side chain becomes a greasy one.
+       6. OXYTOCIN AND VASOPRESSIN. Nine residues, two cysteines that close
+          a ring, and two positions that pick the hormone.
+
+     Cards 4-6 deal the residues out of order and check the chain against
+     the target, so the sequence is something the student reads and builds.
 
      UNDER THE STAGE, THE SAME CHAIN AS A TEXTBOOK DRAWS IT
      (macromolecule/peptide-diagram.js), redrawn on every join, so the
      boxed C(=O)-N(-H) on paper and the bond on the model are read
      against each other.
 
-     Ends where hemoglobin-lab.html begins: a helix is the second level,
-     and that lesson folds one chain into the third.
+     Ends where helix-lab.html begins: the same backbone, folded.
      =================================================================== -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -65,11 +68,9 @@
 <script src="lib/fx.js"></script>
 <script src="kit/motion.js"></script>
 <script src="kit/stagekit.js"></script>
-<script src="kit/hbond.js"></script>
 <script src="macromolecule/spec.js"></script>
 <script src="macromolecule/peptide.js"></script>
 <script src="macromolecule/plane.js"></script>
-<script src="macromolecule/sidechain.js"></script>
 <script src="macromolecule/peptide-diagram.js"></script>
 <script src="macromolecule/assembly.js"></script>
 <script>
@@ -87,7 +88,6 @@ const PEPTIDE = {
   unit:'residue', bond:'peptide bond',
   label:p => p.spec.name,
   diagram,
-  poseIn:(h, g, donor, round) => Peptide.pose(h, g, donor, round ? 'helix' : 'strand'),
   /* EVERY CARBOXYL THE HOST STILL HAS, and the nearest one wins: glutamate
    * has two, and which takes the bond is decided by where the student drags,
    * not by a fixed order that would put it somewhere nobody pointed. */
@@ -119,61 +119,45 @@ function diagram(A, fresh){
     }
     frags.push(frag);
   }
-  // In the folded view the chain is one piece, so a residue's place in
-  // A.chain() is its place in the drawing.
-  const hbonds = A.dim === '3d' ? helixBonds.map(b => [b.acceptor.owner, b.donor.owner]) : [];
-  return PeptideDiagram.svg(frags, { fresh:fresh && where.get(fresh.host), hbonds });
+  return PeptideDiagram.svg(frags, { fresh:fresh && where.get(fresh.host) });
 }
 
-/* THE HELIX'S HYDROGEN BONDS, FOUND. Every backbone N–H is a donor and every
- * carbonyl O an acceptor, and kit/hbond.js decides which pairs are bonded by
- * distance and angle, the same criterion water-lab uses. The page never says
- * i to i+4; if the torsions stopped building a helix, the dashes would go. */
-let helixBonds = [];
-function helixNote(c, tail){
-  const n = helixBonds.length;
-  const gap = n ? Math.abs(helixBonds[0].donor.owner - helixBonds[0].acceptor.owner) : 0;
-  return '<b>An &alpha;-helix.</b> Only the turnable bonds at each &alpha;-carbon changed. '
-    + `Each C=O now points at the N&ndash;H ${gap} residues on: <b>${n} hydrogen bonds</b>, `
-    + 'dashed. ' + tail + ' Next: <a href="hemoglobin-lab.html">hemoglobin</a>.';
+/* A SEQUENCE TO BUILD. Dealt out of order, (2i+1) mod n for odd n, so the row
+ * on the stage never already reads N to C and the student has to read the
+ * target. The chain is checked against it residue by residue. */
+const M = MolLib.MOLECULES;
+const read = keys => keys.map(k => M[k].res).join('-');
+function target(seq, done){
+  const n = seq.length, dealt = seq.map((_, i) => seq[(2*i + 1) % n]);
+  const gap = 13;
+  return {
+    // Backbone carboxyls only: a glutamate joined through its side chain is
+    // glutathione's bond, not the next residue of this sequence.
+    solve:(host, guest) => nearestSite(host, guest, [Peptide.pose(un(host), un(guest), 'carboxyl')]),
+    monomers:dealt,
+    home:dealt.map((_, i) => [(i - (n - 1)/2) * gap, i % 2 ? -9 : 9]),
+    box:{ x:0, y:0, rxz:(n - 1)/2 * gap + 10, hy:17 },
+    more:c => `${c.length} of ${n}. Build it N-terminus to C-terminus: <b>${read(seq)}</b>.`,
+    done:(c, card, A) => c.length === n && c.every((p, i) => p.key === seq[i])
+      ? done(c, card, A)
+      : `That chain reads ${read(c.map(p => p.key))}, and the target is <b>${read(seq)}</b>. `
+        + 'Same amino acids, different order, different molecule. Double-click a bond to break it.',
+  };
 }
-function hbonds(A){
-  const c = A.chain(), donors = [], acceptors = [];
-  c.forEach((p, k) => {
-    const n = p.spec.names, at = i => A.P.atomAt(p, i).toArray();
-    const N = MacroSpec.role(un(p), 'amino').keep;
-    for(const h of ['H', 'H2']) if(n.includes(h))
-      donors.push({ h:at(n.indexOf(h)), root:at(N), owner:k, id:k + h });
-    if(n.includes('O')) acceptors.push({ p:at(n.indexOf('O')), owner:k, id:k + 'O', capacity:1 });
-  });
-  helixBonds = HBond.find(donors, acceptors, { maxDist:2.5 * S, order:'best' });
-  const draw = HBond.create(THREE, { radius:0.055 * S, gap:0.26 * S });
-  draw.set(helixBonds);
-  return [draw.group];
-}
+// The first place two sequences differ, as 1-based positions.
+const differ = (a, b) => a.map((k, i) => k !== b[i] ? i + 1 : 0).filter(Boolean);
 
-/* Each card's box is its deal, edge to edge: every piece's home plus its own
- * half-width (about 7). Any chain the deal can build is shorter than the row
- * it was dealt in, so the frame never has to grow mid-build. */
-/* SIDE CHAINS TURNED TO FIT, in the helix only. Each residue arrives as a rigid
- * free amino acid, and in a coil residue i sits beside i+3 and i+4: left as
- * fetched, a glutamine puts an H 1.05 Å from the backbone a turn below.
- * macromolecule/sidechain.js turns the side chains' single bonds until nothing
- * touches; the backbone, and so the fold, never moves. Cleared first, so every
- * fold packs from the same start. */
-function settle(A, at, view){
-  if(view !== '3d') return;
-  const c = A.chain();
-  for(const p of c){
-    const spec = A.specIn(p, '3d');
-    for(const ch of SideChain.chis(spec)) for(const i of ch.moves) delete p.moved['3d'][spec.names[i]];
-  }
-  const out = SideChain.pack(c.map(p => {
-    const t = at.get(p);
-    return { spec:A.specIn(p, '3d'), quat:t.quat, pos:t.pos.map(v => v / S) };
-  }));
-  c.forEach((p, i) => Object.assign(p.moved['3d'], out[i]));
-}
+const ENKEPHALIN = ['tyrosine', 'glycine', 'glycine', 'phenylalanine', 'methionine'];
+// The first seven of the hemoglobin β chain, after the initiator Met is cut off.
+const HBA = ['valine', 'histidine', 'leucine', 'threonine', 'proline', 'glutamate', 'glutamate'];
+const HBS = HBA.map((k, i) => i === 5 ? 'valine' : k);
+/* Both hormones end in an amidated glycine, –CONH₂ where the chain built here
+ * has –COOH; the library has no glycinamide, and the claim is in the sequence. */
+const OXYTOCIN    = ['cysteine', 'tyrosine', 'isoleucine', 'glutamine', 'asparagine',
+                     'cysteine', 'proline', 'leucine', 'glycine'];
+const VASOPRESSIN = ['cysteine', 'tyrosine', 'phenylalanine', 'glutamine', 'asparagine',
+                     'cysteine', 'proline', 'arginine', 'glycine'];
+const cysAt = seq => seq.map((k, i) => k === 'cysteine' ? i + 1 : 0).filter(Boolean);
 
 const CARDS = [
   { ...PEPTIDE,
@@ -248,42 +232,66 @@ const CARDS = [
     more:(c, card) => card.done(c, card),
   },
   { ...PEPTIDE,
-    /* THE SAME CHAIN, TWO FOLDS. Dealt already joined, because this card is
-     * about the shape and not about making it. */
-    key:'helix', n:4, title:'The helix', sub:'two angles, one fold',
-    home:Array(8).fill([0, 0]),
-    prejoin:true,
-    // Backbone carboxyls only. Glutamate offers its side chain's too, and a
-    // chain joined through it is not a backbone that can coil.
-    solve:(host, guest) => nearestSite(host, guest, [Peptide.pose(un(host), un(guest), 'carboxyl')]),
-    views:{ to:'Fold into a helix', back:'Unfold to a strand', decorate:hbonds, settle },
-    lead:'',
-    more:'Join it back into one chain to fold it.',
-    /* TWO SEQUENCES, ONE FOLD. All alanine is the classic helix-former. The
-     * mixed one puts alanine at i, i+3, i+4, i+7, which a coil of about 3.6
-     * residues a turn stacks down one face, with polar side chains around the
-     * rest: an amphipathic helix. Leucine would make that face properly
-     * nonpolar; the library has no leucine yet, and alanine's methyl is the
-     * nonpolar side chain it has. */
+    key:'enkephalin', n:4, title:'Met-enkephalin', sub:'Tyr-Gly-Gly-Phe-Met',
+    lead:`Five amino acids, one of the brain&rsquo;s own painkillers. Build it N to C: `
+       + `<b>${read(ENKEPHALIN)}</b>.`,
+    ...target(ENKEPHALIN, c => `<b>Met-enkephalin.</b> ${c.length} residues are a whole message: `
+      + 'neurons release it and it fits the <b>opioid receptor</b>. Morphine fits the same '
+      + 'receptor because part of it is shaped like the tyrosine ring at the N-terminus. '
+      + 'Which residue would you change to switch the signal off?'),
+  },
+  { ...PEPTIDE,
+    /* SICKLE CELL, ONE RESIDUE. What the swap does to the whole protein is
+     * sickle-lab.html's; this card stops at the side chain. */
+    key:'sickle', n:5, title:'Sickle cell', sub:'one residue, β6',
     builds:[
-      { key:'ala', label:'All alanine', set:{
-          monomers:Array(8).fill('alanine'),
-          done:c => `<b>${c.length} alanines</b> as an extended strand. Each residue's C=O and N&ndash;H `
-                  + 'point out to the side, at nothing on this chain. Fold it.',
-          round:c => helixNote(c, 'Alanine is a strong helix-former, but most sequences can '
-                  + 'coil: try the mixed one.'),
+      { key:'hba', label:'Normal (HbA)', set:{
+          lead:`The first ${HBA.length} amino acids of hemoglobin&rsquo;s &beta; chain. `
+             + `Build them N to C: <b>${read(HBA)}</b>.`,
+          ...target(HBA, () => {
+            const k = differ(HBA, HBS)[0];
+            return `<b>Normal &beta; chain.</b> Position ${k} is glutamate: its side chain ends `
+              + 'in &ndash;COOH, which in blood has lost its H and carries a charge, so it sits '
+              + 'happily in water on the protein&rsquo;s surface. Now build the sickle version.';
+          }),
         } },
-      { key:'mixed', label:'Mixed sequence', set:{
-          monomers:['alanine', 'glutamate', 'glutamine', 'alanine',
-                    'alanine', 'glutamate', 'serine', 'alanine'],
-          done:c => `<b>${c.length} amino acids</b>, ${new Set(c.map(p => p.key)).size} kinds, `
-                  + 'as an extended strand. Fold it, and watch the side chains.',
-          round:c => {
-            const ala = c.map((p, i) => p.key === 'alanine' ? i + 1 : 0).filter(Boolean);
-            return helixNote(c, 'Those bonds are all backbone, so any sequence can coil; each '
-              + `side chain turned to fit. Drag to turn it: alanines ${ala.join(', ')} make one `
-              + 'nonpolar face.');
-          },
+      { key:'hbs', label:'Sickle (HbS)', set:{
+          lead:`The same seven, with one change. Build <b>${read(HBS)}</b>.`,
+          ...target(HBS, () => {
+            const k = differ(HBA, HBS)[0];
+            return `<b>Sickle &beta; chain.</b> One DNA base changed, so position ${k} is now `
+              + 'valine: a nonpolar side chain where a charged one was, a greasy patch on the '
+              + 'outside of the protein. With no O<sub>2</sub> bound, it sticks into a pocket on the '
+              + 'next hemoglobin, and they stack into fibres that bend the red cell. '
+              + '<a href="sickle-lab.html">Watch it happen</a>.';
+          }),
+        } },
+    ],
+  },
+  { ...PEPTIDE,
+    /* THE DISULFIDE IS NOT BUILT. The two cysteines' –SH stay apart on the
+     * stage, and the note says they close; a second kind of bond, made between
+     * residues already in the chain, is not a reaction assembly.js knows. */
+    key:'hormones', n:6, title:'Oxytocin', sub:'two hormones, nine residues',
+    builds:[
+      { key:'oxytocin', label:'Oxytocin', set:{
+          lead:`A hormone of ${OXYTOCIN.length} amino acids. Build it N to C: <b>${read(OXYTOCIN)}</b>.`,
+          ...target(OXYTOCIN, () => {
+            const [i, j] = cysAt(OXYTOCIN);
+            return `<b>Oxytocin.</b> The cysteines at ${i} and ${j} are where it closes: in the `
+              + 'body their &ndash;SH groups join into one S&ndash;S <b>disulfide bond</b>, a '
+              + `covalent bridge that turns residues ${i} to ${j} into a ring. Now build vasopressin.`;
+          }),
+        } },
+      { key:'vasopressin', label:'Vasopressin', set:{
+          lead:`Another hormone, also ${VASOPRESSIN.length} long. Build <b>${read(VASOPRESSIN)}</b>.`,
+          ...target(VASOPRESSIN, () => {
+            const d = differ(OXYTOCIN, VASOPRESSIN);
+            return `<b>Vasopressin.</b> Same length, same ring, and only ${d.length} positions `
+              + `differ (${d.join(' and ')}). Oxytocin drives labour and milk letdown; vasopressin `
+              + 'tells the kidney to keep water. Each fits a different receptor, and those side '
+              + 'chains are why. Next: <a href="helix-lab.html">folding a chain into a helix</a>.';
+          }),
         } },
     ],
   },

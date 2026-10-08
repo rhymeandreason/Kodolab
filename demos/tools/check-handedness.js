@@ -49,6 +49,10 @@ const REF = {
   proline: 'L-proline',
   glutamine: 'L-glutamine',
   glutamate: 'L-glutamic acid',
+  valine: 'L-valine', histidine: 'L-histidine', leucine: 'L-leucine',
+  threonine: 'L-threonine', tyrosine: 'L-tyrosine', isoleucine: 'L-isoleucine',
+  asparagine: 'L-asparagine', phenylalanine: 'L-phenylalanine',
+  arginine: 'L-arginine', methionine: 'L-methionine',
   // the four dNTPs. Three stereocentres each, all of them the deoxyribose's,
   // and the sugar arrives from dATP's record while the base is superposed on a
   // frame — two chances for a reflection, neither visible from inside the spec.

@@ -10,8 +10,7 @@
  *  way the textbook draws it; nothing reads coordinates. What IS read from each
  *  spec is everything the drawing asserts: which atoms the reaction keeps and
  *  sheds (`condense:` roles), and the side chain, walked off the bond graph.
- *  So a residue added to the library draws without an entry here, and one this
- *  walk cannot condense (a branch) throws rather than drawing a wrong formula.
+ *  So a residue added to the library draws without an entry here.
  *
  *  Pure: residues in, an SVG string out. No THREE, no DOM, so
  *  check-macromolecule.js asserts the side chains in Node.
@@ -56,8 +55,9 @@
 
   /* THE SIDE CHAIN, CONDENSED, walked from the α-carbon outward: each heavy
    * atom with its hydrogens (CH₂, SH, OH), and a terminal carboxyl or amide
-   * written the way a textbook writes it. A walk that arrives back at the
-   * amino N is proline's ring. Glycine's side chain is its second α-H. */
+   * written the way a textbook writes it. A branch is bracketed on its carbon
+   * and a ring written as its formula. A walk that arrives back at the amino N
+   * is proline's ring. Glycine's side chain is its second α-H. */
   function sideChain(spec){
     const { g, N, C, CA } = backbone(spec);
     const start = g.heavy(CA).find(j => j !== N && j !== C);
@@ -78,12 +78,70 @@
           if(end) return { parts, end, ring:false, endAt:cur };
         }
       }
-      if(nb.length > 1) throw new Error(`peptide-diagram: ${spec.name}'s side chain branches; `
-        + 'teach sideChain() to condense it before drawing it');
+      if(nb.length > 1){
+        const ring = ringFrom(g, cur, prev);
+        if(ring) return { parts:[...parts, ring], end:null, ring:false };
+        // A branch: the longest arm carries on up the stack, the rest are
+        // written in brackets on this carbon, identical ones merged: CH(CH₃)₂.
+        const arms = nb.map(j => ({ j, n:reach(g, j, cur).length, t:linear(g, j, cur) }))
+          .sort((a, b) => b.n - a.n || (g.el(a.j) === 'C' ? -1 : 0) - (g.el(b.j) === 'C' ? -1 : 0));
+        const main = arms.every(a => a.t === arms[0].t) ? null : arms[0];
+        const rest = main ? arms.slice(1) : arms;
+        const counts = new Map();
+        rest.forEach(a => counts.set(a.t, (counts.get(a.t) || 0) + 1));
+        const br = [...counts].map(([t, k]) => k > 1 ? `(${t})${k}` : `(${t})`).join('');
+        if(!main){ parts.push(own + br); return { parts, end:null, ring:false }; }
+        parts.push(own + br);
+        prev = cur; cur = main.j;
+        continue;
+      }
       parts.push(own);
       if(!nb.length) return { parts, end:null, ring:false };
       prev = cur; cur = nb[0];
     }
+  }
+  /* Heavy atoms reachable from `from` without passing back through `not`. */
+  function reach(g, from, not){
+    const seen = new Set([not, from]), out = [from];
+    for(let k = 0; k < out.length; k++)
+      for(const j of g.heavy(out[k])) if(!seen.has(j)){ seen.add(j); out.push(j); }
+    return out;
+  }
+  /* An unbranched arm written on one line: CH₃, OH, CH₂CH₃. */
+  function linear(g, from, not){
+    let t = '', prev = not, cur = from;
+    for(;;){
+      const h = g.hs(cur);
+      t += g.el(cur) + (h ? 'H' + (h > 1 ? h : '') : '');
+      const nb = g.heavy(cur).filter(j => j !== prev);
+      if(nb.length !== 1) return t;
+      prev = cur; cur = nb[0];
+    }
+  }
+  /* A RING, written as its formula: C₆H₅, C₆H₄OH, C₃H₃N₂ (imidazole). Whatever
+   * hangs off the ring follows it. Null when nothing from `cur` closes a ring. */
+  function ringFrom(g, cur, prev){
+    const sub = reach(g, cur, prev).filter(i => i !== prev);
+    const inSub = new Set(sub);
+    const deg = i => g.heavy(i).filter(j => inSub.has(j)).length;
+    let edges = 0;
+    sub.forEach(i => { edges += deg(i); });
+    if(edges / 2 < sub.length) return null;
+    // Peel off everything that is not on the cycle; what is left is the ring.
+    const ring = new Set(sub);
+    for(let peeled = true; peeled; ){
+      peeled = false;
+      for(const i of ring) if(i !== cur && g.heavy(i).filter(j => ring.has(j)).length < 2){
+        ring.delete(i); peeled = true;
+      }
+    }
+    const n = {};
+    ring.forEach(i => { n[g.el(i)] = (n[g.el(i)] || 0) + 1; n.H = (n.H || 0) + g.hs(i); });
+    const hill = ['C', 'H', ...Object.keys(n).filter(e => e !== 'C' && e !== 'H').sort()];
+    const f = hill.filter(e => n[e]).map(e => e + (n[e] > 1 ? n[e] : '')).join('');
+    const tail = sub.filter(i => !ring.has(i) && g.heavy(i).some(j => ring.has(j)))
+      .map(i => linear(g, i, g.heavy(i).find(j => ring.has(j)))).join('');
+    return f + tail;
   }
   const label = sc => sub(sc.parts.join('') + (sc.end || ''));
 

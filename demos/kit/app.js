@@ -226,7 +226,7 @@
   // mols:begin
   const MOLS = {
     'lib/mol-small.js':      'water ammonia methane o2 co2 carbonic ethanol',
-    'lib/mol-aminoacids.js': 'glycine alanine serine cysteine dAlanine proline glutamine glutamate',
+    'lib/mol-aminoacids.js': 'glycine alanine serine cysteine valine histidine leucine threonine tyrosine isoleucine asparagine phenylalanine arginine methionine dAlanine proline glutamine glutamate',
     'lib/mol-pathways.js':   'g6p f6p f16bp dhap g3p bpg13 pga3 pga2 pep pyruvate lactate acetaldehyde ethanolSkel',
     'lib/mol-krebs.js':      'oaa citrate isocitrate akg succinate fumarate malate',
     'lib/mol-carriers.js':   'amp pi atp nadh coa acetylcoa succinylcoa fadh2 fad fmnh2 fmn ubiquinol ubiquinone atpSkel nadhSkel',
