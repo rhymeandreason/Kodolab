@@ -69,6 +69,7 @@
 <script src="macromolecule/spec.js"></script>
 <script src="macromolecule/peptide.js"></script>
 <script src="macromolecule/plane.js"></script>
+<script src="macromolecule/sidechain.js"></script>
 <script src="macromolecule/peptide-diagram.js"></script>
 <script src="macromolecule/assembly.js"></script>
 <script>
@@ -129,6 +130,13 @@ function diagram(A, fresh){
  * distance and angle, the same criterion water-lab uses. The page never says
  * i to i+4; if the torsions stopped building a helix, the dashes would go. */
 let helixBonds = [];
+function helixNote(c, tail){
+  const n = helixBonds.length;
+  const gap = n ? Math.abs(helixBonds[0].donor.owner - helixBonds[0].acceptor.owner) : 0;
+  return '<b>An &alpha;-helix.</b> Only the turnable bonds at each &alpha;-carbon changed. '
+    + `Each C=O now points at the N&ndash;H ${gap} residues on: <b>${n} hydrogen bonds</b>, `
+    + 'dashed. ' + tail + ' Next: <a href="hemoglobin-lab.html">hemoglobin</a>.';
+}
 function hbonds(A){
   const c = A.chain(), donors = [], acceptors = [];
   c.forEach((p, k) => {
@@ -147,6 +155,26 @@ function hbonds(A){
 /* Each card's box is its deal, edge to edge: every piece's home plus its own
  * half-width (about 7). Any chain the deal can build is shorter than the row
  * it was dealt in, so the frame never has to grow mid-build. */
+/* SIDE CHAINS TURNED TO FIT, in the helix only. Each residue arrives as a rigid
+ * free amino acid, and in a coil residue i sits beside i+3 and i+4: left as
+ * fetched, a glutamine puts an H 1.05 Å from the backbone a turn below.
+ * macromolecule/sidechain.js turns the side chains' single bonds until nothing
+ * touches; the backbone, and so the fold, never moves. Cleared first, so every
+ * fold packs from the same start. */
+function settle(A, at, view){
+  if(view !== '3d') return;
+  const c = A.chain();
+  for(const p of c){
+    const spec = A.specIn(p, '3d');
+    for(const ch of SideChain.chis(spec)) for(const i of ch.moves) delete p.moved['3d'][spec.names[i]];
+  }
+  const out = SideChain.pack(c.map(p => {
+    const t = at.get(p);
+    return { spec:A.specIn(p, '3d'), quat:t.quat, pos:t.pos.map(v => v / S) };
+  }));
+  c.forEach((p, i) => Object.assign(p.moved['3d'], out[i]));
+}
+
 const CARDS = [
   { ...PEPTIDE,
     key:'bond', n:1, title:'The peptide bond', sub:'which ends react',
@@ -157,11 +185,23 @@ const CARDS = [
     monomers:['glycine', 'alanine', 'serine', 'cysteine'],
     home:{ glycine:[-21, 9], alanine:[-7, -10], serine:[9, 9], cysteine:[22, -10] },
     box:{ x:0, y:0, rxz:30, hy:17 },
-    lead:'Push two of them together. Only one pairing of ends does anything. '
-       + 'Find which, and watch what comes off.',
-    done:c => `<b>${c.length} residues</b>, joined N to C. Four different monomers, so this `
-            + 'chain has a <b>sequence</b>, and the sequence is the whole of what it does.',
-    more:'The chain can only grow at the end that still has its &ndash;COOH.',
+    lead:'Push two amino acids together. Only one pairing of ends reacts. '
+       + 'Find it, and watch what leaves.',
+    // The first bond is where the reaction gets named; after that, direction.
+    more:(c, card, A) => A.sticks.length === 1
+      ? 'That was <b>dehydration synthesis</b>. One amino acid&rsquo;s &ndash;COOH lost an '
+        + '&ndash;OH, the next one&rsquo;s &ndash;NH<sub>2</sub> lost an H, and together '
+        + 'they left as that water. What holds them now is a covalent <b>peptide bond</b>, &ndash;CO&ndash;NH&ndash;, '
+        + 'boxed below.'
+      : 'Each new amino acid joins at the end that still has its &ndash;COOH, so a chain has '
+        + 'a direction: N-terminus to C-terminus.',
+    done:c => {
+      const kinds = new Set(c.map(p => p.key)).size;
+      return `A <b>polypeptide</b> of ${c.length}. Each peptide bond has partial double-bond `
+        + 'character, so it is flat and rigid; the chain can only turn at the bonds on either '
+        + `side of each &alpha;-carbon. ${kinds} different amino acids, so it also has a `
+        + '<b>sequence</b>. What would change if you built them in another order?';
+    },
   },
   { ...PEPTIDE,
     /* GLUTATHIONE, and the choice that makes it. Cysteine will bond to either
@@ -209,27 +249,43 @@ const CARDS = [
   },
   { ...PEPTIDE,
     /* THE SAME CHAIN, TWO FOLDS. Dealt already joined, because this card is
-     * about the shape and not about making it. All alanine: it is the classic
-     * helix-former, and a residue drawn rigid from its conformer would put
-     * side-chain clashes on stage that a real helix relieves by turning. */
+     * about the shape and not about making it. */
     key:'helix', n:4, title:'The helix', sub:'two angles, one fold',
-    monomers:Array(8).fill('alanine'),
     home:Array(8).fill([0, 0]),
     prejoin:true,
-    views:{ to:'Fold into a helix', back:'Unfold to a strand', decorate:hbonds },
+    // Backbone carboxyls only. Glutamate offers its side chain's too, and a
+    // chain joined through it is not a backbone that can coil.
+    solve:(host, guest) => nearestSite(host, guest, [Peptide.pose(un(host), un(guest), 'carboxyl')]),
+    views:{ to:'Fold into a helix', back:'Unfold to a strand', decorate:hbonds, settle },
     lead:'',
-    done:c => `<b>${c.length} alanines</b> as an extended strand. Each residue's C=O and N&ndash;H `
-            + 'point out to the side, at nothing on this chain. Fold it.',
     more:'Join it back into one chain to fold it.',
-    round:c => {
-      const n = helixBonds.length;
-      const gap = n ? Math.abs(helixBonds[0].donor.owner - helixBonds[0].acceptor.owner) : 0;
-      return '<b>An &alpha;-helix.</b> Same bonds, same atoms; only two angles per residue '
-        + `changed. Now each C=O points along the axis at the N&ndash;H ${gap} residues on: `
-        + `<b>${n} hydrogen bonds</b>, dashed, and they are what hold the coil. `
-        + 'Side chains point outward. Folding further is '
-        + '<a href="hemoglobin-lab.html">the hemoglobin lesson</a>.';
-    },
+    /* TWO SEQUENCES, ONE FOLD. All alanine is the classic helix-former. The
+     * mixed one puts alanine at i, i+3, i+4, i+7, which a coil of about 3.6
+     * residues a turn stacks down one face, with polar side chains around the
+     * rest: an amphipathic helix. Leucine would make that face properly
+     * nonpolar; the library has no leucine yet, and alanine's methyl is the
+     * nonpolar side chain it has. */
+    builds:[
+      { key:'ala', label:'All alanine', set:{
+          monomers:Array(8).fill('alanine'),
+          done:c => `<b>${c.length} alanines</b> as an extended strand. Each residue's C=O and N&ndash;H `
+                  + 'point out to the side, at nothing on this chain. Fold it.',
+          round:c => helixNote(c, 'Alanine is a strong helix-former, but most sequences can '
+                  + 'coil: try the mixed one.'),
+        } },
+      { key:'mixed', label:'Mixed sequence', set:{
+          monomers:['alanine', 'glutamate', 'glutamine', 'alanine',
+                    'alanine', 'glutamate', 'serine', 'alanine'],
+          done:c => `<b>${c.length} amino acids</b>, ${new Set(c.map(p => p.key)).size} kinds, `
+                  + 'as an extended strand. Fold it, and watch the side chains.',
+          round:c => {
+            const ala = c.map((p, i) => p.key === 'alanine' ? i + 1 : 0).filter(Boolean);
+            return helixNote(c, 'Those bonds are all backbone, so any sequence can coil; each '
+              + `side chain turned to fit. Drag to turn it: alanines ${ala.join(', ')} make one `
+              + 'nonpolar face.');
+          },
+        } },
+    ],
   },
 ];
 

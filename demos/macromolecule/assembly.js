@@ -25,9 +25,12 @@
  *    poseIn(h, g, donor, round) the same pose for a reveal walk, unspent specs
  *    start(spec, key, A)       a quaternion to deal a monomer at
  *    flat                      built in flat.js's layout, revealed in 3D
- *    views {to, back, decorate} two real poses of one molecule; `round` asks
+ *    views {to, back, decorate, settle}
+ *                              two real poses of one molecule; `round` asks
  *                              poseIn for the second. decorate(A) returns
- *                              objects drawn only in the second
+ *                              objects drawn only in the second; settle(A, at,
+ *                              view) may move atoms within a piece (into
+ *                              p.moved[view], by name) once every pose is known
  *    chains, ends              whether it has a sequence, and what its ends are
  *    unit, bond, label(p)      words
  *    lead, done, more, round   the note: before anything joins, all joined,
@@ -102,7 +105,7 @@
 
     const A = {
       get card(){ return card; }, get dim(){ return dim; },
-      sticks:null, chain:null, P:null, L:null, select:null,
+      sticks:null, chain:null, P:null, L:null, select:null, specIn:null,
     };
 
     /* ---- stage -------------------------------------------------------------- */
@@ -276,6 +279,7 @@
     function respec(p){ P.rebuild(p, rescale(specIn(p, dim))); }
 
     /* A piece's spec as it stands, in angstroms, in one view. */
+    A.specIn = (p, view) => specIn(p, view);
     function specIn(p, view){
       const base = unSpec(p.base, p.key);
       const drop = [...p.spent].flatMap(k => MacroSpec.role(base, k).leaves);
@@ -579,6 +583,7 @@
       const round = to === '3d';
       clearDecor();
       const at = walk(round);
+      if(card.views && card.views.settle) card.views.settle(A, at, round ? '3d' : 'flat');
 
       const movers = P.pieces.map(p => {
         const dest = rescale(specIn(p, round ? '3d' : 'flat'));

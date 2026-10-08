@@ -247,6 +247,69 @@ console.log('\n== 5d. the amide is planar, and the helix bonds to itself');
   ok(min > 1.75, `helix: eight alanines, closest non-bonded ${min.toFixed(2)} A`);
 }
 
+console.log('\n== 5e. side chains turn to fit a helix; the backbone does not move');
+{
+  // protein-lab's mixed helix. Rigid, glutamine's H sits 1.05 A from the
+  // backbone a turn below; sidechain.js turns chi bonds until nothing touches.
+  const SC = require('./sidechain.js');
+  const SEQ = ['alanine','glutamate','glutamine','alanine','alanine','glutamate','serine','alanine'];
+  const res = [{ spec:un(M[SEQ[0]]), q:[0,0,0,1], p:[0,0,0] }];
+  for(let i = 1; i < SEQ.length; i++){
+    const prev = res[i-1], g = un(M[SEQ[i]]);
+    const r = Peptide.pose(prev.spec, g, null, 'helix'), o = Peptide.react(prev.spec, g, r);
+    prev.spec = o.host;
+    res.push({ spec:o.guest, q:qm(prev.q, r.quat), p:vadd(qrot(prev.q, r.pos), prev.p) });
+  }
+  const out = SC.pack(res.map(r => ({ spec:r.spec, quat:r.q, pos:r.p })));
+  const BACK = new Set(['N','H','H2','CA','HA','HA1','HA2','C','O','OXT','HXT','CB']);
+  ok(out.every(m => Object.keys(m).every(n => !BACK.has(n))),
+     'only atoms beyond CB move: phi, psi and the H-bonds are untouched');
+  out.forEach((m, i) => { for(const [n, pos] of Object.entries(m))
+    res[i].spec.atoms[res[i].spec.names.indexOf(n)] = { el:'X', pos }; });
+  const W = (k, i) => vadd(qrot(res[k].q, res[k].spec.atoms[i].pos), res[k].p);
+  let inter = Infinity, intra = Infinity;
+  for(let i = 0; i < res.length; i++){
+    const s = res[i].spec, n = s.atoms.length, adj = s.atoms.map(() => []);
+    s.bonds.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
+    for(let a = 0; a < n; a++){
+      const hop = new Array(n).fill(9); hop[a] = 0;
+      for(const q = [a]; q.length; ){ const x = q.shift();
+        for(const y of adj[x]) if(hop[y] > hop[x] + 1){ hop[y] = hop[x] + 1; q.push(y); } }
+      for(let b = a + 1; b < n; b++) if(hop[b] > 3) intra = Math.min(intra, d(s.atoms[a].pos, s.atoms[b].pos));
+    }
+    for(let j = i + 1; j < res.length; j++)
+      for(let a = 0; a < n; a++) for(let b = 0; b < res[j].spec.atoms.length; b++){
+        if(j === i + 1 && (a === Spec.role(s,'carboxyl').keep || b === Spec.role(res[j].spec,'amino').keep)) continue;
+        inter = Math.min(inter, d(W(i, a), W(j, b)));
+      }
+  }
+  ok(inter > 1.75, `mixed helix: closest contact between residues ${inter.toFixed(2)} A`);
+  ok(intra > 2.0,  `mixed helix: closest contact within a residue, past 3 bonds, ${intra.toFixed(2)} A`);
+
+  /* THE ALANINES ON ONE FACE, which the page tells the student to turn and
+   * see. The axis is found, not assumed: each Ca's bisector points at it, and
+   * consecutive bisectors' cross product runs along it. */
+  const sub3 = (a,b) => a.map((v,i) => v - b[i]);
+  const cr = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  const nrm = a => { const L = Math.hypot(...a); return a.map(v => v / L); };
+  const CA = res.map((r, k) => W(k, r.spec.names.indexOf('CA')));
+  const CB = res.map((r, k) => W(k, r.spec.names.indexOf('CB')));
+  const bis = CA.slice(1, -1).map((c, i) => vadd(sub3(CA[i], c), sub3(CA[i+2], c)));
+  let ax = [0,0,0];
+  for(let i = 0; i + 1 < bis.length; i++) ax = vadd(ax, nrm(cr(bis[i], bis[i+1])));
+  ax = nrm(ax);
+  const mid = CA.reduce((a, c) => vadd(a, c.map(v => v / CA.length)), [0,0,0]);
+  const flat = v => { const r = sub3(v, mid), t = r.reduce((s, x, i) => s + x * ax[i], 0);
+                      return sub3(r, ax.map(x => x * t)); };
+  const u = nrm(flat(CB[0])), w = cr(ax, u);
+  const az = v => { const f = flat(v); return Math.atan2(f.reduce((s,x,i)=>s+x*w[i],0),
+                                                       f.reduce((s,x,i)=>s+x*u[i],0)) * 180/Math.PI; };
+  const ala = SEQ.map((k, i) => k === 'alanine' ? i : -1).filter(i => i >= 0);
+  const spread = Math.max(...ala.map(i => Math.abs(az(CB[i]))));
+  ok(spread < 70, `alanines ${ala.map(i => i + 1).join(', ')} face one way: every CB within `
+                  + `${spread.toFixed(0)} deg of the first`);
+}
+
 console.log('\n== 5a. every solver names the atom that bonds');
 {
   /* plane.js measures the latch AT that atom and falls back to the molecule's
