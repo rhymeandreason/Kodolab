@@ -1157,6 +1157,23 @@
         baked: "cytc-3ZCF.json" } },
   ];
 
+  /* 1OVA numbers its residues on α1-antitrypsin, with insertion codes; the
+     baker renumbers in file order so the ribbon breaks only at real gaps. */
+  const OVALBUMIN_VARIANTS = [
+    { id: '1OVA', default: true,
+      purpose: 'egg-white storage protein, serpin loop intact',
+      species: 'chicken',
+      source: { kind: 'rcsb', id: '1OVA' },
+      chains: 'A',
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 4,
+        residues: 385,
+        declared: 385,
+        ec: null,
+        baked: "ovalbumin-1OVA.json" } },
+  ];
+
   /* RAS: OFF, ON, A MUTANT STUCK ON, AND A MUTANT A DRUG HOLDS OFF. All four
      are superposed on 4Q21's core with both switches excluded, so what moves
      between them is the switch loops and the pocket, not the crystal's frame.
@@ -2421,6 +2438,23 @@
               why: 'the solved basis stands until a human picks one' },
       surface: { bake: false, why: 'the claim is the site, shown by the triad and ligand' },
       variants: MHETASE_VARIANTS,
+    },
+    {
+      key: 'ovalbumin', name: 'Ovalbumin', dir: 'proteins/ovalbumin',
+      blurb: 'Over half the protein in egg white, stored as food for the growing '
+           + 'chick. It is folded like a serpin, a protease trap, with the trap '
+           + 'loop in place, but it never springs.',
+      does: 'storage',
+      pipeline: 'trace',
+      fitWhy: 'one structure, nothing to superpose it onto',
+      view: { by: 'human',
+              why: 'globular enough that the solved basis is not kept; turned on the bench',
+              basis: [[-0.1723, 0.0996, -0.98],
+                      [0.66, 0.7502, -0.0398],
+                      [0.7312, -0.6537, -0.195]] },
+      surface: { bake: false,
+                 why: 'a fold claim, and the loop reads as sticks on the ribbon' },
+      variants: OVALBUMIN_VARIANTS,
     },
   ];
 
