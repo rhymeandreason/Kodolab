@@ -528,11 +528,18 @@
     arginine: {
       flat:true,
       flat2d:[[-2.468,1.781],[-2.468,0.356],[-3.702,-0.356],[-3.702,-1.781],[-4.936,0.356],[-1.234,-0.356],[0,0.356],[1.234,-0.356],[2.468,0.356],[3.702,-0.356],[4.936,0.356],[3.702,-1.781]],
-      name:'Arginine', formula:'C₆H₁₄N₄O₂', class:'aminoacid', res:'Arg', side:'–(CH₂)₃NHC(=NH)NH₂',
+      name:'Arginine', formula:'C₆H₁₅N₄O₂⁺', charge:1, class:'aminoacid', res:'Arg', side:'–(CH₂)₃NHC(NH₂)₂⁺',
+      /* THE SIDE CHAIN IS DRAWN CHARGED, the backbone neutral. The guanidinium
+       * pKa is about 12.5, so at pH 7.4 it is protonated and +1, and that is
+       * the property a sequence lesson reads off it. PubChem's record is the
+       * neutral base, –N=C(NH₂)₂; HE is added on NE, in the CD-NE-CZ plane on
+       * the bisector, and the + sits on NE in this one Lewis structure. The
+       * real charge is shared over all three N; the C–N lengths stay unequal
+       * because the source conformer is the base. */
       units:'angstrom',
       src:{path:'pubchem', cid:6322, record:'3d',
            conformer:'000018B200000004', sdf:'arginine.sdf',
-           tool:'sdf2spec', regen:'exact', fetched:'2026-10-07'},
+           tool:'sdf2spec', regen:'manual', fetched:'2026-10-07'},
       atoms:[ {el:'N',pos:[-1.154,0.536,-0.718]},
               {el:'H',pos:[-1.169,1.552,-0.635]},
               {el:'H',pos:[-2.013,0.204,-0.281]},
@@ -549,7 +556,7 @@
               {el:'C',pos:[-0.178,-3.637,-1.428]},
               {el:'H',pos:[-0.982,-1.734,-1.959]},
               {el:'H',pos:[0.781,-1.801,-1.986]},
-              {el:'N',pos:[1.018,-4.195,-0.795]},
+              {el:'N',pos:[1.018,-4.195,-0.795],q:1},
               {el:'H',pos:[-1.081,-3.958,-0.893]},
               {el:'H',pos:[-0.252,-3.974,-2.469]},
               {el:'C',pos:[1.115,-5.488,-0.769]},
@@ -558,10 +565,11 @@
               {el:'H',pos:[2.953,-5.539,0.219]},
               {el:'H',pos:[2.303,-7.1,-0.162]},
               {el:'H',pos:[0.405,-7.408,-1.19]},
-              {el:'H',pos:[-0.64,-6.141,-1.723]} ],
-      names:['N','H','H2','CA','HA','C','O','OXT','HXT','CB','CG','HB1','HB2','CD','HG1','HG2','NE','HD1','HD2','CZ','NH1','NH2','HH11','HH12','HH21','HH22'],
-      smiles:'NC(N)=NCCC[C@H](N)C(=O)O',
-      bonds:[ [0,1],[0,2],[0,3],[3,4],[3,5],[6,5,2],[7,5],[7,8],[9,3],[9,10],[9,11],[9,12],[10,13],[10,14],[10,15],[13,17],[13,18],[16,13],[16,19,2],[20,19],[20,22],[20,23],[21,19],[21,24],[21,25] ],
+              {el:'H',pos:[-0.64,-6.141,-1.723]},
+              {el:'H',pos:[1.734,-3.601,-0.397]} ],
+      names:['N','H','H2','CA','HA','C','O','OXT','HXT','CB','CG','HB1','HB2','CD','HG1','HG2','NE','HD1','HD2','CZ','NH1','NH2','HH11','HH12','HH21','HH22','HE'],
+      smiles:'NC(N)=[NH+]CCC[C@H](N)C(=O)O',
+      bonds:[ [0,1],[0,2],[0,3],[3,4],[3,5],[6,5,2],[7,5],[7,8],[9,3],[9,10],[9,11],[9,12],[10,13],[10,14],[10,15],[13,17],[13,18],[16,13],[16,19,2],[20,19],[20,22],[20,23],[21,19],[21,24],[21,25],[16,26] ],
       optH:[4,11,12,14,15,17,18],
       chirality:'L',
       pep:{ cC:5, oOH:7, hOH:8, nN:0, hN:[1,2] },
@@ -769,15 +777,14 @@
     //   of heavy atoms clears by at least 0.50 in screen XY.
     //
     //   Both angles are additionally constrained to put the carbonyl O on the
-    //   RIGHT and the group that actually differs (Gln's –NH2, Glu's –OH) on the
+    //   RIGHT and the group that actually differs (Gln's –NH2, Glu's –O⁻) on the
     //   LEFT, so the eye lands on the same spot in either panel and sees one
     //   substitution. This is what makes the pair read as one molecule edited;
     //   unconstrained, the two best-scoring rotamers splay opposite ways.
     //
-    //   Drawn NEUTRAL (side chain as –COOH, not –COO–), matching every other
-    //   amino acid in this file and `palmitate`'s 'Palmitic acid' naming. The
-    //   lesson is the amide->acid swap; the ionisation that follows from it is
-    //   named in the note rather than drawn.
+    //   Glutamate's side chain is drawn CHARGED, as at pH 7.4, like arginine's;
+    //   every backbone in this file stays neutral. The neutral acid is kept as
+    //   `glutamicAcid` for the one reaction that spends its side-chain –OH.
     AA.glutamine={ name:'Glutamine', formula:'C₅H₁₀N₂O₃', class:'aminoacid', res:'Gln', side:'–CH₂CH₂CONH₂',
       // conformer:null is the ACTIVE claim here, and 2026-07-30 made it worse
       // rather than better. ALL TEN currently-published conformers of CID 5961
@@ -831,7 +838,7 @@
         note:'Gliadin is glutamine-rich as well as proline-rich. This side chain '
            + 'ends in an amide — neutral, and nothing your immune system objects to. '
            + 'An enzyme in your gut wall swaps that –NH₂ for an –OH.' } };
-    AA.glutamate={ name:'Glutamic acid', formula:'C₅H₉NO₄', class:'aminoacid', res:'Glu', side:'–CH₂CH₂COOH',
+    AA.glutamicAcid={ name:'Glutamic acid', formula:'C₅H₉NO₄', class:'aminoacid', res:'Glu', side:'–CH₂CH₂COOH',
       // Same as glutamine, and checked the same way: all ten published
       // conformers of CID 33032 fetched and converted 2026-07-30, none
       // reproducing this spec (best |Δ| 5.827). Note these two are INDEPENDENT
@@ -862,7 +869,7 @@
               {el:'O',pos:[1.24,-4.4716,0.2742]},
               {el:'H',pos:[-0.9411,-5.47,0.2695]} ],
       names:['N','H','H2','CA','HA','C','O','OXT','HXT','CB','CG','HB1','HB2','CD','HG1','HG2','OE2','OE1','HE2'],
-      smiles:'N[C@@H](CCC(=O)[OH:1])C(=O)O',
+      smiles:'N[C@@H](CCC(=O)O)C(=O)O',
       bonds:[ [0,1],[0,2],[0,3],[3,4],[3,5],[3,9],[5,6,2],[5,7],[7,8],
               [9,10],[9,11],[9,12],[10,13],[10,14],[10,15],[13,16],[13,17,2],[16,18] ],
       optH:[4,11,12,14,15],   // nonpolar C–H; the hydroxyl H at 18 is a donor, never optional
@@ -880,14 +887,31 @@
        * that decides which of two real molecules gets built. Named by atom,
        * because side-chain indices are not pinned the way the backbone's are. */
       pepSide:[ { key:'gamma', label:'\u03b3\u2013COOH', keep:'CD', leaves:['OE2','HE2'] } ],
-      contrast:{ pair:'glutamine-glutamate', partner:'glutamine',
-        differs:'side-chain acid vs amide',
-        lesson:'how gluten becomes an antigen',
-        diff:['OE2','HE2'],
-        note:'The same residue after that swap: an oxygen where the amide nitrogen '
-           + 'was, giving up its H and leaving the side chain negative. The immune '
-           + 'receptor nearly everyone with celiac disease carries grips exactly this '
-           + 'charge — and ignores the neutral version.' } };
+    };
+    /* GLUTAMATE, the side chain as it is at pH 7.4: HE2 gone, OE2 carrying
+     * the 1−. Derived from the acid above so the two cannot drift; the acid
+     * stays because glutathione's γ bond needs a –COOH to condense. Bond
+     * orders keep the acid's one C=O, a Lewis structure of the carboxylate,
+     * whose two C–O lengths stay the acid's unequal ones. */
+    {
+      const acid = AA.glutamicAcid, he = acid.names.indexOf('HE2'), oe = acid.names.indexOf('OE2');
+      if(he !== acid.atoms.length - 1) throw new Error(SELFNAME + ': HE2 must be glutamic acid\'s last atom');
+      const { pepSide, smiles, ...rest } = acid;
+      AA.glutamate={ ...rest, name:'Glutamate', formula:'C₅H₈NO₄⁻', charge:-1, side:'–CH₂CH₂COO⁻',
+        src:{path:'built', method:'glutamicAcid with HE2 removed, q:−1 on OE2'},
+        atoms:acid.atoms.slice(0, he).map((a, i) => i === oe ? { ...a, q:-1 } : a),
+        names:acid.names.slice(0, he),
+        bonds:acid.bonds.filter(b => b[0] !== he && b[1] !== he),
+        smiles:'N[C@@H](CCC(=O)[O-:1])C(=O)O',
+        contrast:{ pair:'glutamine-glutamate', partner:'glutamine',
+          differs:'side-chain carboxylate vs amide',
+          lesson:'how gluten becomes an antigen',
+          diff:['OE2'],
+          note:'The same residue after that swap: an oxygen where the amide nitrogen '
+             + 'was, without its H, leaving the side chain negative. The immune '
+             + 'receptor nearly everyone with celiac disease carries grips exactly this '
+             + 'charge — and ignores the neutral version.' } };
+    }
   }
   register(AA, SELFNAME);
 })(this);

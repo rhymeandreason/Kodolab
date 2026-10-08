@@ -339,7 +339,7 @@ console.log('\n== 5c. the two named peptides');
   // GLUTATHIONE. Glutamate offers two carboxyls and both make a real molecule;
   // only the γ one is glutathione. Assert that BOTH work — a build where the
   // wrong answer is impossible is not a choice — and that they differ.
-  const glu = un(M.glutamate), cys = un(M.cysteine);
+  const glu = un(M.glutamicAcid), cys = un(M.cysteine);
   ok(!!Spec.free(glu,'carboxyl') && !!Spec.free(glu,'gamma'),
      'glutamate offers two carboxyls, so the linkage is a choice');
   const g = Peptide.pose(glu, cys, 'gamma'), a2 = Peptide.pose(glu, cys, 'carboxyl');
@@ -664,7 +664,7 @@ console.log('\n== 12. the drawn side chain is the one in the spec');
   // order would draw a different formula, and nothing on screen would say so.
   const D = require('./peptide-diagram.js');
   const WANT = { glycine:'H', alanine:'CH₃', serine:'CH₂OH', cysteine:'CH₂SH',
-                 glutamate:'CH₂CH₂COOH', glutamine:'CH₂CH₂CONH₂' };
+                 glutamicAcid:'CH₂CH₂COOH', glutamate:'CH₂CH₂COO⁻', glutamine:'CH₂CH₂CONH₂' };
   for(const [k, w] of Object.entries(WANT))
     ok(D.label(D.sideChain(M[k])) === w, `${k}: drawn as ${D.label(D.sideChain(M[k]))}`);
   const pro = D.sideChain(M.proline);

@@ -66,7 +66,7 @@ const PAIRS = [
      side-chain carboxyl is a third role on a molecule whose other two are the
      backbone's, so a renumbering of that spec moves the gamma-linkage without
      moving anything the other pairs would notice. */
-  ['glutamate', 'glycine'], ['glutamate', 'glycine', 'gamma'],
+  ['glutamicAcid', 'glycine'], ['glutamicAcid', 'glycine', 'gamma'],
 ];
 /* Which end the water's oxygen comes from, per class. Written here rather than
    counted, for reaction/check-reaction.js's reason: a list that derives itself

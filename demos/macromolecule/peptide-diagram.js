@@ -67,7 +67,8 @@
     for(;;){
       const nb = g.heavy(cur).filter(j => j !== prev);
       const h = g.hs(cur);
-      const own = g.el(cur) + (h ? 'H' + (h > 1 ? h : '') : '');
+      const q = spec.atoms[cur].q;
+      const own = g.el(cur) + (h ? 'H' + (h > 1 ? h : '') : '') + (q > 0 ? '⁺' : q < 0 ? '⁻' : '');
       if(nb.includes(N)) return { parts:[...parts, own], end:null, ring:true };
       if(g.el(cur) === 'C' && nb.length === 2){
         const dbl = nb.find(j => g.el(j) === 'O' && g.order(cur, j) === 2);

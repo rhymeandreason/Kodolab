@@ -193,10 +193,10 @@ const CARDS = [
      * the γ one is glutathione, and the γ bond is why no ordinary peptidase can
      * cut it. Nothing on the stage says which to use. */
     key:'glutathione', n:2, title:'Glutathione', sub:'γ-Glu-Cys-Gly',
-    monomers:['glutamate', 'cysteine', 'glycine'],
+    monomers:['glutamicAcid', 'cysteine', 'glycine'],
     home:[[-20, 8], [4, -10], [24, 8]],
     box:{ x:2, y:-1, rxz:30, hy:16 },
-    lead:'Glutamate has <b>two</b> &ndash;COOH: one on the backbone, one on the end of its '
+    lead:'Glutamic acid has <b>two</b> &ndash;COOH: one on the backbone, one on the end of its '
        + 'side chain. Cysteine will take either. Only one of them makes glutathione.',
     done:(c, card, A) => {
       const g = A.sticks.find(s => s.donor === 'gamma');
@@ -209,7 +209,7 @@ const CARDS = [
           + 'reads backbone bonds and cannot see this one, so the cell can keep a lot of it, '
           + 'and the &ndash;SH in the middle is what does the work.'
         : 'All backbone bonds: an ordinary tripeptide, and any protease takes it apart. '
-          + 'Glutathione is joined through glutamate&rsquo;s <b>side chain</b>.';
+          + 'Glutathione is joined through glutamic acid&rsquo;s <b>side chain</b>.';
     },
     more:(c, card, A) => card.done(c, card, A),
   },
@@ -251,8 +251,8 @@ const CARDS = [
           ...target(HBA, () => {
             const k = differ(HBA, HBS)[0];
             return `<b>Normal &beta; chain.</b> Position ${k} is glutamate: its side chain ends `
-              + 'in &ndash;COOH, which in blood has lost its H and carries a charge, so it sits '
-              + 'happily in water on the protein&rsquo;s surface. Now build the sickle version.';
+              + 'in &ndash;COO<sup>&minus;</sup>, its H lost in the blood, so it carries a charge '
+              + 'and sits happily in water on the protein&rsquo;s surface. Now build the sickle version.';
           }),
         } },
       { key:'hbs', label:'Sickle (HbS)', set:{
@@ -286,11 +286,13 @@ const CARDS = [
       { key:'vasopressin', label:'Vasopressin', set:{
           lead:`Another hormone, also ${VASOPRESSIN.length} long. Build <b>${read(VASOPRESSIN)}</b>.`,
           ...target(VASOPRESSIN, () => {
-            const d = differ(OXYTOCIN, VASOPRESSIN);
+            const d = differ(OXYTOCIN, VASOPRESSIN), r = VASOPRESSIN.indexOf('arginine');
             return `<b>Vasopressin.</b> Same length, same ring, and only ${d.length} positions `
-              + `differ (${d.join(' and ')}). Oxytocin drives labour and milk letdown; vasopressin `
-              + 'tells the kidney to keep water. Each fits a different receptor, and those side '
-              + 'chains are why. Next: <a href="helix-lab.html">folding a chain into a helix</a>.';
+              + `differ (${d.join(' and ')}). At ${r + 1}, arginine&rsquo;s side chain carries a `
+              + `<b>+</b> charge where oxytocin&rsquo;s ${M[OXYTOCIN[r]].name.toLowerCase()} carries none. `
+              + 'Oxytocin drives labour and milk letdown; vasopressin tells the kidney to keep '
+              + 'water. Each fits a different receptor, and those side chains are why. '
+              + 'Next: <a href="helix-lab.html">folding a chain into a helix</a>.';
           }),
         } },
     ],

@@ -49,7 +49,7 @@ by `src.sdf` exists.
 | `isoleucine.sdf` | 6306 | `000018A200000001` | `exact` | |
 | `asparagine.sdf` | 6267 | `0000187B00000002` | `exact` | |
 | `phenylalanine.sdf` | 6140 | `000017FC00000001` | `exact` | |
-| `arginine.sdf` | 6322 | `000018B200000004` | `exact` | |
+| `arginine.sdf` | 6322 | `000018B200000004` | `manual` | the neutral base; the spec adds HE to make the +1 guanidinium |
 | `methionine.sdf` | 6137 | `000017F90000000E` | `exact` | |
 
 Verified 2026-07-30, `atp.sdf` added 2026-08-12, `phosphate.sdf` 2026-09-02, `datp.sdf` 2026-09-05. Seven of eleven rebuild exactly; the three that do not are
