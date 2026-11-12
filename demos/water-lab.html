@@ -62,14 +62,15 @@
  * ============================================================= */
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const S = { step:0, temperature:22, tempEnabled:false, freezeEnabled:false,
-  saltEnabled:false, targetR:9 };
+  saltEnabled:false, targetR:9, paused:false };
+let phaseSaid=null;          // the phase last spoken to a screen reader; see syncPhase()
 
 /* ---------- steps ---------- */
 const stepMeta=[
  {tab:'A polar molecule',
   claim:`Water is V shaped. One end is slightly negative, the other slightly positive.`,
   body:`<p>Two lone pairs on oxygen push the hydrogens together, bending the molecule. Bent, its charged ends cannot cancel, so water is polar. Straight CO₂ cancels out and is not.</p>
-        <p>Drag to turn it. Click a label to see why each end carries its charge.</p>`},
+        <p>Drag to turn it, or Tab to the model and use the arrow keys. Click a label to see why each end carries its charge.</p>`},
  {tab:'Hydrogen bonds',
   claim:`The δ+ hydrogen of one water is pulled toward the δ− oxygen of the next. That pull is a hydrogen bond.`,
   body:`<p>Add water and watch the δ+ hydrogens find δ− oxygens. Every bond breaks and reforms with a new partner, over and over.</p>`},
@@ -90,7 +91,7 @@ const stepMeta=[
 const shell = LessonShell.create({
   brand: 'Water',
   hint: 'Drag to orbit · Scroll to zoom',
-  steps: stepMeta.map(m=>({ eyebrow:m.tab, title:m.claim, body:m.body })),
+  steps: stepMeta.map((m,i)=>({ eyebrow:m.tab, title:m.claim, body:m.body, describe:()=>describeStep(i) })),
   onStep: (step, i) => applyStep(i),
 });
 
@@ -138,11 +139,14 @@ shell.el.insertAdjacentHTML('beforeend', `
   <div id="tray">
     <div class="addcol" id="saltctl">
       <button class="pill" id="addsalt">Add Salt</button>
-      <button class="textbtn" id="clearsalt">Clear</button>
+      <button class="textbtn" id="clearsalt" aria-label="Clear salt">Clear</button>
     </div>
     <div class="addcol" id="waterctl">
       <button class="pill" id="addwater">Add Water</button>
-      <button class="textbtn" id="remwater">Remove</button>
+      <button class="textbtn" id="remwater" aria-label="Remove water">Remove</button>
+    </div>
+    <div class="addcol" id="pausectl">
+      <button class="pill pill--ghost" id="pausebtn" type="button" aria-label="Pause" title="Pause"></button>
     </div>
   </div>`);
 
@@ -294,6 +298,7 @@ const tinput=document.getElementById('trange'), tvalEl=document.getElementById('
       tdescEl=document.getElementById('tdesc'),
       tcoldEl=document.getElementById('tcold'), thotEl=document.getElementById('thot');
 function setTemp(v){ S.temperature=v; tvalEl.textContent=v+'°C';
+  tinput.setAttribute('aria-valuetext', v+'°C'+(phaseSaid ? ', '+phaseSaid.split(':')[0].toLowerCase() : ''));
   W.set({temperature:S.tempEnabled?v:null}); }
 tinput.oninput=()=>setTemp(parseFloat(tinput.value));
 // 3.4 px/°C on a laptop; less where the free band is shorter than the widest
@@ -360,35 +365,103 @@ function fitDistance(){ let rad=1.6; sim.mols.forEach(w=>{ if(!w.userData.escape
   return rad*2.0+6; }
 
 /* ---------- the tray ---------- */
-function addWater(){ if(sim.mols.length<60) W.set({nWater:sim.mols.length+1}); }
-function remWater(){ if(sim.mols.length>3) W.set({nWater:sim.mols.length-1}); }
+function addWater(){ if(sim.mols.length<60) W.set({nWater:sim.mols.length+1}); sayCounts(); }
+function remWater(){ if(sim.mols.length>3) W.set({nWater:sim.mols.length-1}); sayCounts(); }
 document.getElementById('addwater').onclick=addWater;
 document.getElementById('remwater').onclick=remWater;
-document.getElementById('addsalt').onclick=()=>{ if(salt.length<8) W.set({salt:SALT, nSalt:salt.length/2+1}); };
-document.getElementById('clearsalt').onclick=()=>W.set({nSalt:0});
+document.getElementById('addsalt').onclick=()=>{ if(salt.length<8) W.set({salt:SALT, nSalt:salt.length/2+1}); sayCounts(); };
+document.getElementById('clearsalt').onclick=()=>{ W.set({nSalt:0}); sayCounts(); };
 const formulaEl=document.getElementById('waterctl'), saltcardEl=document.getElementById('saltctl');
+
+/* PAUSE (WCAG 2.2.2): from step 2 the liquid never stops moving. Only the sim
+   holds; the camera still turns, so a frozen moment can be looked at. */
+const pauseEl=document.getElementById('pausectl'), pauseBtn=document.getElementById('pausebtn');
+const ICON_PAUSE='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>';
+const ICON_PLAY ='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M5 2.8v10.4a.8.8 0 0 0 1.2.7l8-5.2a.8.8 0 0 0 0-1.4l-8-5.2A.8.8 0 0 0 5 2.8z" fill="currentColor"/></svg>';
+function paintPause(){
+  const label=S.paused?'Resume':'Pause';
+  pauseBtn.innerHTML=S.paused?ICON_PLAY:ICON_PAUSE;
+  pauseBtn.setAttribute('aria-label',label); pauseBtn.title=label;
+}
+paintPause();
+pauseBtn.onclick=()=>{
+  S.paused=!S.paused; W.set({paused:S.paused});
+  paintPause();
+  shell.announce(S.paused?'Paused':'Resumed');
+};
+
+/* ---------- the scene as text ----------
+   A screen reader reads describeStep() as the canvas's description, and hears
+   events through shell.announce(). Every number comes from the sim. */
+function phaseWord(p){
+  if(!p) return 'liquid';
+  if(p.fz>0.85) return 'frozen';
+  if(p.fz>0.05) return 'freezing';
+  if(p.evapProb>0) return 'boiling';
+  return 'liquid';
+}
+function describeStep(n){
+  const N=sim.mols.length, T=S.temperature, ph=phaseWord(W.state()), nacl=salt.length/2;
+  const mols = N===1 ? 'One water molecule' : `${N} water molecules`;
+  if(n===0) return `One water molecule, seen front on: oxygen at the top, two hydrogens below, bent at ${angleDeg}. `
+    +`The oxygen carries δ− and each hydrogen δ+. Labels name the two charges and a covalent bond.`;
+  if(n===1) return `${mols}. Dashed lines mark hydrogen bonds, each from a δ+ hydrogen to the δ− oxygen of a neighbour. They keep breaking and reforming.`;
+  if(n===2) return `${mols} at ${T}°C, ${ph}. Dashed lines mark the hydrogen bonds, which loosen as the temperature rises.`;
+  if(n===3) return `${mols} at ${T}°C, ${ph}.`+(ph==='frozen'
+    ? ' Each molecule is held by four neighbours in an open hexagonal lattice, farther apart than in the liquid.'
+    : ' Cool it to 0°C to freeze it.');
+  return `${mols} and ${nacl} NaCl at ${T}°C.`+(nacl
+    ? ' Water molecules turn their oxygens toward each Na⁺ and their hydrogens toward each Cl⁻.'
+    : ' No salt added yet.');
+}
+function sayCounts(){
+  const N=sim.mols.length;
+  shell.announce(S.step===4 ? `${salt.length/2} NaCl, ${N} water molecules` : `${N} water molecules`);
+  shell.describe(describeStep(S.step));
+}
+/* The phase, spoken when it changes and has held for a moment: the
+   descriptor can flicker across a threshold while the slider moves. */
+let phaseSeen=null, phaseAt=0;
+function syncPhase(p){
+  if(!S.tempEnabled){ phaseSaid=phaseSeen=null; return; }
+  const d=tempDescriptor(p).replace(/\n&/g,' &').replace('\n',': ').replace(/\n/g,' ');
+  const now=performance.now();
+  if(d!==phaseSeen){ phaseSeen=d; phaseAt=now; return; }
+  if(d===phaseSaid || now-phaseAt<700) return;
+  if(phaseSaid!==null) shell.announce(`${S.temperature}°C. ${d}`);
+  phaseSaid=d;
+  tinput.setAttribute('aria-valuetext', S.temperature+'°C, '+d.split(':')[0].toLowerCase());
+  shell.describe(describeStep(S.step));
+}
 
 /* ---------- placing the instruments ----------
    The column stands just right of the glass, centred on the free band; the
-   tray sits under the model. Docked (narrow), the column
-   moves to the left edge and the tray sits on the panel's top edge. */
-const TOPBAR=64, BAR_GAP=28, TRAY_H=96, ROOM_W=950;
+   tray sits under the model. Docked (narrow), both move INTO the panel, below
+   the step's controls: on a phone-width stage there is no free band, and
+   floated over the model they covered it (WCAG 1.4.10). The panel scrolls. */
+const BAR_GAP=28, ROOM_W=950, NARROW_PX_PER_DEG=1.6;
+const instrEl=document.createElement('div'); instrEl.id='instr';
+shell.panel.querySelector('.lshell-scroll').appendChild(instrEl);
 function roomScale(){
   if(shell.narrow()) return 1.7;
   return Math.max(1, ROOM_W/(window.innerWidth-shell.panelRect().right-reserve));
 }
 function place(){
   const r=shell.panelRect(), narrow=shell.narrow();
-  const top = narrow ? TOPBAR : r.top, bottom = narrow ? r.top-TRAY_H : r.bottom;
-  const band = bottom-top;
-  pxPerDeg = clamp((band-130)/135, 1, 3.4);
-  tempBar.style.left = (narrow ? 16 : r.right+BAR_GAP)+'px';
-  tempBar.style.top  = (top+band/2)+'px';
-  // The tray centres on the stage beside the glass, ignoring the column: it
-  // stands below the column, so it does not need to clear it.
-  const x=shell.room().x+'px';
-  trayEl.style.left=x;
-  trayEl.style.bottom   = narrow ? (window.innerHeight-r.top+12)+'px' : '';
+  const home = narrow ? instrEl : shell.el;
+  if(tempBar.parentElement!==home){ home.appendChild(tempBar); home.appendChild(trayEl); }
+  if(narrow){
+    tempBar.style.left=tempBar.style.top=trayEl.style.left=trayEl.style.bottom='';
+    pxPerDeg=NARROW_PX_PER_DEG;
+  } else {
+    const band = r.bottom-r.top;
+    pxPerDeg = clamp((band-130)/135, 1, 3.4);
+    tempBar.style.left = (r.right+BAR_GAP)+'px';
+    tempBar.style.top  = (r.top+band/2)+'px';
+    // The tray centres on the stage beside the glass, ignoring the column: it
+    // stands below the column, so it does not need to clear it.
+    trayEl.style.left=shell.room().x+'px';
+  }
   if(S.tempEnabled) paintRange(parseFloat(tinput.min), parseFloat(tinput.max));
 }
 window.addEventListener('resize', place);
@@ -603,6 +676,8 @@ function applyStep(n){
   tempBar.style.display=S.tempEnabled?'flex':'none';
   formulaEl.style.display=n>=1?'flex':'none';       // add-water only once bonding starts
   saltcardEl.style.display=n>=4?'flex':'none';
+  pauseEl.style.display=n>=1?'flex':'none';
+  phaseSaid=phaseSeen=null;              // the step itself is announced; its phase is not news
   if(n===4) shell.ui.controls(`<div class="stats">
     <div class="stat wide"><span class="stat-label">Salt : water</span><span class="stat-value" id="s-ratio"></span>
       <span class="stat-sub" id="s-molal"></span></div>
@@ -628,7 +703,7 @@ const WATER_ENOUGH=25;
 const addWaterBtn=document.getElementById('addwater');
 function syncWaterNudge(){
   addWaterBtn.classList.toggle('is-nudging',
-    S.step>=1 && sim.mols.length<WATER_ENOUGH);
+    S.step>=1 && !S.paused && sim.mols.length<WATER_ENOUGH);
 }
 
 /* ---------- per frame ---------- */
@@ -666,6 +741,7 @@ W.on('frame', p=>{
   // atomkit.js faceCamera(); needs the camera's final position for this frame
   if(detail.visible) kit.faceCamera(camera);
   syncWaterNudge();
+  syncPhase(p);
   syncHbNote(); syncIceNotes(); syncSaltNotes();
   NOTES.step();
 });

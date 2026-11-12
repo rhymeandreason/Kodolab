@@ -34,8 +34,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-#tempbar .tlabel.hot  { color: var(--accent-hot) }
-#tempbar .tlabel.cold { color: var(--accent-cold) }
+/* Text in the slider's colours, darkened to 4.5:1 on the paper (WCAG 1.4.3).
+   The track's gradient keeps the true temperature scale. */
+#tempbar .tlabel.hot,  .lshell-panel .stat.hot  .stat-value { color: color-mix(in srgb, var(--accent-hot) 78%, #000) }
+#tempbar .tlabel.cold, .lshell-panel .stat.cold .stat-value { color: color-mix(in srgb, var(--accent-cold) 72%, #000) }
 
 #trange {
   -webkit-appearance: none;
@@ -47,9 +49,9 @@
   margin: 0;
   border-radius: 12px;
   cursor: pointer;
-  outline: none;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
 }
+#trange:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px }
 
 #trange::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -120,19 +122,32 @@
 
 /* Each wears its substance's colour, so the button and what it drops into
    the water are the same idea: water the H-bond blue, salt the ion-dipole
-   amber. */
-#addwater { --pill-fill: var(--action-blue) }
-#addsalt  { --pill-fill: var(--action-amber) }
+   amber. The label has to reach 4.5:1 on its fill (WCAG 1.4.3): white on the
+   blue darkened, dark ink on the amber, which no darkening gets white to. */
+#addwater { --pill-fill: color-mix(in srgb, var(--action-blue) 82%, #000) }
+#addsalt  { --pill-fill: var(--action-amber); color: var(--clay-900) }
+#tray .textbtn { color: var(--ink-2) }
+/* Pause is an icon in a circle, centred on the solid pills' midline: a pill
+   is its 16px padding twice plus one line of .95rem at line-height 1. */
+#pausebtn {
+  --pause-d: 40px;
+  width: var(--pause-d); height: var(--pause-d); padding: 0;
+  justify-content: center; border-radius: 50%;
+  margin-top: calc((32px + .95rem - var(--pause-d)) / 2);
+  color: var(--ink); background: rgba(255, 255, 255, .7);
+}
+#pausebtn svg { display: block }
 
 /* Step 5's readout in the panel: the ratio across the top, then the
-   phase-change points in the slider's own colours. */
+   phase-change points in the slider's own colours (above). */
 .lshell-panel .stat.wide { grid-column: 1 / -1 }
-.lshell-panel .stat.cold .stat-value { color: var(--accent-cold) }
-.lshell-panel .stat.hot  .stat-value { color: var(--accent-hot) }
 
-/* Docked panel: the column moves to the stage's left edge, above the glass. */
+/* Docked panel: the page moves both instruments into #instr, at the foot of
+   the panel's scroll, so they sit in its flow instead of over the model. */
 @media (max-width: 760px) {
+  #instr { display: flex; flex-direction: column; align-items: center; gap: 22px; margin-top: 22px }
+  #instr #tempbar, #instr #tray { position: static; transform: none }
+  #instr #tray { flex-wrap: wrap; justify-content: center }
   #treadout { margin-top: 0 }
   #treadout .tval { font-size: 24px }
-  #tray { bottom: auto }
 }

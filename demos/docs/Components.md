@@ -87,6 +87,8 @@ The panel's own classes, all styled: `.choices > .choice`, `.callout`, `.slider`
 
 `shell.viewOffset` is what every mount takes to centre its scene beside the panel. The shell knows nothing about the scene; the camera named by a step is flown in `onStep`.
 
+**Every step says what its scene shows, in `describe`** (a string, or a function of ctx): one or two sentences a screen reader reads as the canvas's description, for a student who cannot see it. Say what is on screen and what it means, read any number from the component, never type it. When the scene changes under a step, `shell.describe(text)` rewrites it, and `shell.announce(text)` speaks one event (a phase change, a count after a button). Announce events only, never a value that repaints every frame. The shell labels the canvas, makes it a tab stop that turns on the arrow keys, and announces each step itself.
+
 ### A second component is a second box
 
 **`shell.stage` holds one component.** A lesson that changes scale — the cell this happens in, the membrane inside it — asks the shell for a box per component and each step names the one it shows:
@@ -209,6 +211,7 @@ const w = WaterSim.mount(el, {
   freeze: false,       // may cooling build ice
   hbonds: true,        // draw the dashed network
   still: false,        // no thermal jiggle (one molecule under inspection)
+  paused: false,       // the liquid holds still; camera and labels keep running. A moving scene needs a Pause control
   cam: { theta:0.5, phi:1.15, r:26 },   // first mount only
 });
 ```

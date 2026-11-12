@@ -298,6 +298,8 @@ window.Annot = (function () {
        screen-space and constant — recomputing it per frame would burn a
        trig call per label to arrive at the same number. */
     const SIDE_GAP = 18;         // px from the dot to the label's near edge
+    const EDGE = 8;              // px a label keeps from the stage's side
+    const MIN_LEADER = 12;       // px of offset below which a label changes side instead
     /* How far past the middle of the stage a bracket has to be before it
        changes sides. Without it one sitting near the middle flips on alternate
        frames all the way through a turn. */
@@ -337,6 +339,9 @@ window.Annot = (function () {
       const r = keepOutFn();
       if (!r) return null;
       const lr = layer.getBoundingClientRect();
+      /* A panel docked across the bottom (the shell on a phone) has no free
+         side to flip to; the stage's own edges are the only rule then. */
+      if (r.width >= lr.width * 0.9) return null;
       const left = r.left - lr.left, right = r.right - lr.left;
       return { left, right, side: left >= lr.width / 2 ? 'right' : 'left' };
     }
@@ -396,7 +401,7 @@ window.Annot = (function () {
         set(text) { label.textContent = text; dot.setAttribute('aria-label', text); note._lw = null; return note; },
         // Move the label to the other side of its dot (dx<0 is left). The dot
         // does not move: it is the anchor, and only the typesetting changes.
-        setOffset(o) { note.offset = o; applyOffset(el, o); return note; },
+        setOffset(o) { note.offset = o; note._edgeKey = null; applyOffset(el, o); return note; },
         remove() {
           const i = notes.indexOf(note);
           if (i >= 0) notes.splice(i, 1);
@@ -743,8 +748,31 @@ window.Annot = (function () {
             : natural < ko.right + (n.flipped ? 8 : 0);
           if (want !== n.flipped) {
             n.flipped = want;
+            n._edgeKey = null;
             const free = (Math.abs(n.offset[0] || 0) || 1) * (ko.side === 'right' ? -1 : 1);
             applyOffset(n.el, want ? [free, n.offset[1] || 0] : n.offset);
+          }
+        }
+
+        /* THE STAGE'S OWN EDGE: a label running off the side is a label
+           nobody can read, which on a phone-width stage was most of them.
+           As authored if it fits; else a shorter leader on the same side;
+           else the other side, shortened as far as it must be. Steps of 4px,
+           so a drifting anchor does not rewrite the offset every frame. */
+        if (!n.flipped) {
+          if (n._lw == null) n._lw = n.label.offsetWidth;
+          const ox = n.offset[0] || 0, s0 = ox < 0 ? -1 : 1, mag = Math.abs(ox);
+          const room = s => Math.floor((s > 0 ? (w - EDGE) - (x + SIDE_GAP) - n._lw
+                                              : (x - SIDE_GAP) - n._lw - EDGE) / 4) * 4;
+          let side = s0, m = mag;
+          if (room(s0) < mag) {
+            if (room(s0) >= MIN_LEADER) m = room(s0);
+            else if (room(-s0) >= 0) { side = -s0; m = Math.min(mag, room(-s0)); }
+          }
+          const key = side * (m + 1);
+          if (key !== (n._edgeKey ?? s0 * (mag + 1))) {
+            n._edgeKey = key;
+            applyOffset(n.el, [side < 0 ? -Math.max(m, 0.01) : m, n.offset[1] || 0]);
           }
         }
 

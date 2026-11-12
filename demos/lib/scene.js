@@ -408,7 +408,8 @@
   /* ---- the stage: renderer + scene + camera + orbit + resize ---- */
   // opts: cam {theta,phi,r} initial · turn:'trackball' for pole-free rotation
   //       · phiMin/phiMax pitch clamp (turntable only) · rMin/rMax zoom
-  // clamp · wheel step per mouse detent · zoom:false drops wheel zoom entirely · onZoom(r) /
+  // clamp · wheel step per mouse detent · zoom:false drops wheel zoom entirely
+  // · keys:true arrow keys turn, + and − zoom (see below) · onZoom(r) /
   // onDrag() side-effect hooks (per-page state)
   // · ortho:true swaps in an OrthographicCamera — no perspective foreshortening,
   //   so a shape read off one side of the frame is the same size as the same
@@ -523,8 +524,13 @@
       // is now asking for a scale, and orbiting off whichever finger happens to
       // be `drag` swings the camera through the pinch.
       canvas.addEventListener('pointermove',e=>{ if(!drag||pts.size>1)return;
+        turn(e.clientX-drag.x, e.clientY-drag.y);
+        drag={x:e.clientX,y:e.clientY};});
+      canvas.addEventListener('pointerup',()=>drag=null);
+    }
+    /* One turn for the pointer and the keys, in pixels of drag. */
+    function turn(dx,dy){
         if(o.onDrag)o.onDrag();
-        const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
         if(o.orbit==='pan'){
           // `orbit:'pan'` slides the target in the view plane, for a flat
           // scene with nothing to turn. One pixel moves one pixel's worth of
@@ -546,8 +552,33 @@
           cam.theta-=dx*0.008;
           cam.phi=Math.max(o.phiMin,Math.min(o.phiMax,cam.phi-dy*0.008));
         }
-        drag={x:e.clientX,y:e.clientY}; applyCam();});
-      canvas.addEventListener('pointerup',()=>drag=null);
+        applyCam();
+    }
+    /* `keys:true` makes the canvas a tab stop that turns on the arrows (Shift
+       for a bigger step) and zooms on + and −: WCAG 2.1.1 asks that whatever a
+       drag does, a keyboard can. Opt-in, because a page of thumbnails would
+       otherwise put every card in the tab order; kit/lesson-shell.js turns it
+       on through Stage.defaults. The key stops here so a page's own arrow
+       handler (the shell's step keys) does not also fire.
+       ONLY WHEN THE KEYBOARD BROUGHT FOCUS HERE. A click or drag focuses the
+       canvas too, and a mouse user who then pressed Right to change step got
+       a turned model instead. Escape hands the arrows back. */
+    if(o.keys && o.orbit!==false){
+      canvas.tabIndex=0;
+      let byKey=false, pointerAt=-1e9;
+      canvas.addEventListener('pointerdown',()=>{ pointerAt=performance.now(); byKey=false; });
+      canvas.addEventListener('focus',()=>{ byKey=performance.now()-pointerAt>300; });
+      canvas.addEventListener('keydown',e=>{
+        if(e.key==='Escape'){ canvas.blur(); return; }
+        if(!byKey||e.metaKey||e.ctrlKey||e.altKey)return;
+        const px=e.shiftKey?36:12;
+        const d={ArrowLeft:[-px,0],ArrowRight:[px,0],ArrowUp:[0,-px],ArrowDown:[0,px]}[e.key];
+        if(d) turn(d[0],d[1]);
+        else if(o.zoom!==false && (e.key==='+'||e.key==='=')) zoomBy(Math.exp(-o.wheel*2));
+        else if(o.zoom!==false && (e.key==='-'||e.key==='_')) zoomBy(Math.exp(o.wheel*2));
+        else return;
+        e.preventDefault(); e.stopPropagation();
+      });
     }
     // `zoom:false` leaves the wheel to the browser. A lesson whose framing is
     // SOLVED — one scale for a whole pathway, so a shape's size is a claim about

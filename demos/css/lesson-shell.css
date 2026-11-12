@@ -12,7 +12,7 @@ body.lshell-page {
   --bg: #f4f2ec;
   --ink: #17181a;
   --ink-2: #55585e;
-  --ink-3: #9a9da3;
+  --ink-3: #66696f;           /* 4.9:1 on --bg, the WCAG AA floor for small text */
   --line: #e3e0d7;
   --panel: rgba(255, 255, 255, 0.86);
   /* THE SHELL'S OWN GREEN, AND IT IS NOT THE SITE ACCENT. kodo.css's #1f5f4f is
@@ -49,6 +49,28 @@ body.lshell-page.is-night { --bg: #232735; --on-bg: #f4f2ec; }
 
 .lshell-stage { position: fixed; inset: 0; }
 .lshell-stage canvas { display: block; touch-action: none; }
+
+/* ---------- keyboard and screen reader ---------- */
+/* ONE RING FOR EVERYTHING THE SHELL OWNS. Without it the dots and the
+   panel's buttons fell back to the browser's own, which on this paper is a
+   thin amber at about 2:1. */
+body.lshell-page :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 3px;
+}
+/* The canvas fills the window, so its ring goes inside the edge. */
+.lshell-stage canvas:focus-visible { outline: 3px solid var(--ink); outline-offset: -6px; }
+body.is-night :is(.lshell-topbar, .lshell-stage) :focus-visible { outline-color: var(--on-bg); }
+.lshell-panel:focus { outline: none; }
+.lshell-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.lshell-skip {
+  position: fixed; top: 12px; left: 12px; z-index: 20; padding: 10px 16px; border-radius: 999px;
+  background: var(--ink); color: #fff; font-family: var(--display); font-size: 14px; text-decoration: none;
+  transform: translateY(-200%);
+}
+.lshell-skip:focus { transform: none; }
 
 /* One box per component, stacked full-bleed, one shown at a time. Hidden with
    `visibility` so a component keeps its size and last frame and comes back
@@ -350,6 +372,13 @@ body.is-night .lshell-progress button.is-current { background: #9fd98a; }
   font-family: var(--display); letter-spacing: 0.14em; text-transform: uppercase; transition: opacity 1s, color 1s; pointer-events: none;
 }
 .lshell-hint.is-faded { opacity: 0; }
+/* Shown while the model has keyboard focus (kit/lesson-shell.js). */
+.lshell-keytip {
+  position: fixed; right: 28px; top: 72px; z-index: 6; margin: 0; padding: 8px 14px; border-radius: 999px;
+  background: var(--ink); color: #fff; font-family: var(--display); font-size: 13px; pointer-events: none;
+}
+.lshell-keytip[hidden] { display: none; }
+@media (max-width: 760px) { .lshell-keytip { right: auto; left: 50%; transform: translateX(-50%); top: 64px; white-space: nowrap; } }
 
 @media (max-width: 760px) {
   .lshell-panel { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 54vh; border-radius: 22px 22px 0 0; }

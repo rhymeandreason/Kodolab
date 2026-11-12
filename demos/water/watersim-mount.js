@@ -24,6 +24,8 @@
  *      freeze       whether cooling may build ice
  *      hbonds       draw the dashed network
  *      still        no thermal jiggle (one molecule under inspection)
+ *      paused       the liquid holds still; the camera, the labels and 'frame'
+ *                   keep running, so a student can turn a frozen moment over
  *      solvent      the dissolving scene's spacing; defaults to nSalt>0
  *      cam          Stage.create's cam, first mount only
  *      tuning       WaterSim.TUNING overrides, first mount only; live tuning
@@ -41,7 +43,7 @@
   'use strict';
 
   const DEFAULTS = { nWater:16, salt:null, nSalt:0, temperature:null, freeze:false,
-    hbonds:true, still:false, solvent:undefined };
+    hbonds:true, still:false, paused:false, solvent:undefined };
 
   function mount(el, params = {}) {
     if (!global.CardStage) throw new Error('watersim-mount.js: load kit/card-stage.js first');
@@ -60,6 +62,7 @@
       afterFrame: () => { if (nb) nb.step(); },
       step: () => {
         if (!sim) return;               // CardStage may tick before create returns
+        if (P.paused && last) { emit('frame', last); return; }
         const solvent = P.solvent === undefined ? sim.salt.length > 0 : !!P.solvent;
         last = sim.step({ still:P.still, solvent, showHbonds:P.hbonds,
           tempEnabled: P.temperature !== null, temperature: P.temperature === null ? 22 : P.temperature,

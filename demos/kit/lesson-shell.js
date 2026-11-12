@@ -14,6 +14,8 @@
  *                  short,             // a word or two for the dots' hover outline; else eyebrow
  *                  onEnter(ctx), onExit(ctx),
  *                  onLeave(ctx, to) -> seconds to hold before the swap,
+ *                  describe,          // what the scene shows, for a screen reader;
+ *                                     // a string or a function of ctx
  *                  hidden }, ...],      // true or a function: the step drops out
  *                                       // of the walk; shell.refresh() re-reads it
  *        ctx:   {},                       // handed to every step; the shell adds `ui` and `goTo`
@@ -56,6 +58,15 @@
  *  centre its scene in the room the panel leaves. The stage also carries
  *  `keepOut`, the panel's rect, which lib/annotate.js reads on its own so a
  *  callout behind the glass typesets to the free side.
+ *
+ *  A SCREEN READER GETS THE SCENE AS TEXT (WCAG 1.1.1). Every canvas in the
+ *  stage is labelled an image and described by the step's `describe`;
+ *  `shell.describe(text)` rewrites it when the scene changes under the step,
+ *  and `shell.announce(text)` speaks a change once, through a polite live
+ *  region. Announce events (a phase change, a count), never a value that
+ *  repaints every frame: a live region on a readout reads it sixty times a
+ *  second. The shell also turns on Stage's `keys`, so a canvas takes focus
+ *  and turns on the arrow keys; Left and Right change step everywhere else.
  *
  *  `ctx.after(sec, fn)` is a timeout that dies when the step does.
  *  kit/lesson-stage.js adds an A/B split, a switch, a scrubber and boxes a
@@ -105,7 +116,9 @@
     const el = document.createElement('div');
     el.className = 'lshell';
     el.innerHTML = `
+      <a class="lshell-skip" href="#lshell-main">Skip to the lesson</a>
       <div class="lshell-stage"></div>
+      <p class="lshell-sr" id="lshell-desc"></p>
       <header class="lshell-topbar">
         <div class="lshell-brand"><a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a><a class="lshell-section" hidden></a><span class="lshell-crumb"></span></div>
         <div class="lshell-steps">
@@ -113,7 +126,7 @@
           <ol class="lshell-outline"></ol>
         </div>
       </header>
-      <aside class="lshell-panel">
+      <main class="lshell-panel" id="lshell-main" tabindex="-1">
         <div class="lshell-scroll">
           <p class="eyebrow"></p>
           <h1 class="title"></h1>
@@ -125,7 +138,9 @@
           <span class="lshell-count"></span>
           <button class="btn primary" type="button">Next</button>
         </nav>
-      </aside>
+      </main>
+      <p class="lshell-sr" role="status" aria-live="polite"></p>
+      <p class="lshell-keytip" aria-hidden="true" hidden>Arrow keys turn the model · Esc to leave it</p>
       <div class="lshell-hint"></div>`;
     host.appendChild(el);
     const $ = sel => el.querySelector(sel);
@@ -135,7 +150,38 @@
       eyebrow: $('.eyebrow'), title: $('.title'), body: $('.body'), controls: $('.controls'),
       back: $('.lshell-nav .ghost'), next: $('.lshell-nav .primary'), count: $('.lshell-count'),
       hint: $('.lshell-hint'),
+      skip: $('.lshell-skip'), desc: $('#lshell-desc'), live: $('.lshell-sr[role="status"]'),
     };
+    /* A plain href="#lshell-main" resolves against a featured page's
+       <base href="/demos/"> and leaves the lesson. */
+    els.skip.addEventListener('click', e => { e.preventDefault(); els.panel.focus(); });
+    /* WHILE THE MODEL HOLDS THE ARROWS, SAY SO. They stop changing step there,
+       and nothing on screen said how to get them back. Keyboard focus only:
+       a click leaves the arrows on the steps (lib/scene.js). The canvas's own
+       label carries the same words for a screen reader. */
+    const keytip = el.querySelector('.lshell-keytip');
+    els.stage.addEventListener('focusin', e => {
+      if (e.target.tagName === 'CANVAS' && e.target.matches(':focus-visible')) keytip.hidden = false;
+    });
+    els.stage.addEventListener('focusout', () => { keytip.hidden = true; });
+    /* Stage reads its defaults at create, so every box mounted after this
+       takes focus and turns on the arrow keys. */
+    if (global.Stage) global.Stage.defaults = Object.assign({}, global.Stage.defaults, { keys: true });
+    function labelCanvases() {
+      const name = (opts.brand ? opts.brand + ': ' : '') + '3D model';
+      for (const c of els.stage.querySelectorAll('canvas')) {
+        c.setAttribute('role', 'img');
+        c.setAttribute('aria-label', c.tabIndex >= 0 ? name + '. Arrow keys turn it, plus and minus zoom, Escape leaves it.' : name);
+        c.setAttribute('aria-describedby', 'lshell-desc');
+      }
+    }
+    let announceT = 0;
+    function announce(text) {
+      clearTimeout(announceT);
+      els.live.textContent = '';
+      announceT = setTimeout(() => { els.live.textContent = text || ''; }, 60);   // a repeat of the same words still reads
+    }
+    function describe(text) { els.desc.textContent = text || ''; }
     /* WHICH OF THE PANEL'S NUMBERS THE PAGE REPAINTS, said once, here, beside
        the classes the sheet styles. A readout's first value is written into
        the page's source like any other words, so nothing downstream can tell
@@ -451,6 +497,7 @@
       });
     }
 
+    let swapped = false;
     function swap(i) {
       if (current >= 0 && steps[current].onExit) steps[current].onExit(ctx);
       ctx.clearTimers();
@@ -470,6 +517,11 @@
       if (scenes.size) apply(step.scene ? [].concat(step.scene) : (shown || []));
       if (opts.onStep) opts.onStep(step, i, ctx);
       if (step.onEnter) step.onEnter(ctx);
+      labelCanvases();
+      describe(typeof step.describe === 'function' ? step.describe(ctx) : step.describe);
+      /* Not on the step a page opens on: the panel is what is read first. */
+      if (swapped) announce(`Step ${i + 1} of ${steps.length}. ${step.title || ''}`);
+      swapped = true;
       document.dispatchEvent(new CustomEvent('lessonshell:step', { detail: { i, n: steps.length } }));
       /* Guarded: lib/track.js loads only for a browser holding a class code. */
       if (window.Track) Track.step(i, steps.length, step.title);
@@ -477,7 +529,13 @@
     els.next.addEventListener('click', () => goTo(current === steps.length - 1 ? 0 : current + 1));
     els.back.addEventListener('click', () => goTo(current - 1));
     const onKey = e => {
-      if (e.target.matches('input, textarea, select')) return;
+      /* A VERTICAL slider moves on Up and Down, so Left and Right stay Back
+         and Next on it. Safari's Tab skips buttons by default and lands on
+         one, and the arrows went on changing the temperature. */
+      const t = e.target;
+      const vertical = t.matches('input[type="range"]') && getComputedStyle(t).writingMode.startsWith('vertical');
+      if (t.matches('input, textarea, select') && !(vertical && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) return;
+      if (vertical) e.preventDefault();
       if (e.key === 'ArrowRight') { if (!els.next.classList.contains('is-hidden')) goTo(current + 1); }   // goTo ignores past-the-end, so the arrow never restarts
       if (e.key === 'ArrowLeft') goTo(current - 1);
     };
@@ -510,6 +568,7 @@
          object it hangs off. */
       q: sel => ui.q(sel), qa: sel => ui.qa(sel),
       goTo, get current() { return current; },
+      describe, announce,
       /* `scene(name, mount)` registers and returns the component;
          `showScene(name | [names])` puts one on stage outside the step order,
          for a control that switches scale where a step would be too much. */
