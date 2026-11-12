@@ -70,8 +70,7 @@ let phaseSaid=null;          // the phase last spoken to a screen reader; see sy
 const stepMeta=[
  {tab:'A polar molecule',
   claim:`Water is V shaped. One end is slightly negative, the other slightly positive.`,
-  body:`<p>Two lone pairs on oxygen push the hydrogens together, bending the molecule. Bent, its charged ends cannot cancel, so water is polar. Straight CO₂ cancels out and is not.</p>
-        <p>Drag to turn it, or Tab to the model and use the arrow keys. Click a label to see why each end carries its charge.</p>`},
+  body:`<p>Two lone pairs on oxygen push the hydrogens together, bending the molecule. Bent, its charged ends cannot cancel, so water is polar. Straight CO₂ cancels out and is not.</p>`},
  {tab:'Hydrogen bonds',
   claim:`The δ+ hydrogen of one water is pulled toward the δ− oxygen of the next. That pull is a hydrogen bond.`,
   body:`<p>Add water and watch the δ+ hydrogens find δ− oxygens. Every bond breaks and reforms with a new partner, over and over.</p>`},
@@ -442,7 +441,7 @@ let hbSlow=0;
 let listenBase=null, hbSaid=null, tBand=null;
 function listenStep(i, read){
   if(i===0) return [
-    ...read.slice(0,2),            // title and first paragraph; the last is mouse instructions, said for the keyboard below
+    ...read,
     {pause:500},
     {say:'Here is one water molecule, seen from the front. The red sphere at the top is the oxygen. The two white spheres below it are hydrogens.'},
     {say:`The two bonds meet at an angle of ${angleDeg}, so the molecule is bent.`},
