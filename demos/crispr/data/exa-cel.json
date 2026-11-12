@@ -1,0 +1,23 @@
+{
+  "what": "Exagamglogene autotemcel (exa-cel, Casgevy): CRISPR-Cas9 edit of the BCL11A +58 erythroid enhancer in a patient's own blood stem cells, for sickle cell disease.",
+  "approved": { "fda": 2023, "note": "the first CRISPR therapy approved anywhere" },
+  "target": {
+    "gene": "BCL11A",
+    "element": "+58 erythroid enhancer",
+    "motif": "a GATA1 binding site at the core of that enhancer",
+    "why": "BCL11A is the repressor that switches the gamma-globin genes off after birth. The +58 enhancer is what drives BCL11A in red-cell precursors and nowhere else, so breaking it lowers BCL11A in those cells only.",
+    "repair": "Cas9 cuts both strands; the cell rejoins the ends by non-homologous end joining, which leaves small insertions or deletions that break the motif."
+  },
+  "trial": {
+    "name": "CLIMB SCD-121",
+    "id": "NCT03745287",
+    "treated": 44,
+    "vocFree12mo": 0.97,
+    "vocFreeCI": [0.84, 1.0],
+    "hbfMean": 0.40,
+    "hbfFrom": "month 6",
+    "cellsWithHbF": 0.95,
+    "source": "Frangoul et al., N Engl J Med 2024;390:1649-1662"
+  },
+  "caveat": "One infusion, after chemotherapy that clears the patient's own marrow. The edit is made outside the body in the patient's stem cells, and is not inherited."
+}

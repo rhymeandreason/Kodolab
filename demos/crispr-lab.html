@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Relative paths resolve against /demos/ so a short URL can serve this file
+     unmoved. lib/site.js is absolute for the same reason. -->
+<base href="/demos/">
+<script defer src="/demos/lib/site.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Curing sickle cell with CRISPR</title>
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/lesson-shell.css">
+<link rel="stylesheet" href="dna/codon.css">
+<style>
+  /* Proteinbox's own ribbon / skin / surface segments: the switch on this
+     page is HbS / HbF, and two controls in one room is one too many. */
+  .cr-protein .pbox-rep{display:none}
+  .lshell-panel .cfig{margin:2px 0 10px}
+  /* Two genes, side by side: one card each, sharing the panel's width. */
+  .cr-codons{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+  .cr-codons .cfig{margin:0;min-width:0}
+  /* The card's own titles are uppercased, which turns β into a capital Beta.
+     These two name a chain, so they keep their case. */
+  .cr-codons .cchead{text-transform:none;letter-spacing:.4px}
+  .cr-chart{font-family:var(--display);color:var(--ink-2)}
+  .cr-chart svg{display:block;width:100%;height:auto;overflow:visible;font-size:12px}
+  .cr-chart .src{margin-top:4px;font-size:11px;color:var(--ink-3)}
+  /* The gene diagram: one row per actor, the arrow between them live. */
+  .cr-gene{margin-top:12px;display:grid;gap:6px;font-family:var(--display);font-size:12px;color:var(--ink-2)}
+  .cr-gene div{display:flex;align-items:center;gap:8px}
+  .cr-gene i{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+  .cr-gene b{color:var(--ink);font-weight:500}
+  .cr-gene .off{opacity:.45;text-decoration:line-through}
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/palette.js"></script>
+<script src="lib/tokens-from-palette.js"></script>
+<script src="lib/molecules.js"></script>
+<script src="lib/scene.js"></script>
+<script src="lib/geo.js"></script>
+<script src="lib/annotate.js"></script>
+<script src="kit/card-stage.js"></script>
+<script src="kit/lesson-shell.js"></script>
+<script src="kit/lesson-stage.js"></script>
+<script src="kit/ribbon.js"></script>
+<script src="kit/tube.js"></script>
+<script src="kit/surface.js"></script>
+<script src="kit/nucleic.js"></script>
+<script src="kit/proteinbox.js"></script>
+<script src="proteins/proteins.js"></script>
+<script src="proteins/nucleic-acids.js"></script>
+<script src="bloodcell/bloodcell.js"></script>
+<script src="bloodcell/bloodflow.js"></script>
+<script src="sickle/sickle-fibre.js"></script>
+<script src="sickle/hbcrowd.js"></script>
+<script src="dna/codon.js"></script>
+<!-- For HBB and the substitution in it. ONE COPY OF THE SEQUENCE, and it is
+     the sickle lesson's, so the two pages cannot print different genes. The
+     steps it also defines are not used here. -->
+<script src="sickle/sickle-steps.js"></script>
+<script src="crispr/crispr-steps.js"></script>
+<script>
+'use strict';
+/* =============================================================================
+ *  crispr-lab.html — the wiring. Content is crispr/crispr-steps.js.
+ * =============================================================================
+ *  Boxes as sickle-lab.html has them (kit/lesson-stage.js): built when a step
+ *  asks, destroyed when none does. The page adds `switchChart`, the γ/β
+ *  switch drawn from CrisprSteps.SWITCH.
+ * ========================================================================== */
+
+const V = { HbS: CrisprSteps.HBS, HbF: CrisprSteps.HBF };
+
+const shell = LessonShell.create({
+  brand: 'Curing sickle cell',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: CrisprSteps.steps,
+  ctx: { state: {} },
+  onStep(step, i) { document.body.dataset.beat = i + 1; },
+});
+const ctx = shell.ctx;
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const hexCss = h => '#' + h.toString(16).padStart(6, '0');
+
+/* γ and β as two lines summing to one. γ takes HbF's γ6 colour from the
+   crowd, so the chain on the chart and the spot on the molecule match. */
+ctx.switchChart = sw => {
+  const W = 300, H = 120, L = 0, x0 = 30, x1 = 70;
+  const x = wk => (L + (wk - x0) / (x1 - x0) * W).toFixed(1);
+  const y = v => (H - v * H).toFixed(1);
+  const cg = hexCss(HbCrowd.markOf('HbF')), cb = css('--ink-2') || '#555';
+  const line = (f, col) => `<polyline points="${sw.points.map(p => `${x(p.wk)},${y(f(p))}`).join(' ')}"
+      fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>
+    ${sw.points.map(p => `<circle cx="${x(p.wk)}" cy="${y(f(p))}" r="3.5" fill="${col}"/>`).join('')}`;
+  const end = sw.points[sw.points.length - 1];
+  const pct = v => Math.round(v * 100) + '%';
+  return `<div class="cr-chart" role="img" aria-label="γ chain production falls and β rises around birth">
+    <svg viewBox="-28 -14 ${W + 60} ${H + 40}">
+      <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>
+      <line x1="0" x2="0" y1="0" y2="${H}" stroke="var(--line)"/>
+      <text x="-6" y="4" text-anchor="end" fill="var(--ink-3)">${pct(1)}</text>
+      <text x="-6" y="${H + 4}" text-anchor="end" fill="var(--ink-3)">${pct(0)}</text>
+      <line x1="${x(sw.birth)}" x2="${x(sw.birth)}" y1="0" y2="${H}" stroke="var(--ink-3)" stroke-dasharray="3 4"/>
+      <text x="${x(sw.birth)}" y="${H + 18}" text-anchor="middle" fill="var(--ink-2)">birth</text>
+      <text x="${x(x0)}" y="${H + 18}" fill="var(--ink-3)">before</text>
+      <text x="${W}" y="${H + 18}" text-anchor="end" fill="var(--ink-3)">after</text>
+      ${line(p => p.gamma, cg)}${line(p => 1 - p.gamma, cb)}
+      <text x="${+x(end.wk) + 6}" y="${+y(end.gamma) + 4}" fill="${cg}" font-weight="500">γ</text>
+      <text x="${+x(end.wk) + 6}" y="${+y(1 - end.gamma) + 4}" fill="${cb}" font-weight="500">β</text>
+    </svg>
+    <div class="src">Share of β-like chains being made, ${sw.source}</div>
+  </div>`;
+};
+
+/* The switch as three actors, and what the cut does to them. `cut` is the
+   state after the edit: BCL11A's enhancer is broken, so BCL11A falls and the
+   γ genes it was holding down come back on. A diagram, drawn as one. */
+ctx.geneDiagram = cut => {
+  const g = hexCss(HbCrowd.markOf('HbF')), ink = css('--ink-3') || '#999';
+  const row = (col, label, text, off) =>
+    `<div><i style="background:${col}"></i><span class="${off ? 'off' : ''}"><b>${label}</b> ${text}</span></div>`;
+  return `<div class="cr-gene">
+    ${row(ink, 'BCL11A enhancer', cut ? 'cut, so it no longer drives the gene' : 'drives BCL11A in red-cell precursors', cut)}
+    ${row(ink, 'BCL11A protein', cut ? 'falls' : 'holds the γ genes off', cut)}
+    ${row(g, 'γ-globin genes', cut ? 'back on: fetal hemoglobin again' : 'off since just after birth', !cut)}
+  </div>`;
+};
+
+/* A fetched JSON file, once per URL, for a step that prints its numbers. */
+const FETCHED = {};
+ctx.data = url => (FETCHED[url] || (FETCHED[url] = fetch(url).then(r => r.json())));
+
+/* ---- the scenes ------------------------------------------------------------------ */
+
+const TRACE = {};
+const traces = Promise.all(Object.entries(V).map(([k, v]) =>
+  fetch(v.trace).then(r => r.json()).then(t => { TRACE[k] = t; })));
+
+/* Which chains carry position 6 and 87 is per file: 2HBS's β are B and D,
+   1FDH's γ are G and H, and 1FDH's B is an α. Read off each bake's subunits. */
+const nonAlpha = t => { const s = t.meta.subunits; return [].concat(s.beta || s.gamma || []); };
+const greek = t => (t.meta.subunits.gamma ? 'γ' : 'β');
+const AA3 = {};
+for (const a of Object.values(Codon.AA)) if (a.three) AA3[a.three.toUpperCase()] = a.name;
+const resAt = (t, chain, num) => {
+  const a = t.pocket.atoms.find(x => x.chain === chain && x.num === num);
+  return a ? AA3[a.res] : '?';
+};
+
+/* ONE PROTEIN BOX, SWAPPED (sickle-lab.html says why). Two patches, one per
+   position. A patch is cut once per surface, preloads included, so its
+   selector cannot depend on which file is showing: it is the union of both
+   files' (chain, number, residue) at that position on a β-like chain, read
+   off the bakes. 1FDH's B is an α, and its residue there is not in the set. */
+const siteKeys = num => new Set(Object.values(TRACE).flatMap(t => t.pocket.atoms
+  .filter(a => a.num === num && nonAlpha(t).includes(a.chain))
+  .map(a => `${a.chain}:${num}:${a.res}`)));
+function makeProtein(h) {
+  h.classList.add('cr-protein');
+  let notes = null, cur = 'HbF';
+  const P = Proteinbox.create({
+    mount: h, protein: 'hemoglobin', variant: V.HbF.id,
+    trace: V.HbF.trace, surface: V.HbF.surface,
+    chains: V.HbF.chains, skin: true, orbit: true,
+    viewOffset: shell.stage.viewOffset,
+    afterFrame: () => { if (notes) notes.step(); },
+  });
+  P.setRep('skin');
+  const SITE = parseInt(css('--sketch').slice(1), 16) || 0x3c4650;
+  traces.then(() => {
+    for (const [name, num, colour] of [['p6', 6, HbCrowd.markOf(cur)], ['p87', 87, SITE]]) {
+      const keys = siteKeys(num);
+      P.patch(name, (ch, n, nm) => keys.has(`${ch}:${n}:${nm}`), { colour, visible: showing });
+    }
+    P.preloadSurface(V.HbS.surface);
+    P.preloadData(TRACE.HbS, { chains: V.HbS.chains });
+  });
+
+  const _v = new THREE.Vector3(), _far = new THREE.Vector3(0, 1e6, 0);
+  const ca = (k, num) => () => {
+    const t = TRACE[cur];
+    if (!t) return _far;
+    const ch = t.chains[nonAlpha(t)[k]], i = ch.nums.indexOf(num);
+    return P.group.localToWorld(_v.fromArray(ch.CA[i]));
+  };
+  const CARD = {
+    HbS: { 6: 'Greasy. It reaches into a pocket on the next molecule, and the two stick.',
+           87: 'Small. It sits beside the pocket a sickle valine docks into, and leaves room for it.' },
+    HbF: { 6: 'Charged, the same as normal adult hemoglobin. There is nothing here to stick.',
+           87: 'Longer. It crowds the pocket, so a sickle valine cannot dock onto this molecule either.' },
+  };
+  notes = Annot.create(THREE, h, P.camera, { mode: 'on' });
+  const marks = { 6: notes.add({ text: '', at: ca(0, 6), offset: [36, -26] }),
+                  87: notes.add({ text: '', at: ca(1, 87), offset: [-36, 28] }) };
+  let showing = false;
+  function label() {
+    const t = TRACE[cur];
+    for (const num of [6, 87]) {
+      marks[num].set(`${greek(t)}${num} · ${resAt(t, nonAlpha(t)[num === 6 ? 0 : 1], num)}`);
+      marks[num].card = CARD[cur][num];
+    }
+    notes.show(showing);
+  }
+  function show(v, o = {}) {
+    cur = v;
+    showing = !!o.marks;
+    traces.then(() => {
+      P.setData(TRACE[v], { chains: V[v].chains, keep: true });
+      P.setSurface(V[v].surface);
+      P.setPatch('p6', { colour: HbCrowd.markOf(v), visible: showing });
+      P.setPatch('p87', { visible: showing });
+      label();
+    });
+  }
+  return { show, box: P, start: P.start, stop: P.stop, destroy() { notes.clear(); P.destroy(); } };
+}
+
+/* THE THREE CAS9 STATES, one box. They are fitted onto 5F9R by their baker,
+   so a press moves the domains that moved and nothing else; the strand
+   colours are the registry's, so this page, the bench and the gallery card
+   cannot disagree about which strand is the guide. */
+function makeCas9(h) {
+  const E = NucleicAcids.byKey('cas9');
+  const P = Proteinbox.create({ mount: h, orbit: true, sub: 10,
+    stage: { ortho: false, turn: 'trackball' },
+    viewOffset: shell.stage.viewOffset });
+  const cache = {};
+  let want = null;
+  const show = id => {
+    want = id;
+    const v = NucleicAcids.variantOf(E, id);
+    (cache[id] || (cache[id] = fetch(E.dir + '/data/' + v.read.baked).then(r => r.json())))
+      .then(t => {
+        if (want !== id) return;
+        P.setData(t, { keep: true, colors: NucleicAcids.colorsOf(E, v) || undefined,
+                       view: NucleicAcids.viewOf(E) || undefined });
+      });
+    return P;
+  };
+  /* The states the reader has not pressed yet, decoded while they read. */
+  for (const v of E.variants) cache[v.id] = fetch(E.dir + '/data/' + v.read.baked).then(r => r.json());
+  return { show, box: P, start: P.start, stop: P.stop, destroy: P.destroy };
+}
+
+const BOXES = {
+  crowd:   { side: 'full', mount: h => HbCrowd.mount(h, { variant: 'HbS', stick: true, grow: 16, viewOffset: shell.stage.viewOffset }) },
+  protein: { side: 'full', mount: h => makeProtein(h) },
+  cas9:    { side: 'full', mount: h => makeCas9(h) },
+  flowS:   { side: 'left',  mount: h => BloodFlow.mount(h, { sickle: 1 }) },
+  flowT:   { side: 'right', mount: h => BloodFlow.mount(h, { sickle: 0 }) },
+};
+
+LessonStage.attach(shell, {
+  toggle: [{ value: 'HbS', label: `Sickle · ${V.HbS.label}` }, { value: 'HbF', label: `Fetal · ${V.HbF.label}` }],
+  boxes: BOXES,
+});
+shell.goTo((() => {
+  const m = /[?&]step=(\d+)/.exec(location.search);
+  return m ? Math.max(1, Math.min(CrisprSteps.steps.length, +m[1])) - 1 : 0;
+})());
+</script>
+</body>
+</html>
