@@ -60,7 +60,7 @@ body.lshell-page :where(a, button, input, select, textarea, summary, [tabindex]:
 /* The canvas fills the window, so its ring goes inside the edge. */
 .lshell-stage canvas:focus-visible { outline: 3px solid var(--ink); outline-offset: -6px; }
 body.is-night :is(.lshell-topbar, .lshell-stage) :focus-visible { outline-color: var(--on-bg); }
-.lshell-panel:focus { outline: none; }
+.lshell-panel:focus, .lshell-panel .title:focus { outline: none; }
 .lshell-sr {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
   overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
@@ -150,6 +150,30 @@ body.is-night .lshell-progress button.is-current { background: #9fd98a; }
 .lshell-scroll.swap > *:nth-child(2) { animation-delay: 0.05s; }
 .lshell-scroll.swap > *:nth-child(3) { animation-delay: 0.10s; }
 .lshell-scroll.swap > *:nth-child(4) { animation-delay: 0.16s; }
+/* Listen (kit/listen.js): a speaker in the panel's top-right corner is the
+   switch, and the player sits under the text while it is on. */
+.lshell-panel .lshell-speak { position: absolute; top: 18px; right: 18px; z-index: 1; width: 40px; height: 40px; }
+.lshell-panel .lshell-speak svg { width: 18px; height: 18px; }
+.lshell-speak[hidden] { display: none; }
+.lshell-panel .lshell-speak.is-on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.lshell-speak:not([hidden]) ~ .lshell-scroll .eyebrow { padding-right: 48px; }
+.lshell-listen { padding: 12px 20px; border-top: 1px solid var(--line); }
+.lshell-listen[hidden] { display: none; }
+.lshell-listen-bar { display: flex; align-items: center; gap: 8px; }
+.lshell-ibtn {
+  display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--ink); cursor: pointer;
+  font-family: var(--display); font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.lshell-ibtn:hover { border-color: var(--ink-3); }
+.lshell-listen-bar .lshell-continue { margin-left: auto; padding: 8px 18px; }
+.lshell-listen-bar .lshell-continue[hidden] { display: none; }
+.lshell-listen-bar [data-act="stop"] { margin-left: auto; }
+.lshell-listen-bar .lshell-continue:not([hidden]) + [data-act="stop"] { margin-left: 0; }
+.lshell-caption { margin: 8px 0 0; font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.4; color: var(--ink-2); }
+.lshell-caption:empty { display: none; }
+/* The line being read, marked in the panel, so the text reads along. */
+.lshell-panel .is-reading { background: var(--accent-soft); box-shadow: 0 0 0 6px var(--accent-soft); border-radius: 4px; transition: background .2s, box-shadow .2s; }
 .lshell-nav {
   display: flex; justify-content: space-between; align-items: center;
   padding: 14px 20px 18px; border-top: 1px solid var(--line);

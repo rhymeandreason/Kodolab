@@ -8,6 +8,8 @@
  *
  *      const shell = LessonShell.create({
  *        brand: 'The Mass of a Tree',
+ *        title: 'The Mass of a Tree',      // optional: what the narration opens with
+
  *        section: { label: 'library', href: '/library' },   // optional, beside the mark
  *        hint:  'Drag to orbit · Scroll to zoom',
  *        steps: [{ eyebrow, title, body, nextLabel, camera,
@@ -16,6 +18,9 @@
  *                  onLeave(ctx, to) -> seconds to hold before the swap,
  *                  describe,          // what the scene shows, for a screen reader;
  *                                     // a string or a function of ctx
+ *                  listen(ctx, read), // the step's narrated chapter, when the page
+ *                                     // loads kit/listen.js: beats, `read` being the
+ *                                     // panel's own text as beats; else read + describe
  *                  hidden }, ...],      // true or a function: the step drops out
  *                                       // of the walk; shell.refresh() re-reads it
  *        ctx:   {},                       // handed to every step; the shell adds `ui` and `goTo`
@@ -67,6 +72,9 @@
  *  repaints every frame: a live region on a readout reads it sixty times a
  *  second. The shell also turns on Stage's `keys`, so a canvas takes focus
  *  and turns on the arrow keys; Left and Right change step everywhere else.
+ *  The stage is a region named "3D model", after the panel in reading order;
+ *  a page's own controls for the scene go in a region of their own
+ *  (water-lab's "Model controls") so the rotor lists both.
  *
  *  `ctx.after(sec, fn)` is a timeout that dies when the step does.
  *  kit/lesson-stage.js adds an A/B split, a switch, a scrubber and boxes a
@@ -100,6 +108,16 @@
 (function (global) {
   'use strict';
 
+  const svg = d => `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">${d}</svg>`;
+  const ICON = {
+    play: svg('<path d="M5 2.8v10.4a.8.8 0 0 0 1.2.7l8-5.2a.8.8 0 0 0 0-1.4l-8-5.2A.8.8 0 0 0 5 2.8z" fill="currentColor"/>'),
+    pause: svg('<rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/>'),
+    back: svg('<path d="M8.5 3.5 4 8l4.5 4.5M4.5 8H13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'),
+    stop: svg('<rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/>'),
+    speaker: svg('<path d="M2.5 6v4h2.6L8.5 13V3L5.1 6z" fill="currentColor"/><path d="M10.6 5.6a3.4 3.4 0 0 1 0 4.8M12.4 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'),
+  };
+  const RATES = [1, 1.25, 1.5, 0.85];
+
   function create(opts = {}) {
     /* `authored` is the page's list; `steps` is what a student walks, the
        authored list less any step whose `hidden` says so. */
@@ -115,30 +133,49 @@
 
     const el = document.createElement('div');
     el.className = 'lshell';
+    /* DOM ORDER IS READING ORDER, and a screen reader walks it: the header,
+       then the step, then the model it is about. Everything is position:
+       fixed, so the order changes nothing on screen; the stage still paints
+       under the panel and the bar, which carry z-indexes and it does not.
+       The outline repeats the dots for a pointer, so it is hidden from a
+       screen reader and out of the tab order. The description is hidden
+       too: the canvas reads it through aria-describedby, which reaches a
+       hidden element, so it is heard once, on the model. */
     el.innerHTML = `
       <a class="lshell-skip" href="#lshell-main">Skip to the lesson</a>
-      <div class="lshell-stage"></div>
-      <p class="lshell-sr" id="lshell-desc"></p>
       <header class="lshell-topbar">
         <div class="lshell-brand"><a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a><a class="lshell-section" hidden></a><span class="lshell-crumb"></span></div>
         <div class="lshell-steps">
           <nav class="lshell-progress" aria-label="Lesson progress"></nav>
-          <ol class="lshell-outline"></ol>
+          <ol class="lshell-outline" aria-hidden="true"></ol>
         </div>
       </header>
       <main class="lshell-panel" id="lshell-main" tabindex="-1">
+        <button class="lshell-ibtn lshell-speak" type="button" aria-label="Listen to this lesson" aria-pressed="false" title="Listen" hidden>${ICON.speaker}</button>
         <div class="lshell-scroll">
           <p class="eyebrow"></p>
-          <h1 class="title"></h1>
+          <h1 class="title" tabindex="-1"></h1>
           <div class="body"></div>
           <div class="controls"></div>
         </div>
+        <div class="lshell-listen" hidden>
+          <div class="lshell-listen-bar">
+            <button class="lshell-ibtn" type="button" data-act="toggle" aria-label="Pause narration">${ICON.pause}</button>
+            <button class="lshell-ibtn" type="button" data-act="back" aria-label="Back one sentence">${ICON.back}</button>
+            <button class="lshell-ibtn lshell-rate" type="button" data-act="rate" aria-label="Narration speed">1×</button>
+            <button class="btn primary lshell-continue" type="button" data-act="go" hidden>Continue</button>
+            <button class="lshell-ibtn" type="button" data-act="stop" aria-label="Stop listening">${ICON.stop}</button>
+          </div>
+          <p class="lshell-caption" aria-hidden="true"></p>
+        </div>
         <nav class="lshell-nav">
           <button class="btn ghost" type="button">Back</button>
-          <span class="lshell-count"></span>
+          <span class="lshell-count" aria-hidden="true"></span><span class="lshell-sr lshell-count-sr"></span>
           <button class="btn primary" type="button">Next</button>
         </nav>
       </main>
+      <div class="lshell-stage" role="region" aria-label="3D model"></div>
+      <p id="lshell-desc" hidden></p>
       <p class="lshell-sr" role="status" aria-live="polite"></p>
       <p class="lshell-keytip" aria-hidden="true" hidden>Arrow keys turn the model · Esc to leave it</p>
       <div class="lshell-hint"></div>`;
@@ -150,7 +187,7 @@
       eyebrow: $('.eyebrow'), title: $('.title'), body: $('.body'), controls: $('.controls'),
       back: $('.lshell-nav .ghost'), next: $('.lshell-nav .primary'), count: $('.lshell-count'),
       hint: $('.lshell-hint'),
-      skip: $('.lshell-skip'), desc: $('#lshell-desc'), live: $('.lshell-sr[role="status"]'),
+      skip: $('.lshell-skip'), desc: $('#lshell-desc'), live: $('.lshell-sr[role="status"]'), countSr: $('.lshell-count-sr'),
     };
     /* A plain href="#lshell-main" resolves against a featured page's
        <base href="/demos/"> and leaves the lesson. */
@@ -177,11 +214,97 @@
     }
     let announceT = 0;
     function announce(text) {
+      if (listener && listener.state !== 'off') return;     // the narrator is speaking; a second voice talks over it
       clearTimeout(announceT);
       els.live.textContent = '';
-      announceT = setTimeout(() => { els.live.textContent = text || ''; }, 60);   // a repeat of the same words still reads
+      announceT = setTimeout(() => {
+        els.live.textContent = text || '';                   // after a beat, so a repeat of the same words still reads
+        /* Emptied once spoken, or a screen reader walking the page later
+           lands on a stale "Step 2 of 5". */
+        announceT = setTimeout(() => { els.live.textContent = ''; }, 5000);
+      }, 60);
     }
     function describe(text) { els.desc.textContent = text || ''; }
+
+    /* ---- Listen: the lesson as an audiobook (kit/listen.js) ------------
+       Offered only when the page loads the narrator and the browser can
+       speak. Each step is a chapter: its title and body as they stand in the
+       panel, then the page's own beats from `step.listen(ctx, read)` (or the
+       step's `describe`), then a wait that turns the page. The first chapter
+       opens with the lesson's title and its parts. While it plays, the shell's
+       announcements stay quiet: the narrator is already saying it. */
+    let listener = null, introduced = false, reading = null;
+    const lis = {
+      root: el.querySelector('.lshell-listen'), go: el.querySelector('.lshell-speak'),
+      bar: el.querySelector('.lshell-listen-bar'), caption: el.querySelector('.lshell-caption'),
+      toggle: el.querySelector('[data-act="toggle"]'), cont: el.querySelector('[data-act="go"]'),
+      rate: el.querySelector('[data-act="rate"]'),
+    };
+    if (global.Listen && global.speechSynthesis) {
+      listener = global.Listen.create({
+        onLine(text, at) {
+          if (reading) reading.classList.remove('is-reading');
+          reading = at || null;
+          if (reading) reading.classList.add('is-reading');
+          lis.caption.textContent = at ? '' : text;
+        },
+        onState(s) {
+          /* The speaker in the panel's corner is the switch; the player under
+             the text exists only while it is on. */
+          const on = s !== 'off';
+          lis.root.hidden = !on;
+          lis.go.classList.toggle('is-on', on);
+          lis.go.setAttribute('aria-pressed', String(on));
+          /* At a wait the same button turns the page: the narrator has just
+             said "press Space", and focus is on this button. */
+          const paused = s === 'paused', waiting = s === 'waiting';
+          lis.toggle.innerHTML = paused || waiting ? ICON.play : ICON.pause;
+          lis.toggle.setAttribute('aria-label', waiting ? 'Continue' : paused ? 'Resume narration' : 'Pause narration');
+          lis.cont.hidden = s !== 'waiting';
+        },
+      });
+      lis.go.hidden = false;
+      global.addEventListener('pagehide', () => listener.stop());
+      lis.go.addEventListener('click', () => {
+        if (listener.state === 'off') { startListening(); lis.toggle.focus(); }
+        else listener.stop();
+      });
+      lis.bar.addEventListener('click', e => {
+        const act = e.target.closest('[data-act]'); if (!act) return;
+        const a = act.dataset.act;
+        if (a === 'toggle') { if (listener.state === 'waiting') listener.go(); else listener.toggle(); }
+        else if (a === 'back') listener.back();
+        else if (a === 'go') listener.go();
+        else if (a === 'stop') { listener.stop(); lis.go.focus(); }   // the player is gone; the speaker is where it began
+        else if (a === 'rate') {
+          listener.rate = RATES[(RATES.indexOf(listener.rate) + 1) % RATES.length];
+          lis.rate.textContent = listener.rate + '×';
+        }
+      });
+    }
+    const joinNames = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ', and ' + a[a.length - 1];
+    function chapterFor(i) {
+      const step = steps[i];
+      const read = [{ say: step.title || '', el: els.title }];
+      for (const p of els.body.querySelectorAll('p, li')) if (p.textContent.trim()) read.push({ say: p.textContent, el: p });
+      const own = step.listen ? step.listen(ctx, read) : null;
+      const desc = typeof step.describe === 'function' ? step.describe(ctx) : step.describe;
+      const beats = own || read.concat(desc ? [{ pause: 400 }, { say: desc }] : []);
+      if (i < steps.length - 1) beats.push({ pause: 300 }, { wait: 'Press Space for the next step.' }, { run: () => goTo(i + 1) });
+      else beats.push({ pause: 300 }, { say: 'That is the end of the lesson.' });
+      return beats;
+    }
+    function introBeats() {
+      const title = opts.title || document.title.split(/ [—–|·] /)[0];
+      const parts = steps.map(s => s.short || s.eyebrow || s.title);
+      return [{ say: title + '.' }, { say: `A Kodolab lesson in ${parts.length} parts: ${joinNames(parts)}.` }, { pause: 700 }];
+    }
+    function startListening() {
+      if (!listener) return;
+      const beats = chapterFor(current);
+      listener.chapter(introduced ? beats : introBeats().concat(beats));
+      introduced = true;
+    }
     /* WHICH OF THE PANEL'S NUMBERS THE PAGE REPAINTS, said once, here, beside
        the classes the sheet styles. A readout's first value is written into
        the page's source like any other words, so nothing downstream can tell
@@ -412,11 +535,13 @@
       steps.forEach((s, i) => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`);
+        /* The short name, not the title: the title is a sentence, and the
+           header reads every dot each time a screen reader passes it. */
+        b.setAttribute('aria-label', `Step ${i + 1} of ${steps.length}: ${s.short || s.eyebrow || s.title}`);
         b.addEventListener('click', () => goTo(i));
         els.progress.appendChild(b);
         const li = document.createElement('li');
-        li.innerHTML = `<button type="button"><span>${i + 1}</span></button>`;
+        li.innerHTML = `<button type="button" tabindex="-1"><span>${i + 1}</span></button>`;
         li.firstChild.append(s.short || s.eyebrow || s.title);
         li.firstChild.addEventListener('click', () => goTo(i));
         els.outline.appendChild(li);
@@ -490,10 +615,14 @@
       ui.setNext(last ? 'Start over' : (step.nextLabel || 'Next'), !last || steps.length > 1);
       els.back.disabled = i === 0;
       els.count.textContent = `${i + 1} / ${steps.length}`;
+      els.countSr.textContent = `Step ${i + 1} of ${steps.length}`;
       [...els.progress.children, ...els.outline.children].forEach((b, k) => {
         k %= steps.length;
         b.classList.toggle('is-current', k === i);
         b.classList.toggle('is-done', k < i);
+      });
+      [...els.progress.children].forEach((b, k) => {
+        if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
       });
     }
 
@@ -519,8 +648,15 @@
       if (step.onEnter) step.onEnter(ctx);
       labelCanvases();
       describe(typeof step.describe === 'function' ? step.describe(ctx) : step.describe);
-      /* Not on the step a page opens on: the panel is what is read first. */
+      /* Not on the step a page opens on: there focus goes to the title, so a
+         screen reader starts on the lesson instead of the wordmark, the menu
+         and five dots. Not inside someone else's frame (LabXchange embeds by
+         iframe), where focusing on load would pull it from the host page. */
+      if (listener && listener.state !== 'off') listener.chapter(chapterFor(i));   // the narration follows the step
       if (swapped) announce(`Step ${i + 1} of ${steps.length}. ${step.title || ''}`);
+      else if (window.top === window && !document.activeElement.closest('input, textarea, select, [contenteditable]')) {
+        els.title.focus({ preventScroll: true });
+      }
       swapped = true;
       document.dispatchEvent(new CustomEvent('lessonshell:step', { detail: { i, n: steps.length } }));
       /* Guarded: lib/track.js loads only for a browser holding a class code. */
@@ -533,6 +669,16 @@
          and Next on it. Safari's Tab skips buttons by default and lands on
          one, and the arrows went on changing the temperature. */
       const t = e.target;
+      /* While narrating: Space pauses, resumes, or turns the page at a wait;
+         Escape stops. Not on a control, where Space presses it. */
+      if (listener && listener.state !== 'off' && !t.closest('button, a, input:not([type="range"]), textarea, select, canvas, [contenteditable]')) {
+        if (e.key === ' ') {
+          e.preventDefault();
+          if (listener.state === 'waiting') listener.go(); else listener.toggle();
+          return;
+        }
+        if (e.key === 'Escape') { listener.stop(); return; }
+      }
       const vertical = t.matches('input[type="range"]') && getComputedStyle(t).writingMode.startsWith('vertical');
       if (t.matches('input, textarea, select') && !(vertical && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) return;
       if (vertical) e.preventDefault();
@@ -569,6 +715,10 @@
       q: sel => ui.q(sel), qa: sel => ui.qa(sel),
       goTo, get current() { return current; },
       describe, announce,
+      /* The narrator, or null: a page speaks live events with
+         `shell.listen && shell.listen.comment(text)`. */
+      get listen() { return listener; },
+      get listening() { return !!listener && listener.state !== 'off'; },
       /* `scene(name, mount)` registers and returns the component;
          `showScene(name | [names])` puts one on stage outside the step order,
          for a control that switches scale where a step would be too much. */
@@ -594,6 +744,7 @@
         if (boxes) boxes.clear();
         else for (const s of scenes.values()) if (s.c && s.c.destroy) s.c.destroy();
         scenes.clear();
+        if (listener) listener.stop();
         window.removeEventListener('keydown', onKey); el.remove(); document.body.classList.remove('lshell-page');
         if (global.LessonShell.current === shellApi) global.LessonShell.current = null;
       },

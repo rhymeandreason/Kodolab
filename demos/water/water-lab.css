@@ -145,7 +145,7 @@
 /* Docked panel: the page moves both instruments into #instr, at the foot of
    the panel's scroll, so they sit in its flow instead of over the model. */
 @media (max-width: 760px) {
-  #instr { display: flex; flex-direction: column; align-items: center; gap: 22px; margin-top: 22px }
+  #instr #modelctl { display: flex; flex-direction: column; align-items: center; gap: 22px; margin-top: 22px }
   #instr #tempbar, #instr #tray { position: static; transform: none }
   #instr #tray { flex-wrap: wrap; justify-content: center }
   #treadout { margin-top: 0 }

@@ -89,6 +89,8 @@ The panel's own classes, all styled: `.choices > .choice`, `.callout`, `.slider`
 
 **Every step says what its scene shows, in `describe`** (a string, or a function of ctx): one or two sentences a screen reader reads as the canvas's description, for a student who cannot see it. Say what is on screen and what it means, read any number from the component, never type it. When the scene changes under a step, `shell.describe(text)` rewrites it, and `shell.announce(text)` speaks one event (a phase change, a count after a button). Announce events only, never a value that repaints every frame. The shell labels the canvas, makes it a tab stop that turns on the arrow keys, and announces each step itself.
 
+**Listen.** Load `kit/listen.js` before the shell and the panel gains a Listen button: the lesson read aloud as chapters, opening with `title` and its parts, each step's title and body then its `describe`, and a pause that turns the page. A step's `listen(ctx, read)` returns its own chapter: `read` is the panel's text as beats, to which it adds strings (or functions, for live numbers) and `{ pause: ms }` or `{ run: fn }`. While the chapter waits on the student, `shell.listen.comment(text)` speaks what the scene does.
+
 ### A second component is a second box
 
 **`shell.stage` holds one component.** A lesson that changes scale — the cell this happens in, the membrane inside it — asks the shell for a box per component and each step names the one it shows:

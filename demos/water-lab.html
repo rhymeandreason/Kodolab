@@ -51,6 +51,7 @@
 <script src="lib/annotate.js"></script>     <!-- callouts pinned to atoms: the lesson’s text, on the model -->
 <script src="kit/card-stage.js"></script>
 <script src="water/watersim-mount.js"></script>
+<script src="kit/listen.js"></script>       <!-- Listen: the lesson narrated; the shell offers it when this is loaded -->
 <script src="kit/lesson-shell.js"></script>
 <script>
 "use strict";
@@ -90,8 +91,10 @@ const stepMeta=[
 
 const shell = LessonShell.create({
   brand: 'Water',
+  title: 'Structure of Water',
   hint: 'Drag to orbit · Scroll to zoom',
-  steps: stepMeta.map((m,i)=>({ eyebrow:m.tab, title:m.claim, body:m.body, describe:()=>describeStep(i) })),
+  steps: stepMeta.map((m,i)=>({ eyebrow:m.tab, title:m.claim, body:m.body, describe:()=>describeStep(i),
+    listen: i<3 ? (ctx, read)=>listenStep(i, read) : undefined })),
   onStep: (step, i) => applyStep(i),
 });
 
@@ -122,12 +125,16 @@ W.on('dissociate',(na,cl,at)=>{ FXi.spawnRing(at, FXi.colorOf(na));
 W.on('saltchange',()=>updateTempRange());
 
 /* ---------- the page's own DOM, inside the shell ---------- */
+/* One region round both instruments, so a screen reader's rotor lists
+   "Model controls" beside the shell's "3D model". The range's ends are hidden
+   from it: the slider reads its own value. */
 shell.el.insertAdjacentHTML('beforeend', `
+  <div id="modelctl" role="region" aria-label="Model controls">
   <div id="tempbar">
     <div class="tcol">
-      <div class="tlabel hot" id="thot">100°C</div>
+      <div class="tlabel hot" id="thot" aria-hidden="true">100°C</div>
       <input type="range" id="trange" min="20" max="100" value="22" step="1" aria-label="Temperature">
-      <div class="tlabel cold" id="tcold">20°C</div>
+      <div class="tlabel cold" id="tcold" aria-hidden="true">20°C</div>
     </div>
     <div id="treadout">
       <div class="tval" id="tval">22°C</div>
@@ -148,7 +155,9 @@ shell.el.insertAdjacentHTML('beforeend', `
     <div class="addcol" id="pausectl">
       <button class="pill pill--ghost" id="pausebtn" type="button" aria-label="Pause" title="Pause"></button>
     </div>
+  </div>
   </div>`);
+const modelCtl=document.getElementById('modelctl');
 
 function arrow(from,to,color=0x6fe3c4){
   const dir=new THREE.Vector3().subVectors(to,from);
@@ -416,8 +425,62 @@ function describeStep(n){
 }
 function sayCounts(){
   const N=sim.mols.length;
-  shell.announce(S.step===4 ? `${salt.length/2} NaCl, ${N} water molecules` : `${N} water molecules`);
+  const text = S.step===4 ? `${salt.length/2} NaCl, ${N} water molecules` : `${N} water molecules`;
+  if(shell.listening) shell.listen.comment(text+'.', {force:true}); else shell.announce(text);
   shell.describe(describeStep(S.step));
+}
+
+/* ---------- Listen: steps 1-3 narrated (kit/listen.js) ----------
+   Each chapter is the panel's own text, a tour of what is on screen, and an
+   invitation to act; listenCommentary() then speaks what the sim does while
+   the chapter waits. Every number is read from the sim when it is spoken. */
+/* The bond count, smoothed over a couple of seconds: frame to frame it jumps
+   by one or two as bonds break and reform, and a narrator comparing two raw
+   frames once said the bonds went UP with heat. Only a lower count is
+   reported as lower; anything else is the network still holding. */
+let hbSlow=0;
+let listenBase=null, hbSaid=null, tBand=null;
+function listenStep(i, read){
+  if(i===0) return [
+    ...read.slice(0,2),            // title and first paragraph; the last is mouse instructions, said for the keyboard below
+    {pause:500},
+    {say:'Here is one water molecule, seen from the front. The red sphere at the top is the oxygen. The two white spheres below it are hydrogens.'},
+    {say:`The two bonds meet at an angle of ${angleDeg}, so the molecule is bent.`},
+    ...tourNotes.map(n=>({say:`${n.label.textContent}. ${n.card}`, then:()=>NOTES.openCard(n)})),
+    {run:()=>NOTES.closeCard()},
+    {say:'To turn the molecule yourself, press Tab until you reach the model, then use the arrow keys.'},
+  ];
+  if(i===1) return [
+    ...read, {pause:400},
+    {say:()=>{ const N=sim.mols.length, b=(W.state()||{}).hbondCount||0;
+      return `There are ${N} water molecules now, and ${b} hydrogen ${b===1?'bond':'bonds'} between them.`; }},
+    {say:'Each one is drawn as a dashed line, from the partial positive hydrogen of one molecule to the partial negative oxygen of the next.'},
+    {say:'Press Add Water a few times to build a crowd. I will tell you how the bonds change.'},
+  ];
+  return [
+    ...read, {pause:400},
+    {say:()=>{ listenBase={T:S.temperature, b:Math.round(hbSlow)};
+      return `It is ${listenBase.T}°C, and there are ${listenBase.b} hydrogen bonds among ${sim.mols.length} molecules.`; }},
+    {run:()=>tinput.focus()},
+    {say:'The temperature slider has focus. Press the up arrow to heat the water, and I will tell you what changes.'},
+  ];
+}
+function listenCommentary(p){
+  if(!shell.listening){ hbSaid=tBand=null; return; }
+  if(S.step===1){
+    const b=p.hbondCount||0;
+    if(hbSaid===null){ hbSaid=b; return; }
+    if(b!==hbSaid && shell.listen.comment(b>hbSaid ? `A hydrogen bond formed. ${b} now.` : `One broke. ${b} now.`)) hbSaid=b;
+  }
+  if(S.step===2 && listenBase){
+    const band=Math.floor(S.temperature/10);
+    if(tBand===null){ tBand=band; return; }
+    if(band===tBand) return;
+    const b=Math.round(hbSlow);
+    const text = b<listenBase.b ? `${S.temperature}°C. ${b} hydrogen bonds now, down from ${listenBase.b} at ${listenBase.T}°C.`
+                                : `${S.temperature}°C. The network is still holding, with ${b} hydrogen bonds.`;
+    if(shell.listen.comment(text)) tBand=band;
+  }
 }
 /* The phase, spoken when it changes and has held for a moment: the
    descriptor can flicker across a threshold while the slider moves. */
@@ -428,7 +491,11 @@ function syncPhase(p){
   const now=performance.now();
   if(d!==phaseSeen){ phaseSeen=d; phaseAt=now; return; }
   if(d===phaseSaid || now-phaseAt<700) return;
-  if(phaseSaid!==null) shell.announce(`${S.temperature}°C. ${d}`);
+  if(phaseSaid!==null){
+    // Mid-sentence the narrator refuses; try again next frame rather than lose the change.
+    if(shell.listening){ if(!shell.listen.comment(`${S.temperature}°C. ${d}.`, {force:true})) return; }
+    else shell.announce(`${S.temperature}°C. ${d}`);
+  }
   phaseSaid=d;
   tinput.setAttribute('aria-valuetext', S.temperature+'°C, '+d.split(':')[0].toLowerCase());
   shell.describe(describeStep(S.step));
@@ -449,7 +516,7 @@ function roomScale(){
 function place(){
   const r=shell.panelRect(), narrow=shell.narrow();
   const home = narrow ? instrEl : shell.el;
-  if(tempBar.parentElement!==home){ home.appendChild(tempBar); home.appendChild(trayEl); }
+  if(modelCtl.parentElement!==home) home.appendChild(modelCtl);
   if(narrow){
     tempBar.style.left=tempBar.style.top=trayEl.style.left=trayEl.style.bottom='';
     pxPerDeg=NARROW_PX_PER_DEG;
@@ -521,14 +588,15 @@ function badgeEdge(get, dir){
   };
 }
 
+let tourNotes=[];              // step 1's callouts, in the order the narration tours them
 function buildNotes(n){
-  NOTES.clear(); saltNoted.clear();
+  NOTES.clear(); saltNoted.clear(); tourNotes=[];
   const w=sim.mols[0];
   if(n===0 && w){
     const O=()=>w.userData.oWorld();
-    NOTES.add({text:'slightly negative', offset:[28,-20], at:badgeEdge(()=>dO, [28,-20]),
+    const neg=NOTES.add({text:'slightly negative', offset:[28,-20], at:badgeEdge(()=>dO, [28,-20]),
       card:'Oxygen pulls the shared electrons closer than hydrogen can. That leaves this end of the molecule slightly negative.'});
-    NOTES.add({text:'slightly positive', offset:[16,34], at:badgeEdge(()=>dH1, [16,34]),
+    const pos=NOTES.add({text:'slightly positive', offset:[16,34], at:badgeEdge(()=>dH1, [16,34]),
       card:'Each hydrogen has its one electron pulled away by the oxygen. The exposed proton leaves this end slightly positive.'});
     /* The midpoint of the O–H line is INSIDE the oxygen: the sphere's radius
        (0.95) is most of the bond length (1.55), so only the sliver between the
@@ -536,10 +604,11 @@ function buildNotes(n){
     const WO_R=0.95, WH_R=0.55, stickMid=(WO_R+(HL-WH_R))/2;
     // On the LEFT bond, up and out: the right side already carries both
     // charge labels, and a third there runs off a laptop-width stage.
-    NOTES.add({text:'covalent bond', offset:[-80,-90],
+    const bond=NOTES.add({text:'covalent bond', offset:[-80,-90],
       at:()=>{ const o=w.userData.oWorld();
                return _wp.copy(w.userData.hWorld(1)).sub(o).setLength(stickMid).add(o); },
       card:'A shared pair of electrons creates a strong bond. Shared unevenly, so it is a <b>polar</b> covalent bond.'});
+    tourNotes=[bond, neg, pos];  // the bond first: uneven sharing is why the ends are charged
   }
   /* Step 2's callout waits: seatHBondPair() hands the sim the geometry, but the
      bond is the ENGINE's to register, and a label that arrives first points at
@@ -678,6 +747,7 @@ function applyStep(n){
   saltcardEl.style.display=n>=4?'flex':'none';
   pauseEl.style.display=n>=1?'flex':'none';
   phaseSaid=phaseSeen=null;              // the step itself is announced; its phase is not news
+  listenBase=hbSaid=tBand=null;
   if(n===4) shell.ui.controls(`<div class="stats">
     <div class="stat wide"><span class="stat-label">Salt : water</span><span class="stat-value" id="s-ratio"></span>
       <span class="stat-sub" id="s-molal"></span></div>
@@ -742,6 +812,8 @@ W.on('frame', p=>{
   if(detail.visible) kit.faceCamera(camera);
   syncWaterNudge();
   syncPhase(p);
+  hbSlow += ((p.hbondCount||0)-hbSlow)*0.01;
+  listenCommentary(p);
   syncHbNote(); syncIceNotes(); syncSaltNotes();
   NOTES.step();
 });
