@@ -2,7 +2,7 @@
  *  api/build.js — the builder's model turn
  * =============================================================================
  *  GET  /api/build → whether this link may build, and what the reference has
- *  POST /api/build {request, visitorId, id?, token?, errors?, selection?, provider?}
+ *  POST /api/build {request, visitorId, id?, token?, errors?, selection?, provider?, model?}
  *                → {id, token?, n, title, summary, html, mode, usage, ms, problems,
  *                   shell, uses (a draft only: what the model chose to build with)}
  *
@@ -36,6 +36,9 @@ module.exports = async function handler(req, res) {
   try { who = await access.resolve(req); }
   catch (err) { console.error('[build] access: ' + ((err && err.message) || err)); }
   const cohort = access.admitted(who) ? who.cohort : null;
+  /* A teacher picks the model; a student gets the deployment's default, so a
+     class cannot spend the budget on the dearest one. */
+  const chooser = bench || (!!who && who.kind === 'teacher');
   const owner  = access.admitted(who) ? who.owner : null;
 
   // A code that was sent and is wrong is refused even where the gate is off:
@@ -48,10 +51,14 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     let components = [];
     try { components = builder.components(); } catch { /* reference missing: reported below */ }
+    let dflt = null;
+    try { dflt = providers.pick(null, bench); } catch { /* no key: ok is false below */ }
     return res.status(200).json({
-      ok: apps.enabled() && !!process.env[providers.pick(null, bench).envKey],
+      ok: apps.enabled() && !!dflt,
       gated, cohort, who: access.describe(who), bench,
       provider: providers.DEFAULT, limits: apps.LIMITS, components,
+      model: dflt ? dflt.model : null,
+      models: chooser ? providers.catalog() : null,
       maxRequest: builder.MAX_REQUEST,
     });
   }
@@ -67,6 +74,7 @@ module.exports = async function handler(req, res) {
   if (request.length > builder.MAX_REQUEST) return res.status(400).json({ error: `keep it under ${builder.MAX_REQUEST} characters` });
   const errors = (Array.isArray(body.errors) ? body.errors : []).slice(0, MAX_ERRORS).map(e => String(e).slice(0, 300));
   const provider = bench && body.provider ? String(body.provider) : null;
+  const model = body.model ? String(body.model).slice(0, 60) : null;
   /* What the student clicked before they typed, from the text mode's pills. */
   const selection = (Array.isArray(body.selection) ? body.selection : []).slice(0, MAX_PICKS);
 
@@ -79,7 +87,7 @@ module.exports = async function handler(req, res) {
       const app = await apps.read(body.id);
       if (!app || !app.version) return res.status(404).json({ error: 'no such app' });
 
-      const out = await builder.edit({ html: app.version.html, request, errors, selection, provider, bench });
+      const out = await builder.edit({ html: app.version.html, request, errors, selection, provider, model, bench, chooser });
       const failed = !out.html;
       const v = await apps.addVersion(app.id, {
         kind: 'edit', html: out.html || app.version.html, request, summary: out.summary,
@@ -95,7 +103,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const out = await builder.draft({ request, provider, bench });
+    const out = await builder.draft({ request, provider, model, bench, chooser });
     const failed = out.problems.length > 0;
     const made = await apps.create({
       cohort, ownerId: owner, visitorId: body.visitorId, title: out.title, isLocal: bench,

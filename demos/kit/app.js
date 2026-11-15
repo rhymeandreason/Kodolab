@@ -118,6 +118,8 @@
     'diagram/diagram.js',
     'molecule/molecule.js',  // after lib/molview.js, card-stage.js and every mol-*
     'quiz/quiz.js',
+    'kit/scale.js',
+    'custom/scene.js',      // after scale.js: a definition's rung is checked against the ladder
     'kit/lesson-shell.js',   // the base every template is built on
     'kit/sandbox-shell.js',  // last: a template reads what the shell defined
   ];
@@ -218,6 +220,8 @@
                  'lib/mol-sugars.js', 'lib/mol-glycans.js', 'lib/mol-lipids.js',
                  'lib/mol-nucleic.js', 'lib/molview.js', 'molecule/molecule.js'],
     Quiz:       ['quiz/quiz.js'],
+    /* A scene the page defines itself. Geo for the shapes r128 lacks. */
+    Scene:      ['lib/geo.js', 'kit/scale.js', 'custom/scene.js'],
   };
 
   /* Which domain file registers each molecule key, so a page's data-mol can

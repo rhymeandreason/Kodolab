@@ -19,7 +19,8 @@ const PRICES = {
   'claude-haiku-4-5': { input: 1.00, output:  5.00, cached: 0.10, write: 1.25 },
 };
 
-const PRICE = PRICES[MODEL] || { input: 0, output: 0, cached: 0, write: 0, unknown: true };
+const priceOf = m => PRICES[m] || { input: 0, output: 0, cached: 0, write: 0, unknown: true };
+const PRICE = priceOf(MODEL);
 
 /* The shortest prompt this model will cache, in tokens. NOT MONOTONIC across
  * generations and not guessable from the model's tier: Opus 5 halved what 4.8
@@ -41,14 +42,15 @@ let client = null;
 
 /* `max` and `thinking` as in gemini.js: the builder's page is many times the
  * tutor's answer, and a first draft gets the model's default effort. */
-async function ask({ system, context, messages, schema, max, thinking }) {
+async function ask({ system, context, messages, schema, max, thinking, model }) {
+  const m = model || MODEL;
   if (!client) {
     const Anthropic = require('@anthropic-ai/sdk');
     client = new Anthropic();               // reads ANTHROPIC_API_KEY
   }
 
   const res = await client.messages.create({
-    model: MODEL,
+    model: m,
     max_tokens: max || 2000,
     // The tutor's answer is three sentences. Low effort keeps latency and cost
     // in the range a question box can afford without changing what the model
@@ -72,7 +74,8 @@ async function ask({ system, context, messages, schema, max, thinking }) {
 
   return {
     json: JSON.parse(text),
-    served: res.model || MODEL,   // what answered, not what was asked for
+    served: res.model || m,   // what answered, not what was asked for
+    model: m,
     usage: {
       input:   res.usage.input_tokens,
       output:  res.usage.output_tokens,
@@ -83,4 +86,4 @@ async function ask({ system, context, messages, schema, max, thinking }) {
 }
 
 module.exports = { id: 'anthropic', label: 'Claude', envKey: 'ANTHROPIC_API_KEY',
-                   model: MODEL, PRICE, CACHE_MIN, ask };
+                   model: MODEL, PRICE, CACHE_MIN, priceOf, ask };

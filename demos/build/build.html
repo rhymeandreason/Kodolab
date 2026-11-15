@@ -90,7 +90,8 @@
       </form>
       <form id="ask">
         <div class="refs" id="refs" hidden></div>
-        <textarea id="request" maxlength="600" rows="2" autofocus></textarea>
+        <textarea id="request" maxlength="4000" rows="2" autofocus></textarea>
+        <p class="count" id="count" hidden></p>
         <div class="progress" id="progress" hidden>
           <div class="track"><i></i></div>
           <ul class="phases" id="phases">
@@ -107,6 +108,7 @@
         <div class="row">
           <p class="hint" id="hint">Great questions make great apps. </p>
           <span class="spacer"></span>
+          <select class="model" id="model" aria-label="Model" hidden></select>
           <button class="cta" id="send" type="submit">Let's Go</button>
         </div>
       </form>
@@ -250,7 +252,7 @@
     dialog: $('quizModal'),
     source: () => app.html,
     save: (edits, summary) => saveText(edits, summary),
-    ask: text => { const box = $('request'); box.value = text; box.focus(); box.setSelectionRange(text.length, text.length); },
+    ask: text => { const box = $('request'); box.value = text; box.focus(); box.setSelectionRange(text.length, text.length); fitRequest(); },
   });
   function fromQuiz(msg) {
     if (msg.type === 'app-quiz-hello') { frame.contentWindow.postMessage({ type: 'app-quiz-review', on: true }, '*'); return; }
@@ -771,6 +773,7 @@
     try {
       const body = { request, visitorId: Apps.VISITOR, errors: carried };
       if (picks.length) body.selection = picks;
+      if (!$('model').hidden && $('model').value) body.model = $('model').value;
       if (app) { body.id = app.id; body.token = token; }
       const r = await Apps.api('../../api/build', { method: 'POST', body });
       if (!app) {
@@ -781,7 +784,7 @@
       } else {
         app.n = r.n; app.html = r.html;
       }
-      $('request').value = '';
+      $('request').value = ''; fitRequest();
       // A selection is about the sentence just sent, and it goes with it.
       picks = []; paintPills(); paintWhy();
       frame.contentWindow.postMessage({ type: 'app-edit', clear: true }, '*');
@@ -889,10 +892,44 @@
       gate(true, err.status === 401 ? (GATE_WHY[err.body && err.body.code] || err.message) : 'Could not check the code: ' + err.message);
     }
   });
+  /* The model picker: a teacher's only, since the server refuses a model from
+     anyone else. The choice is remembered per browser. */
+  function paintModels(cfg) {
+    const sel = $('model');
+    const list = (cfg.models || []).filter(m => m.ready);
+    sel.hidden = list.length < 2;
+    if (sel.hidden) return;
+    let saved = null;
+    try { saved = localStorage.getItem('ss.build.model'); } catch {}
+    const cost = d => (d == null ? '' : d < 0.01 ? ' · <1¢' : ` · ~${Math.round(d * 100)}¢`);
+    sel.innerHTML = list.map(m => `<option value="${m.id}">${m.label} · ${m.role}${cost(m.draft)}</option>`).join('');
+    sel.value = list.some(m => m.id === saved) ? saved
+              : list.some(m => m.id === cfg.model) ? cfg.model : list[0].id;
+    sel.title = 'Which model writes the app. The cost is a rough figure for a first draft.';
+  }
+  $('model').addEventListener('change', () => { try { localStorage.setItem('ss.build.model', $('model').value); } catch {} });
+
+  /* The box grows with what is typed, so a pasted outline can be read before it
+     is sent, and a long one drops to body size rather than the hero's display
+     size. The count appears only near the limit. */
+  const LONG = 280;
+  function fitRequest() {
+    const box = $('request'), n = box.value.length, max = box.maxLength;
+    box.classList.toggle('is-long', n > LONG);
+    box.style.height = 'auto';
+    box.style.height = Math.min(box.scrollHeight + 2, innerHeight * 0.5) + 'px';
+    const c = $('count');
+    c.hidden = n < max * 0.8;
+    c.textContent = `${n.toLocaleString()} of ${max.toLocaleString()} characters`;
+  }
+  $('request').addEventListener('input', fitRequest);
+
   function admitted(cfg) {
     if (!cfg.ok) notice('The builder is not configured here: it needs a database and a model key.', true);
     whoNow = cfg.who;
+    if (cfg.maxRequest) $('request').maxLength = cfg.maxRequest;
     $('send').disabled = false;
+    paintModels(cfg);
     paintWho(cfg.who);
     if (cfg.who && cfg.who.account) Apps.account.claimLocal();
   }

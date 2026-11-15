@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strawberry DNA</title>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="PlantCell,Scene,Quiz"></script>
+<script>
+/* ---------------------------------------------------------------- the bench */
+Scene.define('strawberry-bench', {
+  scale: { rung: 'organ', form: 'single', unit: null, exag: {} },
+  params: { mash: 0, buffer: 0, filter: 0, alcohol: 0, spool: 0 },
+  glide: ['mash', 'buffer', 'filter', 'alcohol', 'spool'],
+  build(k) {
+    const { THREE } = k;
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3();
+    const UP = new THREE.Vector3(0, 1, 0);
+    const glass = (c, o) => k.material(c, { transparent: true, opacity: o, side: THREE.DoubleSide });
+    const inst = (geo, mat, n, parent) => { const m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; (parent || k.root).add(m); return m; };
+    const mark = (name, info) => k.part(name, new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), k.material(0xffffff, { transparent: true, opacity: 0 })), Object.assign({ layer: false }, info));
+
+    const bounds = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 4), k.material(0xffffff, { transparent: true, opacity: 0 }));
+    bounds.position.set(-1.5, 2, 0); k.root.add(bounds);
+
+    // bag
+    const bag = k.part('bag', new THREE.Mesh(new THREE.BoxGeometry(7, 8, 2.6), glass(0xdde6ea, 0.18)),
+      { label: 'Zip-top bag', card: 'Sealed, so the berry can be mashed and mixed without a mess.', layer: false });
+    bag.position.set(-6, 0, 0);
+    const zip = new THREE.Mesh(new THREE.BoxGeometry(7.1, 0.25, 2.7), k.material(0x6fa0c8));
+    zip.position.set(-6, 4, 0); k.root.add(zip);
+
+    // berry
+    const prof = [[0, -1.8], [0.5, -1.45], [0.95, -0.85], [1.25, -0.1], [1.3, 0.5], [1.05, 0.95], [0.55, 1.15], [0, 1.2]];
+    const rAt = y => {
+      for (let i = 1; i < prof.length; i++) if (y <= prof[i][1]) {
+        const a = prof[i - 1], b = prof[i];
+        return a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]);
+      }
+      return 0;
+    };
+    const berry = k.part('berry', new THREE.Group(),
+      { label: 'Strawberry', card: 'Ripe and soft: its cell walls are already loosening, so the tissue breaks apart easily.', color: 0xc8323c, layer: false });
+    berry.add(new THREE.Mesh(new THREE.LatheGeometry(prof.map(p => new THREE.Vector2(p[0], p[1])), 32), k.material(0xc8323c)));
+    const seeds = inst(new THREE.SphereGeometry(0.07, 6, 4), k.material(0xe6cf6a), 60, berry);
+    for (let i = 0; i < 60; i++) {
+      const y = -1.5 + 2.3 * rnd(), a = rnd() * Math.PI * 2, r = rAt(y) + 0.02;
+      M4.compose(V.set(Math.cos(a) * r, y, Math.sin(a) * r), Q.identity(), S.set(1, 1.4, 1));
+      seeds.setMatrixAt(i, M4);
+    }
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(1.1, 0.4, 7), k.material(0x4e8a3c));
+    cap.position.y = 1.3; berry.add(cap);
+
+    // pulp after mashing
+    const pulp = inst(new THREE.DodecahedronGeometry(0.28), k.material(0xb52a36), 40);
+    const pulpAt = [];
+    for (let i = 0; i < 40; i++) pulpAt.push([-6 + (rnd() - 0.5) * 6, -3.75 + rnd() * 0.6, (rnd() - 0.5) * 2]);
+
+    // buffer
+    const liquid = k.part('buffer', new THREE.Mesh(new THREE.BoxGeometry(6.7, 1, 2.3).translate(0, 0.5, 0), glass(0xcfe0e8, 0.5)),
+      { label: 'Extraction buffer', card: 'Water with dish soap and salt. The soap opens the membranes; the salt cancels the charge on DNA.', color: 0x9fc3d6, layer: false });
+    liquid.position.set(-6, -3.95, 0);
+    const foam = inst(new THREE.SphereGeometry(0.22, 8, 6), k.material(0xffffff), 30);
+    const foamAt = [];
+    for (let i = 0; i < 30; i++) foamAt.push([-6 + (rnd() - 0.5) * 6.2, (rnd() - 0.5) * 2, rnd() * 6.28]);
+    const cA = new THREE.Color(0xcfe0e8), cB = new THREE.Color(0xe48a9b);
+
+    // tube
+    const tube = k.part('tube', new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, 9.5, 32, 1, true), glass(0xdde6ea, 0.2)),
+      { label: 'Test tube', card: 'Tall and narrow, so the alcohol sits as a clear band on top of the watery layer.', layer: false });
+    tube.position.set(4, -0.25, 0);
+    const tubeFoot = new THREE.Mesh(new THREE.SphereGeometry(1.25, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), glass(0xdde6ea, 0.2));
+    tubeFoot.position.set(4, -5, 0); tubeFoot.scale.y = 0.2; k.root.add(tubeFoot);
+
+    // funnel and filter
+    const funnel = k.part('filter', new THREE.Group(),
+      { label: 'Coffee filter', card: 'Its pores let dissolved molecules through and hold back scraps of cell wall.', layer: false });
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(2.3, 2.8, 32, 1, true), glass(0xd9e2e6, 0.3));
+    cone.rotation.x = Math.PI;
+    const paper = new THREE.Mesh(new THREE.ConeGeometry(2.15, 2.6, 32, 1, true), glass(0xf2ede2, 0.85));
+    paper.rotation.x = Math.PI; paper.position.y = 0.1;
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.2, 12, 1, true), glass(0xd9e2e6, 0.3));
+    spout.position.y = -1.9;
+    funnel.add(cone, paper, spout);
+    const debris = inst(new THREE.DodecahedronGeometry(0.22), k.material(0x7d2a2e), 26, funnel);
+    const debrisAt = [];
+    for (let i = 0; i < 26; i++) {
+      const y = -0.8 + rnd() * 1.1, r = 2.1 * (y + 1.4) / 2.8 * Math.sqrt(rnd()) * 0.85, a = rnd() * 6.28;
+      debrisAt.push([Math.cos(a) * r, y, Math.sin(a) * r]);
+    }
+
+    // filtrate and alcohol layers
+    const filtrate = k.part('filtrate', new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 1, 32).translate(0, 0.5, 0), glass(0xe7a0ac, 0.6)),
+      { label: 'Filtrate', card: 'Clear pink liquid: dissolved DNA, plus soap, salt and some dissolved protein and RNA.', color: 0xe7a0ac, layer: false });
+    filtrate.position.set(4, -4.95, 0);
+    const alcohol = k.part('alcohol', new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 1, 32).translate(0, 0.5, 0), glass(0xeaf2f6, 0.4)),
+      { label: 'Cold alcohol', card: 'Ice-cold rubbing alcohol, less dense than the watery layer, so it floats on top.', color: 0xcfdde4, layer: false });
+    alcohol.position.set(4, -4.95, 0);
+
+    // threads and stick
+    const threads = inst(new THREE.CylinderGeometry(0.035, 0.035, 1, 5), k.material(0xf6f3ea), 70);
+    const th = [];
+    for (let i = 0; i < 70; i++) {
+      const a = rnd() * 6.28, r = Math.sqrt(rnd()) * 0.9;
+      th.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, rise: rnd(), len: 0.4 + rnd() * 0.8, ph: rnd() * 6.28,
+        q: new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3)) });
+    }
+    const threadMark = mark('threads', { label: 'White threads', card: 'DNA out of solution, tangled with some RNA and protein. Each thread is millions of molecules.', color: 0xf6f3ea });
+    const stick = k.part('stick', new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 9, 8), k.material(0xc8a26a)),
+      { label: 'Wooden stick', card: 'Twirled, it winds the threads on, because the long molecules are tangled together.', layer: false });
+
+    let time = 0;
+    const qW = new THREE.Quaternion(), T = new THREE.Vector3(), W = new THREE.Vector3(), B = new THREE.Vector3();
+    const place = () => {
+      const p = k.params, m = p.mash, b = p.buffer, f = p.filter, a = p.alcohol, sp = p.spool;
+
+      const sy = 1 - 0.68 * sm(0, 1, m);
+      berry.scale.set(1 + 0.8 * m, sy, 1 + 0.35 * m);
+      berry.position.set(-6, -4 + 1.8 * sy, 0);
+
+      const pv = Math.max(1e-4, sm(0.1, 0.9, m) * (1 - 0.6 * f));
+      for (let i = 0; i < 40; i++) { M4.compose(V.set(...pulpAt[i]), Q.identity(), S.setScalar(pv)); pulp.setMatrixAt(i, M4); }
+      pulp.instanceMatrix.needsUpdate = true;
+
+      const h = 3.2 * b * (1 - 0.85 * f);
+      liquid.visible = h > 0.02; liquid.scale.y = Math.max(h, 0.001);
+      liquid.material.color.copy(cA).lerp(cB, 0.9 * m);
+      const fv = Math.max(1e-4, sm(0, 0.6, b) * (1 - f));
+      for (let i = 0; i < 30; i++) {
+        const fa = foamAt[i];
+        M4.compose(V.set(fa[0], -3.95 + h + 0.05 * Math.sin(time * 2 + fa[2]), fa[1]), Q.identity(), S.setScalar(fv));
+        foam.setMatrixAt(i, M4);
+      }
+      foam.instanceMatrix.needsUpdate = true;
+
+      funnel.position.set(4, 6.2 + 3 * sm(0, 1, a), 0);
+      funnel.visible = a < 0.98;
+      cone.material.opacity = 0.3 * (1 - a); paper.material.opacity = 0.85 * (1 - a); spout.material.opacity = 0.3 * (1 - a);
+      const dv = Math.max(1e-4, sm(0.05, 0.6, f) * (1 - a));
+      for (let i = 0; i < 26; i++) { M4.compose(V.set(...debrisAt[i]), Q.identity(), S.setScalar(dv)); debris.setMatrixAt(i, M4); }
+      debris.instanceMatrix.needsUpdate = true;
+
+      const fh = 3.6 * f;
+      filtrate.visible = fh > 0.02; filtrate.scale.y = Math.max(fh, 0.001);
+      const top = -4.95 + fh;
+      const ah = 2.6 * a;
+      alcohol.visible = ah > 0.02; alcohol.scale.y = Math.max(ah, 0.001); alcohol.position.y = top;
+
+      const lower = sm(0, 0.4, sp), lift = sm(0.8, 1, sp);
+      const tip = lerp(top + 6, top - 0.1, lower) + 3.2 * lift;
+      stick.visible = sp > 0.005;
+      stick.position.set(4.2, tip + 4.5, 0);
+      stick.rotation.y = sp * 25;
+
+      const show = Math.max(1e-4, sm(0.15, 0.9, a)), wind = sm(0.4, 0.85, sp);
+      for (let i = 0; i < 70; i++) {
+        const t = th[i];
+        B.set(4 + t.x, top + 0.05 + t.rise * a + 0.06 * Math.sin(time * 0.8 + t.ph) * (1 - wind), t.z);
+        const ang = i * 0.75 + sp * 25;
+        W.set(4.2 + Math.cos(ang) * 0.17, tip + 0.25 + (i / 70) * 1.6, Math.sin(ang) * 0.17);
+        T.set(-Math.sin(ang), 0.15, Math.cos(ang)).normalize();
+        qW.setFromUnitVectors(UP, T);
+        Q.copy(t.q).slerp(qW, wind);
+        V.copy(B).lerp(W, wind);
+        M4.compose(V, Q, S.set(show, t.len * show, show));
+        threads.setMatrixAt(i, M4);
+      }
+      threads.instanceMatrix.needsUpdate = true;
+      threadMark.position.set(lerp(4.6, 4.3, wind), lerp(top + 0.6, tip + 1, wind), 0.6);
+    };
+    place();
+    return {
+      update() { place(); },
+      step(dt, t) { time = t; if (k.params.buffer > 0.01 || k.params.alcohol > 0.01) place(); },
+      state() {
+        const sets = 8, perSet = 7;
+        return { chromosomeSets: sets, chromosomesPerSet: perSet, chromosomesPerCell: sets * perSet };
+      },
+    };
+  },
+});
+
+/* ------------------------------------------------- tissue: walls tear, membranes open */
+Scene.define('berry-tissue', {
+  scale: { rung: 'cell', form: 'bulk', unit: null, exag: {} },
+  params: { mash: 0, lyse: 0 },
+  glide: ['mash', 'lyse'],
+  build(k) {
+    const { THREE } = k;
+    let seed = 11;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3(), E = new THREE.Euler();
+    const inst = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; k.root.add(m); return m; };
+    const mark = (name, info) => k.part(name, new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), k.material(0xffffff, { transparent: true, opacity: 0 })), Object.assign({ layer: false }, info));
+
+    const bounds = new THREE.Mesh(new THREE.BoxGeometry(24, 15, 3), k.material(0xffffff, { transparent: true, opacity: 0 }));
+    k.root.add(bounds);
+
+    const R = 2, cells = [];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
+      cells.push({ x: (c - 1.5) * R * 1.732 + (r % 2 - 0.5) * R * 0.866, y: (r - 1) * R * 1.5,
+        dx: (rnd() - 0.5) * 2.2, dy: (rnd() - 0.5) * 2.2,
+        dna: new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, (rnd() - 0.5) * 0.4).normalize(), spin: rnd() * 6 });
+    }
+    const segs = [];
+    cells.forEach((c, ci) => {
+      for (let j = 0; j < 6; j++) {
+        const mid = Math.PI / 3 + j * Math.PI / 3;
+        const torn = rnd() < 0.5;
+        segs.push({ ci, mx: Math.cos(mid) * R * 0.84, my: Math.sin(mid) * R * 0.84, rot: mid + Math.PI / 2, torn,
+          d: new THREE.Vector3((rnd() - 0.5) * 3, (rnd() - 0.5) * 3, (rnd() - 0.5) * 2), tilt: (rnd() - 0.5) * 2 });
+      }
+    });
+    const walls = inst(new THREE.BoxGeometry(R * 0.98, 0.22, 1.2), k.material(0xa9b97a), segs.length);
+    const memMat = k.material(0xe8b54e, { transparent: true, opacity: 0.35 });
+    const membranes = inst(new THREE.SphereGeometry(1, 24, 16), memMat, cells.length);
+    const nucMat = k.material(0x8f72bf, { transparent: true, opacity: 0.5 });
+    const nuclei = inst(new THREE.SphereGeometry(0.6, 20, 14), nucMat, cells.length);
+    const dna = inst(new THREE.TorusKnotGeometry(0.28, 0.035, 64, 6, 3, 7), k.material(0xe0703a), cells.length);
+    const nLip = 16, nEnv = 6;
+    const lip = inst(new THREE.SphereGeometry(0.12, 8, 6), k.material(0xe8b54e), cells.length * nLip);
+    const env = inst(new THREE.SphereGeometry(0.1, 8, 6), k.material(0x8f72bf), cells.length * nEnv);
+    const lipAt = [], envAt = [];
+    for (let i = 0; i < cells.length * nLip; i++) lipAt.push({ a: rnd() * 6.28, r: 1 + rnd() * 1.4, z: (rnd() - 0.5) * 1.2 });
+    for (let i = 0; i < cells.length * nEnv; i++) envAt.push({ a: rnd() * 6.28, r: 0.4 + rnd() * 1.2, z: (rnd() - 0.5) * 0.8 });
+    const NUC = new THREE.Vector3(0.3, 0.2, 0);
+
+    const mWall = mark('wall', { label: 'Cell wall', card: 'Cellulose, rigid but brittle. Mashing tears it.', color: 0xa9b97a });
+    const mMem = mark('membrane', { label: 'Plasma membrane', card: 'A lipid bilayer. Flexible, so mashing alone leaves it whole.', color: 0xe8b54e });
+    const mNuc = mark('nucleus', { label: 'Nuclear envelope', card: 'A double lipid bilayer around the DNA.', color: 0x8f72bf });
+    const mDna = mark('dna', { label: 'DNA', card: 'Wound up inside the nucleus until both membranes open.', color: 0xe0703a });
+
+    let time = 0;
+    const cp = new THREE.Vector3();
+    const cellPos = (c, m) => cp.set(c.x * (1 + 0.35 * m) + c.dx * m, c.y * (1 + 0.35 * m) + c.dy * m, 0);
+    const place = () => {
+      const m = k.params.mash, l = k.params.lyse;
+      segs.forEach((s, i) => {
+        const c = cellPos(cells[s.ci], m);
+        const amt = s.torn ? m : 0.08 * m;
+        V.set(c.x + s.mx + s.d.x * amt, c.y + s.my + s.d.y * amt, s.d.z * amt);
+        Q.setFromEuler(E.set(s.tilt * amt, s.tilt * 0.5 * amt, s.rot + (s.torn ? s.tilt * m : 0)));
+        M4.compose(V, Q, S.set(1, 1, 1));
+        walls.setMatrixAt(i, M4);
+      });
+      walls.instanceMatrix.needsUpdate = true;
+      memMat.opacity = 0.35 * (1 - l); nucMat.opacity = 0.5 * (1 - l);
+      membranes.visible = l < 0.98; nuclei.visible = l < 0.98;
+      const sv = Math.max(1e-4, sm(0, 0.6, l));
+      cells.forEach((c, ci) => {
+        const p = cellPos(c, m).clone();
+        M4.compose(p, Q.identity(), S.set(1.5, 1.5, 0.6)); membranes.setMatrixAt(ci, M4);
+        M4.compose(V.copy(p).add(NUC), Q.identity(), S.set(1, 1, 1)); nuclei.setMatrixAt(ci, M4);
+        V.copy(p).add(NUC).addScaledVector(c.dna, 1.6 * l);
+        Q.setFromEuler(E.set(time * 0.3 + c.spin, time * 0.2, 0));
+        M4.compose(V, Q, S.setScalar(1 + 1.2 * l)); dna.setMatrixAt(ci, M4);
+        for (let j = 0; j < nLip; j++) {
+          const f = lipAt[ci * nLip + j], r = 1.5 + f.r * l;
+          M4.compose(V.set(p.x + Math.cos(f.a) * r, p.y + Math.sin(f.a) * r, f.z), Q.identity(), S.setScalar(sv));
+          lip.setMatrixAt(ci * nLip + j, M4);
+        }
+        for (let j = 0; j < nEnv; j++) {
+          const f = envAt[ci * nEnv + j], r = 0.6 + f.r * l;
+          M4.compose(V.set(p.x + NUC.x + Math.cos(f.a) * r, p.y + NUC.y + Math.sin(f.a) * r, f.z), Q.identity(), S.setScalar(sv));
+          env.setMatrixAt(ci * nEnv + j, M4);
+        }
+      });
+      [membranes, nuclei, dna, lip, env].forEach(o => { o.instanceMatrix.needsUpdate = true; });
+      const c5 = cellPos(cells[5], m).clone();
+      const s0 = segs[5 * 6 + 1];
+      mWall.position.set(c5.x + s0.mx + s0.d.x * (s0.torn ? m : 0.08 * m), c5.y + s0.my + s0.d.y * (s0.torn ? m : 0.08 * m), 0.6);
+      mMem.position.set(c5.x - 1.45, c5.y - 0.3, 0.3);
+      mNuc.position.copy(c5).add(NUC).add(V.set(0, 0.55, 0.2));
+      mDna.position.copy(c5).add(NUC).addScaledVector(cells[5].dna, 1.6 * l);
+    };
+    place();
+    return {
+      update() { place(); },
+      step(dt, t) { time = t; place(); },
+      state() { return {}; },
+    };
+  },
+});
+
+/* ------------------------------------------------- a bilayer and the detergent */
+Scene.define('bilayer-soap', {
+  scale: { rung: 'molecules', form: 'bulk', unit: null, exag: {} },
+  params: { soap: 0 },
+  glide: ['soap'],
+  build(k) {
+    const { THREE } = k;
+    let seed = 23;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1);
+    const UP = new THREE.Vector3(0, 1, 0), X = new THREE.Vector3(1, 0, 0);
+    const inst = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; k.root.add(m); return m; };
+    const mark = (name, info) => k.part(name, new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), k.material(0xffffff, { transparent: true, opacity: 0 })), Object.assign({ layer: false }, info));
+
+    const bounds = new THREE.Mesh(new THREE.BoxGeometry(22, 14, 10), k.material(0xffffff, { transparent: true, opacity: 0 }));
+    k.root.add(bounds);
+
+    const nMic = 10, R = 2.3;
+    const centers = [];
+    for (let i = 0; i < nMic; i++) centers.push(new THREE.Vector3(-8 + (i % 5) * 4, i < 5 ? 3.4 : -3.4, (rnd() - 0.5) * 3));
+    const members = new Array(nMic).fill(0);
+    const sphereAt = (j, idx, n) => {
+      const y = 1 - 2 * (idx + 0.5) / n, r = Math.sqrt(1 - y * y), ph = idx * 2.39996;
+      return new THREE.Vector3(r * Math.cos(ph), y, r * Math.sin(ph));
+    };
+    const perMic = 30;
+
+    const lipids = [];
+    for (let leaf = 0; leaf < 2; leaf++) for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) {
+      const sgn = leaf ? -1 : 1, mic = lipids.length % nMic, idx = members[mic]++;
+      const u = sphereAt(mic, idx, perMic);
+      lipids.push({ P0: new THREE.Vector3(-4.5 + i, 2.4 * sgn, -4.5 + j), D0: new THREE.Vector3(0, -sgn, 0),
+        P1: centers[mic].clone().addScaledVector(u, R), D1: u.clone().negate(), st: rnd() * 0.5 });
+    }
+    const dets = [];
+    for (let i = 0; i < 100; i++) {
+      const mic = i % nMic, idx = members[mic]++;
+      const u = sphereAt(mic, idx, perMic);
+      const sgn = rnd() < 0.5 ? -1 : 1;
+      dets.push({ P0: new THREE.Vector3((rnd() - 0.5) * 20, sgn * (3.6 + rnd() * 2.6), (rnd() - 0.5) * 8),
+        D0: new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize(),
+        P1: centers[mic].clone().addScaledVector(u, R), D1: u.clone().negate(), st: rnd() * 0.4 });
+    }
+
+    const lHead = inst(new THREE.SphereGeometry(0.45, 12, 8), k.material(0xe0a64a), lipids.length);
+    const lTail = inst(new THREE.CylinderGeometry(0.12, 0.12, 1.8, 6), k.material(0xf0dca8), lipids.length * 2);
+    const dHead = inst(new THREE.SphereGeometry(0.38, 12, 8), k.material(0x4fa89a), dets.length);
+    const dTail = inst(new THREE.CylinderGeometry(0.11, 0.11, 1.4, 6), k.material(0x9fd0c6), dets.length);
+    const mLip = mark('lipid', { label: 'Phospholipid', card: 'Water-loving head, two oily tails. Two sheets of these, tails inward, make every membrane in the cell.', color: 0xe0a64a });
+    const mDet = mark('detergent', { label: 'Detergent', card: 'One head, one oily tail. It wedges into the bilayer and carries lipids off in small clusters.', color: 0x4fa89a });
+
+    const P = new THREE.Vector3(), D = new THREE.Vector3(), perp = new THREE.Vector3(), C = new THREE.Vector3();
+    const pose = (o, w) => {
+      P.copy(o.P0).lerp(o.P1, w);
+      D.copy(o.D0).lerp(o.D1, w);
+      if (D.lengthSq() < 1e-4) D.copy(o.D1);
+      D.normalize();
+      Q.setFromUnitVectors(UP, D);
+      perp.crossVectors(D, Math.abs(D.y) < 0.9 ? UP : X).normalize();
+    };
+    const place = () => {
+      const s = k.params.soap;
+      lipids.forEach((o, i) => {
+        pose(o, sm(o.st, o.st + 0.5, s));
+        M4.compose(P, Q, S); lHead.setMatrixAt(i, M4);
+        C.copy(P).addScaledVector(D, 1.35);
+        M4.compose(V.copy(C).addScaledVector(perp, 0.17), Q, S); lTail.setMatrixAt(2 * i, M4);
+        M4.compose(V.copy(C).addScaledVector(perp, -0.17), Q, S); lTail.setMatrixAt(2 * i + 1, M4);
+        if (i === 44) mLip.position.copy(P);
+      });
+      dets.forEach((o, i) => {
+        pose(o, sm(o.st, o.st + 0.6, s));
+        M4.compose(P, Q, S); dHead.setMatrixAt(i, M4);
+        M4.compose(V.copy(P).addScaledVector(D, 1.08), Q, S); dTail.setMatrixAt(i, M4);
+        if (i === 7) mDet.position.copy(P);
+      });
+      [lHead, lTail, dHead, dTail].forEach(o => { o.instanceMatrix.needsUpdate = true; });
+    };
+    place();
+    return { update() { place(); }, state() { return {}; } };
+  },
+});
+
+/* ------------------------------------------------- DNA in water, salt, alcohol */
+Scene.define('dna-solution', {
+  scale: { rung: 'molecules', form: 'bulk', unit: null, exag: {} },
+  params: { salt: 0, filter: 0, alcohol: 0 },
+  glide: ['salt', 'filter', 'alcohol'],
+  build(k) {
+    const { THREE } = k;
+    let seed = 31;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3(), ONE = new THREE.Vector3(1, 1, 1);
+    const UP = new THREE.Vector3(0, 1, 0);
+    const inst = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; k.root.add(m); return m; };
+    const mark = (name, info) => k.part(name, new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), k.material(0xffffff, { transparent: true, opacity: 0 })), Object.assign({ layer: false }, info));
+    const randQ = () => new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd() * 6.28, rnd() * 6.28, rnd() * 6.28));
+
+    const TOP = 6, BOT = -7;
+    const bounds = new THREE.Mesh(new THREE.BoxGeometry(21, 15, 9), k.material(0xffffff, { transparent: true, opacity: 0 }));
+    bounds.position.y = 0.5; k.root.add(bounds);
+
+    // DNA: four short double helices, 1 unit is about 1 nm
+    const nbp = 20, nStr = 4;
+    const local = [];
+    for (let i = 0; i < nbp; i++) {
+      const t = i * 2 * Math.PI / 10.5, x = (i - (nbp - 1) / 2) * 0.34;
+      local.push({ a: new THREE.Vector3(x, Math.cos(t), Math.sin(t)), b: new THREE.Vector3(x, Math.cos(t + 2.4), Math.sin(t + 2.4)) });
+    }
+    const phos = [];
+    local.forEach(p => { phos.push(p.a, p.b); });
+    const strands = [
+      { Cw: new THREE.Vector3(-5.5, -3.8, 0.5), Cc: new THREE.Vector3(-0.6, 2.2, 1.05) },
+      { Cw: new THREE.Vector3(5, -4.6, -1), Cc: new THREE.Vector3(0.6, 2.2, -1.05) },
+      { Cw: new THREE.Vector3(-4.5, 1.5, -0.5), Cc: new THREE.Vector3(0.9, 4.3, 0.2) },
+      { Cw: new THREE.Vector3(5.5, 1.2, 1), Cc: new THREE.Vector3(-0.8, 0.2, -0.2) },
+    ];
+    strands.forEach((s, i) => {
+      s.qw = randQ();
+      s.qc = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2 * (i - 1.5), 0.25 * (i % 2 ? 1 : -1), 0.1 * i));
+      s.C = new THREE.Vector3(); s.q = new THREE.Quaternion(); s.ph = rnd() * 6.28;
+    });
+    const bb = inst(new THREE.SphereGeometry(0.24, 10, 8), k.material(0xd88a3a), nStr * phos.length);
+    const rungs = inst(new THREE.CylinderGeometry(0.09, 0.09, 1, 6), k.material(0x7f9fd0), nStr * nbp);
+
+    // Na+: one per phosphate
+    const ions = [];
+    for (let s = 0; s < nStr; s++) for (let p = 0; p < phos.length; p++) {
+      ions.push({ s, p, free: new THREE.Vector3((rnd() - 0.5) * 20, BOT + rnd() * (TOP - BOT - 1), (rnd() - 0.5) * 8), st: rnd() * 0.5, ph: rnd() * 6.28 });
+    }
+    const na = inst(new THREE.SphereGeometry(0.27, 10, 8), k.material(k.atom('Na')), ions.length);
+
+    // water
+    const nW = 260, waters = [];
+    const h1 = new THREE.Vector3(0.158, 0.122, 0), h2 = new THREE.Vector3(-0.158, 0.122, 0);
+    for (let i = 0; i < nW; i++) waters.push({ p: new THREE.Vector3((rnd() - 0.5) * 20, BOT + rnd() * (TOP - BOT), (rnd() - 0.5) * 8), q: randQ(), ph: rnd() * 6.28 });
+    const wO = inst(new THREE.SphereGeometry(0.17, 8, 6), k.material(k.atom('O')), nW);
+    const wH = inst(new THREE.SphereGeometry(0.1, 6, 4), k.material(k.atom('H')), nW * 2);
+
+    // isopropanol, CH3-CH(OH)-CH3
+    const nA = 140, alc = [];
+    const aC = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.3, 0.12, 0), new THREE.Vector3(0.3, 0.12, 0)], aO = new THREE.Vector3(0, -0.3, 0.05);
+    for (let i = 0; i < nA; i++) alc.push({ p: new THREE.Vector3((rnd() - 0.5) * 20, rnd() * TOP, (rnd() - 0.5) * 8), q: randQ(), ph: rnd() * 6.28 });
+    const alcC = inst(new THREE.SphereGeometry(0.19, 8, 6), k.material(k.atom('C')), nA * 3);
+    const alcO = inst(new THREE.SphereGeometry(0.17, 8, 6), k.material(k.atom('O')), nA);
+    const alcTint = k.part('alcohol', new THREE.Mesh(new THREE.BoxGeometry(21, 1, 9).translate(0, -0.5, 0), k.material(0xe8eef2, { transparent: true, opacity: 0.12 })),
+      { label: 'Alcohol', card: 'DNA dissolves poorly here. With its charge cancelled, a strand clings to other strands instead.', color: k.atom('C'), layer: false });
+    alcTint.position.y = TOP;
+
+    // filter and debris
+    const filterMat = k.material(0xf2ede2, { transparent: true, opacity: 0.5 });
+    const filterSheet = new THREE.Mesh(new THREE.BoxGeometry(21, 0.12, 9), filterMat);
+    filterSheet.position.y = TOP + 0.6; k.root.add(filterSheet);
+    const nD = 9, deb = [];
+    for (let i = 0; i < nD; i++) deb.push({ x: -8.5 + i * 2.1 + (rnd() - 0.5) * 0.8, z: (rnd() - 0.5) * 6, r: 0.8 + rnd() * 0.6, q: randQ() });
+    const debris = inst(new THREE.IcosahedronGeometry(1, 0), k.material(0x8d9a58), nD);
+
+    const mBack = mark('backbone', { label: 'DNA backbone', card: 'A chain of phosphates, each with a negative charge. Bare, two strands repel each other.', color: 0xd88a3a });
+    const mNa = mark('na', { label: 'Na⁺', card: 'Each sodium ion settles beside a phosphate and cancels its charge. Nothing is broken.', color: k.atom('Na') });
+    const mWater = mark('water', { label: 'Water', card: 'Polar molecules crowd around the charged backbone and keep each strand dissolved on its own.', color: k.atom('O') });
+    const mDeb = mark('debris', { label: 'Cell-wall debris', card: 'Far bigger than the filter’s pores, so it stays on the paper.', color: 0x8d9a58 });
+    mark('rungs', { label: 'Base pairs', card: 'The rungs of the ladder, inside the helix, shielded from the water.', color: 0x7f9fd0 });
+
+    let time = 0;
+    const segA = new THREE.Vector3(), segB = new THREE.Vector3(), AX = new THREE.Vector3(), W = new THREE.Vector3(), T = new THREE.Vector3();
+    const nearDNA = p => {
+      for (const s of strands) {
+        segA.set(-(nbp - 1) * 0.17, 0, 0).applyQuaternion(s.q).add(s.C);
+        segB.set((nbp - 1) * 0.17, 0, 0).applyQuaternion(s.q).add(s.C);
+        AX.subVectors(segB, segA);
+        const t = Math.min(1, Math.max(0, T.subVectors(p, segA).dot(AX) / AX.lengthSq()));
+        if (W.copy(segA).addScaledVector(AX, t).distanceToSquared(p) < 1.6) return true;
+      }
+      return false;
+    };
+    const place = () => {
+      const { salt, filter, alcohol } = k.params;
+      const by = TOP - alcohol * TOP;
+      const clump = sm(0.3, 1, alcohol);
+      strands.forEach((s, si) => {
+        const wob = 0.25 * (1 - clump);
+        s.C.copy(s.Cw).lerp(s.Cc, clump).add(V.set(Math.sin(time * 0.4 + s.ph) * wob, Math.cos(time * 0.3 + s.ph) * wob, 0));
+        s.q.copy(s.qw).slerp(s.qc, clump);
+        phos.forEach((p, pi) => {
+          M4.compose(V.copy(p).applyQuaternion(s.q).add(s.C), Q.identity(), ONE);
+          bb.setMatrixAt(si * phos.length + pi, M4);
+        });
+        local.forEach((p, i) => {
+          segA.copy(p.a).applyQuaternion(s.q).add(s.C);
+          segB.copy(p.b).applyQuaternion(s.q).add(s.C);
+          AX.subVectors(segB, segA);
+          Q.setFromUnitVectors(UP, T.copy(AX).normalize());
+          M4.compose(V.addVectors(segA, segB).multiplyScalar(0.5), Q, S.set(1, AX.length(), 1));
+          rungs.setMatrixAt(si * nbp + i, M4);
+        });
+      });
+      bb.instanceMatrix.needsUpdate = true; rungs.instanceMatrix.needsUpdate = true;
+
+      ions.forEach((o, i) => {
+        const s = strands[o.s], p = phos[o.p];
+        T.set(0, p.y, p.z).normalize();
+        W.copy(p).addScaledVector(T, 0.5).applyQuaternion(s.q).add(s.C);
+        const w = sm(o.st, o.st + 0.5, salt);
+        V.copy(o.free).add(T.set(Math.sin(time + o.ph), Math.cos(time * 0.8 + o.ph), 0).multiplyScalar(0.3 * (1 - w))).lerp(W, w);
+        M4.compose(V, Q.identity(), S.setScalar(Math.max(1e-4, sm(0, 0.15, salt))));
+        na.setMatrixAt(i, M4);
+        if (i === 9) mNa.position.copy(V);
+      });
+      na.instanceMatrix.needsUpdate = true;
+
+      waters.forEach((o, i) => {
+        V.copy(o.p).add(T.set(Math.sin(time * 1.3 + o.ph) * 0.15, Math.cos(time * 1.1 + o.ph) * 0.15, 0));
+        const vis = V.y < by && !nearDNA(V) ? 1 : 1e-4;
+        M4.compose(V, o.q, S.setScalar(vis)); wO.setMatrixAt(i, M4);
+        M4.compose(W.copy(h1).multiplyScalar(vis).applyQuaternion(o.q).add(V), Q.identity(), S.setScalar(vis)); wH.setMatrixAt(2 * i, M4);
+        M4.compose(W.copy(h2).multiplyScalar(vis).applyQuaternion(o.q).add(V), Q.identity(), S.setScalar(vis)); wH.setMatrixAt(2 * i + 1, M4);
+      });
+      wO.instanceMatrix.needsUpdate = true; wH.instanceMatrix.needsUpdate = true;
+
+      alc.forEach((o, i) => {
+        V.copy(o.p).add(T.set(Math.sin(time * 1.2 + o.ph) * 0.15, Math.cos(time + o.ph) * 0.15, 0));
+        const vis = alcohol > 0.01 && V.y > by && !nearDNA(V) ? 1 : 1e-4;
+        aC.forEach((c, j) => {
+          M4.compose(W.copy(c).applyQuaternion(o.q).add(V), Q.identity(), S.setScalar(vis));
+          alcC.setMatrixAt(3 * i + j, M4);
+        });
+        M4.compose(W.copy(aO).applyQuaternion(o.q).add(V), Q.identity(), S.setScalar(vis));
+        alcO.setMatrixAt(i, M4);
+      });
+      alcC.instanceMatrix.needsUpdate = true; alcO.instanceMatrix.needsUpdate = true;
+      alcTint.visible = alcohol > 0.01;
+      alcTint.scale.y = Math.max(0.001, TOP - by);
+
+      filterSheet.visible = filter > 0.01;
+      filterMat.opacity = 0.5 * sm(0, 0.25, filter);
+      const drop = 7 * (1 - sm(0, 0.8, filter)), dv = Math.max(1e-4, sm(0, 0.15, filter));
+      deb.forEach((d, i) => {
+        V.set(d.x, TOP + 0.66 + d.r + drop, d.z);
+        M4.compose(V, d.q, S.setScalar(d.r * dv));
+        debris.setMatrixAt(i, M4);
+        if (i === 4) mDeb.position.copy(V);
+      });
+      debris.instanceMatrix.needsUpdate = true;
+
+      const s0 = strands[0];
+      mBack.position.copy(phos[14]).applyQuaternion(s0.q).add(s0.C);
+      mWater.position.copy(s0.C).add(V.set(0, -1.9, 0.5));
+    };
+    place();
+    return {
+      update() { place(); },
+      step(dt, t) { time = t; place(); },
+      state() { return { boundaryY: TOP - k.params.alcohol * TOP }; },
+    };
+  },
+});
+
+/* ------------------------------------------------- from a clump to one molecule */
+Scene.define('dna-zoom', {
+  scale: { rung: 'macromolecule', form: 'bulk', unit: null, exag: {} },
+  params: { zoom: 0 },
+  glide: ['zoom'],
+  build(k) {
+    const { THREE } = k;
+    let seed = 41;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+    const mark = (name, info) => k.part(name, new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), k.material(0xffffff, { transparent: true, opacity: 0 })), Object.assign({ layer: false }, info));
+    const inst = (geo, mat, n, parent) => { const m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; parent.add(m); return m; };
+    const fade = c => k.material(c, { transparent: true, opacity: 1 });
+
+    const bounds = new THREE.Mesh(new THREE.BoxGeometry(12, 9, 9), k.material(0xffffff, { transparent: true, opacity: 0 }));
+    k.root.add(bounds);
+
+    const g0 = new THREE.Group(), g1 = new THREE.Group(), g2 = new THREE.Group();
+    k.root.add(g0, g1, g2);
+
+    // level 0: the tangled clump on the stick
+    const m0 = fade(0xf3efe4);
+    const clump = inst(new THREE.CylinderGeometry(0.05, 0.05, 1, 5), m0, 500, g0);
+    for (let i = 0; i < 500; i++) {
+      const u = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize();
+      V.copy(u).multiplyScalar(3.5 * Math.cbrt(rnd()));
+      Q.setFromEuler(new THREE.Euler(rnd() * 6.28, rnd() * 6.28, rnd() * 6.28));
+      M4.compose(V, Q, S.set(1, 1.5 + rnd() * 2.5, 1));
+      clump.setMatrixAt(i, M4);
+    }
+    // level 1: one thread, many molecules side by side
+    const m1 = fade(0xe8e2d2);
+    const pts = [[0, 0]];
+    for (let ring = 1; ring <= 3; ring++) for (let j = 0; j < ring * 6; j++) { const a = j / (ring * 6) * 6.28; pts.push([Math.cos(a) * ring * 0.27, Math.sin(a) * ring * 0.27]); }
+    const fibre = inst(new THREE.CylinderGeometry(0.1, 0.1, 12, 6), m1, pts.length, g1);
+    pts.forEach((p, i) => {
+      Q.setFromEuler(new THREE.Euler(0, 0, Math.PI / 2 + (rnd() - 0.5) * 0.04));
+      M4.compose(V.set((rnd() - 0.5) * 0.6, p[0], p[1]), Q, S.set(1, 1, 1));
+      fibre.setMatrixAt(i, M4);
+    });
+    // level 2: one double helix
+    const m2a = fade(0xd88a3a), m2b = fade(0x7f9fd0);
+    const nbp = 30;
+    const bbm = inst(new THREE.SphereGeometry(0.24, 10, 8), m2a, nbp * 2, g2);
+    const rgm = inst(new THREE.CylinderGeometry(0.09, 0.09, 1, 6), m2b, nbp, g2);
+    const A = new THREE.Vector3(), B = new THREE.Vector3(), D = new THREE.Vector3();
+    for (let i = 0; i < nbp; i++) {
+      const t = i * 2 * Math.PI / 10.5, x = (i - (nbp - 1) / 2) * 0.34;
+      A.set(x, Math.cos(t), Math.sin(t)); B.set(x, Math.cos(t + 2.4), Math.sin(t + 2.4));
+      M4.compose(A, Q.identity(), S.set(1, 1, 1)); bbm.setMatrixAt(2 * i, M4);
+      M4.compose(B, Q.identity(), S.set(1, 1, 1)); bbm.setMatrixAt(2 * i + 1, M4);
+      D.subVectors(B, A);
+      Q.setFromUnitVectors(UP, D.clone().normalize());
+      M4.compose(V.addVectors(A, B).multiplyScalar(0.5), Q, S.set(1, D.length(), 1));
+      rgm.setMatrixAt(i, M4);
+    }
+    const mClump = mark('clump', { label: 'The white clump', card: 'What you wound onto the stick: DNA tangled with some RNA and protein.', color: 0xf3efe4 });
+    const mFibre = mark('fibre', { label: 'One thread', card: 'Still far too many molecules to count, lying side by side.', color: 0xe8e2d2 });
+    const mHelix = mark('helix', { label: 'One DNA molecule', card: 'A double helix, far thinner than anything an eye can see.', color: 0xd88a3a });
+
+    const F = 12;
+    const place = () => {
+      const z = k.params.zoom;
+      const s0 = Math.pow(F, 2 * z), s1 = Math.pow(F, 2 * z - 1), s2 = Math.pow(F, 2 * z - 2);
+      g0.scale.setScalar(s0); g1.scale.setScalar(s1); g2.scale.setScalar(s2);
+      const o0 = 1 - sm(0.15, 0.45, z), o1 = sm(0.15, 0.45, z) * (1 - sm(0.6, 0.9, z)), o2 = sm(0.6, 0.9, z);
+      m0.opacity = o0; m1.opacity = o1; m2a.opacity = o2; m2b.opacity = o2;
+      g0.visible = o0 > 0.01; g1.visible = o1 > 0.01; g2.visible = o2 > 0.01;
+      mClump.position.set(2.5, 2.5, 0).multiplyScalar(Math.min(s0, 1.6));
+      mFibre.position.set(0, 0.9, 0).multiplyScalar(Math.min(s1, 1.6));
+      mHelix.position.set(1, 1, 0).multiplyScalar(Math.min(s2, 1));
+    };
+    place();
+    return {
+      update() { place(); },
+      step(dt, t) { g0.rotation.y = t * 0.08; g2.rotation.x = t * 0.25; },
+      state() {
+        const helixWidthNm = 2, eyeLimitUm = 100;
+        return { helixWidthNm, eyeLimitUm, helicesAcrossVisible: Math.round(eyeLimitUm * 1000 / helixWidthNm) };
+      },
+    };
+  },
+});
+
+/* ---------------------------------------------------------------- the lesson */
+const BENCH = [
+  { mash: 0, buffer: 0, filter: 0, alcohol: 0, spool: 0 },
+  { mash: 1, buffer: 0, filter: 0, alcohol: 0, spool: 0 },
+  { mash: 1, buffer: 1, filter: 0, alcohol: 0, spool: 0 },
+  { mash: 1, buffer: 1, filter: 1, alcohol: 0, spool: 0 },
+  { mash: 1, buffer: 1, filter: 1, alcohol: 1, spool: 0 },
+  { mash: 1, buffer: 1, filter: 1, alcohol: 1, spool: 1 },
+];
+
+function whenState(c, fn) {
+  const s = c.state();
+  if (s) { fn(s); return; }
+  const off = c.on('frame', st => { off(); fn(st); });
+}
+
+function benchView(i, notes, describe) {
+  return {
+    label: 'Bench', scene: 'bench', c: bench, describe,
+    enter() {
+      bench.set(BENCH[Math.max(0, i - 1)], { snap: true });
+      bench.set(BENCH[i]);
+      bench.notes(notes);
+    },
+  };
+}
+
+// Each step pairs the bench with one or more molecular views, switched by chips.
+function views(ctx, list, extra) {
+  ctx.ui.controls(
+    '<div class="chips">' + list.map((v, i) => `<button class="chip" data-v="${i}" aria-pressed="false">${v.label}</button>`).join('') + '</div>' +
+    (extra || '') + '<div id="legend"></div>');
+  const legend = ctx.ui.q('#legend');
+  const pick = i => {
+    const v = list[i];
+    ctx.ui.qa('[data-v]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === i)));
+    shell.showScene(v.scene);
+    legend.innerHTML = '';
+    CardStage.showPanel(legend, v.c);
+    v.enter();
+    shell.describe(v.describe);
+  };
+  ctx.ui.qa('[data-v]').forEach(b => {
+    b.onclick = () => { const i = +b.dataset.v; pick(i); shell.announce(list[i].label + ' view'); };
+  });
+  pick(0);
+  return pick;
+}
+
+const shell = LessonShell.create({
+  brand: 'Strawberry DNA',
+  hint: 'Drag to orbit · Scroll to zoom',
+  ctx: { state: {} },
+  steps: [
+    {
+      eyebrow: 'Step 1 · The berry', title: 'Why strawberries?', scene: 'bench',
+      body: '<p class="lead">A ripe strawberry is soft, so its cells break open easily.</p>' +
+            '<p>Garden strawberries are <strong>octoploid</strong>: each cell carries many full copies of every chromosome set, so there is a lot of DNA to pull out. Switch to the cell to see where it is.</p>',
+      describe: 'A strawberry sits in a sealed plastic bag, beside an empty test tube with a coffee filter in a funnel.',
+      nextLabel: 'Mash it',
+      onEnter(ctx) {
+        views(ctx, [
+          benchView(0, ['berry'], 'A strawberry sits in a sealed plastic bag, beside an empty test tube with a coffee filter in a funnel.'),
+          { label: 'Inside a cell', scene: 'cell', c: cell,
+            describe: 'A plant cell cut open: a cellulose wall, a membrane inside it, a large vacuole, and the nucleus, where the DNA is kept.',
+            enter() {
+              cell.notes(['wall']);
+              cell.note('nucleus', { text: 'Nucleus', card: 'The DNA is in here, packed into chromosomes. This is a generic plant cell, not a strawberry’s own.' });
+            } },
+        ],
+        '<div class="stats"><div class="stat"><div class="stat-label">Chromosome sets per cell</div><div class="stat-value" id="sets">–</div><div class="stat-sub" id="per">–</div></div>' +
+        '<div class="stat"><div class="stat-label">Chromosomes per cell</div><div class="stat-value" id="chr">–</div><div class="stat-sub">Fragaria × ananassa</div></div></div>');
+        whenState(bench, s => {
+          ctx.ui.q('#sets').textContent = s.chromosomeSets;
+          ctx.ui.q('#per').textContent = `of ${s.chromosomesPerSet} chromosomes each`;
+          ctx.ui.q('#chr').textContent = s.chromosomesPerCell;
+        });
+      },
+    },
+    {
+      eyebrow: 'Step 2 · Mash', title: 'Squash the berry', scene: 'bench',
+      body: '<p class="lead">Squeeze the berry through the bag until it is pulp.</p>' +
+            '<p>Mashing tears the tissue apart and rips the <strong>cell walls</strong>. The membranes bend instead of breaking, so the DNA is still wrapped inside the plasma membrane and the nuclear envelope.</p>',
+      describe: 'The strawberry is squashed flat in the bag, with pulp spread across the bottom.',
+      nextLabel: 'Add the buffer',
+      onEnter(ctx) {
+        views(ctx, [
+          benchView(1, ['berry'], 'The strawberry is squashed flat in the bag, with pulp spread across the bottom.'),
+          { label: 'Molecules', scene: 'tissue', c: tissue,
+            describe: 'Plant cells pull apart and their cell walls break into pieces, while each membrane and nucleus stays whole with the DNA inside.',
+            enter() {
+              tissue.set({ mash: 0, lyse: 0 }, { snap: true });
+              tissue.set({ mash: 1 });
+              tissue.notes(['wall', 'membrane']);
+            } },
+        ]);
+      },
+    },
+    {
+      eyebrow: 'Step 3 · Extraction buffer', title: 'Soap, salt and water', scene: 'bench',
+      body: '<p class="lead">Pour in water with a squirt of dish soap and a pinch of salt, and mix gently.</p>' +
+            '<p><strong>Soap</strong> pulls the lipid bilayers apart into small clusters, so both membranes open and DNA spills into the liquid. <strong>Salt</strong> adds Na⁺ ions that settle on DNA’s negative phosphate backbone and cancel its charge, so the strands stop repelling each other.</p>',
+      describe: 'Pale buffer fills the bottom of the bag around the mashed berry, with foam on top.',
+      nextLabel: 'Filter it',
+      onEnter(ctx) {
+        views(ctx, [
+          benchView(2, ['buffer'], 'Pale buffer fills the bottom of the bag around the mashed berry, with foam on top.'),
+          { label: 'Cells', scene: 'tissue', c: tissue,
+            describe: 'The broken cells lose their membranes and nuclear envelopes, which break into small clusters, and the DNA drifts out into the liquid.',
+            enter() {
+              tissue.set({ mash: 1, lyse: 0 }, { snap: true });
+              tissue.set({ lyse: 1 });
+              tissue.notes(['nucleus', 'dna']);
+            } },
+          { label: 'Soap', scene: 'bilayer', c: bilayer,
+            describe: 'A flat lipid bilayer with detergent molecules around it comes apart into small round clusters of lipid and detergent.',
+            enter() {
+              bilayer.set({ soap: 0 }, { snap: true });
+              bilayer.set({ soap: 1 });
+              bilayer.notes(['lipid', 'detergent']);
+            } },
+          { label: 'Salt', scene: 'dna', c: dna,
+            describe: 'Short DNA double helices float apart in water, and sodium ions gather along each backbone, one beside every phosphate.',
+            enter() {
+              dna.set({ salt: 0, filter: 0, alcohol: 0 }, { snap: true });
+              dna.set({ salt: 1 });
+              dna.notes(['backbone', 'na']);
+            } },
+        ]);
+      },
+    },
+    {
+      eyebrow: 'Step 4 · Filter', title: 'Pour it through a coffee filter', scene: 'bench',
+      body: '<p class="lead">Pour the mash through a coffee filter into the tube.</p>' +
+            '<p>Cell walls and other big debris stay on the paper. The DNA is <strong>dissolved</strong>, so it passes straight through with the water, each strand surrounded by water molecules.</p>',
+      describe: 'The liquid drains from the bag through the paper filter, leaving red pulp behind, and clear pink filtrate collects in the test tube.',
+      nextLabel: 'Add alcohol',
+      onEnter(ctx) {
+        views(ctx, [
+          benchView(3, ['filter', 'filtrate'], 'The liquid drains from the bag through the paper filter, leaving red pulp behind, and clear pink filtrate collects in the test tube.'),
+          { label: 'Molecules', scene: 'dna', c: dna,
+            describe: 'Large chunks of cell wall land on the filter sheet at the top, while the DNA strands below stay dissolved, each surrounded by water molecules.',
+            enter() {
+              dna.set({ salt: 1, filter: 0, alcohol: 0 }, { snap: true });
+              dna.set({ filter: 1 });
+              dna.notes(['debris', 'water']);
+            } },
+        ]);
+      },
+    },
+    {
+      eyebrow: 'Step 5 · Cold alcohol', title: 'Layer alcohol on top', scene: 'bench',
+      body: '<p class="lead">Tilt the tube and pour ice-cold rubbing alcohol gently down the side, so it floats on top.</p>' +
+            '<p>DNA dissolves in water but much less in alcohol. Where the layers meet, the neutralised strands come out of solution and clump into <strong>cloudy white threads</strong>. Cold makes them come out faster.</p>',
+      describe: 'A clear layer of alcohol floats on the pink filtrate, and white threads form where the two layers meet.',
+      nextLabel: 'Spool it',
+      onEnter(ctx) {
+        views(ctx, [
+          benchView(4, ['alcohol', 'threads'], 'A clear layer of alcohol floats on the pink filtrate, and white threads form where the two layers meet.'),
+          { label: 'Molecules', scene: 'dna', c: dna,
+            describe: 'Alcohol molecules fill the upper half and replace the water there. The DNA strands, each lined with sodium ions, leave the water and pack together in the alcohol.',
+            enter() {
+              dna.set({ salt: 1, filter: 0, alcohol: 0 }, { snap: true });
+              dna.set({ alcohol: 1 });
+              dna.notes(['alcohol']);
+              dna.note('backbone', { text: 'Strands clumping' });
+            } },
+        ]);
+      },
+    },
+    {
+      eyebrow: 'Step 6 · Spool', title: 'Wind the threads onto a stick', scene: 'bench',
+      body: '<p class="lead">Twirl a stick where the layers meet, and the threads wind onto it.</p>' +
+            '<p>What you lift out is <strong>millions of DNA molecules</strong> tangled with some RNA and protein. One double helix is far too thin to see: zoom from the clump down to a single molecule.</p>',
+      describe: 'A wooden stick dips into the tube, the white threads wind around its tip, and the stick lifts them out.',
+      nextLabel: 'Check yourself',
+      onEnter(ctx) {
+        let last = -1;
+        views(ctx, [
+          Object.assign(benchView(5, ['stick', 'threads'], 'A wooden stick dips into the tube, the white threads wind around its tip, and the stick lifts them out.'), {
+            enter() {
+              bench.set(BENCH[4], { snap: true });
+              bench.set(BENCH[5]);
+              bench.notes(['stick', 'threads']);
+              ctx.ui.hide(ctx.ui.q('#zoombox'));
+            },
+          }),
+          { label: 'Zoom in', scene: 'zoom', c: zoom,
+            describe: 'A tangled white clump of fibres. Drag the zoom slider to go down to one thread, then to a single DNA double helix.',
+            enter() {
+              ctx.ui.show(ctx.ui.q('#zoombox'));
+              last = -1;
+              sync(0);
+              setZoom(0);
+              whenState(zoom, s => {
+                ctx.ui.q('#across').textContent = s.helicesAcrossVisible.toLocaleString();
+                ctx.ui.q('#acrossSub').textContent = `one helix is ${s.helixWidthNm} nm wide; the eye resolves about ${s.eyeLimitUm} µm`;
+              });
+            } },
+        ],
+        '<div id="zoombox" class="is-hidden">' +
+          '<div class="slider"><div class="slider-head"><span class="label">Zoom</span><span class="value" id="zv">the clump</span></div>' +
+          '<input type="range" id="zoom" min="0" max="1" step="0.01" value="0"></div>' +
+          '<div class="stats"><div class="stat"><div class="stat-label">Helices side by side to make the thinnest visible thread</div><div class="stat-value" id="across">–</div><div class="stat-sub" id="acrossSub"></div></div></div>' +
+        '</div>');
+        const LEVELS = ['the clump', 'one thread', 'one molecule'], NOTES = ['clump', 'fibre', 'helix'];
+        function setZoom(v) {
+          zoom.set({ zoom: v }, { snap: true });
+          const lvl = v < 0.35 ? 0 : v < 0.75 ? 1 : 2;
+          if (lvl !== last) {
+            last = lvl;
+            zoom.notes([NOTES[lvl]]);
+            ctx.ui.q('#zv').textContent = LEVELS[lvl];
+            shell.describe(['A tangled white clump of fibres, the threads from the stick.',
+                            'One thread, made of many DNA molecules lying side by side.',
+                            'A single DNA double helix: two backbones twisted around a ladder of base pairs.'][lvl]);
+          }
+        }
+        const sync = ctx.ui.range(ctx.ui.q('#zoom'), v => setZoom(+v));
+      },
+    },
+    Quiz.step({
+      scene: () => bench,
+      questions: [
+        { q: 'What does the dish soap do?',
+          choices: ['Pulls the lipid membranes apart so the DNA spills out', 'Cuts the DNA into short pieces', 'Cancels the negative charge on DNA', 'Dissolves the cellulose cell walls'],
+          answer: 0,
+          why: 'Detergent breaks the bilayers of the plasma membrane and nuclear envelope into small clusters, which opens both.' },
+        { q: 'What does the salt do?',
+          choices: ['Breaks the DNA strands apart', 'Makes the alcohol colder', 'Its Na⁺ ions cancel the negative charge on DNA’s phosphate backbone', 'Opens the cell walls'],
+          answer: 2,
+          why: 'With the charge cancelled the strands stop repelling each other, so they can clump together later.' },
+        { q: 'Why does the DNA appear only in the alcohol layer?',
+          choices: ['DNA is much less soluble in alcohol than in water, so it comes out of solution there', 'Alcohol reacts with DNA to make a white solid', 'DNA is lighter than water and floats up', 'The cold alcohol freezes the DNA'],
+          answer: 0,
+          why: 'In water the strands stay dissolved; in alcohol the neutralised strands cling to each other and form visible threads.' },
+        { q: 'Can you see a single DNA molecule in the white threads?',
+          choices: ['Yes, each white thread is one long DNA molecule', 'Yes, with a magnifying glass', 'No: each thread is millions of DNA molecules tangled with some RNA and protein', 'No, because the soap destroyed the DNA'],
+          answer: 2,
+          why: 'One double helix is far too thin to see; what you hold is a tangle of millions.' },
+      ],
+    }),
+  ],
+});
+
+const bench   = shell.scene('bench',   el => Scene.mount(el, { scene: 'strawberry-bench', viewOffset: shell.viewOffset }));
+const cell    = shell.scene('cell',    el => PlantCell.mount(el, { viewOffset: shell.viewOffset, tissue: 'root', stream: 1 }));
+const tissue  = shell.scene('tissue',  el => Scene.mount(el, { scene: 'berry-tissue', viewOffset: shell.viewOffset }));
+const bilayer = shell.scene('bilayer', el => Scene.mount(el, { scene: 'bilayer-soap', viewOffset: shell.viewOffset }));
+const dna     = shell.scene('dna',     el => Scene.mount(el, { scene: 'dna-solution', viewOffset: shell.viewOffset }));
+const zoom    = shell.scene('zoom',    el => Scene.mount(el, { scene: 'dna-zoom', viewOffset: shell.viewOffset }));
+shell.goTo(0);
+</script>
+</body>
+</html>

@@ -56,4 +56,48 @@ function pick(requested, bench) {
   return p;
 }
 
-module.exports = { pick, names, DEFAULT };
+/* The models the builder may be asked for by name, in the order a picker lists
+ * them. Only a teacher (or a bench) may choose; everyone else gets the
+ * provider's default. A model is here because the eval set was run on it, so
+ * adding one is a gen-app.js sweep first and a line second. `role` is the
+ * picker's one-word reason to choose it. */
+const MODELS = [
+  { id: 'gemini-3.8-flash',      provider: 'gemini', label: 'Gemini 3.8 Flash',      role: 'everyday' },
+  { id: 'gemini-4-hydrogen',     provider: 'gemini', label: 'Gemini 4 Hydrogen',     role: 'stronger' },
+  { id: 'gemini-4-carbon',       provider: 'gemini', label: 'Gemini 4 Carbon',       role: 'strongest' },
+  { id: 'gemini-3.5-flash-lite', provider: 'gemini', label: 'Gemini 3.5 Flash-Lite', role: 'cheapest' },
+];
+
+/* A draft's rough bill on each model: the reference read from cache, a page
+ * out, thinking on top. Rounded for a picker, never for the cost line, which
+ * prices what the call actually used. */
+const DRAFT_TOKENS = { cached: 30000, output: 8000 };
+
+function catalog() {
+  return MODELS.map(m => {
+    let ready = false, draft = null;
+    try {
+      const p = PROVIDERS[m.provider]();
+      ready = !!process.env[p.envKey];
+      const r = p.priceOf ? p.priceOf(m.id) : null;
+      /* An implicit cache may not hit, so the reference is priced as input there. */
+      const ref = p.implicit && p.implicit(m.id) ? r && r.input : r && r.cached;
+      if (r && !r.unknown) draft = (DRAFT_TOKENS.cached * ref + DRAFT_TOKENS.output * r.output) / 1e6;
+    } catch { /* SDK missing: listed as not ready */ }
+    return { ...m, ready, draft };
+  });
+}
+
+/* A provider and a model id for a request that named one, or throws a message
+ * the box can show. `allowed` is the transport's answer to whether this caller
+ * may choose at all. */
+function forModel(id, allowed) {
+  if (!allowed) throw new Error('only a teacher can choose the model');
+  const m = MODELS.find(x => x.id === id);
+  if (!m) throw new Error(`no model named "${id}" is offered`);
+  const p = PROVIDERS[m.provider]();
+  if (!process.env[p.envKey]) throw new Error(`${p.envKey} is not set on the server`);
+  return { p, model: m.id };
+}
+
+module.exports = { pick, names, DEFAULT, MODELS, catalog, forModel };

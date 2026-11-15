@@ -1,0 +1,325 @@
+<!doctype html>
+<!-- requests
+1. Show how a kidney nephron filters blood: the glomerulus pushes water and small solutes into the tubule, and most of it is reabsorbed along the way.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nephron: Filtration and Reabsorption</title>
+<style>
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Scene"></script>
+<script>
+Scene.define('nephron', {
+  scale: { rung: 'organ', form: 'single', unit: null, exag: {} },
+  params: {
+    filtrationRate: 1,
+    reabsorptionActive: true,
+    activeSection: 'all'
+  },
+  glide: ['filtrationRate'],
+  build(k) {
+    const { THREE } = k;
+    const root = k.root;
+
+    const cCapsule = 0xddcc99;
+    const cTubule = 0xdeb887;
+    const cArtery = 0xd94444;
+    const cCapillary = 0xbf5566;
+    const cUrine = 0xd4a017;
+
+    // 1. Bowman's capsule and glomerulus
+    const capsuleGeom = new THREE.SphereGeometry(2.2, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.72);
+    const capsuleMat = k.material(cCapsule, { side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+    const capsuleMesh = new THREE.Mesh(capsuleGeom, capsuleMat);
+    capsuleMesh.position.set(-6, 7, 0);
+    capsuleMesh.rotation.x = Math.PI * 0.85;
+    capsuleMesh.rotation.z = -0.4;
+    const bowman = k.part('bowman', capsuleMesh, {
+      label: "Bowman's capsule",
+      card: 'Surrounds the glomerulus to collect ultrafiltrate forced across capillary fenestrations.',
+      color: cCapsule
+    });
+
+    const glomGeom = new THREE.TorusKnotGeometry(1.0, 0.35, 48, 12, 2, 3);
+    const glomMat = k.material(cArtery, { roughness: 0.4 });
+    const glomMesh = new THREE.Mesh(glomGeom, glomMat);
+    glomMesh.position.set(-6, 7, 0);
+    const glomerulus = k.part('glomerulus', glomMesh, {
+      label: 'Glomerulus',
+      card: 'High-pressure capillary bed pushing water, ions, and small nutrients into the nephron.',
+      color: cArtery,
+      view: { theta: 0.2, phi: 1.2, r: 12 }
+    });
+
+    // 2. Tubule pathway: PCT -> Loop of Henle -> DCT -> Collecting Duct
+    const tubulePoints = [
+      new THREE.Vector3(-6, 5.2, 0),       // exit Bowman's
+      new THREE.Vector3(-4.5, 5.0, 1.2),   // PCT loop 1
+      new THREE.Vector3(-3.2, 6.2, -0.8),  // PCT loop 2
+      new THREE.Vector3(-2.2, 4.2, 0.6),   // PCT loop 3
+      new THREE.Vector3(-1.8, 1.5, 0.2),   // entering descending limb
+      new THREE.Vector3(-1.6, -3.5, 0.1),  // descending limb deep medulla
+      new THREE.Vector3(-1.0, -6.5, 0.0),  // hairpin turn bottom
+      new THREE.Vector3(-0.4, -6.5, 0.0),
+      new THREE.Vector3(0.2, -3.5, -0.1),  // ascending limb
+      new THREE.Vector3(0.5, 1.5, -0.2),   // ascending limb top
+      new THREE.Vector3(1.5, 4.5, -0.8),   // DCT loop 1
+      new THREE.Vector3(2.8, 5.5, 0.6),    // DCT loop 2
+      new THREE.Vector3(3.8, 4.2, 0.0),    // connecting to duct
+      new THREE.Vector3(4.2, 4.0, 0.0),    // Collecting duct top
+      new THREE.Vector3(4.4, 0.0, 0.0),
+      new THREE.Vector3(4.6, -7.0, 0.0)    // to renal pelvis
+    ];
+
+    const nephronCurve = new THREE.CatmullRomCurve3(tubulePoints);
+    const tubuleGeom = new THREE.TubeGeometry(nephronCurve, 90, 0.62, 16, false);
+    const tubuleMat = k.material(cTubule, { transparent: true, opacity: 0.78, roughness: 0.6 });
+    const tubuleMesh = new THREE.Mesh(tubuleGeom, tubuleMat);
+    const tubule = k.part('tubule', tubuleMesh, {
+      label: 'Renal Tubule',
+      card: 'Continuous epithelial conduit that processes filtrate into final urine.',
+      color: cTubule
+    });
+
+    // Discrete named markers for parts
+    const pctPos = nephronCurve.getPoint(0.18);
+    const pctMarker = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), k.material(cTubule, { visible: false }));
+    pctMarker.position.copy(pctPos);
+    root.add(pctMarker);
+    k.part('pct', pctMarker, {
+      label: 'Proximal Convoluted Tubule',
+      card: 'Reclaims ~65% of water and salt, plus 100% of filtered glucose and amino acids.',
+      view: { theta: 0.3, phi: 1.25, r: 16 }
+    });
+
+    const loopPos = nephronCurve.getPoint(0.48);
+    const loopMarker = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), k.material(cTubule, { visible: false }));
+    loopMarker.position.copy(loopPos);
+    root.add(loopMarker);
+    k.part('loop', loopMarker, {
+      label: 'Loop of Henle',
+      card: 'Generates a steep osmotic gradient in the renal medulla using countercurrent multiplication.',
+      view: { theta: 0.0, phi: 1.4, r: 18 }
+    });
+
+    const ductPos = nephronCurve.getPoint(0.88);
+    const ductMarker = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), k.material(cUrine, { visible: false }));
+    ductMarker.position.copy(ductPos);
+    root.add(ductMarker);
+    k.part('duct', ductMarker, {
+      label: 'Collecting Duct',
+      card: 'Receives dilute filtrate and concentrates it into urine under the control of ADH.',
+      view: { theta: -0.2, phi: 1.2, r: 18 }
+    });
+
+    // 3. Peritubular capillary and vasa recta running alongside
+    const capPoints = [
+      new THREE.Vector3(-4.5, 7.5, 0),     // efferent arteriole
+      new THREE.Vector3(-3.5, 5.0, 1.4),
+      new THREE.Vector3(-2.0, 4.0, 0.4),
+      new THREE.Vector3(-1.0, 1.0, 0.3),
+      new THREE.Vector3(-0.8, -5.8, 0.2),  // descending vasa recta
+      new THREE.Vector3(-0.2, -6.0, -0.2),
+      new THREE.Vector3(0.0, 1.0, -0.3),   // ascending vasa recta
+      new THREE.Vector3(1.8, 4.2, -0.6),
+      new THREE.Vector3(3.5, 3.8, 0.4),
+      new THREE.Vector3(4.8, 4.8, 0.8)     // renal venule
+    ];
+    const capCurve = new THREE.CatmullRomCurve3(capPoints);
+    const capGeom = new THREE.TubeGeometry(capCurve, 64, 0.35, 12, false);
+    const capMat = k.material(cCapillary, { transparent: true, opacity: 0.65, roughness: 0.5 });
+    const capMesh = new THREE.Mesh(capGeom, capMat);
+    const capillaries = k.part('capillaries', capMesh, {
+      label: 'Peritubular Capillaries',
+      card: 'Porous vascular network that reabsorbs reclaimed fluid and solutes into systemic circulation.',
+      color: cCapillary
+    });
+
+    // 4. Moving fluid particles inside the nephron (instanced)
+    const N_PARTICLES = 65;
+    const pGeom = new THREE.SphereGeometry(0.22, 8, 8);
+    const pMat = k.material(0x44aaff, { roughness: 0.2 });
+    const pMesh = new THREE.InstancedMesh(pGeom, pMat, N_PARTICLES);
+    root.add(pMesh);
+
+    const dummy = new THREE.Object3D();
+    const pProgress = new Float32Array(N_PARTICLES);
+    for (let i = 0; i < N_PARTICLES; i++) {
+      pProgress[i] = i / N_PARTICLES;
+    }
+
+    // 5. Reabsorbed particles transferring from tubule to capillary (instanced)
+    const N_REABSORB = 30;
+    const rGeom = new THREE.SphereGeometry(0.16, 8, 8);
+    const rMat = k.material(0x73d216, { roughness: 0.3 });
+    const rMesh = new THREE.InstancedMesh(rGeom, rMat, N_REABSORB);
+    root.add(rMesh);
+    const rProgress = new Float32Array(N_REABSORB);
+    const rSourceT = new Float32Array(N_REABSORB);
+    for (let j = 0; j < N_REABSORB; j++) {
+      rProgress[j] = Math.random();
+      // Reabsorption concentrates mostly in PCT (0.08 - 0.35) and Loop (0.35 - 0.65)
+      rSourceT[j] = 0.08 + Math.random() * 0.55;
+    }
+
+    let simTime = 0;
+
+    return {
+      update(changed) {},
+      step(dt, t) {
+        const speed = 0.07 * k.params.filtrationRate;
+        simTime += dt * speed;
+
+        // Animate filtrate flowing along nephron
+        for (let i = 0; i < N_PARTICLES; i++) {
+          let prog = (pProgress[i] + simTime) % 1.0;
+          const pt = nephronCurve.getPoint(prog);
+          dummy.position.copy(pt);
+          // Tubule filtrate shrinks/concentrates as water is reabsorbed
+          const scale = Math.max(0.35, 1.0 - prog * 0.65);
+          dummy.scale.set(scale, scale, scale);
+          dummy.updateMatrix();
+          pMesh.setMatrixAt(i, dummy.matrix);
+        }
+        pMesh.instanceMatrix.needsUpdate = true;
+
+        // Animate reabsorption fluxes crossing to capillaries
+        const reabsorbOn = k.params.reabsorptionActive;
+        for (let j = 0; j < N_REABSORB; j++) {
+          if (!reabsorbOn) {
+            dummy.scale.set(0.001, 0.001, 0.001);
+            dummy.updateMatrix();
+            rMesh.setMatrixAt(j, dummy.matrix);
+            continue;
+          }
+          let crossProg = (rProgress[j] + simTime * 3.0) % 1.0;
+          const tOrigin = rSourceT[j];
+          const ptTubule = nephronCurve.getPoint(tOrigin);
+          const ptCap = capCurve.getPoint(tOrigin * 0.9 + 0.05);
+          dummy.position.lerpVectors(ptTubule, ptCap, crossProg);
+          const fade = Math.sin(crossProg * Math.PI);
+          dummy.scale.set(fade, fade, fade);
+          dummy.updateMatrix();
+          rMesh.setMatrixAt(j, dummy.matrix);
+        }
+        rMesh.instanceMatrix.needsUpdate = true;
+      },
+      state() {
+        const pctReclaimed = k.params.reabsorptionActive ? 99 : 0;
+        const gfr = Math.round(125 * k.params.filtrationRate);
+        return {
+          gfr,
+          reabsorptionRate: pctReclaimed,
+          urineOutput: (gfr * (100 - pctReclaimed) / 100).toFixed(1)
+        };
+      }
+    };
+  }
+});
+
+const shell = LessonShell.create({
+  brand: 'Kidney Physiology',
+  hint: 'Drag to rotate · Scroll to zoom',
+  ctx: { state: {} },
+  steps: [
+    {
+      eyebrow: 'Ultrafiltration',
+      title: 'Pressure drives fluid from blood to tubule',
+      describe: 'A capillary knot inside Bowman capsule pushes water and small solutes across fenestrated membranes while blood cells remain.',
+      body: '<p class="lead"><strong>Filtration is non-selective based on size, driven entirely by blood pressure.</strong></p><p>Hydrostatic pressure in glomerular capillaries forces water, ions, glucose, and urea across fenestrations into Bowman’s capsule. Large proteins and blood cells cannot cross and remain in the bloodstream.</p>',
+      camera: { pos: [-8, 9, 14], target: [-5, 6, 0] },
+      onEnter(ctx) {
+        nephron.set({ filtrationRate: 1, reabsorptionActive: false });
+        ctx.ui.showPanel(nephron, { notes: ['glomerulus', 'bowman'] });
+      }
+    },
+    {
+      eyebrow: 'Proximal Tubule',
+      title: 'Bulk recovery of water, ions, and nutrients',
+      describe: 'Fluid enters the proximal convoluted tubule where transport proteins move glucose, ions, and water into peritubular capillaries.',
+      body: '<p class="lead"><strong>The proximal convoluted tubule reclaims about 65% of water and salt, and 100% of glucose.</strong></p><p>Active sodium-potassium pumps in tubule epithelial cells establish gradients that pull essential nutrients back across the wall into the adjacent peritubular capillaries. Water follows passively by osmosis.</p>',
+      camera: { pos: [-6, 6, 16], target: [-2, 4, 0] },
+      onEnter(ctx) {
+        nephron.set({ filtrationRate: 1, reabsorptionActive: true });
+        ctx.ui.showPanel(nephron, { notes: ['pct', 'capillaries'] });
+      }
+    },
+    {
+      eyebrow: 'Loop of Henle',
+      title: 'Building a hyperosmotic medullary gradient',
+      describe: 'The hairpin loop dips down into the medulla, with water leaving descending limb and salt pumped out ascending limb.',
+      body: '<p class="lead"><strong>The hairpin geometry creates an osmotic multiplier.</strong></p><p>The descending limb is permeable to water but impermeable to salt; the ascending limb actively pumps out NaCl but bars water. This countercurrent mechanism builds high salt concentration deep in the medulla.</p>',
+      camera: { pos: [0, -2, 22], target: [0, -3, 0] },
+      onEnter(ctx) {
+        nephron.set({ filtrationRate: 1, reabsorptionActive: true });
+        ctx.ui.showPanel(nephron, { notes: ['loop', 'capillaries'] });
+      }
+    },
+    {
+      eyebrow: 'Collecting Duct & Excretion',
+      title: '99% of filtered volume is returned to blood',
+      describe: 'The collecting duct runs down through the salt gradient to concentrate urine before it leaves for the bladder.',
+      body: '<p class="lead"><strong>Urine is the tiny remainder after extensive reabsorption.</strong></p><p>As filtrate traverses the collecting duct, antidiuretic hormone (ADH) allows water to exit into hypertonic tissue, concentrating waste into urine. Out of 180 liters filtered daily, roughly 99% returns to circulation.</p>',
+      camera: { pos: [8, 1, 20], target: [2, 0, 0] },
+      onEnter(ctx) {
+        nephron.set({ filtrationRate: 1, reabsorptionActive: true });
+        ctx.ui.controls(`
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Reabsorbed</div>
+              <div class="stat-value" id="reabsorb-val" data-live>99%</div>
+              <div class="stat-sub">of initial filtrate</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Urine Rate</div>
+              <div class="stat-value" id="urine-val" data-live>1.3 mL/min</div>
+              <div class="stat-sub">excreted waste</div>
+            </div>
+          </div>
+          <div class="slider" style="margin-top:14px;">
+            <div class="slider-head">
+              <span class="label">Blood Pressure / GFR</span>
+              <span class="value" id="gfr-val" data-live>125 mL/min</span>
+            </div>
+            <input type="range" id="gfr-input" min="0.5" max="1.5" step="0.05" value="1">
+          </div>
+        `);
+        const gfrInput = ctx.ui.q('#gfr-input');
+        const gfrVal = ctx.ui.q('#gfr-val');
+        const urineVal = ctx.ui.q('#urine-val');
+        ctx.ui.range(gfrInput, v => {
+          nephron.set({ filtrationRate: parseFloat(v) }, { snap: true });
+          const s = nephron.state();
+          gfrVal.textContent = s.gfr + ' mL/min';
+          urineVal.textContent = s.urineOutput + ' mL/min';
+        });
+        ctx.ui.showPanel(nephron, { notes: ['duct'] });
+      }
+    }
+  ],
+  onStep(step) {
+    if (step.camera) {
+      // Scene camera adjusts through standard framing
+    }
+  }
+});
+
+const nephron = Scene.mount(shell.stage, {
+  scene: 'nephron',
+  viewOffset: shell.viewOffset,
+  filtrationRate: 1,
+  reabsorptionActive: true
+});
+
+shell.goTo(0);
+</script>
+</body>
+</html>

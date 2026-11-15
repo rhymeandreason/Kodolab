@@ -231,6 +231,10 @@ body.work .hero { opacity: 0; transform: scale(.985); visibility: hidden; pointe
   font-family: var(--font-editorial); font-size: clamp(1.2rem, 2.2vw, 1.6rem); line-height: 1.35;
   transition: border-color var(--dur-base), box-shadow var(--dur-base);
 }
+.hero textarea.is-long { font-size: 1rem; line-height: 1.5; }
+.hero textarea, .rail textarea { overflow-y: auto; }
+.count { margin: .4rem .2rem 0; font-size: 12px; color: var(--text-muted); text-align: right; }
+.count[hidden] { display: none; }
 .hero textarea::placeholder { color: color-mix(in srgb, var(--play-ink) 55%, transparent); font-style: italic; transition: opacity .28s; }
 .hero textarea:focus-visible {
   outline: 0; border-color: var(--play-ink);
@@ -238,6 +242,10 @@ body.work .hero { opacity: 0; transform: scale(.985); visibility: hidden; pointe
 }
 .hero form .row { display: flex; align-items: center; gap: 1.5rem; margin-top: 1.4rem; }
 .hero form .row .spacer { flex: 1; }
+.model { font: inherit; font-size: 13px; max-width: 16rem; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent); background: transparent; color: inherit; }
+.model[hidden] { display: none; }
+.rail form .model { max-width: 9rem; font-size: 12px; }
 .hero .hint { font-family: var(--font-editorial); font-size: 1rem; font-style: italic; color: color-mix(in srgb, var(--play-ink) 72%, transparent); margin: 0; max-width: 30em; line-height: 1.4; }
 /* The system recolours a cta with --cta-fill and nothing else. */
 .hero .cta { flex: none; --cta-fill: var(--play-ink); --cta-hover: var(--play-pop); color: var(--brand-paper); border-color: transparent; border-radius: 999px; box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--play-ink) 50%, transparent); }

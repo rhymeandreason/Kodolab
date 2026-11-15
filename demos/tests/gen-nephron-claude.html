@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Nephron</title>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Scene,Membrane,Graph"></script>
+<script>
+// A nephron as a diagram: blood in through the glomerulus, filtrate down the tubule,
+// reabsorbed filtrate across to the capillary that runs beside it.
+Scene.define('nephron', {
+  scale: { rung: 'tissue', form: 'single', unit: null, exag: {} },
+  params: { flow: 0, reabsorb: 0, adh: 0.95 },
+  glide: ['flow', 'reabsorb', 'adh'],
+  build(k) {
+    const { THREE } = k;
+    const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+
+    function makePath(lists) {
+      const curves = lists.map(p => new THREE.CatmullRomCurve3(p.map(V)));
+      const lens = curves.map(c => c.getLength());
+      const total = lens.reduce((a, b) => a + b, 0);
+      const starts = []; let acc = 0;
+      for (const l of lens) { starts.push(acc / total); acc += l; }
+      return {
+        curves, lens, total, starts,
+        at(u, out) {
+          u = Math.min(Math.max(u, 0), 0.99999);
+          let i = curves.length - 1;
+          while (i > 0 && u < starts[i]) i--;
+          const local = (u - starts[i]) * total / lens[i];
+          return curves[i].getPointAt(Math.min(Math.max(local, 0), 1), out);
+        },
+      };
+    }
+
+    // Fractions of the FILTERED load each segment takes back, at full reabsorption.
+    // Water: proximal, descending limb, then the collecting duct takes a share of what is left, set by ADH.
+    // Salt: proximal, thick ascending limb, distal tubule.
+    const PROX = 0.65, DESC = 0.15, ASC = 0.25, DIST = 0.07;
+    const FILTERED_L_PER_DAY = 180;
+    const ductShare = adh => 0.45 + 0.53 * adh;
+
+    const G = new THREE.Vector3(-7, 5, 0);
+    const OFF = new THREE.Vector3(0, 0, -1.8);
+
+    const SEG = ['proximal', 'descending', 'ascending', 'distal', 'duct'];
+    const tubeLists = [
+      [[-5.6, 5, 0], [-4.6, 6, 0.8], [-3.6, 5.2, -0.6], [-4.2, 4, 0.6], [-3, 3.6, 0], [-2, 4.6, -0.6], [-1.2, 4, 0.4], [-1, 2.8, 0]],
+      [[-1, 2.8, 0], [-1, 0, 0.2], [-1, -3, 0], [-0.9, -6, 0]],
+      [[-0.9, -6, 0], [0, -7, 0], [0.9, -6, 0], [1, -3, 0], [1, 0, 0.2], [1, 2.8, 0]],
+      [[1, 2.8, 0], [1.4, 4.2, 0.6], [2.6, 4.6, -0.6], [3.2, 3.6, 0.5], [4.2, 4.4, 0], [5, 4, 0]],
+      [[5, 4, 0], [6, 4.2, 0], [6.2, 2, 0], [6.2, -3, 0], [6.2, -9, 0]],
+    ];
+    const tube = makePath(tubeLists);
+    const segRange = i => [tube.starts[i], i + 1 < tube.starts.length ? tube.starts[i + 1] : 1];
+
+    const capLists = tubeLists.map(l => l.map(p => [p[0] + OFF.x, p[1] + OFF.y, p[2] + OFF.z]));
+    const afferent = [[-11, 8, 0], [-9.5, 7, 0], [-8.2, 5.6, 0], [-7.4, 5.3, 0]];
+    const glom = [[-7.4, 5.3, 0], [-6.6, 5.5, 0.4], [-6.6, 4.6, -0.3], [-7.2, 4.7, 0.4], [-7, 5.6, -0.4]];
+    const efferent = [[-7, 5.6, -0.4], [-7.5, 7, -1.2], [-6.4, 6.6, -1.8], [-5.6, 5, -1.8]];
+    const blood = makePath([afferent, glom, efferent, ...capLists]);
+
+    const glass = (c, o) => k.material(c, { transparent: true, opacity: o, depthWrite: false });
+
+    // Tubule, one part per segment
+    const TUBE_C = 0xd9c49a;
+    const cards = {
+      proximal: ['Proximal tubule', 'The first and busiest stretch. Its cells pump solutes back toward the blood and water follows, so most of the filtrate is reclaimed here.'],
+      descending: ['Descending limb', 'Open to water, closed to salt. Water leaves into the salty tissue around the loop.'],
+      ascending: ['Ascending limb', 'Closed to water. Its thick part pumps salt out, which is what makes the tissue around the loop salty.'],
+      distal: ['Distal tubule', 'Fine-tunes salt. Hormones adjust how much it takes back.'],
+      duct: ['Collecting duct', 'The last chance for water. ADH puts aquaporins in its cells, and water moves out into the salty tissue around it.'],
+    };
+    tube.curves.forEach((c, i) => {
+      const r = SEG[i] === 'duct' ? 0.55 : 0.38;
+      const mesh = new THREE.Mesh(new THREE.TubeGeometry(c, 80, r, 12, false), glass(SEG[i] === 'duct' ? 0xc9b48a : TUBE_C, 0.38));
+      k.part(SEG[i], mesh, { label: cards[SEG[i]][0], card: cards[SEG[i]][1], color: i === 0 ? TUBE_C : undefined });
+    });
+
+    // Blood vessels
+    const capGroup = new THREE.Group();
+    blood.curves.slice(3).forEach(c => capGroup.add(new THREE.Mesh(new THREE.TubeGeometry(c, 60, 0.26, 10, false), glass(0xc85a54, 0.28))));
+    k.part('capillary', capGroup, { label: 'Peritubular capillary', card: 'Blood leaving the glomerulus runs beside the tubule. Everything reabsorbed returns to the body here.', color: 0xc85a54 });
+
+    const artGroup = new THREE.Group();
+    [blood.curves[0], blood.curves[2]].forEach(c => artGroup.add(new THREE.Mesh(new THREE.TubeGeometry(c, 40, 0.3, 10, false), glass(0xb5403a, 0.5))));
+    k.part('arterioles', artGroup, { label: 'Arterioles', card: 'Blood arrives through a wide vessel and leaves through a narrower one, which keeps the pressure in the glomerulus high.' });
+
+    const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(0.75, 0.16, 140, 10, 3, 5), glass(0xb5403a, 0.6));
+    knot.position.copy(G);
+    k.part('glomerulus', knot, { label: 'Glomerulus', card: 'A knot of leaky capillaries under high pressure. Water and small solutes are pushed out through its walls; cells and proteins are too big.' });
+
+    const cup = new THREE.Mesh(new THREE.SphereGeometry(1.7, 32, 20, 0, Math.PI * 2, 0.6, Math.PI - 0.6),
+                               k.material(0xe6dcc6, { transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+    cup.position.copy(G);
+    cup.rotation.z = Math.PI / 2;
+    k.part('capsule', cup, { label: "Bowman's capsule", card: 'The cup that catches the filtrate and funnels it into the tubule.' });
+
+    // Particles
+    const dummy = new THREE.Object3D();
+    const tmp = new THREE.Vector3(), pos = new THREE.Vector3();
+    const ease = s => s * s * (3 - 2 * s);
+    const put = (mesh, i, p, s) => { dummy.position.copy(p); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(s); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); };
+    const hide = (mesh, i) => put(mesh, i, G, 0);
+
+    function swarm(kind, n, r, color, rate) {
+      const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(r, 8, 6), k.material(color), n);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      const ps = [];
+      for (let i = 0; i < n; i++) {
+        ps.push({ ph: 0, u: 0, exit: 2, t: 0, from: new THREE.Vector3(),
+                  j: new THREE.Vector3((Math.random() - 0.5) * 0.36, (Math.random() - 0.5) * 0.36, (Math.random() - 0.5) * 0.36) });
+        hide(mesh, i);
+      }
+      return { kind, mesh, ps, rate, acc: 0 };
+    }
+    const WATER_C = 0x5a9fd6;
+    const water = swarm('water', 220, 0.11, WATER_C, 14);
+    const salt = swarm('salt', 90, 0.13, k.atom('Na'), 5);
+    k.part('water', water.mesh, { label: 'Water', card: 'Filtered freely, and almost all of it reabsorbed.', color: WATER_C });
+    k.part('salt', salt.mesh, { label: 'Salt (Na⁺)', card: 'Small enough to be filtered; pumped back out along the tubule.', color: k.atom('Na') });
+
+    const NB = 70;
+    const cells = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 14), k.material(0xb8322f), NB);
+    cells.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    const bc = [];
+    for (let i = 0; i < NB; i++) bc.push({ u: i / NB, rot: new THREE.Euler(Math.random() * 3, Math.random() * 3, 0),
+                                           j: new THREE.Vector3((Math.random() - 0.5) * 0.16, (Math.random() - 0.5) * 0.16, (Math.random() - 0.5) * 0.16) });
+    k.part('blood', cells, { label: 'Red blood cells', card: 'Too big to pass the filter, so they stay in the blood the whole way.', color: 0xb8322f });
+
+    function fate(kind) {
+      const reab = k.params.reabsorb;
+      const stages = kind === 'water'
+        ? [[0, PROX], [1, DESC], [4, (1 - PROX - DESC) * ductShare(k.params.adh)]]
+        : [[0, PROX], [2, ASC], [3, DIST]];
+      const r = Math.random(); let acc = 0;
+      for (const [seg, f] of stages) {
+        acc += f * reab;
+        if (r < acc) { const [a, b] = segRange(seg); return a + (0.15 + 0.7 * Math.random()) * (b - a); }
+      }
+      return 2;
+    }
+
+    const SPEED = 4.5, BSPEED = 5;
+    function spawn(s) {
+      const p = s.ps.find(q => q.ph === 0);
+      if (!p) return;
+      p.ph = 1; p.t = 0;
+      p.from.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(0.8).add(G);
+      p.exit = fate(s.kind);
+    }
+    function stepSwarm(s, dt) {
+      s.acc += dt * k.params.flow * s.rate;
+      while (s.acc >= 1) { s.acc -= 1; spawn(s); }
+      s.ps.forEach((p, i) => {
+        let scale = 1;
+        if (p.ph === 0) return;
+        if (p.ph === 1) {
+          p.t += dt / 0.7;
+          tube.at(0, tmp).add(p.j);
+          pos.lerpVectors(p.from, tmp, ease(Math.min(p.t, 1)));
+          if (p.t >= 1) { p.ph = 2; p.u = 0; }
+        } else if (p.ph === 2) {
+          p.u += dt * SPEED / tube.total;
+          if (p.u >= p.exit) { p.ph = 3; p.t = 0; tube.at(p.exit, p.from).add(p.j); }
+          else if (p.u >= 1) { p.ph = 0; hide(s.mesh, i); return; }
+          tube.at(p.u, pos).add(p.j);
+        } else if (p.ph === 3) {
+          p.t += dt / 0.6;
+          tube.at(p.u, tmp).add(OFF);
+          pos.lerpVectors(p.from, tmp, ease(Math.min(p.t, 1)));
+          if (p.t >= 1) { p.ph = 4; p.t = 0; }
+        } else if (p.ph === 4) {
+          p.t += dt / 1.2;
+          p.u += dt * SPEED / tube.total;
+          tube.at(p.u, pos).add(OFF);
+          scale = Math.max(0, 1 - p.t);
+          if (p.t >= 1) { p.ph = 0; hide(s.mesh, i); return; }
+        }
+        put(s.mesh, i, pos, scale);
+      });
+      s.mesh.instanceMatrix.needsUpdate = true;
+    }
+
+    return {
+      update() {},
+      step(dt) {
+        dt = Math.min(dt, 0.05);
+        stepSwarm(water, dt);
+        stepSwarm(salt, dt);
+        bc.forEach((c, i) => {
+          c.u += dt * BSPEED / blood.total;
+          if (c.u >= 1) c.u -= 1;
+          blood.at(c.u, dummy.position).add(c.j);
+          dummy.rotation.copy(c.rot); dummy.scale.setScalar(1); dummy.updateMatrix();
+          cells.setMatrixAt(i, dummy.matrix);
+        });
+        cells.instanceMatrix.needsUpdate = true;
+      },
+      state() {
+        const reab = k.params.reabsorb;
+        const filtered = FILTERED_L_PER_DAY * k.params.flow;
+        const keptShare = reab * (PROX + DESC + (1 - PROX - DESC) * ductShare(k.params.adh));
+        return {
+          filteredLPerDay: Math.round(filtered),
+          urineLPerDay: Math.round(filtered * (1 - keptShare) * 10) / 10,
+          pctReabsorbedProximal: Math.round(100 * PROX * reab),
+          pctReabsorbedTotal: Math.round(1000 * keptShare) / 10,
+        };
+      },
+    };
+  },
+});
+
+const stat = (id, label, sub) =>
+  `<div class="stat"><div class="stat-label">${label}</div><div class="stat-value" id="${id}">–</div><div class="stat-sub">${sub}</div></div>`;
+
+function watch(ctx, comp, fn) {
+  ctx.state.off = comp.on('frame', s => { if (s) fn(s); });
+}
+function unwatch(ctx) {
+  if (ctx.state.off) { ctx.state.off(); ctx.state.off = null; }
+  if (ctx.state.graph) { ctx.state.graph.destroy(); ctx.state.graph = null; }
+}
+
+const AQP_ON = { AQP: { x: 0 }, K: null, CL: null, NA: null, pump: null };
+const AQP_OFF = { AQP: null, K: null, CL: null, NA: null, pump: null };
+
+const shell = LessonShell.create({
+  brand: 'The Nephron',
+  hint: 'Drag to orbit · Scroll to zoom',
+  ctx: { state: {} },
+  steps: [
+    {
+      eyebrow: 'Start here', title: 'How do kidneys clean blood without drying you out?',
+      scene: 'nephron',
+      body: '<p class="lead"><strong>Each kidney is packed with tubes like this one, called nephrons.</strong></p>' +
+            '<p>Blood arrives at a knot of capillaries, the glomerulus. Whatever leaves the blood there travels down the tubule. The question is how much of it ever comes back.</p>' +
+            '<p class="foot">A diagram, not to scale: each dot stands for a great many molecules.</p>',
+      nextLabel: 'Start filtering',
+      describe: 'A nephron: a red knot of capillaries inside a cup at the top left, a long tubule looping down and back up, and a collecting duct on the right. Red blood cells flow through the vessels; nothing has been filtered yet.',
+      onEnter(ctx) {
+        N.set({ flow: 0, reabsorb: 0 });
+        N.notes(false); N.notes(['glomerulus', 'duct']);
+        ctx.ui.controls('<div id="sp"></div>');
+        CardStage.showPanel(ctx.q('#sp'), N, {});
+      },
+    },
+    {
+      eyebrow: 'Filtration', title: 'Pressure pushes the small stuff out',
+      body: '<p class="lead"><strong>Blood pressure forces water and small solutes like salt and glucose out of the glomerulus and into the capsule.</strong></p>' +
+            '<p>Red cells and proteins are too big for the filter and stay in the blood. For now nothing comes back: compare what is filtered with what would leave as urine.</p>',
+      nextLabel: 'Turn on reabsorption',
+      describe: 'Blue water dots and salt dots stream out of the glomerulus into the cup and travel the whole tubule to the end of the collecting duct. Red cells stay in the vessels.',
+      onEnter(ctx) {
+        N.set({ flow: 1, reabsorb: 0 });
+        N.notes(false); N.notes(['glomerulus', 'capsule']);
+        ctx.ui.controls('<div class="stats">' + stat('filt', 'Filtered', 'litres per day') + stat('urine', 'Leaving as urine', 'litres per day') + '</div>');
+        const f = ctx.q('#filt'), u = ctx.q('#urine');
+        watch(ctx, N, s => { f.textContent = s.filteredLPerDay; u.textContent = s.urineLPerDay; });
+      },
+      onExit: unwatch,
+    },
+    {
+      eyebrow: 'Reabsorption', title: 'Most of it goes straight back',
+      body: '<p class="lead"><strong>Cells lining the proximal tubule pull water and solutes back out, into the capillary running beside it.</strong></p>' +
+            '<p>The rest of the tubule takes back more. Watch the urine fall as reabsorption switches on.</p>',
+      nextLabel: 'The loop',
+      describe: 'Dots now leave the tubule along its length and cross into the red capillary beside it, most of them in the first, coiled stretch. Only a trickle reaches the end of the collecting duct.',
+      onEnter(ctx) {
+        N.set({ flow: 1, reabsorb: 1 });
+        N.notes(false); N.notes(['proximal', 'capillary']);
+        ctx.ui.controls('<div class="stats">' + stat('prox', 'Back to blood in proximal tubule', '% of filtered water') + stat('urine', 'Leaving as urine', 'litres per day') + '</div>');
+        const p = ctx.q('#prox'), u = ctx.q('#urine');
+        watch(ctx, N, s => { p.textContent = s.pctReabsorbedProximal + '%'; u.textContent = s.urineLPerDay; });
+        shell.announce('Reabsorption on.');
+      },
+      onExit: unwatch,
+    },
+    {
+      eyebrow: 'Loop of Henle', title: 'Two limbs, two jobs',
+      body: '<p class="lead"><strong>The descending limb lets water out but not salt; the ascending limb pumps salt out but holds its water.</strong></p>' +
+            '<p>That split leaves the tissue around the loop salty, and the collecting duct uses it next. Hide the water to see where the salt leaves.</p>',
+      nextLabel: 'How does water cross?',
+      describe: 'Along the loop, water dots leave only from the descending side and salt dots only from the ascending side.',
+      onEnter(ctx) {
+        N.set({ flow: 1, reabsorb: 1 });
+        N.notes(false); N.notes(['descending', 'ascending']);
+        ctx.ui.controls('<div id="sp"></div>');
+        CardStage.showPanel(ctx.q('#sp'), N, { layers: ['water', 'salt'] });
+      },
+      onExit() { N.show('water', true); N.show('salt', true); },
+    },
+    {
+      eyebrow: 'Up close', title: 'Water crosses through aquaporins',
+      scene: 'membrane',
+      body: '<p class="lead"><strong>This is one patch of a collecting duct cell: the face touching the tubule fluid.</strong></p>' +
+            '<p>The cell holds more solute than the fluid, so water arrives on its side more often. Blood is on the far side of the cell, not across this membrane. Switch off ADH and see how fast water still gets in.</p>',
+      nextLabel: 'Back to the nephron',
+      describe: ctx => {
+        const s = m.state();
+        const sd = s && s.sides ? s.sides : { inside: 'inside', outside: 'outside' };
+        return `A membrane patch. Tubule fluid is above (${sd.outside}), the duct cell below (${sd.inside}). Water molecules cross both ways, more of them into the cell, fastest through the aquaporin channel.`;
+      },
+      onEnter(ctx) {
+        m.notes(false);
+        m.note('outside', { text: 'tubule fluid' });
+        m.note('inside', { text: 'collecting duct cell' });
+        m.note('aquaporin');
+        ctx.ui.controls(
+          '<label class="switch"><input type="checkbox" id="adh" checked><span class="track"></span><span class="label">ADH: aquaporins in the membrane</span></label>' +
+          '<div id="trace"></div>');
+        ctx.q('#adh').addEventListener('change', e => {
+          const on = e.target.checked;
+          m.set({ proteins: on ? AQP_ON : AQP_OFF });
+          if (on) m.note('aquaporin');
+          shell.announce(on ? 'Aquaporins inserted.' : 'Aquaporins removed.');
+        });
+        ctx.state.graph = Graph.mount(ctx.q('#trace'), { live: { span: 120 }, height: 130 });
+        ctx.state.graph.follow(m, 'water');
+      },
+      onExit: unwatch,
+    },
+    {
+      eyebrow: 'Your call', title: 'ADH sets how much water you keep',
+      scene: 'nephron',
+      body: '<p class="lead"><strong>When you are short of water, ADH fills the collecting duct with aquaporins and nearly all the remaining water comes back.</strong></p>' +
+            '<p>Slide ADH down, as alcohol does, and watch the urine.</p>',
+      describe: 'The whole nephron with reabsorption on. An ADH slider controls how many water dots leave the collecting duct for the capillary.',
+      onEnter(ctx) {
+        N.set({ flow: 1, reabsorb: 1 });
+        N.notes(false); N.note('duct');
+        ctx.ui.controls(
+          '<div class="slider"><div class="slider-head"><span class="label">ADH</span><span class="value" id="adhv"></span></div>' +
+          '<input type="range" id="adh" min="0" max="1" step="0.01" value="' + ((N.state() || {}).adh ?? 1) + '"></div>' +
+          '<div class="stats">' + stat('urine', 'Leaving as urine', 'litres per day') + stat('tot', 'Water reabsorbed', 'of what was filtered') + '</div>');
+        const v = ctx.q('#adhv');
+        ctx.ui.range(ctx.q('#adh'), x => {
+          x = +x;
+          v.textContent = x < 0.33 ? 'low' : x < 0.67 ? 'medium' : 'high';
+          N.set({ adh: x }, { snap: true });
+        });
+        const u = ctx.q('#urine'), t = ctx.q('#tot');
+        watch(ctx, N, s => { u.textContent = s.urineLPerDay; t.textContent = s.pctReabsorbedTotal + '%'; });
+      },
+      onExit: unwatch,
+    },
+  ],
+});
+
+const N = shell.scene('nephron', el => Scene.mount(el, { scene: 'nephron', viewOffset: shell.viewOffset }));
+const m = shell.scene('membrane', el => Membrane.mount(el, {
+  viewOffset: shell.viewOffset,
+  proteins: AQP_ON,
+  potential: 'off',
+  pumpOn: false,
+}));
+m.set({ contents: {
+  outside: { water: 70, NA: 4, CL: 4 },
+  inside:  { water: 52, K: 13, A: 13 },
+} });
+shell.goTo(0);
+</script>
+</body>
+</html>

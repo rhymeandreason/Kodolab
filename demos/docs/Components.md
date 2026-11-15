@@ -2,7 +2,7 @@
 
 # Components
 
-A generated app is one HTML file. It loads the shared library from `demos/`, mounts one or two components into boxes, wires controls to `set()` and readouts to `state()`, and says in prose what the student is looking at. It writes no Three.js and no physics. If the request needs something no component offers, say so instead of inventing it.
+A generated app is one HTML file. It loads the shared library from `demos/`, mounts one or two components into boxes, wires controls to `set()` and readouts to `state()`, and says in prose what the student is looking at. It writes no Three.js and no physics, with one exception: when the subject is something no component draws, it defines its own with `Scene` (below).
 
 ## Which template
 
@@ -187,7 +187,7 @@ Every component declares a **rung** (how big) and a **form** (how many) in its o
 molecules · macromolecule · membrane · organelle · cell · tissue · organ · organism · population
 ```
 
-**A page composing normally cannot get this wrong**: each `mount()` gets its own box and its own camera, so components at different rungs simply live in different boxes. Nothing at the `population` rung yet; Graph, Diagram and Quiz sit on no rung, because a chart, a notation and a question are not in the world.
+**A page composing normally cannot get this wrong**: each `mount()` gets its own box and its own camera, so components at different rungs simply live in different boxes. Nothing at the `population` rung yet; a `Scene` sits on whatever rung its definition declares; Graph, Diagram and Quiz sit on no rung, because a chart, a notation and a question are not in the world.
 
 **At the cell rung, AnimalCell and PlantCell are the defaults.** They are what a reader pictures when they hear "a cell", and between them they carry a nucleus, organelles, a wall and a vacuole. BloodCell is a specialist with none of that, so it comes out when the subject really is blood, or as a second example after a general cell has made the point.
 
@@ -960,6 +960,50 @@ The score reaches the teacher's dashboard on its own: never send it yourself.
 
 Good for: the end of a lesson a teacher asked to check. Not for: teaching (a question that introduces something new belongs in a step's copy), a poll, or a free-text answer.
 
+## Scene — a scene you define, for a subject no component draws
+
+**Scale**: whatever the definition declares. `scale.rung` is required, from the ladder above.
+
+**Reach for it only when no component above shows the subject.** A cell is AnimalCell or PlantCell, a membrane is Membrane, a molecule is Molecule: a hand-built version of any of those is always worse and is wrong. A U-tube of solutions, a kidney nephron, a seed germinating, a predator and its prey, a DNA gel lane: those are Scenes. A page may mount a Scene beside library components, each in its own box.
+
+```js
+Scene.define('u-tube', {                       // lower-case-hyphen name, unique on the page
+  scale: { rung: 'organ', form: 'single', unit: null, exag: {} },   // unit null: nothing printed off it is a length
+  params: { level: 0.5, solute: 0.3 },         // every param and its default
+  glide: ['level'],                            // numeric params set() animates; the rest snap
+  build(k) {
+    const { THREE } = k;
+    const tube = k.part('tube', new THREE.Mesh(new THREE.TorusGeometry(4, 0.6, 16, 48, Math.PI),
+                                               k.material(0xd8d2c4, { transparent: true, opacity: 0.35 })),
+                        { label: 'Tube', layer: true });
+    tube.rotation.z = Math.PI;
+    const water = k.part('water', new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 24), k.material(0x5a9fd6)),
+                         { label: 'Water', card: 'Moves toward the side with more solute.', color: 0x5a9fd6 });
+    const ion = k.part('ion', new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 12), k.material(k.atom('Na'))),
+                       { label: 'Na⁺', color: k.atom('Na') });
+    const place = () => { water.scale.y = 1 + 4 * k.params.level; water.position.set(4, -2 + 2 * k.params.level, 0); };
+    place();
+    return {
+      update(changed) { if ('level' in changed) place(); },       // after set(), and every frame of a glide
+      step(dt, t) { ion.position.set(-4 + 0.3 * Math.sin(t * 2), 1, 0); },
+      state() { return { height: k.params.level * 5 }; },          // merged over the params
+    };
+  },
+});
+const U = Scene.mount(shell.stage, { scene: 'u-tube', viewOffset: shell.viewOffset, level: 0.2 });
+U.set({ level: 0.8 });                        // glides
+```
+
+**The definition reads only `k` and its own params, never a variable of the page.** It may be lifted out and mounted by another app, so the page talks to it through `set`, `state` and `on` like any other component. Define it above the shell, mount it like any component, and name `Scene` in `data-use`.
+
+`k` is `THREE`, `params` (live, already updated when `update` runs), `time`, `Geo` (`Geo.capsule(THREE, r, len)`, `Geo.roundedBox(THREE, w, h, d, seg, r)`, `Geo.merge(THREE, geometries)`), `material(color, opts)` (a matte standard material), `atom('O')` and `bond('hbond')` (the palette's colours: an atom is never a typed colour), `emit(name, ...args)` for an event the page can `on()`, and `part(name, object, info)`. **Every thing worth pointing at is a `part`**: it is added to the scene and becomes a note anchor with `info.label` and `info.card`, a layer chip (`layer: false` opts out), a legend entry when `info.color` is given, and a camera stop when `info.view` (`{theta, phi, r}`) is given. Build whatever is not a part straight into `k.root`.
+
+The camera frames whatever was built, in any units, so build at a convenient size and do not position it. Lights, the render loop, resizing and cleanup are the component's: write none of them. **A crowd is one `THREE.InstancedMesh`**, never hundreds of meshes; past 1,500 meshes the scene warns. Animate in `step`, never with a timer. A Scene has no checked physics, so its numbers are where a reviewer looks. **A real figure the page cites (a rate, a volume, a percentage) is a field in the definition's `state()`, named for exactly what it measures and where** (`pctReabsorbed` is the proximal tubule's share, not the whole nephron's), and the copy prints it from there instead of typing it. Anything drawn out of proportion goes in `scale.exag` as drawn/true so a page can print the factor.
+
+`state()`: every param, plus whatever the definition's `state()` returns, plus `scene`, `rung` and `custom: true`. Events: `frame`, plus anything the definition emits.
+
+Good for: a subject the library does not draw, at any scale, built from simple shapes. Not for: anything a component above already shows, a molecule (Molecule has the real coordinates), or a chart (Graph).
+
 ## Copy
 
 A tutor for a college Bio 101 student. Concise, no repetition, one claim per paragraph, in bold, that the picture is showing right now. Prefer a question the student can answer by touching a control. No em dashes.
@@ -992,5 +1036,6 @@ correctly and then breaks, or breaks nothing and is wrong anyway.
   its own sentence never mentions drops the readout.
 - No colour is typed: the palette publishes `--atom-O`, `--bond-hbond` and the
   rest, and a caption naming an atom uses its token.
-- Nothing is mounted, set or called that this document does not describe. If
-  the request needed something more, the page says so in one sentence.
+- Nothing is mounted, set or called that this document does not describe. A
+  subject no component draws is a `Scene.define`, never raw Three.js beside
+  the shell; a `Scene` standing in for a component that exists is wrong.

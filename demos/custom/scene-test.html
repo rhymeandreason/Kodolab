@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scene bench</title>
+<style>
+  .lshell-nav, .lshell-progress { display: none; }
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Scene"></script>
+<script>
+/* The bench for custom/scene.js: one definition written the way the reference
+   tells a model to write one, mounted on the lesson shell. A U-tube split by a
+   semipermeable membrane; solute on the right pulls water across until the
+   columns stand at different heights. Qualitative: unit is null and the height
+   is in scene units. Console: `u.set({solute: 0.9})`, `u.state()`, `u.pump(0.1)`. */
+
+Scene.define('u-tube', {
+  scale: { rung: 'organ', form: 'single', unit: null, exag: {} },
+  params: { solute: 0.5 },
+  glide: ['solute'],
+  build(k) {
+    const { THREE } = k;
+    const R = 4, r = 0.7, H = 6;
+    const glass = k.material(0xa8a294, { transparent: true, opacity: 0.22, depthWrite: false });
+    const tube = new THREE.Group();
+    tube.add(new THREE.Mesh(new THREE.TorusGeometry(R, r, 16, 48, Math.PI), glass));
+    tube.children[0].rotation.z = Math.PI;
+    for (const x of [-R, R]) {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(r, r, H, 24, 1, true), glass);
+      arm.position.set(x, H / 2, 0); tube.add(arm);
+    }
+    k.part('tube', tube, { label: 'U-tube', layer: false });
+
+    const membrane = k.part('membrane', new THREE.Mesh(new THREE.CircleGeometry(r * 1.05, 24),
+      k.material(0xc9a227, { side: THREE.DoubleSide, transparent: true, opacity: 0.8 })),
+      { label: 'Membrane', card: 'Lets water through and holds the solute back. That difference is what makes water move.', color: 0xc9a227 });
+    membrane.position.set(0, -R, 0); membrane.rotation.y = Math.PI / 2;
+
+    const waterMat = k.material(0x5a9fd6, { transparent: true, opacity: 0.55 });
+    const cols = [-R, R].map(x => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.92, r * 0.92, 1, 24), waterMat); m.position.x = x; return m; });
+    const bend = new THREE.Mesh(new THREE.TorusGeometry(R, r * 0.92, 16, 48, Math.PI), waterMat);
+    bend.rotation.z = Math.PI;
+    const water = new THREE.Group(); cols.forEach(c => water.add(c)); water.add(bend);
+    k.part('water', water, { label: 'Water', card: 'Crosses the membrane toward the side with more dissolved solute.', color: 0x5a9fd6 });
+
+    const N = 40;
+    const solute = k.part('solute', new THREE.InstancedMesh(new THREE.SphereGeometry(0.16, 12, 8), k.material(k.atom('Na')), N),
+      { label: 'Solute', card: 'Too big to pass the membrane, so it stays on the right.', color: k.atom('Na') });
+    const seeds = Array.from({ length: N }, (_, i) => [Math.sin(i * 12.9898) * 0.5 + 0.5, Math.sin(i * 78.233) * 0.5 + 0.5, i * 1.7]);
+    const m4 = new THREE.Matrix4();
+
+    let diff = 0;
+    function place() {
+      diff = 2.4 * k.params.solute;               // right column rises with the solute it holds
+      const base = 1.5;
+      cols[0].scale.y = base - diff / 2 + 0.01; cols[0].position.y = cols[0].scale.y / 2;
+      cols[1].scale.y = base + diff / 2;        cols[1].position.y = cols[1].scale.y / 2;
+      solute.count = Math.round(N * k.params.solute);
+    }
+    place();
+    return {
+      update() { place(); },
+      step(dt, t) {
+        const h = cols[1].scale.y;
+        for (let i = 0; i < solute.count; i++) {
+          const [a, b, ph] = seeds[i];
+          m4.makeTranslation(R + (a - 0.5) * r * 1.2 + 0.05 * Math.sin(t * 2 + ph), 0.2 + b * (h - 0.4), 0.05 * Math.cos(t * 2.3 + ph));
+          solute.setMatrixAt(i, m4);
+        }
+        solute.instanceMatrix.needsUpdate = true;
+      },
+      state() { return { heightDiff: diff }; },
+    };
+  },
+});
+
+const shell = LessonShell.create({
+  brand: 'Scene bench',
+  hint: 'Drag to orbit',
+  steps: [{
+    eyebrow: 'custom/scene.js',
+    title: 'A U-tube, defined on the page',
+    body: '<p class="lead">Every shape here is the page\'s own, mounted through <strong>Scene</strong>.</p>',
+    onEnter(ctx) {
+      ctx.ui.controls(`
+        <div class="slider"><div class="slider-head"><span class="label">Solute on the right</span><span class="value" id="sv"></span></div>
+          <input type="range" id="sol" min="0" max="1" step="0.01" value="${u.state().solute}"></div>
+        <div class="stats"><div class="stat"><span class="stat-label">Height difference</span><span class="stat-value" id="hd"></span></div></div>`);
+      ctx.ui.range(ctx.ui.q('#sol'), v => u.set({ solute: +v }, { snap: true }));
+      ctx.ui.showPanel(u, { notes: ['membrane', 'solute'], layers: ['water', 'solute'] });
+    },
+  }],
+});
+
+const u = Scene.mount(shell.stage, { scene: 'u-tube', viewOffset: shell.viewOffset, solute: 0.4 });
+u.on('frame', s => {
+  const hd = shell.q('#hd'), sv = shell.q('#sv');
+  if (hd) hd.textContent = s.heightDiff.toFixed(2);
+  if (sv) sv.textContent = Math.round(s.solute * 100) + '%';
+});
+window.u = u;
+shell.goTo(0);
+</script>
+</body>
+</html>

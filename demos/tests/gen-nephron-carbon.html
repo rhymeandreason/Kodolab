@@ -1,0 +1,422 @@
+<!doctype html>
+<!-- requests
+1. Show how a kidney nephron filters blood: the glomerulus pushes water and small solutes into the tubule, and most of it is reabsorbed along the way.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How a Nephron Filters Blood</title>
+<style>
+  .stats { margin-bottom: 12px; }
+  .slider { margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Scene,Membrane"></script>
+<script>
+Scene.define('nephron', {
+  scale: { rung: 'organ', form: 'single', unit: null, exag: { particles: 25000 } },
+  params: { gfr: 1, reabsorb: 0 },
+  glide: ['gfr', 'reabsorb'],
+  build(k) {
+    const { THREE } = k;
+
+    const curveFrom = pts => new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p[0], p[1], p[2])));
+
+    const affCurve = curveFrom([
+      [-10.5, 4.2, 0.2], [-8.4, 3.6, 0.3], [-6.8, 2.8, 0.4]
+    ]);
+    const glomCurve = curveFrom([
+      [-6.8, 2.8, 0.4], [-5.9, 3.3, 0.9], [-5.3, 2.4, -0.7], [-6.2, 1.7, 0.7],
+      [-5.2, 2.7, 0.5], [-5.8, 1.9, -0.6], [-6.5, 2.2, -0.3]
+    ]);
+    const effCurve = curveFrom([
+      [-6.5, 2.2, -0.3], [-4.8, 1.6, -1.3], [-2.0, 2.2, -1.5], [0.5, 0.2, -1.4],
+      [1.2, -3.5, -1.2], [2.8, -3.5, -1.2], [3.6, 0.6, -1.3], [5.4, 2.0, -1.1], [8.5, 1.2, -0.9]
+    ]);
+    const tubuleCurve = curveFrom([
+      [-5.2, 2.5, 0.0], [-3.6, 3.4, 0.4], [-1.8, 2.4, -0.3], [-0.2, 3.1, 0.3],
+      [0.8, 1.2, 0.0], [1.0, -3.4, 0.0], [1.9, -4.6, 0.0], [2.8, -3.4, 0.0],
+      [3.0, 1.2, 0.0], [4.3, 2.8, 0.3], [5.8, 2.1, -0.2], [7.0, 2.5, 0.0],
+      [7.3, -1.0, 0.0], [7.3, -5.0, 0.0]
+    ]);
+
+    const vesselMat = k.material(0xc83e4d, { transparent: true, opacity: 0.78 });
+    const capMat = k.material(0x9b4d96, { transparent: true, opacity: 0.55 });
+    const tubuleMat = k.material(0xe3c26f, { transparent: true, opacity: 0.45 });
+    const capsuleMat = k.material(0xe8d399, { transparent: true, opacity: 0.36, side: THREE.DoubleSide });
+
+    const glomGeo = k.Geo.merge(THREE, [
+      new THREE.TubeGeometry(affCurve, 20, 0.36, 12, false),
+      new THREE.TubeGeometry(glomCurve, 64, 0.26, 10, false)
+    ]);
+    k.part('glomerulus', new THREE.Mesh(glomGeo, vesselMat), {
+      label: 'Glomerulus',
+      card: 'A high-pressure knot of capillaries. Blood pressure forces water and small solutes out through pores while keeping cells and proteins inside.',
+      color: 0xc83e4d,
+      view: { theta: -0.35, phi: 1.35, r: 12 }
+    });
+
+    const capGeo = new THREE.SphereGeometry(1.65, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.68);
+    capGeo.rotateZ(-Math.PI * 0.48);
+    capGeo.translate(-5.9, 2.5, 0.0);
+    k.part('capsule', new THREE.Mesh(capGeo, capsuleMat), {
+      label: 'Bowman\'s capsule',
+      card: 'Cup-like sac surrounding the glomerulus that catches the newly pushed filtrate and funnels it into the proximal tubule.',
+      color: 0xe8d399
+    });
+
+    const tubGeo = new THREE.TubeGeometry(tubuleCurve, 140, 0.46, 14, false);
+    k.part('tubule', new THREE.Mesh(tubGeo, tubuleMat), {
+      label: 'Renal tubule',
+      card: 'Long winding tube from proximal tubule through the loop of Henle to the collecting duct. Its walls reclaim almost all water and needed solutes.',
+      color: 0xe3c26f,
+      view: { theta: 0.1, phi: 1.4, r: 18 }
+    });
+
+    const effGeo = new THREE.TubeGeometry(effCurve, 90, 0.3, 10, false);
+    k.part('capillaries', new THREE.Mesh(effGeo, capMat), {
+      label: 'Peritubular capillaries',
+      card: 'Low-pressure vessels wrapping around the tubule to pick up the water and solutes pumped back out of the filtrate.',
+      color: 0x9b4d96
+    });
+
+    const dummy = new THREE.Object3D();
+    const sphereLow = new THREE.SphereGeometry(1, 10, 8);
+
+    const nRbc = 42;
+    const rbcGeo = new THREE.SphereGeometry(0.22, 12, 8);
+    rbcGeo.scale(1.1, 0.48, 1.1);
+    const rbcMesh = new THREE.InstancedMesh(rbcGeo, k.material(0xa81c2b), nRbc);
+    k.part('bloodCells', rbcMesh, {
+      label: 'Blood cells & proteins',
+      card: 'Too big to cross the glomerular filter. They stay in the bloodstream the entire way through.',
+      color: 0xa81c2b
+    });
+
+    const nWater = 130;
+    const waterGeo = sphereLow.clone();
+    waterGeo.scale(0.11, 0.11, 0.11);
+    const waterMesh = new THREE.InstancedMesh(waterGeo, k.material(k.atom('O')), nWater);
+    k.part('water', waterMesh, {
+      label: 'Water',
+      card: 'Pushed freely into Bowman\'s capsule, then drawn back into the blood by osmosis as solutes are pumped out.',
+      color: k.atom('O')
+    });
+
+    const nSolute = 75;
+    const solGeo = sphereLow.clone();
+    solGeo.scale(0.12, 0.12, 0.12);
+    const solMesh = new THREE.InstancedMesh(solGeo, k.material(k.atom('Na')), nSolute);
+    k.part('solutes', solMesh, {
+      label: 'Small solutes (Na⁺, glucose)',
+      card: 'Small enough to filter right out of the glomerulus, then actively reclaimed by pumps in the tubule wall.',
+      color: k.atom('Na')
+    });
+
+    const rbcState = Array.from({ length: nRbc }, (_, i) => ({ s: i / nRbc }));
+    const makeMover = (n, seedOff) => Array.from({ length: n }, (_, i) => ({
+      s: (i / n + seedOff) % 1,
+      reabAt: 0.18 + ((i * 0.618034) % 0.62),
+      willReab: ((i * 7 + 3) % 100) / 100,
+      offX: Math.sin(i * 2.3) * 0.16,
+      offY: Math.cos(i * 3.1) * 0.16
+    }));
+    const waterState = makeMover(nWater, 0);
+    const solState = makeMover(nSolute, 0.37);
+
+    const tmpPos = new THREE.Vector3();
+    const tmpCap = new THREE.Vector3();
+
+    function bloodPoint(u, out) {
+      if (u < 0.22) affCurve.getPointAt(u / 0.22, out);
+      else if (u < 0.48) glomCurve.getPointAt((u - 0.22) / 0.26, out);
+      else effCurve.getPointAt((u - 0.48) / 0.52, out);
+    }
+
+    function moverPoint(m, reabsorbAmt, out) {
+      const s = m.s;
+      if (s < 0.14) {
+        affCurve.getPointAt(s / 0.14, out);
+      } else if (s < 0.24) {
+        glomCurve.getPointAt((s - 0.14) / 0.10, out);
+      } else {
+        const tU = (s - 0.24) / 0.76;
+        const reclaimed = m.willReab < reabsorbAmt * 0.99;
+        if (!reclaimed || tU < m.reabAt) {
+          tubuleCurve.getPointAt(tU, out);
+        } else if (tU < m.reabAt + 0.10) {
+          const blend = (tU - m.reabAt) / 0.10;
+          tubuleCurve.getPointAt(tU, tmpPos);
+          effCurve.getPointAt(Math.min(0.98, 0.12 + tU * 0.85), tmpCap);
+          out.lerpVectors(tmpPos, tmpCap, blend);
+        } else {
+          effCurve.getPointAt(Math.min(0.99, 0.12 + tU * 0.85), out);
+        }
+      }
+      out.x += m.offX;
+      out.y += m.offY;
+    }
+
+    function syncMeshes(dt) {
+      const speed = 0.075 * Math.max(0.05, k.params.gfr);
+      const reab = k.params.reabsorb;
+      for (let i = 0; i < nRbc; i++) {
+        rbcState[i].s = (rbcState[i].s + dt * speed * 1.15) % 1;
+        bloodPoint(rbcState[i].s, dummy.position);
+        dummy.rotation.set(rbcState[i].s * 9, rbcState[i].s * 6, 0);
+        dummy.updateMatrix();
+        rbcMesh.setMatrixAt(i, dummy.matrix);
+      }
+      rbcMesh.instanceMatrix.needsUpdate = true;
+
+      dummy.rotation.set(0, 0, 0);
+      for (let i = 0; i < nWater; i++) {
+        waterState[i].s = (waterState[i].s + dt * speed) % 1;
+        moverPoint(waterState[i], reab, dummy.position);
+        dummy.updateMatrix();
+        waterMesh.setMatrixAt(i, dummy.matrix);
+      }
+      waterMesh.instanceMatrix.needsUpdate = true;
+
+      for (let i = 0; i < nSolute; i++) {
+        solState[i].s = (solState[i].s + dt * speed) % 1;
+        moverPoint(solState[i], reab, dummy.position);
+        dummy.updateMatrix();
+        solMesh.setMatrixAt(i, dummy.matrix);
+      }
+      solMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    syncMeshes(0);
+
+    return {
+      update() {},
+      step(dt) { syncMeshes(dt); },
+      state() {
+        const filteredLDay = Math.round(180 * k.params.gfr);
+        const pctReabsorbed = Math.round(99 * k.params.reabsorb);
+        const reabsorbedLDay = +(filteredLDay * (pctReabsorbed / 100)).toFixed(1);
+        const urineLDay = Math.max(0, +(filteredLDay - reabsorbedLDay).toFixed(1));
+        return {
+          filteredLDay,
+          pctReabsorbed,
+          reabsorbedLDay,
+          urineLDay,
+          particleExag: 25000
+        };
+      }
+    };
+  }
+});
+
+let neph, mem;
+let unsubNeph = null;
+let unsubMem = null;
+
+function clearSubs() {
+  if (unsubNeph) { unsubNeph(); unsubNeph = null; }
+  if (unsubMem) { unsubMem(); unsubMem = null; }
+}
+
+const shell = LessonShell.create({
+  brand: 'Filtration & Reabsorption',
+  hint: 'Drag to orbit · Scroll to zoom',
+  steps: [
+    {
+      scene: 'nephron',
+      eyebrow: 'Step 1 · Filtration',
+      title: 'The glomerulus filters by size, not by need',
+      body: '<p class="lead"><strong>Blood pressure pushes water and small solutes out of the glomerulus into Bowman\'s capsule.</strong> Red blood cells and large proteins are too big to fit through the capillary pores and remain in the vessel.</p><p>Notice how indiscriminate this first step is: useful sodium and water leave the blood right alongside waste. Watch what happens to daily fluid loss when nothing is reclaimed.</p>',
+      describe() {
+        const s = neph ? neph.state() : null;
+        if (!s) return 'A 3D nephron showing blood entering the glomerulus and water and solutes pouring into the tubule.';
+        return 'A 3D nephron with filtration at ' + s.filteredLDay + ' liters per day and ' + s.pctReabsorbed + ' percent reabsorbed, leaving ' + s.urineLDay + ' liters per day in the tubule.';
+      },
+      onEnter(ctx) {
+        clearSubs();
+        neph.set({ gfr: 1, reabsorb: 0 });
+        neph.notes(['glomerulus', 'capsule']);
+        ctx.controls(
+          '<div class="stats">' +
+            '<div class="stat"><div class="stat-label">Filtered</div><div class="stat-value" id="st-filt">--</div><div class="stat-sub">into capsule</div></div>' +
+            '<div class="stat"><div class="stat-label">Left in tubule</div><div class="stat-value" id="st-urine">--</div><div class="stat-sub">without reabsorption</div></div>' +
+          '</div>' +
+          '<div class="slider">' +
+            '<div class="slider-head"><span class="label">Filtration pressure</span><span class="value" id="val-gfr">--</span></div>' +
+            '<input type="range" id="rng-gfr" min="0.3" max="1.3" step="0.05" value="1">' +
+          '</div>' +
+          '<div id="sp"></div>'
+        );
+        ctx.showPanel(neph, { only: ['legend', 'zoom'], zoom: ['glomerulus', 'tubule'] });
+        const elFilt = ctx.q('#st-filt');
+        const elUrine = ctx.q('#st-urine');
+        const elGfr = ctx.q('#val-gfr');
+        ctx.range(ctx.q('#rng-gfr'), v => {
+          neph.set({ gfr: v }, { snap: true });
+        });
+        unsubNeph = neph.on('frame', s => {
+          elFilt.textContent = s.filteredLDay + ' L/day';
+          elUrine.textContent = s.urineLDay + ' L/day';
+          elGfr.textContent = Math.round(s.gfr * 100) + '%';
+        });
+      },
+      onExit() { clearSubs(); }
+    },
+    {
+      scene: 'nephron',
+      eyebrow: 'Step 2 · Tubular Reabsorption',
+      title: 'Almost everything filtered is taken right back',
+      body: '<p class="lead"><strong>As filtrate winds through the renal tubule, transport proteins return nearly all water and needed solutes to the peritubular capillaries.</strong></p><p>Turn reabsorption up and watch the blue water and purple solute streams cross from the yellow tubule back into the surrounding blood vessels, shrinking daily urine output to a tiny fraction of what was filtered.</p>',
+      describe() {
+        const s = neph ? neph.state() : null;
+        if (!s) return 'Water and solutes cross from the renal tubule back into the wrapping peritubular capillaries.';
+        return 'Nephron reclaiming ' + s.pctReabsorbed + ' percent of filtrate, returning it to capillaries and leaving ' + s.urineLDay + ' liters per day as urine.';
+      },
+      onEnter(ctx) {
+        clearSubs();
+        neph.set({ gfr: 1, reabsorb: 1 });
+        neph.notes(['tubule', 'capillaries']);
+        ctx.controls(
+          '<div class="stats">' +
+            '<div class="stat"><div class="stat-label">Reabsorbed</div><div class="stat-value" id="st-reab">--</div><div class="stat-sub">returned to blood</div></div>' +
+            '<div class="stat"><div class="stat-label">Urine output</div><div class="stat-value" id="st-urine2">--</div><div class="stat-sub">leaves collecting duct</div></div>' +
+          '</div>' +
+          '<div class="slider">' +
+            '<div class="slider-head"><span class="label">Tubular reabsorption</span><span class="value" id="val-reab">--</span></div>' +
+            '<input type="range" id="rng-reab" min="0" max="1" step="0.02" value="1">' +
+          '</div>' +
+          '<div id="sp2"></div>'
+        );
+        ctx.showPanel(neph, { only: ['legend', 'layers'], layers: ['bloodCells', 'water', 'solutes'] });
+        const elReab = ctx.q('#st-reab');
+        const elUrine = ctx.q('#st-urine2');
+        const elVal = ctx.q('#val-reab');
+        ctx.range(ctx.q('#rng-reab'), v => {
+          neph.set({ reabsorb: v }, { snap: true });
+        });
+        unsubNeph = neph.on('frame', s => {
+          elReab.textContent = s.pctReabsorbed + '%';
+          elUrine.textContent = s.urineLDay + ' L/day';
+          elVal.textContent = s.pctReabsorbed + '%';
+        });
+      },
+      onExit() { clearSubs(); }
+    },
+    {
+      scene: 'membrane',
+      eyebrow: 'Step 3 · Inside the Tubule Wall',
+      title: 'Pumping sodium pulls the water after it',
+      body: '<p class="lead"><strong>Zooming into the blood-facing membrane of a tubule cell shows how reabsorption is powered: Na⁺/K⁺ pumps spend ATP to drive sodium out, and water follows through aquaporins.</strong></p><p>This patch is the basolateral face touching fluid beside the peritubular capillary; the filtrate lumen lies on the far side of the cell. Pause the pump to see what happens when active transport stops.</p>',
+      describe() {
+        const s = mem ? mem.state() : null;
+        if (!s) return 'A lipid bilayer with a sodium-potassium pump, aquaporin, and channels moving sodium and water.';
+        return 'Tubule cell membrane patch: ATP spent is ' + s.atpSpent + ' and water movement verdict is ' + s.net + '.';
+      },
+      onEnter(ctx) {
+        clearSubs();
+        mem.set({
+          pumpOn: true,
+          pumpAuto: true,
+          timeScale: 1.4,
+          contents: {
+            inside: { water: 62, NA: 18, K: 18, A: 6 },
+            outside: { water: 30, NA: 32, CL: 32 }
+          }
+        });
+        mem.reset();
+        mem.notes(['pump', 'aquaporin']);
+        ctx.controls(
+          '<div class="stats">' +
+            '<div class="stat"><div class="stat-label">ATP spent</div><div class="stat-value" id="st-atp">--</div><div class="stat-sub">by Na⁺/K⁺ pump</div></div>' +
+            '<div class="stat"><div class="stat-label">Water flow</div><div class="stat-value" id="st-net">--</div><div class="stat-sub">across membrane</div></div>' +
+          '</div>' +
+          '<label class="switch"><input type="checkbox" id="sw-pump" checked><span class="track"></span><span>Run Na⁺/K⁺ pump</span></label>' +
+          '<div id="sp3"></div>'
+        );
+        ctx.showPanel(mem, { only: ['legend', 'notes'], notes: ['pump', 'aquaporin', 'channel.NA'] });
+        const elAtp = ctx.q('#st-atp');
+        const elNet = ctx.q('#st-net');
+        const swPump = ctx.q('#sw-pump');
+        swPump.addEventListener('change', e => {
+          mem.set({ pumpOn: e.target.checked });
+          shell.announce(e.target.checked ? 'Pump running' : 'Pump paused');
+        });
+        unsubMem = mem.on('frame', s => {
+          elAtp.textContent = s.atpSpent;
+          elNet.textContent = s.net;
+        });
+      },
+      onExit() { clearSubs(); }
+    },
+    {
+      scene: 'nephron',
+      eyebrow: 'Step 4 · Whole-Nephron Balance',
+      title: 'Test filtration and reabsorption together',
+      body: '<p class="lead"><strong>Healthy kidneys filter the entire blood plasma dozens of times a day while losing almost none of its water.</strong></p><p>Adjust both filtration pressure and tubular reabsorption to see how glomerular push and tubular reclamation work together to set final urine volume. Travelling particles are drawn exaggerated for visibility.</p>',
+      describe() {
+        const s = neph ? neph.state() : null;
+        if (!s) return 'Full nephron view comparing filtered volume and final urine output.';
+        return 'Nephron filtering ' + s.filteredLDay + ' liters per day, reabsorbing ' + s.pctReabsorbed + ' percent, and producing ' + s.urineLDay + ' liters per day of urine.';
+      },
+      onEnter(ctx) {
+        clearSubs();
+        neph.set({ gfr: 1, reabsorb: 1 });
+        neph.notes(false);
+        ctx.controls(
+          '<div class="stats">' +
+            '<div class="stat"><div class="stat-label">Filtered</div><div class="stat-value" id="st-f4">--</div><div class="stat-sub">at glomerulus</div></div>' +
+            '<div class="stat"><div class="stat-label">Urine output</div><div class="stat-value" id="st-u4">--</div><div class="stat-sub">after reabsorption</div></div>' +
+          '</div>' +
+          '<div class="slider">' +
+            '<div class="slider-head"><span class="label">Filtration pressure</span><span class="value" id="val-g4">--</span></div>' +
+            '<input type="range" id="rng-g4" min="0.3" max="1.3" step="0.05" value="1">' +
+          '</div>' +
+          '<div class="slider">' +
+            '<div class="slider-head"><span class="label">Tubular reabsorption</span><span class="value" id="val-r4">--</span></div>' +
+            '<input type="range" id="rng-r4" min="0" max="1" step="0.02" value="1">' +
+          '</div>' +
+          '<div id="sp4"></div>'
+        );
+        ctx.showPanel(neph, { notes: ['glomerulus', 'capsule', 'tubule', 'capillaries'], layers: ['bloodCells', 'water', 'solutes'] });
+        const elF = ctx.q('#st-f4');
+        const elU = ctx.q('#st-u4');
+        const elG = ctx.q('#val-g4');
+        const elR = ctx.q('#val-r4');
+        ctx.range(ctx.q('#rng-g4'), v => neph.set({ gfr: v }, { snap: true }));
+        ctx.range(ctx.q('#rng-r4'), v => neph.set({ reabsorb: v }, { snap: true }));
+        unsubNeph = neph.on('frame', s => {
+          elF.textContent = s.filteredLDay + ' L/day';
+          elU.textContent = s.urineLDay + ' L/day';
+          elG.textContent = Math.round(s.gfr * 100) + '%';
+          elR.textContent = s.pctReabsorbed + '%';
+        });
+      },
+      onExit() { clearSubs(); }
+    }
+  ]
+});
+
+neph = shell.scene('nephron', el => Scene.mount(el, {
+  scene: 'nephron',
+  viewOffset: shell.viewOffset,
+  gfr: 1,
+  reabsorb: 0
+}));
+
+mem = shell.scene('membrane', el => Membrane.mount(el, {
+  viewOffset: shell.viewOffset,
+  proteins: { NA: { x: -68 }, AQP: { x: -8 }, K: { x: 42 }, pump: { x: 88 } },
+  potential: 'nernst',
+  pumpAuto: true,
+  pumpOn: true,
+  curve: 6
+}));
+
+shell.goTo(0);
+</script>
+</body>
+</html>
