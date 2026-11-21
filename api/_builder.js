@@ -571,7 +571,7 @@ async function composeEdit({ p, m, html, req, errors, selection }) {
   return {
     summary: String((r.lesson && r.lesson.summary) || '').slice(0, 300),
     html: ok ? withHistory(compose.page(r.lesson), history(html).concat(req)) : null,
-    edits: 0, mode: 'compose', fallback: null, problems: r.problems, warn: r.warn,
+    edits: r.ops ? r.ops.length : 0, mode: r.mode, fallback: r.fallback || null, problems: r.problems, warn: r.warn,
     provider: p.id, model: r.served, asked: m, usage: r.usage, ms: Date.now() - t0,
   };
 }
