@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- requests
+1. show what happens inside a mitochondrion to make ATP, and what an uncoupler does
+2. add a slider so I can turn the oxygen supply down and watch ATP production stop
+3. make the first step shorter, one sentence
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ATP Production and Uncoupling</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Mitochondrion,ElectronTransport"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "ATP Production and Uncoupling",
+ "brand": "Mitochondrial Energy",
+ "summary": "Shorten the first step to a single sentence.",
+ "scenes": [
+  {
+   "id": "mitochondrion-view",
+   "component": "Mitochondrion",
+   "params": [
+    {
+     "name": "flow",
+     "value": "0.5"
+    }
+   ]
+  },
+  {
+   "id": "membrane-view",
+   "component": "ElectronTransport",
+   "params": [
+    {
+     "name": "span",
+     "value": "inner"
+    },
+    {
+     "name": "fuel",
+     "value": "NADH"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "mitochondrion-view",
+   "eyebrow": "1 · Structure",
+   "title": "The mitochondrial architecture",
+   "lead": "<b>A mitochondrion uses its folded inner membrane to create specialized compartments.<\/b>",
+   "body": [
+    "The outer membrane encloses the organelle, while the inner membrane folds into cristae to create a continuous intermembrane space."
+   ],
+   "describe": "The organelle is {lengthNm} nm long.",
+   "notes": [
+    {
+     "anchor": "outer",
+     "text": "The outer membrane contains porins that allow small molecules to pass."
+    },
+    {
+     "anchor": "crista",
+     "text": "Cristae increase the surface area available for energy production."
+    },
+    {
+     "anchor": "matrix",
+     "text": "The matrix is the innermost compartment where the citric acid cycle occurs."
+    }
+   ]
+  },
+  {
+   "scene": "membrane-view",
+   "eyebrow": "2 · The Gradient",
+   "title": "Building proton-motive force",
+   "lead": "<b>Electrons moving through the transport chain power the pumping of protons.<\/b>",
+   "body": [
+    "As NADH delivers electrons to Complex I, the energy released is used to pump protons from the matrix into the intermembrane space.",
+    "This creates a steep electrochemical gradient, or proton-motive force."
+   ],
+   "describe": "The proton-motive force is {pmf} mV.",
+   "set": [
+    {
+     "name": "fuel",
+     "value": "NADH"
+    }
+   ],
+   "legend": true,
+   "controls": [
+    {
+     "type": "readout",
+     "label": "PMF",
+     "key": "pmf",
+     "unit": "mV",
+     "digits": 1
+    },
+    {
+     "type": "slider",
+     "param": "oxygen",
+     "label": "Oxygen Supply",
+     "min": 0,
+     "max": 1,
+     "step": 1,
+     "unit": "",
+     "digits": 0
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "complex.I",
+     "text": "Complex I uses electron energy to pump protons."
+    },
+    {
+     "anchor": "H",
+     "text": "Protons accumulate in the intermembrane space."
+    }
+   ]
+  },
+  {
+   "scene": "membrane-view",
+   "eyebrow": "3 · Synthesis",
+   "title": "Turning the turbine",
+   "lead": "<b>Protons flow back into the matrix through ATP synthase to generate energy.<\/b>",
+   "body": [
+    "The synthase acts like a molecular turbine, driven by the return of protons down their gradient.",
+    "This mechanical rotation provides the energy required to phosphorylate ADP into ATP."
+   ],
+   "describe": "The system has made {atpMade} ATP.",
+   "set": [
+    {
+     "name": "showATP",
+     "value": "true"
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "ATP Made",
+     "key": "atpMade",
+     "unit": "",
+     "digits": 0
+    },
+    {
+     "type": "slider",
+     "param": "oxygen",
+     "label": "Oxygen Supply",
+     "min": 0,
+     "max": 1,
+     "step": 1,
+     "unit": "",
+     "digits": 0
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "synthase",
+     "text": "ATP synthase converts the proton gradient into chemical energy."
+    }
+   ],
+   "nextLabel": "Add an uncoupler"
+  },
+  {
+   "scene": "membrane-view",
+   "eyebrow": "4 · Uncoupling",
+   "title": "Dissipating the gradient",
+   "lead": "<b>Uncouplers provide an alternative path for protons, bypassing ATP synthase.<\/b>",
+   "body": [
+    "An uncoupler makes the membrane leaky to protons, allowing them to return to the matrix without doing work.",
+    "The energy stored in the gradient is no longer captured as ATP; instead, it is released as heat."
+   ],
+   "describe": "The proton-motive force has dropped to {pmf} mV.",
+   "set": [
+    {
+     "name": "proteins.leak",
+     "value": "{\"x\":0}"
+    }
+   ],
+   "controls": [
+    {
+     "type": "button",
+     "label": "Add Uncoupler",
+     "set": [
+      {
+       "name": "proteins.leak",
+       "value": "{\"x\":0.5}"
+      }
+     ]
+    },
+    {
+     "type": "readout",
+     "label": "ATP Made",
+     "key": "atpMade",
+     "unit": "",
+     "digits": 0
+    },
+    {
+     "type": "readout",
+     "label": "PMF",
+     "key": "pmf",
+     "unit": "mV",
+     "digits": 1
+    },
+    {
+     "type": "slider",
+     "param": "oxygen",
+     "label": "Oxygen Supply",
+     "min": 0,
+     "max": 1,
+     "step": 1,
+     "unit": "",
+     "digits": 0
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "leak",
+     "text": "Protons leak through the membrane, bypassing the synthase."
+    }
+   ]
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body>
+</html>

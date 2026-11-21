@@ -1,0 +1,240 @@
+<!doctype html>
+<!-- requests
+1. why does a red blood cell burst in pure water but a plant cell just gets firmer?
+2. add a brine step where the red cell shrivels
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Osmosis and the Cell Wall</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="BloodCell,PlantCell"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "Osmosis and the Cell Wall",
+ "brand": "Comparing Osmosis",
+ "summary": "Add a step showing the red blood cell shrivelling in brine.",
+ "scenes": [
+  {
+   "id": "animal",
+   "component": "BloodCell",
+   "params": [
+    {
+     "name": "cut",
+     "value": "1"
+    },
+    {
+     "name": "tonicity",
+     "value": "0"
+    }
+   ]
+  },
+  {
+   "id": "plant",
+   "component": "PlantCell",
+   "params": [
+    {
+     "name": "tissue",
+     "value": "'leaf'"
+    },
+    {
+     "name": "t",
+     "value": "0"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "animal",
+   "eyebrow": "1 · Animal Cell",
+   "title": "A steady state",
+   "lead": "<b>In plasma, the red blood cell is balanced.<\/b>",
+   "body": [
+    "The concentration of solutes inside the cell matches the surrounding fluid.",
+    "Water moves in and out at equal rates, keeping the cell's volume stable."
+   ],
+   "describe": "A red blood cell in a slice of plasma, with a volume of {volume} µm³.",
+   "notes": [
+    {
+     "anchor": "haemoglobin",
+     "text": "Haemoglobin carries oxygen through the blood."
+    },
+    {
+     "anchor": "dimple",
+     "text": "The biconcave shape increases surface area for gas exchange."
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "Volume",
+     "key": "volume",
+     "unit": "µm³",
+     "digits": 0
+    },
+    {
+     "type": "button",
+     "label": "Pure Water",
+     "set": [
+      {
+       "name": "tonicity",
+       "value": "-1"
+      }
+     ]
+    },
+    {
+     "type": "button",
+     "label": "Brine",
+     "set": [
+      {
+       "name": "tonicity",
+       "value": "1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "scene": "animal",
+   "eyebrow": "2 · Crenation",
+   "title": "Shrinking in brine",
+   "lead": "<b>In a concentrated solution, water leaves the cell.<\/b>",
+   "body": [
+    "As water exits via osmosis, the cell loses volume and its membrane buckles.",
+    "This shrivelled state is called crenation."
+   ],
+   "describe": "The cell shrinks as its volume drops to {volume} µm³.",
+   "set": [
+    {
+     "name": "tonicity",
+     "value": "1"
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "spicule",
+     "text": "The membrane buckles into spikes as water leaves."
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "Volume",
+     "key": "volume",
+     "unit": "µm³",
+     "digits": 0
+    }
+   ],
+   "nextLabel": "Switch to a plant cell"
+  },
+  {
+   "scene": "animal",
+   "eyebrow": "2 · Lysis",
+   "title": "The effect of pure water",
+   "lead": "<b>Without solutes outside, water rushes in.<\/b>",
+   "body": [
+    "In pure water, the cell swells as water enters the membrane to balance the concentration.",
+    "Because animal cells lack a rigid wall, the membrane eventually reaches its limit and bursts."
+   ],
+   "set": [
+    {
+     "name": "tonicity",
+     "value": "-1"
+    }
+   ],
+   "describe": "The cell expands and then lyses as the internal volume reaches {volume} µm³.",
+   "notes": [
+    {
+     "anchor": "rim",
+     "text": "The membrane stretches to its maximum capacity."
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "Volume",
+     "key": "volume",
+     "unit": "µm³",
+     "digits": 0
+    }
+   ],
+   "nextLabel": "Switch to a plant cell"
+  },
+  {
+   "scene": "plant",
+   "eyebrow": "3 · Plant Cell",
+   "title": "The advantage of a wall",
+   "lead": "<b>Plant cells use water for support.<\/b>",
+   "body": [
+    "Like the red cell, water enters a plant cell in pure water via osmosis.",
+    "However, the rigid cellulose wall resists the internal pressure."
+   ],
+   "describe": "A hexagonal plant cell in a leaf tissue, held firm by its wall.",
+   "notes": [
+    {
+     "anchor": "wall",
+     "text": "A sturdy cellulose wall provides structural support."
+    },
+    {
+     "anchor": "vacuole",
+     "text": "The large central vacuole stores water and maintains pressure."
+    }
+   ],
+   "controls": [
+    {
+     "type": "slider",
+     "label": "Water level",
+     "param": "t",
+     "min": 0,
+     "max": 2,
+     "step": 0.1,
+     "unit": "turgor",
+     "digits": 1
+    }
+   ]
+  },
+  {
+   "scene": "plant",
+   "eyebrow": "4 · Turgor",
+   "title": "Turgid and strong",
+   "lead": "<b>The cell becomes turgid, not burst.<\/b>",
+   "body": [
+    "As the vacuole fills, it pushes the cytoplasm against the wall.",
+    "This internal pressure, called turgor, makes the plant stand upright."
+   ],
+   "set": [
+    {
+     "name": "t",
+     "value": "0"
+    }
+   ],
+   "describe": "The plant cell is fully turgid, pressing its membrane against the wall.",
+   "notes": [
+    {
+     "anchor": "membrane",
+     "text": "The plasma membrane is pressed tightly against the wall."
+    }
+   ],
+   "controls": [
+    {
+     "type": "slider",
+     "label": "Water level",
+     "param": "t",
+     "min": 0,
+     "max": 2,
+     "step": 0.1,
+     "unit": "turgor",
+     "digits": 1
+    }
+   ]
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body>
+</html>

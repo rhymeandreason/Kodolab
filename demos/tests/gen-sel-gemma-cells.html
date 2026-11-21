@@ -1,0 +1,151 @@
+<!doctype html>
+<!-- requests
+1. how do plant and animal cells differ?
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cellular Architecture</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="AnimalCell,PlantCell"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "Cellular Architecture",
+ "brand": "Animal vs. Plant Cells",
+ "summary": "Comparing the structural differences between eukaryotic cells.",
+ "scenes": [
+  {
+   "id": "animal_scene",
+   "component": "AnimalCell",
+   "params": [
+    {
+     "name": "motion",
+     "value": "1"
+    },
+    {
+     "name": "detail",
+     "value": "high"
+    }
+   ]
+  },
+  {
+   "id": "plant_scene",
+   "component": "PlantCell",
+   "params": [
+    {
+     "name": "tissue",
+     "value": "leaf"
+    },
+    {
+     "name": "t",
+     "value": "0"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "animal_scene",
+   "eyebrow": "1 · Animal Cell",
+   "title": "The flexible animal cell",
+   "lead": "**Animal cells are defined by their flexibility.**",
+   "body": [
+    "Unlike plant cells, they lack a rigid outer wall.",
+    "They are bounded only by a plasma membrane, allowing them to adopt various shapes."
+   ],
+   "notes": [
+    {
+     "anchor": "nucleus",
+     "text": "The nucleus acts as the cell's control center.",
+     "card": "Contains the genetic blueprint for the organism."
+    },
+    {
+     "anchor": "mitochondrion",
+     "text": "Mitochondria provide chemical energy.",
+     "card": "The site of aerobic respiration."
+    }
+   ],
+   "describe": "An animal cell with a nucleus and several mitochondria jiggling in the cytoplasm.",
+   "legend": true
+  },
+  {
+   "scene": "animal_scene",
+   "eyebrow": "2 · Respiration",
+   "title": "Fueling the cell",
+   "lead": "**Oxygen must enter the cell to power metabolism.**",
+   "body": [
+    "Gases like oxygen cross the membrane to reach the mitochondria."
+   ],
+   "set": [
+    {
+     "name": "flows.o2",
+     "value": "{\"x\":1}"
+    }
+   ],
+   "describe": "Oxygen molecules are seen crossing the plasma membrane into the cytosol.",
+   "nextLabel": "Switch to plant cells"
+  },
+  {
+   "scene": "plant_scene",
+   "eyebrow": "3 · Plant Cell",
+   "title": "The rigid plant cell",
+   "lead": "**Plant cells use a cellulose wall for structural support.**",
+   "body": [
+    "This wall provides the strength needed for plants to grow upright.",
+    "A large central vacuole sits inside, helping to regulate internal pressure."
+   ],
+   "notes": [
+    {
+     "anchor": "wall",
+     "text": "A sturdy cellulose boundary.",
+     "card": "Protects the cell and maintains its shape."
+    },
+    {
+     "anchor": "vacuole",
+     "text": "A large central reservoir.",
+     "card": "Stores water and maintains turgor pressure."
+    }
+   ],
+   "describe": "A hexagonal plant cell showing a thick cell wall and a massive central vacuole.",
+   "legend": true
+  },
+  {
+   "scene": "plant_scene",
+   "eyebrow": "4 · Turgor",
+   "title": "Managing water pressure",
+   "lead": "**The vacuole drives turgor pressure against the cell wall.**",
+   "body": [
+    "When the vacuole is full, the cell is turgid and firm.",
+    "If water is lost, the membrane shrinks away from the wall, causing wilting."
+   ],
+   "controls": [
+    {
+     "type": "slider",
+     "label": "Turgor level",
+     "param": "t",
+     "min": 0,
+     "max": 2,
+     "step": 0.1,
+     "unit": "turgor",
+     "digits": 1
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "membrane",
+     "text": "The membrane pulls away during plasmolysis.",
+     "card": "This happens when the cell loses water."
+    }
+   ],
+   "describe": "The turgor level is {t}.",
+   "nextLabel": "Finish"
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body>
+</html>

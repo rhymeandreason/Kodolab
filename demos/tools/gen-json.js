@@ -47,5 +47,6 @@ const sum = (a, b) => (a ? { input: a.input + b.input, output: a.output + b.outp
   const u = r.usage || {};
   console.log(JSON.stringify({ model: r.served, mode: EDIT ? 'edit' : 'draft', ms: Date.now() - t0, uses: r.uses,
     in: (u.input || 0) + (u.cached || 0), out: u.output || 0, steps: ok ? r.lesson.steps.length : 0,
+    selected: r.selected, route: r.mode, ops: r.ops ? r.ops.map(o => o.op) : undefined, fallback: r.fallback || undefined,
     retried: r.retried, problems: r.problems, warn: r.warn, wrote: ok ? out : null }));
 })().catch(e => { console.error(String(e.message || e).slice(0, 400)); process.exit(1); });

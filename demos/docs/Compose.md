@@ -31,6 +31,29 @@ The component sections below are written for a page that calls JavaScript. Read 
 
 Every param value is written as a string: `"1"`, `"-0.5"`, `"true"`, `"null"`, `"leaf"`. The runtime turns them back into numbers and booleans. A param that is an object in the section's example takes a dotted name and its value as JSON: `{ "name": "proteins.leak", "value": "{\"x\":0}" }` puts a leak on stage, and `"null"` takes it away.
 
+## Editing: ops
+
+An edit replies with `ops`, a list of verbs applied in order, and a one-line `summary` of the change. Steps are numbered from 1, as the lesson you are shown numbers them in `n`, and every op in the list uses those numbers, even after an earlier op added or removed a step. Only `moveStep`'s `to` is a position in the final order. An eyebrow's leading number is renumbered for you. Use as few ops as the change needs and touch nothing the student did not ask about.
+
+| op | fields | does |
+| --- | --- | --- |
+| `addStep` | `after` (0 = first), `add` (a whole step) | inserts a step |
+| `removeStep` | `step` | deletes it |
+| `moveStep` | `step`, `to` | moves it |
+| `setText` | `step`, `field` (eyebrow · title · lead · callout · describe · nextLabel), `text` | replaces one field; empty `text` clears it |
+| `setBody` | `step`, `paragraphs` | replaces the body |
+| `set` | `step`, `params` | params the step glides to; a name already set is replaced |
+| `addNote` | `step`, `anchor`, `text`, `card` | pins a note; one per anchor |
+| `removeNote` | `step`, `anchor` | unpins it |
+| `addControl` | `step`, `control` | appends a slider, button or readout |
+| `removeControl` | `step`, `index` (from 1) | removes one |
+| `legend` | `step`, `on` | shows or hides the colour legend |
+| `addScene` | `scene` (a new id), `component`, `params` | a second scene; the existing steps keep the first, and each step you add for the new one names it in `scene` |
+| `swapComponent` | `scene`, `component`, `params` | replaces a scene's component; its steps lose their params, notes and controls, so follow with ops that give the new ones |
+| `retitle` | `text` | renames the lesson |
+
+"Add a slider for oxygen" is one `addControl`. "Make step 2 shorter" is a `setBody` and maybe a `setText` on `lead`. "Show it in salt water too" is an `addStep`.
+
 ## Rules that render fine and are wrong
 
 - A component, param, anchor or `state()` field the sections below do not name does nothing. Use only those.

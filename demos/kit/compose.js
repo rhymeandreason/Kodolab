@@ -50,10 +50,27 @@
     }
     return out;
   }
+  /* A member set alone would REPLACE its object: `{ proteins: { leak } }`
+     takes complexes I-IV and the synthase off stage to put an uncoupler on.
+     So a dotted name is merged into the component's live value first, read
+     from `sim.params()` where the component exposes it. */
+  function setOn(c, list, opts) {
+    const p = params(list);
+    const live = c.sim && typeof c.sim.params === 'function' ? c.sim.params() : null;
+    for (const q of list || []) {
+      const top = String(q.name).split('.')[0];
+      if (top !== q.name && live && live[top] && typeof live[top] === 'object')
+        p[top] = Object.assign({}, live[top], p[top]);
+    }
+    return c.set(p, opts);
+  }
+  const dotted = list => (list || []).filter(q => String(q.name).includes('.'));
+  const plain  = list => (list || []).filter(q => !String(q.name).includes('.'));
 
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
     .replace(/&lt;(\/?)(strong|em)&gt;/g, '<$1$2>')
+    .replace(/&lt;(\/?)b&gt;/g, '<$1strong>').replace(/&lt;(\/?)i&gt;/g, '<$1em>')
     // A small model writes markdown whatever it is told; it means the same two tags.
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(\S(?:.*?\S)?)\*/g, '<em>$1</em>');
 
@@ -92,17 +109,20 @@
 
   const comps = {};
   const two = (spec.scenes || []).length > 1;
-  const steps = (spec.steps || []).map(st => {
+  const steps = (spec.steps || []).map((st, i) => {
     const ctls = st.controls || [];
     let unsub = null;
+    /* "2 · Lysis" goes stale the moment a step is added above it; the number
+       is the step's place, so it is read from the place. */
+    const eyebrow = String(st.eyebrow || '').replace(/^\s*\d+\s*([·.:\-–]\s*)/, `${i + 1} · `);
     return {
-      eyebrow: st.eyebrow, title: st.title, body: body(st), nextLabel: st.nextLabel,
+      eyebrow, title: st.title, body: body(st), nextLabel: st.nextLabel,
       ...(two && st.scene ? { scene: st.scene } : {}),
       describe: () => { const c = comps[st.scene] || Object.values(comps)[0]; return fill(st.describe, c && c.state()); },
       onEnter(ctx) {
         const c = comps[st.scene] || Object.values(comps)[0];
         c.notes(false);
-        if (st.set && st.set.length) c.set(params(st.set));
+        if (st.set && st.set.length) setOn(c, st.set);
         /* A note's text is a label, and a sentence there collides with its
            neighbour's. A model writes sentences anyway, so a long one becomes
            the card, under the library's own label for that part. */
@@ -133,7 +153,7 @@
           } else if (k.type === 'readout') {
             reads.push(s => { node.textContent = fmt(s[k.key], k.digits); });
           } else if (k.type === 'button') {
-            node.onclick = () => c.set(params(k.set));
+            node.onclick = () => setOn(c, k.set);
           }
         });
         if (reads.length) unsub = c.on('frame', s => { if (s) reads.forEach(f => f(s)); });
@@ -151,8 +171,10 @@
   });
   for (const s of spec.scenes || []) {
     const C = window[s.component];
-    const p = { ...params(s.params), viewOffset: shell.viewOffset };
+    const p = { ...params(plain(s.params)), viewOffset: shell.viewOffset };
     comps[s.id] = two ? shell.scene(s.id, e => C.mount(e, p)) : C.mount(shell.stage, p);
+    // Members go on after the mount, merged into the defaults it laid out.
+    if (dotted(s.params).length) setOn(comps[s.id], dotted(s.params));
   }
   shell.goTo(0);
 })();
