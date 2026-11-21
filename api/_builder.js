@@ -45,6 +45,7 @@ const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
 const providers = require('./_providers/index.js');
+const compose   = require('./_compose.js');
 
 const REFERENCE = path.join(__dirname, '..', 'demos', 'docs', 'Components.md');
 const LOADER    = path.join(__dirname, '..', 'demos', 'kit', 'app.js');
@@ -434,6 +435,7 @@ function resolve({ provider, model, bench, chooser }) {
 async function draft({ request, provider, model, bench, chooser }) {
   const { p, model: m } = resolve({ provider, model, bench, chooser });
   const req = String(request || '').trim().slice(0, MAX_REQUEST);
+  if (providers.modeOf(m) === 'compose') return composeDraft({ p, m, req });
   const sys = system();
   const names = components(sys);
   const t0 = Date.now();
@@ -474,6 +476,14 @@ async function draft({ request, provider, model, bench, chooser }) {
 async function edit({ html, request, errors, selection, provider, model, bench, chooser }) {
   const { p, model: m } = resolve({ provider, model, bench, chooser });
   const req = String(request || '').trim().slice(0, MAX_REQUEST);
+  /* The page decides the route: a composed lesson is edited as JSON by any
+     model, and a written page is past what a compose-only model can edit. */
+  if (compose.isComposed(html)) return composeEdit({ p, m, html, req, errors, selection });
+  if (providers.modeOf(m) === 'compose') {
+    return { summary: '', html: null, edits: 0, mode: 'compose', fallback: null,
+             problems: ['this page was written as code, and this model only edits composed lessons: pick another model'],
+             provider: p.id, model: m, asked: m, usage: null, ms: 0 };
+  }
   const sys = system();
   const names = components(sys);
   const past = history(html);
@@ -530,6 +540,39 @@ async function edit({ html, request, errors, selection, provider, model, bench, 
     edits: mode === 'edits' ? edits.length : 0,
     mode, fallback, problems,
     provider: p.id, model: served, asked: m, usage, ms: Date.now() - t0,
+  };
+}
+
+/* ---- the compose route (api/_compose.js) ------------------------------ */
+
+async function composeDraft({ p, m, req }) {
+  const t0 = Date.now();
+  const r = await compose.turn({ p, model: m, request: req, current: null, priced, sum });
+  const ok = r.lesson && !r.problems.length;
+  return {
+    title: String((r.lesson && r.lesson.title) || '').slice(0, 120), shell: 'steps', uses: r.uses,
+    summary: String((r.lesson && r.lesson.summary) || '').slice(0, 300),
+    html: ok ? withHistory(compose.page(r.lesson), [req]) : '',
+    problems: r.problems, warn: r.warn, retried: r.retried,
+    provider: p.id, model: r.served, asked: m, usage: r.usage, ms: Date.now() - t0,
+  };
+}
+
+async function composeEdit({ p, m, html, req, errors, selection }) {
+  const t0 = Date.now();
+  let current;
+  try { current = compose.lessonOf(html); } catch (e) { current = null; }
+  if (!current) {
+    return { summary: '', html: null, edits: 0, mode: 'compose', fallback: null, problems: ['the lesson JSON in this page does not parse'],
+             provider: p.id, model: m, asked: m, usage: null, ms: 0 };
+  }
+  const r = await compose.turn({ p, model: m, request: req, current, extra: errorsBlock(errors) + selectionBlock(selection), priced, sum });
+  const ok = r.lesson && !r.problems.length;
+  return {
+    summary: String((r.lesson && r.lesson.summary) || '').slice(0, 300),
+    html: ok ? withHistory(compose.page(r.lesson), history(html).concat(req)) : null,
+    edits: 0, mode: 'compose', fallback: null, problems: r.problems, warn: r.warn,
+    provider: p.id, model: r.served, asked: m, usage: r.usage, ms: Date.now() - t0,
   };
 }
 

@@ -34,9 +34,22 @@
     if (s === 'true') return true;
     if (s === 'false') return false;
     if (s !== '' && !isNaN(+s)) return +s;
+    if (s === 'null') return null;
+    if (/^[{[]/.test(s)) { try { return JSON.parse(s); } catch (e) { /* a string after all */ } }
     return s;
   }
-  const params = list => Object.fromEntries((list || []).map(p => [p.name, val(p.value)]));
+  /* `proteins.leak` is `{ proteins: { leak } }`: a param that is an object
+     arrives one key at a time, since a name and a string is all a value is. */
+  function params(list) {
+    const out = {};
+    for (const p of list || []) {
+      const keys = String(p.name).split('.');
+      let o = out;
+      keys.slice(0, -1).forEach(k => { o = (o[k] = o[k] && typeof o[k] === 'object' ? o[k] : {}); });
+      o[keys[keys.length - 1]] = val(p.value);
+    }
+    return out;
+  }
 
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

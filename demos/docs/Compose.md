@@ -29,7 +29,7 @@ The component sections below are written for a page that calls JavaScript. Read 
 
 ## Values
 
-Every param value is written as a string: `"1"`, `"-0.5"`, `"true"`, `"leaf"`. The runtime turns them back into numbers and booleans.
+Every param value is written as a string: `"1"`, `"-0.5"`, `"true"`, `"null"`, `"leaf"`. The runtime turns them back into numbers and booleans. A param that is an object in the section's example takes a dotted name and its value as JSON: `{ "name": "proteins.leak", "value": "{\"x\":0}" }` puts a leak on stage, and `"null"` takes it away.
 
 ## Rules that render fine and are wrong
 

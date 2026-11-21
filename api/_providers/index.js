@@ -66,7 +66,12 @@ const MODELS = [
   { id: 'gemini-4-hydrogen',     provider: 'gemini', label: 'Gemini 4 Hydrogen',     role: 'stronger' },
   { id: 'gemini-4-carbon',       provider: 'gemini', label: 'Gemini 4 Carbon',       role: 'strongest' },
   { id: 'gemini-3.5-flash-lite', provider: 'gemini', label: 'Gemini 3.5 Flash-Lite', role: 'cheapest' },
+  /* `compose`: drafts as a lesson JSON (api/_compose.js), never as code. */
+  { id: 'gemma-4-26b-a4b-it',    provider: 'gemini', label: 'Gemma 4 26B',           role: 'open',     mode: 'compose' },
 ];
+
+/* How a model drafts: 'compose' or 'page'. An unlisted model writes pages. */
+const modeOf = id => ((MODELS.find(m => m.id === id) || {}).mode) || 'page';
 
 /* A draft's rough bill on each model: the reference read from cache, a page
  * out, thinking on top. Rounded for a picker, never for the cost line, which
@@ -100,4 +105,4 @@ function forModel(id, allowed) {
   return { p, model: m.id };
 }
 
-module.exports = { pick, names, DEFAULT, MODELS, catalog, forModel };
+module.exports = { pick, names, DEFAULT, MODELS, catalog, forModel, modeOf };

@@ -1,0 +1,204 @@
+<!doctype html>
+<!-- requests
+1. show what happens inside a mitochondrion to make ATP
+2. add a slider so I can turn the oxygen supply down and watch ATP production stop
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Mitochondrial Engine</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Mitochondrion,ElectronTransport"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "The Mitochondrial Engine",
+ "brand": "Cellular Respiration",
+ "summary": "How the electron transport chain builds a proton gradient to power ATP synthesis.",
+ "scenes": [
+  {
+   "id": "organelle",
+   "component": "Mitochondrion",
+   "params": [
+    {
+     "name": "flow",
+     "value": "0.5"
+    }
+   ]
+  },
+  {
+   "id": "membrane",
+   "component": "ElectronTransport",
+   "params": [
+    {
+     "name": "span",
+     "value": "mitochondrion"
+    },
+    {
+     "name": "fuel",
+     "value": "NADH"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "organelle",
+   "eyebrow": "1 · Location",
+   "title": "The energy plant of the cell",
+   "lead": "<strong>ATP is produced within the specialized folds of the mitochondrion.<\/strong>",
+   "body": [
+    "The inner membrane is folded into structures called cristae to increase surface area.",
+    "This extra space allows for thousands of protein machines to work simultaneously."
+   ],
+   "describe": "The scene shows a mitochondrion with its outer membrane and the highly folded inner membrane.",
+   "notes": [
+    {
+     "anchor": "matrix",
+     "text": "The innermost compartment where the citric acid cycle occurs.",
+     "card": "Matrix"
+    },
+    {
+     "anchor": "crista",
+     "text": "Folds of the inner membrane that increase surface area for ATP production.",
+     "card": "Crista"
+    },
+    {
+     "anchor": "ims",
+     "text": "The intermembrane space between the two membranes.",
+     "card": "Intermembrane Space"
+    }
+   ]
+  },
+  {
+   "scene": "membrane",
+   "eyebrow": "2 · The Gradient",
+   "title": "Pumping protons to store energy",
+   "lead": "<strong>Electrons from fuel drive the movement of protons across the membrane.<\/strong>",
+   "body": [
+    "As NADH is oxidized, the electron transport chain uses that energy to pump protons from the matrix into the intermembrane space.",
+    "This creates a concentration gradient, effectively a battery of stored potential energy."
+   ],
+   "describe": "The scene shows the inner membrane with complexes I-IV pumping protons upward.",
+   "legend": true,
+   "controls": [
+    {
+     "type": "slider",
+     "label": "Fuel Supply",
+     "param": "fuelRate",
+     "min": 0,
+     "max": 1,
+     "step": 0.1,
+     "unit": "rate",
+     "digits": 1
+    },
+    {
+     "type": "readout",
+     "label": "Proton-motive force",
+     "key": "pmf",
+     "unit": "mV",
+     "digits": 0
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "complex.I",
+     "text": "Complex I accepts electrons from NADH and pumps protons.",
+     "card": "Complex I"
+    },
+    {
+     "anchor": "H",
+     "text": "Protons (H+) being concentrated in the intermembrane space."
+    }
+   ]
+  },
+  {
+   "scene": "membrane",
+   "eyebrow": "3 · Chemiosmosis",
+   "title": "Turning the molecular turbine",
+   "lead": "<strong>Protons flow back into the matrix through ATP synthase to generate power.<\/strong>",
+   "body": [
+    "The enzyme ATP synthase acts like a turbine, using the force of returning protons to drive the chemical synthesis of ATP.",
+    "This process, called oxidative phosphorylation, is how the cell converts gradient energy into a usable form."
+   ],
+   "describe": "The scene shows protons flowing through the ATP synthase back into the matrix, making ATP.",
+   "controls": [
+    {
+     "type": "readout",
+     "label": "ATP Produced",
+     "key": "atpMade",
+     "unit": "",
+     "digits": 0
+    },
+    {
+     "type": "slider",
+     "label": "Oxygen Stock",
+     "param": "o2Stock",
+     "min": 0,
+     "max": 10,
+     "step": 1,
+     "unit": "O₂",
+     "digits": 0
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "synthase",
+     "text": "The ATP synthase enzyme that converts the proton gradient into ATP.",
+     "card": "ATP Synthase"
+    },
+    {
+     "anchor": "atp",
+     "text": "Newly formed ATP molecules drifting into the matrix."
+    }
+   ],
+   "nextLabel": "What if the gradient leaks?"
+  },
+  {
+   "scene": "membrane",
+   "eyebrow": "4 · Uncoupling",
+   "title": "Energy lost as heat",
+   "lead": "<strong>Uncouplers provide a shortcut for protons, bypassing ATP synthase.<\/strong>",
+   "body": [
+    "When the membrane becomes leaky to protons, the energy of the gradient is released as heat rather than being captured as ATP.",
+    "This is how some organisms, like hibernating mammals, generate body heat."
+   ],
+   "describe": "The scene shows protons leaking through the membrane, causing ATP production to drop.",
+   "controls": [
+    {
+     "type": "button",
+     "label": "Add Uncoupler",
+     "set": [
+      {
+       "name": "uncoupler",
+       "value": "true"
+      }
+     ]
+    },
+    {
+     "type": "button",
+     "label": "Remove Uncoupler",
+     "set": [
+      {
+       "name": "uncoupler",
+       "value": "false"
+      }
+     ]
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "leak",
+     "text": "An uncoupler creates a path for protons to skip the turbine.",
+     "card": "Uncoupler"
+    }
+   ]
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body>
+</html>
