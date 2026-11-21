@@ -95,6 +95,7 @@ const CACHE_MINS = {
   'gemini-3.7-flash':      1024,
   'gemini-3.8-flash':      1024,   // 3.7 requests were already served by 3.8 when 1024 was measured
   'gemini-2.5-flash-lite': null,
+  'gemma-4-26b-a4b-it':    null,   // createCachedContent answers 404 for Gemma
 };
 
 const CACHE_MIN = Object.prototype.hasOwnProperty.call(CACHE_MINS, MODEL)
@@ -102,11 +103,20 @@ const CACHE_MIN = Object.prototype.hasOwnProperty.call(CACHE_MINS, MODEL)
 
 let client = null;
 
+/* GEMMA IS NOT HANDED THE SCHEMA. Under `responseJsonSchema` it skips thinking
+ * and its strings degrade: one word repeated to the cap, or a stray Hangul
+ * syllable mid-sentence (2026-11-21, gemma-4-26b-a4b-it, 3 of 3 runs). With
+ * only `responseMimeType` it thinks first and the JSON comes back clean, so
+ * the schema rides in the system prompt and the caller validates. */
+const LOOSE = m => /^gemma-/.test(m);
+
 /* Thinking is configured differently either side of the 3.x line: 2.5 models take
  * a token budget (0 turns it off), 3.x models take a named level, and each
  * rejects the other's field. The answer is three sentences about settled
- * biology, so both settings say the same thing: barely think about it. */
+ * biology, so both settings say the same thing: barely think about it.
+ * Gemma takes neither (400 on both) and always thinks, so it gets no config. */
 function thinkingFor(model) {
+  if (LOOSE(model)) return null;
   return /^gemini-2\./.test(model) ? { thinkingBudget: 0 }
                                    : { thinkingLevel: 'LOW' };
 }
@@ -219,13 +229,15 @@ async function ask({ system, context, messages, schema, max, thinking, model }) 
   }
 
   const heavy = thinking === 'default' && HEAVY[m];
+  const think = thinking === 'default' ? null : thinkingFor(m);
   const config = {
     maxOutputTokens: (max || 2000) + (heavy ? HEAVY_ROOM : 0),
     ...(heavy ? { thinkingConfig: { thinkingLevel: heavy } }
-       : thinking === 'default' ? {} : { thinkingConfig: thinkingFor(m) }),
+       : think ? { thinkingConfig: think } : {}),
     responseMimeType: 'application/json',
-    responseJsonSchema: forGemini(schema),
+    ...(LOOSE(m) ? {} : { responseJsonSchema: forGemini(schema) }),
   };
+  if (LOOSE(m)) system = `${system}\n\nReply with one JSON object matching this JSON Schema:\n${JSON.stringify(forGemini(schema))}`;
 
   const handle = await cacheFor(system, m);
   if (handle) config.cachedContent = handle;   // holds the system instruction
@@ -249,7 +261,7 @@ async function ask({ system, context, messages, schema, max, thinking, model }) 
   const u = res.usageMetadata || {};
 
   return {
-    json: JSON.parse(res.text),
+    json: JSON.parse(String(res.text || '').replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '')),
     // What answered, not what was asked for. An alias resolves to a dated build,
     // and a model that is retired or rerouted resolves to something else again.
     served: res.modelVersion || m,

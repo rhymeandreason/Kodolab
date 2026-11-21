@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- requests
+1. why does a red blood cell burst in pure water but a plant cell just gets firmer?
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turgor vs Lysis</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="BloodCell,PlantCell"></script>
+<script>
+const shell = LessonShell.create({
+  brand: 'Osmosis & Cell Walls',
+  hint: 'Drag to orbit · Scroll to zoom',
+  ctx: { state: {} },
+  steps: [
+    {
+      eyebrow: 'Animal Cells',
+      title: 'An animal cell in isotonic plasma',
+      scene: 'blood',
+      describe: 'A biconcave red blood cell cut open in plasma, showing interior hemoglobin.',
+      body: '<p class="lead"><strong>Animal cells are bounded only by a delicate plasma membrane.</strong></p><p>In isotonic blood plasma, water molecules enter and leave at equal rates. The cell maintains its stable biconcave shape with no net volume change.</p>',
+      onEnter(ctx) {
+        blood.notes(false);
+        blood.set({ tonicity: 0, spill: 0, cut: 1 });
+        blood.note('cutFace', { text: 'No cell wall' });
+      }
+    },
+    {
+      eyebrow: 'Hypotonic Swelling',
+      title: 'Pure water forces the cell to lyse',
+      scene: 'blood',
+      describe: 'The red blood cell swells to a sphere and ruptures, spilling hemoglobin into the solution.',
+      body: '<p class="lead"><strong>Without a rigid wall, incoming water causes osmotic lysis.</strong></p><p>Placed in pure water, water rushes into the hypertonic cytoplasm. Because the membrane cannot stretch past the sphere its surface area allows, the cell bursts.</p>',
+      onEnter(ctx) {
+        blood.notes(false);
+        blood.set({ tonicity: -1, spill: 0.85 });
+        ctx.ui.controls('<div class="stats"><div class="stat"><span class="stat-label">Cell Volume</span><span class="stat-value" id="vol" data-live>--</span><span class="stat-sub">µm³</span></div></div>');
+        const volEl = ctx.ui.q('#vol');
+        ctx.unsub = blood.on('frame', s => {
+          if (volEl && s.volume) volEl.textContent = Math.round(s.volume);
+        });
+      },
+      onExit(ctx) {
+        if (ctx.unsub) ctx.unsub();
+      }
+    },
+    {
+      eyebrow: 'Plant Cells',
+      title: 'The plant cell is built inside a rigid wall',
+      scene: 'plant',
+      describe: 'A hexagonal plant cell cut open, revealing the cellulose cell wall enclosing the plasma membrane and vacuole.',
+      body: '<p class="lead"><strong>Plant cells surround their membrane with a tough cellulose wall.</strong></p><p>Even in a flaccid state from low water, the cellulose matrix forms a sturdy mechanical boundary that resists stretching forces.</p>',
+      onEnter(ctx) {
+        plant.notes(false);
+        plant.set({ t: 1 });
+        plant.note('wall', { text: 'Cellulose wall' });
+        plant.note('vacuole', { text: 'Central vacuole' });
+      }
+    },
+    {
+      eyebrow: 'Turgor Pressure',
+      title: 'Wall pressure stops water influx',
+      scene: 'plant',
+      describe: 'The vacuole expands with water, pressing the protoplast firmly against the rigid wall to create turgor pressure.',
+      body: '<p class="lead"><strong>The rigid cell wall exerts counter-pressure that prevents bursting.</strong></p><p>In pure water, water fills the central vacuole until the protoplast presses firmly against the wall. This mechanical turgor pressure balances the osmotic gradient, keeping the plant upright and firm.</p>',
+      onEnter(ctx) {
+        plant.notes(false);
+        plant.set({ t: 0 });
+        ctx.ui.controls('<div class="slider"><div class="slider-head"><span class="label">Hydration state</span><span class="value" id="s-val" data-live>Turgid</span></div><input type="range" id="turgor-slider" min="0" max="2" step="0.05" value="0"></div>');
+        const readout = ctx.ui.q('#s-val');
+        ctx.ui.range(ctx.ui.q('#turgor-slider'), v => {
+          plant.set({ t: parseFloat(v), now: true });
+          const s = plant.state();
+          if (readout && s && s.state) {
+            readout.textContent = s.state.charAt(0).toUpperCase() + s.state.slice(1);
+          }
+        });
+      }
+    }
+  ]
+});
+const blood = shell.scene('blood', el => BloodCell.mount(el, { viewOffset: shell.viewOffset, cut: 1, tonicity: 0 }));
+const plant = shell.scene('plant', el => PlantCell.mount(el, { viewOffset: shell.viewOffset, tissue: 'leaf', t: 1 }));
+shell.goTo(0);
+</script>
+</body>
+</html>

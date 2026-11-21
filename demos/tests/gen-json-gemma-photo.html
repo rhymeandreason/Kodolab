@@ -1,0 +1,179 @@
+<!doctype html>
+<!-- requests
+1. How does a plant turn sunlight into sugar?
+-->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Light Reactions</title></head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Chloroplast,LightReactions"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "The Light Reactions",
+ "brand": "Photosynthesis",
+ "summary": "Converting solar energy into chemical power.",
+ "scenes": [
+  {
+   "id": "chloroplast_scene",
+   "component": "Chloroplast",
+   "params": [
+    {
+     "name": "light",
+     "value": "0.5"
+    }
+   ]
+  },
+  {
+   "id": "light_reactions_scene",
+   "component": "LightReactions",
+   "params": [
+    {
+     "name": "fuel",
+     "value": "light"
+    },
+    {
+     "name": "fuelRate",
+     "value": "0.5"
+    },
+    {
+     "name": "showATP",
+     "value": "true"
+    },
+    {
+     "name": "showFuel",
+     "value": "true"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "chloroplast_scene",
+   "eyebrow": "1 · The Organelle",
+   "title": "Photosynthesis happens inside the chloroplast.",
+   "lead": "**The chloroplast is the solar factory of the plant cell.**",
+   "body": [
+    "Inside, specialized membranes called thylakoids are stacked into columns called grana.",
+    "The space around them, the stroma, is where the energy harvested by these membranes is used to build sugar."
+   ],
+   "describe": "The chloroplast contains {granumNm} nm long grana.",
+   "notes": [
+    {
+     "anchor": "stroma",
+     "text": "The stroma is the fluid-filled space surrounding the thylakoids."
+    },
+    {
+     "anchor": "granum",
+     "text": "Grana are stacks of thylakoid discs."
+    },
+    {
+     "anchor": "thylakoid",
+     "text": "The thylakoid membrane is where the light reactions occur."
+    }
+   ]
+  },
+  {
+   "scene": "light_reactions_scene",
+   "eyebrow": "2 · The Membrane",
+   "title": "Light drives the electron transport chain.",
+   "lead": "**Sunlight provides the energy to kickstart a flow of electrons.**",
+   "body": [
+    "As photons hit the photosystems, electrons are energized and passed through a chain of proteins.",
+    "This movement provides the power to pump protons across the membrane. Try adjusting the light intensity to see how the reaction responds."
+   ],
+   "describe": "The membrane contains photosystems and a proton pump.",
+   "set": [
+    {
+     "name": "fuelRate",
+     "value": "1.0"
+    }
+   ],
+   "controls": [
+    {
+     "type": "slider",
+     "label": "Light Intensity",
+     "param": "fuelRate",
+     "min": 0,
+     "max": 1,
+     "step": 0.1,
+     "unit": "%",
+     "digits": 0
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "psii",
+     "text": "Photosystem II splits water to release electrons and oxygen."
+    },
+    {
+     "anchor": "b6f",
+     "text": "The cytochrome b6f complex acts as the proton pump."
+    },
+    {
+     "anchor": "psi",
+     "text": "Photosystem I re-energizes electrons to make NADPH."
+    }
+   ]
+  },
+  {
+   "scene": "light_reactions_scene",
+   "eyebrow": "3 · The Gradient",
+   "title": "Protons build up inside the lumen.",
+   "lead": "**The energy from light is stored as a proton gradient.**",
+   "body": [
+    "As electrons flow, protons are pumped from the stroma into the thylakoid lumen.",
+    "This creates a high concentration of protons inside the membrane, much like water held behind a dam."
+   ],
+   "describe": "The proton-motive force is {pmf} mV.",
+   "controls": [
+    {
+     "type": "readout",
+     "label": "Proton-motive force",
+     "key": "pmf",
+     "unit": "mV",
+     "digits": 1
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "inside",
+     "text": "The lumen is the compartment inside the thylakoid."
+    },
+    {
+     "anchor": "outside",
+     "text": "The stroma is the space outside the thylakoid."
+    }
+   ]
+  },
+  {
+   "scene": "light_reactions_scene",
+   "eyebrow": "4 · Synthesis",
+   "title": "The gradient powers ATP production.",
+   "lead": "**Protons flowing back out drive the ATP synthase turbine.**",
+   "body": [
+    "The concentrated protons rush through the ATP synthase enzyme. This mechanical rotation provides the energy to produce ATP and NADPH.",
+    "These molecules are the energy carriers used in the next stage of photosynthesis to build sugar."
+   ],
+   "describe": "The process has produced {atpMade} ATP.",
+   "callout": "The Calvin cycle, which occurs in the stroma, uses this energy to build sugar.",
+   "controls": [
+    {
+     "type": "readout",
+     "label": "ATP Produced",
+     "key": "atpMade",
+     "unit": "",
+     "digits": 0
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "synthase",
+     "text": "ATP synthase turns as protons flow down their gradient."
+    }
+   ],
+   "nextLabel": "Summary"
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body></html>

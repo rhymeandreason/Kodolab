@@ -1,0 +1,181 @@
+<!doctype html>
+<!-- requests
+1. why does a red blood cell burst in pure water but a plant cell just gets firmer?
+-->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Osmosis and the Cell Wall</title></head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="BloodCell,PlantCell"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "Osmosis and the Cell Wall",
+ "brand": "Bio 101: Osmosis",
+ "summary": "Comparing how animal and plant cells respond to water movement.",
+ "scenes": [
+  {
+   "id": "animal",
+   "component": "BloodCell",
+   "params": [
+    {
+     "name": "cut",
+     "value": "1"
+    },
+    {
+     "name": "hb",
+     "value": "true"
+    }
+   ]
+  },
+  {
+   "id": "plant",
+   "component": "PlantCell",
+   "params": [
+    {
+     "name": "tissue",
+     "value": "leaf"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "animal",
+   "eyebrow": "1 · Animal Cells",
+   "title": "The biconcave red blood cell",
+   "lead": "**A red blood cell is a specialist shaped to carry oxygen.**",
+   "body": [
+    "It lacks a nucleus and a cell wall, consisting only of a thin membrane surrounding haemoglobin.",
+    "Its biconcave disc shape provides a large surface area for gas exchange."
+   ],
+   "describe": "A single red blood cell is shown halved, revealing the red haemoglobin inside.",
+   "notes": [
+    {
+     "anchor": "dimple",
+     "text": "The indentation increases surface area."
+    },
+    {
+     "anchor": "haemoglobin",
+     "text": "The protein that binds oxygen."
+    },
+    {
+     "anchor": "cutFace",
+     "text": "A cross-section showing the cell interior."
+    }
+   ]
+  },
+  {
+   "scene": "animal",
+   "eyebrow": "2 · Osmosis",
+   "title": "Lysis in pure water",
+   "lead": "**In pure water, the cell swells until it bursts.**",
+   "body": [
+    "Water moves into the cell via osmosis to balance the concentration gradient.",
+    "Because there is no wall to resist the internal pressure, the membrane eventually ruptures."
+   ],
+   "set": [
+    {
+     "name": "tonicity",
+     "value": "-1"
+    }
+   ],
+   "describe": "The cell expands into a sphere as water enters, and then the contents spill out.",
+   "controls": [
+    {
+     "type": "slider",
+     "label": "Solution Tonicity",
+     "param": "tonicity",
+     "min": -1,
+     "max": 1,
+     "step": 0.1,
+     "unit": "solute level",
+     "digits": 1
+    },
+    {
+     "type": "readout",
+     "label": "Cell Volume",
+     "key": "volume",
+     "unit": "µm³",
+     "digits": 1
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "spill",
+     "text": "The cell has lysed, leaving a pale ghost."
+    }
+   ],
+   "nextLabel": "See the plant cell"
+  },
+  {
+   "scene": "plant",
+   "eyebrow": "3 · Plant Cells",
+   "title": "The reinforced plant cell",
+   "lead": "**Plant cells use a cellulose wall for structural support.**",
+   "body": [
+    "A typical leaf cell contains a large central vacuole that manages water storage.",
+    "The rigid cell wall provides a boundary that the plasma membrane cannot cross."
+   ],
+   "describe": "A hexagonal plant cell is shown, filled with a large vacuole and chloroplasts.",
+   "notes": [
+    {
+     "anchor": "wall",
+     "text": "The rigid cellulose structure."
+    },
+    {
+     "anchor": "vacuole",
+     "text": "Stores water and maintains pressure."
+    },
+    {
+     "anchor": "chloroplast",
+     "text": "The site of photosynthesis."
+    }
+   ]
+  },
+  {
+   "scene": "plant",
+   "eyebrow": "4 · Turgor",
+   "title": "Turgidity and support",
+   "lead": "**In pure water, the plant cell becomes firm but stays intact.**",
+   "body": [
+    "As water enters the vacuole, it pushes the membrane against the cell wall.",
+    "This internal pressure, or turgor pressure, makes the cell firm and supports the plant."
+   ],
+   "set": [
+    {
+     "name": "t",
+     "value": "0"
+    }
+   ],
+   "describe": "The vacuole expands, pressing the cytoplasm firmly against the cell wall.",
+   "controls": [
+    {
+     "type": "slider",
+     "label": "Water Availability",
+     "param": "t",
+     "min": 0,
+     "max": 2,
+     "step": 0.1,
+     "unit": "turgor",
+     "digits": 1
+    }
+   ],
+   "legend": true,
+   "nextLabel": "Summary"
+  },
+  {
+   "scene": "plant",
+   "eyebrow": "5 · Comparison",
+   "title": "Why the difference?",
+   "lead": "**The cell wall is the deciding factor.",
+   "body": [
+    "In the red blood cell, osmosis leads to lysis because the membrane is fragile.",
+    "In the plant cell, osmosis leads to turgidity because the wall resists the pressure."
+   ],
+   "describe": "The plant cell remains stable even at maximum hydration.",
+   "callout": "<strong>Conclusion:<\/strong> Without a wall, cells are at the mercy of their environment. With a wall, they can use osmotic pressure for strength."
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body></html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<!-- requests
+1. How does a plant turn sunlight into sugar?
+-->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Harvesting Light</title></head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Chloroplast,LightReactions"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "Harvesting Light",
+ "brand": "Bio 101 · Photosynthesis",
+ "summary": "How chloroplast membranes convert photons into chemical energy to power sugar production.",
+ "scenes": [
+  {
+   "id": "organelle",
+   "component": "Chloroplast",
+   "params": [
+    {
+     "name": "light",
+     "value": "0.6"
+    },
+    {
+     "name": "uncoupler",
+     "value": "false"
+    }
+   ]
+  },
+  {
+   "id": "membrane",
+   "component": "LightReactions",
+   "params": [
+    {
+     "name": "fuel",
+     "value": "light"
+    },
+    {
+     "name": "fuelRate",
+     "value": "1"
+    },
+    {
+     "name": "cyclic",
+     "value": "0"
+    },
+    {
+     "name": "sideLabels",
+     "value": "true"
+    },
+    {
+     "name": "showATP",
+     "value": "true"
+    },
+    {
+     "name": "showFuel",
+     "value": "true"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "organelle",
+   "eyebrow": "1 · Architecture",
+   "title": "The chloroplast encloses one continuous internal membrane",
+   "lead": "Photosynthesis starts inside the chloroplast, where a continuous thylakoid network captures sunlight.",
+   "body": [
+    "Light strikes flattened membrane discs stacked into grana. Surrounding them is the stroma, the fluid workspace where enzymes assemble sugars."
+   ],
+   "describe": "A cutaway view of a chloroplast displaying stacked thylakoid grana bathed in stroma.",
+   "notes": [
+    {
+     "anchor": "granum",
+     "text": "Stacked thylakoids"
+    },
+    {
+     "anchor": "stroma",
+     "text": "Stroma fluid"
+    }
+   ],
+   "nextLabel": "Examine the membrane"
+  },
+  {
+   "scene": "membrane",
+   "eyebrow": "2 · Water Splitting",
+   "title": "Photosystem II strips electrons from water to release oxygen",
+   "lead": "Light absorption excites electrons in photosystem II, refilled by ripping electrons from water.",
+   "body": [
+    "Two water molecules are stripped of four electrons, releasing one molecule of oxygen gas and depositing protons straight into the lumen."
+   ],
+   "describe": "The thylakoid membrane active under light, splitting water on the lower lumen face.",
+   "notes": [
+    {
+     "anchor": "psii",
+     "text": "Photosystem II"
+    },
+    {
+     "anchor": "water.split",
+     "text": "Oxygen evolving complex"
+    }
+   ],
+   "nextLabel": "Follow the gradient"
+  },
+  {
+   "scene": "membrane",
+   "eyebrow": "3 · Proton Gradient",
+   "title": "Electron shuttles pump protons across the thylakoid membrane",
+   "lead": "Excited electrons travel through cytochrome b6f, pumping protons downward into the lumen.",
+   "body": [
+    "Together with protons freed from water, this pumping builds a steep proton-motive force across the thylakoid bilayer."
+   ],
+   "describe": "Plastoquinone and cytochrome b6f moving protons across the membrane into the lumen, generating {pmf} mV of proton-motive force.",
+   "notes": [
+    {
+     "anchor": "b6f",
+     "text": "Cytochrome b6f proton pump"
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "Proton-motive force",
+     "key": "pmf",
+     "unit": "mV",
+     "digits": 0
+    }
+   ],
+   "nextLabel": "Make chemical fuel"
+  },
+  {
+   "scene": "membrane",
+   "eyebrow": "4 · Powering Synthesis",
+   "title": "The gradient powers ATP synthase while photosystem I forms NADPH",
+   "lead": "Protons escape through ATP synthase into the stroma while a second photon excites electrons into NADPH.",
+   "body": [
+    "ATP and NADPH escape into the stroma. The Calvin cycle spends both to fix carbon dioxide into sugar, a chemical pathway that occurs downstream in the fluid stroma."
+   ],
+   "callout": "Sugar assembly itself is a metabolic pathway requiring enzymes in the stroma rather than membrane machines.",
+   "describe": "ATP synthase spinning to release ATP upward into the stroma while photosystem I reduces NADP+ to NADPH.",
+   "notes": [
+    {
+     "anchor": "psi",
+     "text": "Photosystem I"
+    },
+    {
+     "anchor": "synthase",
+     "text": "ATP synthase"
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "ATP synthesized",
+     "key": "atpMade",
+     "digits": 0
+    }
+   ]
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body></html>

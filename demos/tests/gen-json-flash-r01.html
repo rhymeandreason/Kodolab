@@ -1,0 +1,206 @@
+<!doctype html>
+<!-- requests
+1. why does a red blood cell burst in pure water but a plant cell just gets firmer?
+-->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Osmosis and the Cell Wall</title></head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="BloodCell,PlantCell"></script>
+<script type="application/json" id="lesson">
+{
+ "title": "Osmosis and the Cell Wall",
+ "brand": "Cellular Biology",
+ "summary": "Why animal cells lyse in hypotonic solutions while plant cells gain structural turgor pressure.",
+ "scenes": [
+  {
+   "id": "animal",
+   "component": "BloodCell",
+   "params": [
+    {
+     "name": "tonicity",
+     "value": "0"
+    },
+    {
+     "name": "cut",
+     "value": "1"
+    },
+    {
+     "name": "spill",
+     "value": "0"
+    }
+   ]
+  },
+  {
+   "id": "plant",
+   "component": "PlantCell",
+   "params": [
+    {
+     "name": "tissue",
+     "value": "leaf"
+    },
+    {
+     "name": "t",
+     "value": "1"
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "scene": "animal",
+   "eyebrow": "1 · Isotonic Equilibrium",
+   "title": "A red blood cell rests in osmotic balance with plasma",
+   "lead": "In an isotonic fluid, water enters and leaves the erythrocyte at equal rates.",
+   "body": [
+    "A red blood cell is a biconcave disc packed with haemoglobin. Its surface area is fixed, leaving room to swell if fluid rushes inward.",
+    "Without an external rigid structure, the animal cell relies entirely on its flexible plasma membrane to maintain its boundary."
+   ],
+   "describe": "The biconcave red blood cell is cut open, showing internal haemoglobin at a volume of {volume} cubic micrometres.",
+   "notes": [
+    {
+     "anchor": "rim",
+     "text": "Flexible lipid bilayer"
+    },
+    {
+     "anchor": "haemoglobin",
+     "text": "Cytosolic haemoglobin"
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "Cell Volume",
+     "key": "volume",
+     "unit": "µm³",
+     "digits": 0
+    }
+   ],
+   "nextLabel": "Expose to pure water"
+  },
+  {
+   "scene": "animal",
+   "eyebrow": "2 · Osmotic Lysis",
+   "title": "Hypotonic water inflates and ruptures the animal membrane",
+   "lead": "Pure water rushes into the hypertonic cytoplasm until the membrane reaches maximum capacity and bursts.",
+   "body": [
+    "Because the cell's membrane area is fixed, swelling forces it into a sphere to hold the added water volume.",
+    "When the influx exceeds the sphere's maximum geometric volume, the lipid bilayer tears open, spilling its contents in osmotic lysis."
+   ],
+   "describe": "The red blood cell has inflated into a sphere and ruptured, spilling haemoglobin with a volume of {volume} cubic micrometres.",
+   "set": [
+    {
+     "name": "tonicity",
+     "value": "-1"
+    },
+    {
+     "name": "spill",
+     "value": "1"
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "cutFace",
+     "text": "Ruptured membrane"
+    }
+   ],
+   "controls": [
+    {
+     "type": "readout",
+     "label": "Cell Volume",
+     "key": "volume",
+     "unit": "µm³",
+     "digits": 0
+    }
+   ],
+   "nextLabel": "Compare with a plant cell"
+  },
+  {
+   "scene": "plant",
+   "eyebrow": "3 · Flaccid Plant Cell",
+   "title": "A plant cell without excess water lacks structural tension",
+   "lead": "When water availability is limited, the plant cell's central vacuole loses volume and the membrane relaxes away from the wall.",
+   "body": [
+    "Unlike an animal cell, the plant cell is encased in a tough, rigid wall made of cellulose fibres.",
+    "In an isotonic or flaccid state, the plasma membrane rests gently against the wall without pushing outward."
+   ],
+   "describe": "A cut-open plant cell with an underfilled central vacuole inside a loose hexagonal cellulose wall.",
+   "notes": [
+    {
+     "anchor": "wall",
+     "text": "Rigid cellulose wall"
+    },
+    {
+     "anchor": "membrane",
+     "text": "Plasma membrane"
+    },
+    {
+     "anchor": "vacuole",
+     "text": "Central vacuole"
+    }
+   ],
+   "nextLabel": "Add pure water"
+  },
+  {
+   "scene": "plant",
+   "eyebrow": "4 · Turgor Pressure",
+   "title": "The cellulose wall exerts wall pressure to halt osmotic influx",
+   "lead": "In hypotonic water, the swelling vacuole drives the membrane hard against the rigid cell wall, generating turgor.",
+   "body": [
+    "As water enters down its concentration gradient, the expanding protoplast presses against the inelastic cellulose box.",
+    "The wall exerts an equal and opposite physical pressure that halts net water entry long before the membrane can stretch to its breaking point. This turgor pressure keeps non-woody plants upright."
+   ],
+   "describe": "The plant cell expands to fill the rigid frame, the central vacuole pressing tightly against the boundary.",
+   "set": [
+    {
+     "name": "t",
+     "value": "0"
+    }
+   ],
+   "notes": [
+    {
+     "anchor": "wall",
+     "text": "Resists internal osmotic pressure"
+    },
+    {
+     "anchor": "vacuole",
+     "text": "Turgid vacuole"
+    }
+   ],
+   "controls": [
+    {
+     "type": "button",
+     "label": "Pure Water (Turgid)",
+     "set": [
+      {
+       "name": "t",
+       "value": "0"
+      }
+     ]
+    },
+    {
+     "type": "button",
+     "label": "Flaccid",
+     "set": [
+      {
+       "name": "t",
+       "value": "1"
+      }
+     ]
+    },
+    {
+     "type": "button",
+     "label": "Brine (Plasmolysed)",
+     "set": [
+      {
+       "name": "t",
+       "value": "2"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
+</script>
+<script src="../kit/compose.js"></script>
+</body></html>

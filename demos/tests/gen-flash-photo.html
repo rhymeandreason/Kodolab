@@ -1,0 +1,109 @@
+<!doctype html>
+<!-- requests
+1. How does a plant turn sunlight into sugar?
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>From Sunlight to Sugar: The Light Reactions</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../kit/app.js" data-shell="steps" data-use="Chloroplast,LightReactions"></script>
+<script>
+const shell = LessonShell.create({
+  brand: 'Photosynthesis: Light to Sugar',
+  hint: 'Drag to rotate · Scroll to zoom',
+  ctx: {},
+  steps: [
+    {
+      scene: 'chloroplast',
+      eyebrow: 'The Solar Organelle',
+      title: 'Where light meets the plant cell',
+      body: '<p class="lead"><strong>Photosynthesis takes place within the chloroplast.</strong> Two envelope membranes enclose the gel-like stroma and disc-shaped thylakoids stacked into grana.</p><p>Sunlight penetrates deep into the organelle, exciting pigment complexes embedded throughout the internal membranes.</p>',
+      describe: 'Cutaway view of a chloroplast showing green grana stacks within the stroma.',
+      onEnter(ctx) {
+        chloro.notes(false);
+        ctx.ui.showPanel(chloro, { notes: ['granum', 'stroma'] });
+      }
+    },
+    {
+      scene: 'chloroplast',
+      eyebrow: 'Internal Architecture',
+      title: 'A continuous proton reservoir',
+      body: '<p class="lead"><strong>All thylakoids enclose one continuous internal space called the lumen.</strong> Grana discs are joined by stroma lamellae so that protons collect in a single shared reservoir.</p><p>As light strikes the thylakoid membranes, proton pumps move hydrogen ions from the stroma into this enclosed lumen.</p>',
+      describe: 'Zoomed cross section of grana stacks connected by stroma lamellae with protons gathering in the central lumen.',
+      onEnter(ctx) {
+        chloro.notes(['lumen', 'synthase']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><span class="stat-label">ATP synthesized</span><span class="stat-value" id="atp-ch" data-live>0</span></div></div>');
+        chloro.on('frame', s => {
+          const el = ctx.ui.q('#atp-ch');
+          if (el && s.ledger) el.textContent = s.ledger.atpMade;
+        });
+      }
+    },
+    {
+      scene: 'membrane',
+      eyebrow: 'Thylakoid Membrane',
+      title: 'Splitting water to capture electrons',
+      body: '<p class="lead"><strong>Photosystem II absorbs light to strip electrons from water.</strong> Splitting water supplies replacement electrons to the photosystem while releasing oxygen gas as a byproduct.</p><p>Each split water molecule leaves behind protons in the lumen, directly contributing to the concentration gradient.</p>',
+      describe: 'Molecular view of the thylakoid bilayer with photosystem II splitting water on the lumen side and releasing oxygen.',
+      onEnter(ctx) {
+        light.notes(['psii', 'water.split']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><span class="stat-label">O₂ released</span><span class="stat-value" id="o2-count" data-live>0</span></div><div class="stat"><span class="stat-label">Proton motive force</span><span class="stat-value" id="pmf-count" data-live>0 mV</span></div></div>');
+        light.on('frame', s => {
+          const o2El = ctx.ui.q('#o2-count');
+          const pmfEl = ctx.ui.q('#pmf-count');
+          if (o2El && s.light) o2El.textContent = s.light.o2Released;
+          if (pmfEl) pmfEl.textContent = Math.round(s.pmf) + ' mV';
+        });
+      }
+    },
+    {
+      scene: 'membrane',
+      eyebrow: 'Electron Transport',
+      title: 'Pumping protons and reducing NADP⁺',
+      body: '<p class="lead"><strong>Electrons pass through cytochrome b₆f to photosystem I.</strong> Cytochrome b₆f pumps additional protons across the membrane into the lumen as electrons traverse the chain.</p><p>At photosystem I, a second photon re-energizes electrons so that ferredoxin-NADP⁺ reductase can store them in high-energy NADPH.</p>',
+      describe: 'Electron transport chain transferring electrons from plastoquinone through cytochrome b6f and plastocyanin to photosystem I and ferredoxin.',
+      onEnter(ctx) {
+        light.notes(['b6f', 'psi', 'fnr']);
+        ctx.ui.controls('<div class="stats"><div class="stat"><span class="stat-label">NADPH formed</span><span class="stat-value" id="nadph-count" data-live>0</span></div><div class="stat"><span class="stat-label">pH difference (ΔpH)</span><span class="stat-value" id="dp-count" data-live>0</span></div></div>');
+        light.on('frame', s => {
+          const nEl = ctx.ui.q('#nadph-count');
+          const dpEl = ctx.ui.q('#dp-count');
+          if (nEl && s.light) nEl.textContent = s.light.nadphMade;
+          if (dpEl) dpEl.textContent = s.dpH ? s.dpH.toFixed(2) : '0.00';
+        });
+      }
+    },
+    {
+      scene: 'membrane',
+      eyebrow: 'Calvin Cycle Fuel',
+      title: 'ATP and NADPH power sugar synthesis',
+      body: '<p class="lead"><strong>Protons exit through ATP synthase to produce ATP in the stroma.</strong> The high electrochemical potential in the lumen drives the rotor turbine as protons escape into the stroma.</p><p>Both ATP and NADPH are released into the stroma, where the enzymes of the Calvin cycle consume them to convert CO₂ into sugars.</p>',
+      describe: 'ATP synthase turbine turning as protons flow from the lumen to the stroma, generating ATP alongside NADPH.',
+      onEnter(ctx) {
+        light.notes(['synthase', 'nadph']);
+        ctx.ui.controls('<div class="slider"><div class="slider-head"><span class="label">Light brightness</span><span class="value" id="light-num" data-live>100%</span></div><input type="range" id="light-slider" min="0" max="1" step="0.1" value="1"></div><div class="stats"><div class="stat"><span class="stat-label">ATP produced</span><span class="stat-value" id="atp-final" data-live>0</span></div><div class="stat"><span class="stat-label">NADPH produced</span><span class="stat-value" id="nadph-final" data-live>0</span></div></div>');
+        ctx.ui.range(ctx.ui.q('#light-slider'), v => {
+          light.set({ fuelRate: v }, { snap: true });
+          const num = ctx.ui.q('#light-num');
+          if (num) num.textContent = Math.round(v * 100) + '%';
+        });
+        light.on('frame', s => {
+          const atpEl = ctx.ui.q('#atp-final');
+          const nEl = ctx.ui.q('#nadph-final');
+          if (atpEl) atpEl.textContent = s.atpMade;
+          if (nEl && s.light) nEl.textContent = s.light.nadphMade;
+        });
+      }
+    }
+  ]
+});
+const chloro = shell.scene('chloroplast', el => Chloroplast.mount(el, { viewOffset: shell.viewOffset, light: 0.8 }));
+const light = shell.scene('membrane', el => LightReactions.mount(el, { viewOffset: shell.viewOffset, fuel: 'light', fuelRate: 1, cyclic: 0 }));
+shell.goTo(0);
+</script>
+</body>
+</html>
