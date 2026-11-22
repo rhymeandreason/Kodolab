@@ -576,6 +576,25 @@ async function composeEdit({ p, m, html, req, errors, selection }) {
   };
 }
 
-module.exports = { draft, edit, apply, validate, syntax, components, needs, reference, system,
+/* Ops from the builder's own controls, applied with no model: the text
+ * editor today. Judged like a model's edit, on the problems it adds, so a
+ * lesson that already warned can still have a typo fixed. */
+function applyLessonOps(html, ops) {
+  let lesson;
+  try { lesson = compose.lessonOf(html); } catch (e) { lesson = null; }
+  if (!lesson) return { status: 400, error: 'this page is not a composed lesson' };
+  const d = compose.docs();
+  const r = compose.applyOps(lesson, ops, d);
+  if (r.failed && r.failed.length) return { status: 409, error: 'the lesson changed under the editor; reload and try again (' + r.failed.join('; ') + ')' };
+  const before = new Set(compose.check(lesson, d).problems);
+  const added = compose.check(r.lesson, d).problems.filter(x => !before.has(x));
+  if (added.length) return { status: 400, error: added.join('; ') };
+  const first = ops.find(o => o.text || (o.paragraphs && o.paragraphs.length)) || ops[0];
+  const words = String(first.text || (first.paragraphs || [])[0] || '').replace(/<[^>]*>|\*/g, '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  return { html: withHistory(compose.page(r.lesson), history(html)), count: ops.length,
+           summary: (words ? `“${words}”` : `step ${first.step}`) + (ops.length > 1 ? ` and ${ops.length - 1} more` : '') };
+}
+
+module.exports = { draft, edit, apply, applyLessonOps, validate, syntax, components, needs, reference, system,
                    history, withHistory, stripHistory,
                    DRAFT_SCHEMA, EDITS_SCHEMA, WHOLE_SCHEMA, MAX_REQUEST };

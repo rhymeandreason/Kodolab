@@ -413,14 +413,15 @@
       paintEditBar();
       return;
     }
-    if (msg.type === 'app-edit-edits') saveText(msg.edits);
+    if (msg.type === 'app-edit-edits') saveText(msg.edits, null, msg.ops);
   }
 
-  async function saveText(edits, summary) {
-    if (!edits || !edits.length) { setTextMode(false); return; }
+  async function saveText(edits, summary, ops) {
+    edits = edits || []; ops = ops || [];
+    if (!edits.length && !ops.length) { setTextMode(false); return; }
     setBusy(true);
     try {
-      const r = await Apps.api('../../api/app', { method: 'POST', token, body: { action: 'text', id: app.id, edits, summary } });
+      const r = await Apps.api('../../api/app', { method: 'POST', token, body: { action: 'text', id: app.id, edits, ops, summary } });
       app.n = r.n; app.html = r.html;
       extra[r.n] = summary || `${r.edits} passage${r.edits === 1 ? '' : 's'}, by hand`;
       open = String(r.n);

@@ -19,7 +19,7 @@
 <div><iframe id="f" sandbox="allow-scripts allow-same-origin"></iframe></div>
 <aside>
   <h3>Text mode bench</h3>
-  <p>The frame editor on a real generated page. No database: Save prints the pairs and applies them here.</p>
+  <p>The frame editor on a real generated page. No database: Save prints the pairs and applies them here. A composed page (gen-ops-*) saves ops instead, which only the server applies.</p>
   <select id="page"></select>
   <button id="arm">Arm</button><button id="off">Off</button><button id="save">Save</button>
   <p id="stat"></p>
@@ -30,7 +30,7 @@
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const PAGES = ['gen-rbc-test', 'gen-salmon-n5', 'gen-photo-4', 'gen-plantcell-turgor', 'gen-animalcell-parts'];
+  const PAGES = ['gen-ops-gemma-mito-e1', 'gen-rbc-test', 'gen-salmon-n5', 'gen-photo-4', 'gen-plantcell-turgor', 'gen-animalcell-parts'];
   $('page').innerHTML = PAGES.map(p => `<option>${p}</option>`).join('');
   let src = '';
 
@@ -58,7 +58,8 @@ var s=document.createElement('script');s.src='app-edit.js';var m=e.data;s.onload
       $('picks').insertAdjacentHTML('beforeend', `<li><b>${d.pill.text}</b><br>${d.pill.tag}.${d.pill.cls} ${d.pill.note ? '· note=' + d.pill.note : ''}<br>step ${d.pill.step} · after "${d.pill.anchor}"</li>`);
     }
     if (d.type === 'app-edit-edits') {
-      $('pairs').textContent = JSON.stringify(d.edits, null, 1) || '(none)';
+      $('pairs').textContent = JSON.stringify(d.ops && d.ops.length ? { ops: d.ops, edits: d.edits } : d.edits, null, 1) || '(none)';
+      if (d.ops && d.ops.length) { $('out').textContent = `${d.ops.length} ops: the server applies these (api/_builder.js applyLessonOps)`; return; }
       let out = src, bad = [];
       d.edits.forEach((p, i) => {
         const n = out.split(p.find).length - 1;

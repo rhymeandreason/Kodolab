@@ -18,7 +18,7 @@
  *  shape a structured-output schema cannot hold; `val` coerces it back.
  *
  *  Text may carry <strong> and <em> and nothing else: everything is escaped,
- *  then those four tags are let back in. Loaded after app.js, which has
+ *  then those tags (and <b>, <i>, markdown's ** and *) are let back in. Loaded after app.js, which has
  *  already document.written the shell and the components this runs on.
  * ========================================================================== */
 (function () {
@@ -82,10 +82,14 @@
   }
   const fill = (tpl, s) => String(tpl || '').replace(/\{(\w+)\}/g, (_, k) => fmt(s && s[k]));
 
+  /* `data-cf` names the field a passage was drawn from, which is what the
+     builder's text editor writes back to: an op on the lesson, not a find in
+     the page's source. The lead's mark is on the <strong> so the bold the
+     runtime adds is not read back as bold the author typed. */
   const body = st => [
-    st.lead ? `<p class="lead"><strong>${esc(String(st.lead).replace(/\*\*/g, ''))}</strong></p>` : '',
-    ...(st.body || []).map(p => `<p>${esc(p)}</p>`),
-    st.callout ? `<p class="callout">${esc(st.callout)}</p>` : '',
+    st.lead ? `<p class="lead"><strong data-cf="lead">${esc(String(st.lead).replace(/\*\*/g, ''))}</strong></p>` : '',
+    ...(st.body || []).map((p, k) => `<p data-cf="body.${k}">${esc(p)}</p>`),
+    st.callout ? `<p class="callout" data-cf="callout">${esc(st.callout)}</p>` : '',
   ].join('');
 
   function controlsHtml(list) {
@@ -109,14 +113,14 @@
 
   const comps = {};
   const two = (spec.scenes || []).length > 1;
+  /* "2 · Lysis" goes stale the moment a step is added above it; the number
+     is the step's place, so it is read from the place. */
+  const brow = (st, i) => String(st.eyebrow || '').replace(/^\s*\d+\s*([·.:\-–]\s*)/, `${i + 1} · `);
   const steps = (spec.steps || []).map((st, i) => {
     const ctls = st.controls || [];
     let unsub = null;
-    /* "2 · Lysis" goes stale the moment a step is added above it; the number
-       is the step's place, so it is read from the place. */
-    const eyebrow = String(st.eyebrow || '').replace(/^\s*\d+\s*([·.:\-–]\s*)/, `${i + 1} · `);
     return {
-      eyebrow, title: st.title, body: body(st), nextLabel: st.nextLabel,
+      eyebrow: brow(st, i), title: st.title, body: () => body(st), nextLabel: st.nextLabel,
       ...(two && st.scene ? { scene: st.scene } : {}),
       describe: () => { const c = comps[st.scene] || Object.values(comps)[0]; return fill(st.describe, c && c.state()); },
       onEnter(ctx) {
@@ -177,4 +181,21 @@
     if (dotted(s.params).length) setOn(comps[s.id], dotted(s.params));
   }
   shell.goTo(0);
+
+  /* The text editor's handle (build/app-edit.js). It edits the spec in place
+     so a repaint after a step change draws what was typed, and saves the
+     same change as ops, which the server applies to the stored lesson. */
+  window.Compose = {
+    spec,
+    at: () => shell.current,
+    setText(i, field, text) {
+      const st = spec.steps[i], s = steps[i];
+      if (!st) return;
+      const m = /^body\.(\d+)$/.exec(field);
+      if (m) { st.body = (st.body || []).slice(); st.body[+m[1]] = text; return; }
+      st[field] = text;
+      if (field === 'eyebrow') s.eyebrow = brow(st, i);
+      else if (field === 'title' || field === 'nextLabel') s[field] = text;
+    },
+  };
 })();

@@ -33,6 +33,14 @@
  *  server syntax-checks the spliced page before it stores it, so a case this
  *  gets wrong is a rejected save and not a broken app.
  *
+ *  A COMPOSED PAGE IS EDITED AS ITS LESSON, not its source. Its words live in
+ *  a JSON spec (`kit/compose.js`), where a find against the HTML lands by luck
+ *  if at all, so each passage the runtime drew carries the field it came from
+ *  (`data-cf="body.1"`, or the shell's own eyebrow and title). The passage is
+ *  edited whole, the spec is updated in place so a repaint keeps it, and the
+ *  save sends `setText` and `setBody` ops, which the server applies to the
+ *  stored lesson with no model in the loop.
+ *
  *  CLICKS STILL DO WHAT THE PAGE DOES. Editing does not take the page over:
  *  a click on outlined text edits or selects it, but text inside a control (a
  *  Next button, a tab) keeps its own click and offers a badge instead, so the
@@ -217,6 +225,7 @@
   }
 
   function encode(text, hit) {
+    if (hit.cf) return text;   // the runtime escapes it when it draws it
     var s = text;
     if (!hit.script || hit.markup) s = entity(s);
     if (hit.script) s = jsEsc(s);
@@ -292,7 +301,7 @@
       acceptNode: function (n) {
         var p = n.parentElement;
         if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        if (!p || SKIP.test(p.tagName) || p.closest('.ssx-ui')) return NodeFilter.FILTER_REJECT;
+        if (!p || SKIP.test(p.tagName) || p.closest('.ssx-ui, [data-ssx="e"]')) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       },
     });
@@ -310,6 +319,37 @@
 
   /* ---- the mode --------------------------------------------------------- */
 
+  /* The fields of the step on screen, each one passage. The whole element is
+   * the unit, since a paragraph with a bold run in it is three text nodes and
+   * one field. `nextLabel` is skipped on the last step, whose button the shell
+   * relabels "Start over" whatever the lesson says. */
+  var CF = [['.lshell-panel .eyebrow', 'eyebrow'], ['.lshell-panel .title', 'title'], ['.lshell-nav .primary', 'nextLabel']];
+  function paintComposed(C) {
+    var i = C.at(), n = (C.spec.steps || []).length;
+    if (i < 0) return;
+    var els = [];
+    CF.forEach(function (k) {
+      var el = document.querySelector(k[0]);
+      if (el && el.textContent.trim() && !(k[1] === 'nextLabel' && i === n - 1)) els.push([el, k[1]]);
+    });
+    document.querySelectorAll('.lshell-panel [data-cf]').forEach(function (el) { els.push([el, el.getAttribute('data-cf')]); });
+    els.forEach(function (pair) {
+      var el = pair[0], field = pair[1];
+      if (el.querySelector('[data-ssx="e"]')) return;
+      var span = document.createElement('span');
+      span.setAttribute('data-ssx', 'e');
+      while (el.firstChild) span.appendChild(el.firstChild);
+      el.appendChild(span);
+      var hit = { cf: field, step: i, find: 'cf:' + i + ':' + field, script: false,
+                  markup: field === 'lead' || field === 'callout' || /^body\./.test(field) };
+      var rec = { span: span, hit: hit, lead: '', trail: '', text: span.textContent };
+      rec.body = serialize(span, hit);
+      span._ssx = rec;
+      spans.push(rec);
+      order.push(rec.text);
+    });
+  }
+
   /* TWO PASSES, and the reason is the order the walker happens to run in.
    * Everything is resolved first, then the passages are wrapped, then what is
    * left is offered for pointing at — and a block holding a passage is never
@@ -319,14 +359,23 @@
    * inside it. */
   function paint() {
     spans = []; order = [];
+    var C = window.Compose;
+    if (C) paintComposed(C);
     var list = texts(), found = [];
     for (var j = 0; j < list.length; j++) {
       var host = list[j].parentElement;
-      found.push(host && host.closest(READOUT)
+      /* On a composed page every editable word was claimed above; the rest
+       * (notes, chips, chrome) is drawn by the library and is for pointing at. */
+      found.push(C || (host && host.closest(READOUT))
         ? { why: 'absent' }
         : locate(list[j].nodeValue, keyFor(host), list[j]));
     }
     var holds = [];
+    for (var c = 0; c < spans.length; c++) {
+      for (var e1 = spans[c].span.parentElement; e1 && e1 !== document.body; e1 = e1.parentElement) {
+        if (holds.indexOf(e1) < 0) holds.push(e1);
+      }
+    }
     for (var j2 = 0; j2 < list.length; j2++) {
       if (found[j2].why) continue;
       for (var e2 = list[j2].parentElement; e2 && e2 !== document.body; e2 = e2.parentElement) {
@@ -502,6 +551,7 @@
     if (para) { reblock(para); return; }
     if (body === rec.body) return;
     rec.text = text; rec.body = body;
+    if (rec.hit.cf && window.Compose) window.Compose.setText(rec.hit.step, rec.hit.cf, body);
     var pair = { find: rec.hit.find,
                  replace: (rec.hit.pre || '') + rec.lead + body + rec.trail + (rec.hit.post || ''),
                  text: text };
@@ -840,6 +890,26 @@
     unpaint();
   }
 
+  /* The composed edits as ops, numbered from 1 as the server's lesson is. A
+   * body is sent whole, from the spec already holding every paragraph typed
+   * over, and a paragraph emptied is a paragraph removed. */
+  function ops() {
+    var C = window.Compose, out = [], bodies = {};
+    if (!C) return out;
+    pending.forEach(function (p) {
+      var m = /^cf:(\d+):(.+)$/.exec(p.find);
+      if (!m) return;
+      var i = +m[1], field = m[2];
+      if (/^body\./.test(field)) bodies[i] = true;
+      else out.push({ op: 'setText', step: i + 1, field: field, text: p.replace.trim() });
+    });
+    Object.keys(bodies).forEach(function (i) {
+      var list = (C.spec.steps[i].body || []).map(function (t) { return String(t || '').trim(); }).filter(Boolean);
+      out.push({ op: 'setBody', step: +i + 1, paragraphs: list });
+    });
+    return out;
+  }
+
   addEventListener('message', function (e) {
     var d = e.data;
     if (!d || d.type !== 'app-edit') return;
@@ -848,7 +918,9 @@
     else if (d.on) arm(d.html);
     else if (d.save) {
       document.activeElement && document.activeElement.blur();
-      post({ type: 'app-edit-edits', edits: pending.map(function (p) { return { find: p.find, replace: p.replace }; }) });
+      var plain = pending.filter(function (p) { return p.find.indexOf('cf:') !== 0; });
+      post({ type: 'app-edit-edits', ops: ops(),
+             edits: plain.map(function (p) { return { find: p.find, replace: p.replace }; }) });
     } else if (d.done) { pending = []; regions = {}; picked = []; disarm(); }
     else disarm();
   });

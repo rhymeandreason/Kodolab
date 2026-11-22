@@ -148,6 +148,16 @@ module.exports = async function handler(req, res) {
      * model turn — so the whole batch is refused and the browser reloads
      * rather than half of it landing. */
     if (action === 'text') {
+      /* A composed page's words are its lesson's, so they arrive as ops. */
+      if (Array.isArray(body.ops) && body.ops.length) {
+        const app = await apps.read(id);
+        if (!app || !app.version) return res.status(404).json({ error: 'no such app' });
+        const out = builder.applyLessonOps(app.version.html, body.ops.slice(0, MAX_TEXT_EDITS));
+        if (out.error) return res.status(out.status).json({ error: out.error });
+        const named = typeof body.summary === 'string' && body.summary.trim().slice(0, 80);
+        const v = await apps.addVersion(id, { kind: 'text', html: out.html, summary: named || out.summary });
+        return res.status(200).json({ id, n: v.n, html: out.html, edits: out.count });
+      }
       const edits = (Array.isArray(body.edits) ? body.edits : []).slice(0, MAX_TEXT_EDITS)
         .map(e => ({ find: String(e.find || ''), replace: String(e.replace || '').slice(0, 4000) }));
       if (!edits.length) return res.status(400).json({ error: 'no text edits to save' });
