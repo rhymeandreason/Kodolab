@@ -55,7 +55,7 @@ var s=document.createElement('script');s.src='app-edit.js';var m=e.data;s.onload
     if (d.type === 'app-edit-ready') $('stat').textContent = `${d.editable} editable passages · ${d.pending} pending`;
     if (d.type === 'app-edit-dirty') $('stat').textContent = `${d.count} banked`;
     if (d.type === 'app-select') {
-      $('picks').insertAdjacentHTML('beforeend', `<li><b>${d.pill.text}</b><br>${d.pill.tag}.${d.pill.cls} ${d.pill.note ? '· note=' + d.pill.note : ''}<br>step ${d.pill.step} · after "${d.pill.anchor}"</li>`);
+      $('picks').innerHTML = (d.picks || []).map(p => `<li><b>${p.text}</b><br>${p.tag}.${p.cls} ${p.note ? '· note=' + p.note : ''}<br>step ${p.step} · after "${p.anchor}"</li>`).join('');
     }
     if (d.type === 'app-edit-edits') {
       $('pairs').textContent = JSON.stringify(d.ops && d.ops.length ? { ops: d.ops, edits: d.edits } : d.edits, null, 1) || '(none)';

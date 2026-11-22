@@ -148,7 +148,7 @@
       <!-- The step list, read off the live shell. A row is a jump: the app in
            the frame goes to that step, which is the whole point of the pane. -->
       <div class="pane" id="paneOutline" hidden>
-        <p class="hint">The lesson's steps. Click one to go there.</p>
+        <p class="hint" id="outlineHint">The lesson's steps. Click one to go there.</p>
         <ol class="outline" id="outline"></ol>
       </div>
       <div class="pane" id="paneText" hidden>
@@ -327,22 +327,54 @@
   let outline = null;
   let outlineAt = -1;
 
+  /* A composed page's steps are its lesson's, so the outline can change
+   * them: each tool is one op, saved as a version with no model call. A coded
+   * page's steps are code, and its outline stays a list of jumps. */
+  const composed = () => !!(app && token && /<script type="application\/json" id="lesson">/.test(app.html) && /kit\/compose\.js/.test(app.html));
+  let landAt = null;   // the step to show once the saved page has mounted
+
   function paintOutline() {
     const ol = $('outline');
     if (!outline) { ol.innerHTML = ''; paintTabs(); return; }
+    const tools = composed(), last = outline.length - 1;
+    $('outlineHint').textContent = tools
+      ? "The lesson's steps. Click one to go there; the arrows move it, × deletes it."
+      : "The lesson's steps. Click one to go there.";
     ol.innerHTML = outline.map((s, i) => `<li${i === outlineAt ? ' class="current"' : ''}>`
       + `<button type="button" data-i="${i}">`
       + `<span class="n">${i + 1}</span>`
       + `<span class="what"><span class="t">${esc(s.title) || '(untitled)'}</span>`
       + `${s.eyebrow ? `<span class="eb">${esc(s.eyebrow)}</span>` : ''}</span>`
       + `${s.scene ? `<span class="scene">${esc(s.scene)}</span>` : ''}`
-      + `</button></li>`).join('');
+      + `</button>`
+      + (tools ? `<span class="tools">`
+        + `<button type="button" data-op="up" data-i="${i}" title="Move up" aria-label="Move step ${i + 1} up"${i ? '' : ' disabled'}>↑</button>`
+        + `<button type="button" data-op="down" data-i="${i}" title="Move down" aria-label="Move step ${i + 1} down"${i < last ? '' : ' disabled'}>↓</button>`
+        + `<button type="button" data-op="del" data-i="${i}" title="Delete step" aria-label="Delete step ${i + 1}"${last ? '' : ' disabled'}>×</button>`
+        + `</span>` : '')
+      + `</li>`).join('');
     paintTabs();
   }
   $('outline').addEventListener('click', e => {
+    const t = e.target.closest('button[data-op]');
+    if (t) { outlineOp(t.dataset.op, +t.dataset.i); return; }
     const b = e.target.closest('button[data-i]');
     if (b) Apps.outline.go(frame, +b.dataset.i);
   });
+
+  function outlineOp(op, i) {
+    if (busy || !outline) return;
+    const name = `step ${i + 1}${outline[i].title ? ` “${outline[i].title.slice(0, 50)}”` : ''}`;
+    if (op === 'del') {
+      if (!confirm(`Delete ${name}? You can get it back from History.`)) return;
+      landAt = Math.min(i, outline.length - 2);
+      saveText([], `Deleted ${name}`, [{ op: 'removeStep', step: i + 1 }]);
+    } else {
+      const to = op === 'up' ? i : i + 2;   // 1-based final position
+      landAt = to - 1;
+      saveText([], `Moved ${name} ${op}`, [{ op: 'moveStep', step: i + 1, to }]);
+    }
+  }
 
   /* What the last few clicks landed on, and for a passage that cannot be
    * typed over, why. The sentence is written here rather than in the frame:
@@ -401,6 +433,7 @@
       /* One step is a sandbox, not a walk: a list of one is not an outline. */
       outline = msg.steps && msg.steps.length > 1 ? msg.steps : null;
       outlineAt = msg.current == null ? -1 : msg.current;
+      if (landAt != null && msg.steps) { const at = landAt; landAt = null; if (at !== outlineAt) { Apps.outline.go(frame, at); return; } }
       paintOutline();
       return;
     }
