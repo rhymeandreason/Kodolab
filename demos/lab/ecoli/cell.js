@@ -10,23 +10,13 @@
  * Each quantity eases toward its value for the stage (from the original), so a
  * jump on the timeline settles in a second or two. Its look is fixed by a seed. */
 import * as THREE from 'three';
-import { clamp, smooth, Ease, seeded } from '../lab.js';
+import { clamp, smooth, Ease, seeded, T } from '../lab.js';
 
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 
-export const CAPTIONS = [
-  '<b>A single <i>E. coli</i> cell.</b> Its chromosome (blue) floats in the cytoplasm among ribosomes. Flagella trail behind.',
-  '<b>Calcium ions</b> (blue dots) gather at the membrane and cancel out its negative charge, so DNA is no longer pushed away.',
-  '<b>Competent cells.</b> Suspended in cold CaCl₂, the cells are now ready to take up DNA.',
-  '<b>Plasmids arrive.</b> Each ring carries <b style="color:#16a34a">GFP</b>, <b style="color:#d97706">bla</b> (ampicillin resistance) and the <b style="color:#7c3aed">araC</b> switch.',
-  '<b>On ice</b> the membrane stiffens and plasmids settle against the cell surface.',
-  '<b>Heat shock!</b> The sudden heat makes the membrane flex and open temporary pores. A plasmid slips inside.',
-  '<b>Recovery.</b> In fresh broth the cell repairs itself, copies the plasmid and starts making β-lactamase (amber).',
-  '<b>On the amp plate</b>, β-lactamase breaks down ampicillin (red), so only transformed cells survive and divide.',
-];
-export const captionFor = (st) => (st.stage < 8 ? CAPTIONS[st.stage] : st.ara
-  ? '<b>Arabinose</b> (yellow) enters and switches on araC. The cell makes <b style="color:#16a34a">GFP</b>, which glows green under UV light.'
-  : '<b>No arabinose:</b> araC keeps the GFP gene switched off. The cell survives ampicillin but does not glow.');
+const TX = T.levels.cell;
+/** The card's "why" while zoomed in: what the cell is doing at this stage. */
+export const captionFor = (st) => (st.stage < 8 ? TX.stages[st.stage] : st.ara ? TX.stageAra : TX.stageNoAra);
 
 function glowTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
@@ -242,49 +232,44 @@ export function createCell(env) {
   const world = (o, local) => { cell.updateMatrixWorld(); return o.localToWorld(local.clone()); };
   const st = (t) => t.stage;
   const labels = [
-    { text: 'Chromosome', anchor: () => world(cell, V3(-0.9, 0.35, 0.3)), show: (t) => st(t) === 0 },
-    { text: 'Flagellum', anchor: () => world(cell, V3(-4.6, 0.6, 0.2)), show: (t) => st(t) === 0 },
-    { text: 'Cell membrane', anchor: () => world(cell, V3(1.6, CR, 0)), show: (t) => st(t) <= 2 },
-    { text: 'Ca²⁺ ions', anchor: () => world(cell, V3(-1.2, CR + 0.4, 0.4)), show: (t) => st(t) >= 1 && st(t) <= 2 },
-    { text: 'Plasmid', anchor: () => plasOut[2].g.getWorldPosition(V3()), show: (t) => st(t) >= 3 && st(t) <= 4 && M.out > 0.6 },
-    { text: 'Pore', anchor: () => poreMeshes[0].getWorldPosition(V3()), show: (t) => st(t) === 5 && M.heat > 0.6 },
-    { text: 'Plasmid copies', anchor: () => plasCopies[0].getWorldPosition(V3()), show: (t) => st(t) === 6 && M.inside > 0.6 },
-    { text: 'β-lactamase', anchor: () => world(cell, enzM.userData.d[0].to), show: (t) => st(t) === 6 && M.enz > 0.6 },
-    { text: 'Ampicillin', anchor: () => world(cell, ampM.userData.d[0].p), show: (t) => st(t) === 7 && M.t7 > -1e8 && M.time - M.t7 < ampM.userData.d[0].d },
-    { text: 'Arabinose', anchor: () => world(cell, araM.userData.d[0].out), show: (t) => st(t) >= 8 && t.ara && M.gfp < 0.5 },
-    { text: 'GFP', anchor: () => world(cell, gfpM.userData.d[0].p), show: (t) => st(t) >= 8 && t.ara && M.gfp > 0.6 },
+    { key: 'chromosome', ...TX.labels.chromosome, anchor: () => world(cell, V3(-0.9, 0.35, 0.3)), show: (t) => st(t) === 0 },
+    { key: 'flagellum', ...TX.labels.flagellum, anchor: () => world(cell, V3(-4.6, 0.6, 0.2)), show: (t) => st(t) === 0 },
+    { key: 'membrane', ...TX.labels.membrane, anchor: () => world(cell, V3(1.6, CR, 0)), show: (t) => st(t) <= 2 },
+    { key: 'calcium', ...TX.labels.calcium, anchor: () => world(cell, V3(-1.2, CR + 0.4, 0.4)), show: (t) => st(t) >= 1 && st(t) <= 2 },
+    { key: 'plasmid', ...TX.labels.plasmid, anchor: () => plasOut[2].g.getWorldPosition(V3()), show: (t) => st(t) >= 3 && st(t) <= 4 && M.out > 0.6 },
+    { key: 'pore', ...TX.labels.pore, anchor: () => poreMeshes[0].getWorldPosition(V3()), show: (t) => st(t) === 5 && M.heat > 0.6 },
+    { key: 'copies', ...TX.labels.copies, anchor: () => plasCopies[0].getWorldPosition(V3()), show: (t) => st(t) === 6 && M.inside > 0.6 },
+    { key: 'enzyme', ...TX.labels.enzyme, anchor: () => world(cell, enzM.userData.d[0].to), show: (t) => st(t) === 6 && M.enz > 0.6 },
+    { key: 'amp', ...TX.labels.amp, anchor: () => world(cell, ampM.userData.d[0].p), show: (t) => st(t) === 7 && M.t7 > -1e8 && M.time - M.t7 < ampM.userData.d[0].d },
+    { key: 'arabinose', ...TX.labels.arabinose, anchor: () => world(cell, araM.userData.d[0].out), show: (t) => st(t) >= 8 && t.ara && M.gfp < 0.5 },
+    { key: 'gfp', ...TX.labels.gfp, anchor: () => world(cell, gfpM.userData.d[0].p), show: (t) => st(t) >= 8 && t.ara && M.gfp > 0.6 },
   ];
   const interactives = [
-    { root: shellOuter, priority: 0, info: () => ({ title: 'Cell membrane', text: 'Two layers of fatty molecules that keep the cell’s contents in. Its surface is negatively charged, like DNA.' }) },
-    { root: nucleoid, priority: 1, info: () => ({ title: 'Chromosome', text: 'One long loop of DNA with about 4,300 genes. Unlike a plant cell’s, it isn’t inside a nucleus.' }) },
-    { root: ribo, priority: 1, info: () => ({ title: 'Ribosomes', text: 'They read genes and build proteins, including GFP once the gene is switched on.' }) },
-    { root: plasmidRoot, priority: 2, info: () => ({ title: 'GFP plasmid', text: 'A small ring of DNA carrying three genes: GFP (green), bla for ampicillin resistance (amber) and the araC switch (violet).' }) },
-    { root: enzM, priority: 2, info: () => ({ title: 'β-lactamase', text: 'The enzyme made from the bla gene. It breaks ampicillin down before it can damage the cell wall.' }) },
-    { root: ampM, priority: 2, info: () => ({ title: 'Ampicillin', text: 'An antibiotic in the agar. It kills E. coli that have no β-lactamase.' }) },
-    { root: araM, priority: 2, info: () => ({ title: 'Arabinose', text: 'A sugar. It binds the araC protein, which then switches on the GFP gene.' }) },
-    { root: gfpM, priority: 2, info: () => ({ title: 'Green fluorescent protein', text: 'From a jellyfish. It absorbs UV light and gives off green light.' }) },
+    { root: shellOuter, priority: 0, info: () => TX.info.membrane },
+    { root: nucleoid, priority: 1, info: () => TX.info.chromosome },
+    { root: ribo, priority: 1, info: () => TX.info.ribosomes },
+    { root: plasmidRoot, priority: 2, info: () => TX.info.plasmid },
+    { root: enzM, priority: 2, info: () => TX.info.enzyme },
+    { root: ampM, priority: 2, info: () => TX.info.amp },
+    { root: araM, priority: 2, info: () => TX.info.arabinose },
+    { root: gfpM, priority: 2, info: () => TX.info.gfp },
   ];
 
   /* Watch's caption at this level: one or two beats per stage, the second when its change shows */
+  const C = (k, mark = null) => ({ text: TX.cues[k], mark });
   function cue(t) {
     switch (st(t)) {
-      case 0: return { text: '<i>E. coli</i> is a one-celled bacterium from the gut. Its <b>chromosome</b> floats free, with no nucleus', mark: 'Chromosome' };
-      case 1: return { text: 'Calcium chloride is added. Its <b>calcium ions</b> coat the membrane and cancel its negative charge', mark: 'Ca²⁺ ions' };
-      case 2: return { text: 'DNA, also negative, is no longer pushed away. The cell is <b>competent</b>', mark: 'Cell membrane' };
-      case 3: return { text: '<b>Plasmids</b> arrive: small DNA rings carrying GFP, bla and araC', mark: 'Plasmid' };
-      case 4: return { text: 'On ice the membrane stiffens, and plasmids settle against it', mark: 'Plasmid' };
-      case 5: return M.heat < 0.6
-        ? { text: '<b>Heat shock!</b> The sudden heat makes the membrane flex' }
-        : { text: 'Brief <b>pores</b> open, and a plasmid slips inside', mark: 'Pore' };
-      case 6: return M.enz < 0.6
-        ? { text: 'In fresh broth the cell repairs itself and copies the plasmid', mark: 'Plasmid copies' }
-        : { text: 'The <b>bla</b> gene makes <b>β-lactamase</b>', mark: 'β-lactamase' };
-      case 7: return { text: 'On the amp plate, β-lactamase breaks down <b>ampicillin</b> before it can kill the cell', mark: 'Ampicillin' };
+      case 0: return C('cell', 'chromosome');
+      case 1: return C('calcium', 'calcium');
+      case 2: return C('competent', 'membrane');
+      case 3: return C('plasmids', 'plasmid');
+      case 4: return C('ice', 'plasmid');
+      case 5: return M.heat < 0.6 ? C('heat') : C('pores', 'pore');
+      case 6: return M.enz < 0.6 ? C('recover', 'copies') : C('enzyme', 'enzyme');
+      case 7: return C('amp', 'amp');
       default:
-        if (!t.ara) return { text: 'No arabinose: araC keeps the GFP gene off. The cell lives but does not glow' };
-        return M.gfp < 0.5
-          ? { text: '<b>Arabinose</b> binds araC, which switches on the GFP gene', mark: 'Arabinose' }
-          : { text: 'The cell makes <b>GFP</b>, which glows green under UV light', mark: 'GFP' };
+        if (!t.ara) return C('noAra');
+        return M.gfp < 0.5 ? C('arabinose', 'arabinose') : C('glow', 'gfp');
     }
   }
 

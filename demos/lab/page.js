@@ -88,8 +88,8 @@
   function moveChildren(from, to) { while (from.firstChild) to.appendChild(from.firstChild); }
 
   /* The intro card and the info modal from the lab's text (intro, info), into the page's
-     .lab-intro and .lab-info (made if the page has none). A page without them in its text
-     keeps whatever markup it wrote. */
+     .lab-intro and .lab-info (made if the page has none), and any [data-t] element's words.
+     A page without them in its text keeps whatever markup it wrote. */
   function fillContent(app, T) {
     var icon = T.icon ? '<i class="ph-fill ' + T.icon + '"></i>' : '';
     var block = function (cls, extra) {
@@ -105,6 +105,11 @@
         }).join('') + '</ul>' : '');
       if (art) n.insertBefore(art, n.firstChild);
     }
+    // a page's own markup names its words by key: <span data-t="introArt.name"></span>
+    app.querySelectorAll('[data-t]').forEach(function (n) {
+      var v = n.dataset.t.split('.').reduce(function (o, k) { return o == null ? o : o[k]; }, T);
+      if (v != null) n.innerHTML = v;
+    });
     if (T.info) {
       var F = T.info, m = block('lab-info', { hidden: '' });
       m.innerHTML = '<div class="modal-kicker">' + icon + F.kicker + '</div><h2>' + F.title + '</h2>'

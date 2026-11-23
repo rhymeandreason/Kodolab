@@ -18,7 +18,7 @@
 <meta property="og:description" content="Bacterial transformation in a 3D virtual lab: heat-shock E. coli with a GFP plasmid, plate on ampicillin and arabinose, and see which colonies glow under UV.">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
-  <script src="../page.js"></script>  <!-- import map, fonts, icons, lab.css -->
+  <script src="../page.js" data-text="text.js"></script>  <!-- import map, fonts, icons, lab.css, the words (text.js) -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -27,42 +27,20 @@
 
     <!-- cell view, after the UV step: with or without arabinose -->
     <div class="ara-seg" id="araSeg" hidden>
-      <button data-ara="1" class="on">+ arabinose</button><button data-ara="0">no arabinose</button>
-    </div>
-
-    <div class="lab-info" hidden>
-      <div class="modal-kicker"><i class="ph-fill ph-dna"></i>About the experiment</div>
-      <h2>How do you make bacteria glow?</h2>
-      <p>Give them a gene from a jellyfish. The gene sits on a <b>plasmid</b>, a small ring of DNA that bacteria can take up and copy.</p>
-      <ol class="info-list">
-        <li><span>1</span><div><b>Make the cells competent.</b> Ice-cold calcium chloride cancels the negative charges on the DNA and the cell membrane, so the plasmid can touch the cell.</div></li>
-        <li><span>2</span><div><b>Heat shock.</b> A sudden jump from 0 °C to 42 °C opens temporary pores in the membrane, and some plasmids slip in.</div></li>
-        <li><span>3</span><div><b>Select.</b> Only cells with the plasmid carry <b>bla</b>, so only they grow on ampicillin plates.</div></li>
-        <li><span>4</span><div><b>Switch it on.</b> <b>araC</b> turns the GFP gene on only when the sugar arabinose is present, so only those colonies glow under UV light.</div></li>
-      </ol>
-      <p class="muted"><i class="ph ph-magnifying-glass-plus"></i> Click the circle on the right to zoom into one cell. Both views show the same moment.</p>
-      <p class="muted"><i class="ph ph-mouse-left-click"></i> Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan · keys 1 2 switch levels</p>
+      <button data-ara="1" class="on" data-t="araSeg.on"></button><button data-ara="0" data-t="araSeg.off"></button>
     </div>
 
     <div class="lab-intro">
       <div class="intro-art">
         <div class="plasmid3d" id="plasmid3d">
           <canvas id="plasmidCanvas"></canvas>
-          <div class="pcenter"><b>GFP plasmid</b><span>~5,400 base pairs</span></div>
-          <span class="plab" data-r="gfp" style="--c:#16a34a">GFP</span>
-          <span class="plab" data-r="bla" style="--c:#d97706">bla (amp<sup>R</sup>)</span>
-          <span class="plab" data-r="ara" style="--c:#7c3aed">araC</span>
-          <span class="plab" data-r="ori" style="--c:#64748b">ori</span>
+          <div class="pcenter"><b data-t="introArt.name"></b><span data-t="introArt.size"></span></div>
+          <span class="plab" data-r="gfp" style="--c:#16a34a" data-t="introArt.gfp"></span>
+          <span class="plab" data-r="bla" style="--c:#d97706" data-t="introArt.bla"></span>
+          <span class="plab" data-r="ara" style="--c:#7c3aed" data-t="introArt.ara"></span>
+          <span class="plab" data-r="ori" style="--c:#64748b" data-t="introArt.ori"></span>
         </div>
       </div>
-      <div class="modal-kicker"><i class="ph-fill ph-dna"></i>Interactive 3D lab</div>
-      <h2>Make bacteria <em>glow</em></h2>
-      <p>In this classic biology lab you add a small loop of DNA, called a <b>plasmid</b>, to <i>E. coli</i>. The plasmid carries a gene from a jellyfish. If the bacteria take it up, they glow green under UV light.</p>
-      <ul class="keys">
-        <li><i style="--c:#22c55e"></i><span><b>GFP</b> makes green fluorescent protein</span></li>
-        <li><i style="--c:#f59e0b"></i><span><b>bla</b> lets cells survive the antibiotic ampicillin</span></li>
-        <li><i style="--c:#8b5cf6"></i><span><b>araC</b> turns GFP on only when the sugar arabinose is present</span></li>
-      </ul>
     </div>
   </div>
   <script>LabPage.chrome()</script>

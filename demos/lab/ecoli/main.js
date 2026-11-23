@@ -13,6 +13,7 @@ import {
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createZoom, createIntro, chromeInsets, bindChrome,
   makeBench, makeMicroTube, makeTubeRack, makeReagentBottle, makeIceBath, makeWaterBath,
   makeAgarPlate, makeBenchCard, makePipette, makeLoop, makeToolHolder, makeWasteBin, makeUvLamp,
+  T, fmt, LANG,
 } from '../lab.js';
 import { createCell, captionFor } from './cell.js';
 
@@ -31,11 +32,12 @@ const POS = {
 };
 const PLATE_Z = 14.5;
 const PLATES = [
-  { x: -15, title: 'LB / amp', sub: '− plasmid', src: 'minus', colonies: 0, desc: 'Ampicillin agar, cells without the plasmid.' },
-  { x: -5, title: 'LB', sub: '− plasmid', src: 'minus', lawn: true, desc: 'Plain nutrient agar, cells without the plasmid.' },
-  { x: 5, title: 'LB / amp', sub: '+ plasmid', src: 'plus', colonies: 42, desc: 'Ampicillin agar, transformed cells.' },
-  { x: 15, title: 'LB / amp / ara', sub: '+ plasmid', src: 'plus', colonies: 46, glow: true, desc: 'Ampicillin + arabinose agar, transformed cells.' },
+  { x: -15, src: 'minus', colonies: 0, dish: '' },
+  { x: -5, src: 'minus', lawn: true, dish: 'lawn' },
+  { x: 5, src: 'plus', colonies: 42, dish: 'col' },
+  { x: 15, src: 'plus', colonies: 46, glow: true, dish: 'glow' },
 ];
+PLATES.forEach((P, i) => Object.assign(P, T.plates[i])); // title, sub, desc, out, result
 const PIP_SCALE = 0.6;                      // the 14 cm transfer pipette, at a bench-friendly size
 const COL = { cacl2: '#cfe6ff', cells: '#efe5c9', lb: '#f1d58a', recovered: '#ecd38e' };
 const hex = (c) => new THREE.Color(c).getHex();
@@ -71,7 +73,7 @@ let lesson, ix;
 
 const cellState = { stage: 0, ara: true, uv: 0 };
 const zoom = createZoom(stage, {
-  levels: [{ key: 'cell', world: createCell(stage.env), name: 'Cell', meta: '≈ 5 µm', bg: '#eef1f8' }],
+  levels: [{ key: 'cell', world: createCell(stage.env), name: T.levels.cell.name, meta: T.levels.cell.meta, bg: '#eef1f8' }],
   getT: () => { cellState.stage = S ? S.micro : 0; cellState.ara = ara; cellState.uv = S ? S.uv : 0; return cellState; },
   getStep: () => 0,
   onChange: (scale) => { lesson.holdWatch(scale !== 'lab'); lesson.render(); requestAnimationFrame(() => stage.resize()); },
@@ -97,8 +99,8 @@ function rebuild() {
   const rack = place(makeTubeRack(mat, { block: true, holes: 2, spacing: 4, holeR: 1.05, color: hex('#c3cdf4') }), POS.rack);
   const plus = place(makeMicroTube(mat, { color: hex('#6366f1'), label: '+' }), POS.rack.clone().add(rack.holes[0]));
   const minus = place(makeMicroTube(mat, { color: hex('#94a3b8'), label: '−' }), POS.rack.clone().add(rack.holes[1]));
-  const cacl2 = place(makeReagentBottle(mat, { title: 'CaCl₂', line: 'TRANSFORMATION', note: '0.05 M · ice-cold', color: '#0ea5e9', liquidColor: hex('#d6ecff') }), POS.cacl2, 0.2);
-  const lb = place(makeReagentBottle(mat, { title: 'LB', line: 'NUTRIENT BROTH', note: 'sterile', color: '#f59e0b', liquidColor: hex('#f1d58a') }), POS.lb, -0.15);
+  const cacl2 = place(makeReagentBottle(mat, { ...T.props.cacl2, color: '#0ea5e9', liquidColor: hex('#d6ecff') }), POS.cacl2, 0.2);
+  const lb = place(makeReagentBottle(mat, { ...T.props.lb, color: '#f59e0b', liquidColor: hex('#f1d58a') }), POS.lb, -0.15);
   lb.liquid.setFraction(0.7);
   const ice = place(makeIceBath(mat, { cubes: 9, seed: 5 }), POS.ice);
   const bath = place(makeWaterBath(mat), POS.bath);
@@ -134,23 +136,23 @@ function rebuild() {
   };
 
   // targets
-  ix.register('cacl2', cacl2.group, { name: 'CaCl₂ transformation solution', short: 'CaCl₂', desc: 'Ice-cold calcium chloride helps DNA stick to the cell surface.', anchor: V3(0, 11, 0) });
-  ix.register('lb', lb.group, { name: 'LB nutrient broth', short: 'LB broth', desc: 'Food for the cells while they recover.', anchor: V3(0, 11, 0) });
-  ix.register('starter', starter.group, { name: 'E. coli starter plate', short: 'Starter plate', desc: 'Colonies of ordinary, non-glowing E. coli.', anchor: V3(0, 1.2, 0) });
-  ix.register('plasmid', vial.group, { name: 'GFP plasmid', short: 'Plasmid', desc: 'A ring of DNA carrying the GFP, bla and araC genes.', anchor: V3(0, 5.6, 0), ringAround: vialHolder.group });
+  ix.register('cacl2', cacl2.group, { ...T.objects.cacl2, anchor: V3(0, 11, 0) });
+  ix.register('lb', lb.group, { ...T.objects.lb, anchor: V3(0, 11, 0) });
+  ix.register('starter', starter.group, { ...T.objects.starter, anchor: V3(0, 1.2, 0) });
+  ix.register('plasmid', vial.group, { ...T.objects.plasmid, anchor: V3(0, 5.6, 0), ringAround: vialHolder.group });
   ix.addGroup('plasmid', vialHolder.group);
-  ix.register('ice', ice.group, { name: 'Ice bath', short: 'Ice bath', desc: 'Keeps the tubes at 0 °C.', anchor: V3(0, 4.2, 0) });
-  ix.register('bath', bath.group, { name: 'Water bath · 42 °C', short: 'Water bath', desc: 'Used for the 50-second heat shock.', anchor: V3(0, 6, 0) });
-  ix.register('plates', plates[0].group, { name: 'Agar plates', short: 'Agar plates', desc: PLATES.map((P) => `${P.title} (${P.sub})`).join(' · '), anchor: V3(0, 1.2, 0) });
+  ix.register('ice', ice.group, { ...T.objects.ice, anchor: V3(0, 4.2, 0) });
+  ix.register('bath', bath.group, { ...T.objects.bath, anchor: V3(0, 6, 0) });
+  ix.register('plates', plates[0].group, { ...T.objects.plates, desc: PLATES.map((P) => `${P.title} (${P.sub})`).join(' · '), anchor: V3(0, 1.2, 0) });
   plates.slice(1).forEach((p) => ix.addGroup('plates', p.group));
-  ix.register('uv', lamp.group, { name: 'UV lamp', short: 'UV lamp', desc: 'Ultraviolet light makes GFP fluoresce.', anchor: V3(0, 0, 1.8) });
+  ix.register('uv', lamp.group, { ...T.objects.uv, anchor: V3(0, 0, 1.8) });
   // things to hover for their name and what they do
-  ix.register('tubes', plus.group, { name: 'Microcentrifuge tubes', desc: '+ plasmid (indigo cap) gets the GFP plasmid. − plasmid (grey cap) is the control: same cells, no plasmid.' });
+  ix.register('tubes', plus.group, { ...T.objects.tubes });
   ix.addGroup('tubes', minus.group);
-  ix.register('pipette', pip.group, { name: 'Sterile transfer pipette', desc: 'Disposable: a fresh one whenever it could carry cells somewhere they shouldn’t go.' });
-  ix.register('loop', loop.group, { name: 'Sterile inoculation loop', desc: 'Disposable: a fresh loop for every transfer, so nothing gets cross-contaminated.' });
-  ix.register('waste', waste.group, { name: 'Biohazard waste', desc: 'Used loops and pipettes go here and are autoclaved later.' });
-  ix.register('rack', rack.group, { name: 'Tube rack', desc: 'Holds the two tubes upright.' });
+  ix.register('pipette', pip.group, { ...T.objects.pipette });
+  ix.register('loop', loop.group, { ...T.objects.loop });
+  ix.register('waste', waste.group, { ...T.objects.waste });
+  ix.register('rack', rack.group, { ...T.objects.rack });
 
   applyLights();
 }
@@ -294,14 +296,16 @@ const SLOTS = {
 const both = (slot, dur) => { const s = SLOTS[slot](); return Promise.all([carry(B.plus, s[0], dur), carry(B.minus, s[1], dur)]); };
 
 /** A timer on the card: counts `total` seconds of lab time over `real` seconds. */
-function fmt(sec, mode) {
-  if (mode === 'h') return `${Math.floor(sec / 3600)} h ${String(Math.floor(sec % 3600 / 60)).padStart(2, '0')} m`;
-  if (mode === 's') return `${Math.ceil(sec)} s`;
-  return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+const pad = (n) => String(Math.floor(n)).padStart(2, '0');
+function clockTime(sec, mode) {
+  if (mode === 'h') return fmt(T.clock.hours, { h: Math.floor(sec / 3600), mm: pad(sec % 3600 / 60) });
+  if (mode === 's') return fmt(T.clock.seconds, { s: Math.ceil(sec) });
+  return fmt(T.clock.minutes, { m: Math.floor(sec / 60), ss: pad(sec % 60) });
 }
+/** label: a key of T.clock. */
 async function timer(label, total, real, mode, each) {
   await anim(real, (e, k) => {
-    S.clock = `${label} · ${mode === 'h' ? fmt(total * k, mode) : fmt(total * (1 - k), mode)}`;
+    S.clock = fmt(T.clock.line, { label: T.clock[label], time: clockTime(mode === 'h' ? total * k : total * (1 - k), mode) });
     if (each) each(k);
   }, Ease.linear);
   await wait(0.35);
@@ -332,12 +336,12 @@ async function actCells() {
   await anim(0.55, (e) => st.setLid(e));
   for (const tube of [B.plus, B.minus]) {
     const sx = sp.x + rand(-1.5, 0.5), sz = sp.z + rand(-1.75, -1);
-    S.cap = 'Pick up a colony with a sterile loop';
+    S.cap = T.steps.cells.captions.pick;
     await moveTo(lg.group, { pos: V3(sx, 3, sz), dur: 0.75, arc: 3 });
     await moveTo(lg.group, { pos: V3(sx, 0.55, sz), dur: 0.25 });
     await Promise.all([anim(0.35, (e) => lg.setBlob(0.9 * e)), anim(0.35, (e, k) => { lg.group.position.x = sx + Math.sin(k * Math.PI) * 0.6; })]);
     await moveTo(lg.group, { pos: V3(sx, 3, sz), dur: 0.25 });
-    S.cap = 'Swirl it into the tube until the liquid looks cloudy';
+    S.cap = T.steps.cells.captions.swirl;
     await cap(tube, true, 0.3);
     const done = loopIntoTube(tube);
     await wait(1.15);
@@ -345,7 +349,7 @@ async function actCells() {
     tint(tube, COL.cells, 0.8);
     await done;
     cap(tube, false, 0.3);
-    if (tube === B.plus) { S.micro = 2; S.cap = 'A fresh loop for each tube'; await discardLoop(); }
+    if (tube === B.plus) { S.micro = 2; S.cap = T.steps.cells.captions.fresh; await discardLoop(); }
   }
   await Promise.all([discardLoop(), anim(0.55, (e) => st.setLid(1 - e))]);
   S.cap = null;
@@ -372,20 +376,20 @@ async function actPlasmid() {
 async function actIce() {
   await both('ice', 1.4);
   S.micro = 4;
-  await timer('0 °C', 600, 3.2, 'mm');
+  await timer('ice', 600, 3.2, 'mm');
 }
 
 async function actHeat() {
-  S.cap = 'Into the 42 °C water bath';
+  S.cap = T.steps.heat.captions.into;
   await both('bath', 1.6);
   S.micro = 5;
   B.bath.setActive(true);
-  S.cap = { text: 'Heat shock for exactly 50 seconds', note: 'Then straight back onto ice' };
-  await timer('42 °C', 50, 3.4, 's', (k) => B.bath.setActive(true, Math.floor(k * 14) % 2 === 1));
+  S.cap = T.steps.heat.captions.shock;
+  await timer('heat', 50, 3.4, 's', (k) => B.bath.setActive(true, Math.floor(k * 14) % 2 === 1));
   B.bath.setActive(false);
-  S.cap = 'Straight back onto ice';
+  S.cap = T.steps.heat.captions.back;
   await both('ice', 1.6);
-  await timer('Back on ice · 0 °C', 120, 1.4, 'mm');
+  await timer('backOnIce', 120, 1.4, 'mm');
   S.cap = null;
 }
 
@@ -404,18 +408,18 @@ async function actRecover() {
     if (tube === B.plus) await discardPipette();   // a fresh pipette for each tube
   }
   await Promise.all([discardPipette(), bottleCap(b, false)]);
-  S.cap = 'Let the cells recover for 10 minutes';
-  await timer('Room temp', 600, 2.6, 'mm');
+  S.cap = T.steps.recover.captions.rest;
+  await timer('recover', 600, 2.6, 'mm');
   S.cap = null;
 }
 
 async function actPlate() {
   const plates = B.plates, lg = B.loop;
-  S.cap = 'Lift the lids';
+  S.cap = T.steps.plate.captions.lids;
   await Promise.all(plates.map((p, i) => wait(i * 0.08).then(() => anim(0.55, (e) => p.setLid(e)))));
   for (let i = 0; i < 4; i++) {
     const tube = PLATES[i].src === 'plus' ? B.plus : B.minus, p = plates[i], tp = tube.group.position, pp = p.group.position;
-    S.cap = `Pipette 100 µL of the ${PLATES[i].sub} cells onto the ${PLATES[i].title} plate`;
+    S.cap = fmt(T.steps.plate.captions.pipette, { sub: PLATES[i].sub, plate: PLATES[i].title });
     await cap(tube, true, 0.3);
     await pipDraw(tp.x, tp.z, tube.liquid.surfaceY(), tubeTop(tube), COL.recovered);
     level(tube, tube.liquid.level - 0.4, 0.3);
@@ -425,7 +429,7 @@ async function actPlate() {
   }
   for (let i = 0; i < 4; i++) {
     const p = plates[i], c = p.group.position;
-    S.cap = 'Spread it with a fresh sterile loop';
+    S.cap = T.steps.plate.captions.spread;
     await moveTo(lg.group, { pos: V3(c.x, 2.3, c.z), dur: 0.55, arc: 2.5 });
     await moveTo(lg.group, { pos: V3(c.x, 0.55, c.z), dur: 0.2 });
     await anim(1.1, (e, k) => {
@@ -436,7 +440,7 @@ async function actPlate() {
     await moveTo(lg.group, { pos: V3(lg.group.position.x, 2.3, lg.group.position.z), dur: 0.2 });
     await discardLoop();
   }
-  S.cap = 'Put the lids back on';
+  S.cap = T.steps.plate.captions.close;
   await Promise.all(plates.map((p, i) => wait(i * 0.08).then(() => anim(0.55, (e) => p.setLid(1 - e)))));
   S.cap = null;
 }
@@ -444,7 +448,7 @@ async function actPlate() {
 async function actIncubate() {
   S.micro = 7;
   B.plates.forEach((p) => anim(0.8, (e) => p.setWet(3.6, 0.11 * (1 - e))));
-  await timer('37 °C', 24 * 3600, 5, 'h', (k) => {
+  await timer('incubate', 24 * 3600, 5, 'h', (k) => {
     S.sunA = k * Math.PI * 2;
     S.day = Math.sin(k * Math.PI) ** 2 * 0.9;
     const g = Ease.inOut(clamp(k * 1.1));
@@ -476,129 +480,93 @@ async function toggleUv() {
 // =========================================================================
 // Steps
 // =========================================================================
+/** A step's card text from text.js. */
+const card = (id) => { const { title, short, action, hint, detail, why } = T.steps[id]; return { title, short, action, hint, detail, why }; };
 const STEPS = [
   {
-    id: 'cacl2', title: 'Add transformation solution', short: 'CaCl₂', targets: ['cacl2'], view: 'back',
-    caption: { text: 'Pipette ice-cold calcium chloride into both tubes', note: '250 µL each' },
-    action: 'add CaCl₂ to both tubes',
-    hint: 'Click the <b>CaCl₂</b> bottle',
-    detail: 'Pipette 250 µL of ice-cold calcium chloride (CaCl₂) into both tubes.',
-    why: 'Calcium ions cancel out negative charges on the DNA and the cell membrane, so the two can touch.',
+    id: 'cacl2', ...card('cacl2'), targets: ['cacl2'], view: 'back',
+    caption: T.steps.cacl2.caption,
     run: actCacl2,
   },
   {
-    id: 'cells', title: 'Add E. coli', short: 'Cells', targets: ['starter'], view: 'starter',
-    caption: () => S.cap || 'Add E. coli to both tubes',
-    action: 'add cells to both tubes',
-    hint: 'Click the <b>starter plate</b>',
-    detail: 'Use a sterile loop to pick up a colony from the starter plate and swirl it into a tube until the liquid looks cloudy. Use a fresh loop for each tube, and throw each used loop in the waste.',
-    why: 'Each colony is millions of identical cells, grown from one.',
+    id: 'cells', ...card('cells'), targets: ['starter'], view: 'starter',
+    caption: () => S.cap || T.steps.cells.caption,
     run: actCells,
   },
   {
-    id: 'plasmid', title: 'Add the GFP plasmid', short: 'Plasmid', targets: ['plasmid'], view: 'starter',
-    caption: { text: 'Add the GFP plasmid to the + tube only', note: 'The − tube is the control' },
-    action: 'add the plasmid',
-    hint: 'Click the <b>GFP plasmid</b> vial',
-    detail: 'Dip a fresh sterile loop into the plasmid solution and swirl it into the <b>+ plasmid</b> tube only.',
-    why: 'The − tube is your control: the same cells, treated the same way, without the plasmid.',
+    id: 'plasmid', ...card('plasmid'), targets: ['plasmid'], view: 'starter',
+    caption: T.steps.plasmid.caption,
     run: actPlasmid,
   },
   {
-    id: 'ice', title: 'Incubate on ice', short: 'Ice', targets: ['ice'], view: 'ice',
-    caption: 'Leave both tubes on ice for 10 minutes',
-    action: 'put the tubes on ice',
-    hint: 'Click the <b>ice bath</b>',
-    detail: 'Leave both tubes on ice for 10 minutes.',
-    why: 'The cold stiffens the membrane and lets plasmids settle onto the cells.',
+    id: 'ice', ...card('ice'), targets: ['ice'], view: 'ice',
+    caption: T.steps.ice.caption,
     run: actIce,
     clock: () => S.clock,
   },
   {
-    id: 'heat', title: 'Heat shock', short: 'Heat shock', targets: ['bath'], view: 'bath',
-    caption: () => S.cap || 'Heat shock',
-    action: 'heat-shock the tubes',
-    hint: 'Click the <b>water bath</b>',
-    detail: 'Move the tubes into the 42 °C water bath for exactly 50 seconds, then straight back onto ice.',
-    why: 'The sudden change in temperature opens temporary pores in the membrane, and plasmids slip in.',
+    id: 'heat', ...card('heat'), targets: ['bath'], view: 'bath',
+    caption: () => S.cap || T.steps.heat.caption,
     run: actHeat,
     clock: () => S.clock,
   },
   {
-    id: 'recover', title: 'Recover in LB broth', short: 'Recover', targets: ['lb'], view: 'back',
-    caption: () => S.cap || { text: 'Add LB nutrient broth to both tubes', note: 'A fresh pipette for each tube' },
-    action: 'add LB broth',
-    hint: 'Click the <b>LB broth</b>',
-    detail: 'Using a fresh pipette for each tube, add 250 µL of LB nutrient broth and let the cells rest for 10 minutes.',
-    why: 'The cells repair their membranes and start using the ampicillin-resistance gene.',
+    id: 'recover', ...card('recover'), targets: ['lb'], view: 'back',
+    caption: () => S.cap || T.steps.recover.caption,
     run: actRecover,
     clock: () => S.clock,
   },
   {
-    id: 'plate', title: 'Spread on plates', short: 'Plates', targets: ['plates'], view: 'plates',
-    caption: () => S.cap || 'Spread the cells on agar plates',
-    action: 'spread the cells',
-    hint: 'Click the <b>agar plates</b>',
-    detail: 'Pipette 100 µL onto each agar plate (one fresh pipette per tube) and spread it with a fresh sterile loop for each plate. The − tube goes on LB/amp and LB; the + tube on LB/amp and LB/amp/ara.',
-    why: 'Each plate tests one thing: whether the cells can grow on ampicillin, and whether arabinose switches GFP on.',
+    id: 'plate', ...card('plate'), targets: ['plates'], view: 'plates',
+    caption: () => S.cap || T.steps.plate.caption,
     run: actPlate,
   },
   {
-    id: 'incubate', title: 'Incubate overnight', short: 'Incubate', targets: ['plates'], view: 'plates',
-    caption: 'Keep the plates at 37 °C for 24 hours',
-    action: 'incubate them',
-    hint: 'Click the <b>agar plates</b> to incubate them',
-    detail: 'Keep the plates at 37 °C for 24 hours.',
-    why: 'A colony only grows where the cells can survive the conditions on that plate.',
+    id: 'incubate', ...card('incubate'), targets: ['plates'], view: 'plates',
+    caption: T.steps.incubate.caption,
     run: actIncubate,
     clock: () => S.clock,
   },
   {
-    id: 'uv', title: 'Shine UV light', short: 'UV', targets: ['uv'], view: 'uv',
-    caption: 'Turn off the lights and shine the UV lamp on the plates',
-    action: 'shine it on the plates',
-    hint: 'Click the <b>UV lamp</b>',
-    detail: 'Turn off the room lights and hold the UV lamp over the plates. Which colonies glow?',
+    id: 'uv', ...card('uv'), targets: ['uv'], view: 'uv',
+    caption: T.steps.uv.caption,
     run: actUv,
   },
 ];
 // The card's "why" follows the level in the main view; bench clicks only work at the Lab level.
+const cellWhy = () => fmt(T.levelWhy, { level: zoom.names.cell, text: captionFor(cellState) });
 STEPS.forEach((s) => {
   const why = s.why, hint = s.hint;
-  s.why = () => (zoom.scale === 'lab' ? why : `<b>Cell level:</b> ${captionFor(cellState)}`);
-  s.hint = () => (zoom.scale === 'lab' ? hint : `Click the <b>Lab</b> circle to go back to the bench and ${s.action}`);
+  s.why = () => (zoom.scale === 'lab' ? why : cellWhy());
+  s.hint = () => (zoom.scale === 'lab' ? hint : fmt(T.backToLab, { action: s.action }));
 });
 const PHASES = [
-  { title: 'Prepare the tubes', desc: 'CaCl₂, cells and the plasmid', steps: ['cacl2', 'cells', 'plasmid'] },
-  { title: 'Heat shock', desc: 'Ice, 42 °C, ice', steps: ['ice', 'heat'] },
-  { title: 'Recover', desc: 'Fresh broth, 10 minutes', steps: ['recover'] },
-  { title: 'Plate and grow', desc: 'Spread and incubate overnight', steps: ['plate', 'incubate'] },
-  { title: 'Look under UV', desc: 'Which colonies glow?', steps: ['uv'] },
+  { ...T.phases.prepare, steps: ['cacl2', 'cells', 'plasmid'] },
+  { ...T.phases.shock, steps: ['ice', 'heat'] },
+  { ...T.phases.recover, steps: ['recover'] },
+  { ...T.phases.grow, steps: ['plate', 'incubate'] },
+  { ...T.phases.uv, steps: ['uv'] },
 ];
 
 // =========================================================================
 // The results (the complete card)
 // =========================================================================
 // The complete card: the four plates in bench order (hint), then the efficiency (why)
-const RESULTS = [
-  { dish: '', title: 'LB / amp', sub: '− plasmid', out: 'No growth', text: 'Without the plasmid, ampicillin kills the cells.' },
-  { dish: 'lawn', title: 'LB', sub: '− plasmid', out: 'A lawn', text: 'No antibiotic, so every cell grows: they were alive.' },
-  { dish: 'col', title: 'LB / amp', sub: '+ plasmid', out: 'Colonies', text: '<b>bla</b> protects them. No arabinose, so no glow.' },
-  { dish: 'glow', title: 'LB / amp / ara', sub: '+ plasmid', out: 'Glowing colonies', text: 'Arabinose switches GFP on through <b>araC</b>.' },
-];
+/** A number in the page's language (English if the browser doesn't know it). */
+function num(x, opts) { try { return x.toLocaleString(LANG, opts); } catch (e) { return x.toLocaleString('en-US', opts); } }
 function results() {
-  if (zoom.scale !== 'lab') return `<b>Cell level:</b> ${captionFor(cellState)}`;
+  if (zoom.scale !== 'lab') return cellWhy();
   const n = B ? B.plates[3].colonies : 46;
   const dna = 0.8 * 100 / 510, eff = Math.round(n / dna);
-  return `<b>Transformation efficiency:</b> ${n} glowing colonies ÷ ${dna.toFixed(2)} µg of plasmid ≈ <b>${eff.toLocaleString('en-US')} transformants per µg</b>.`;
+  return fmt(T.complete.efficiency, { n, dna: num(dna, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), eff: num(eff) });
 }
 const completeHint = () => {
   const uv = S && S.uv > 0.5;
-  const head = `<span class="res-head"><b>Only the arabinose plate glows.</b><button class="uv-toggle" data-act="uv"><i class="ph ${uv ? 'ph-sun' : 'ph-lightbulb-filament'}"></i>${uv ? 'Lights on' : 'UV light'}</button></span>`;
+  const head = `<span class="res-head"><b>${T.complete.head}</b><button class="uv-toggle" data-act="uv"><i class="ph ${uv ? 'ph-sun' : 'ph-lightbulb-filament'}"></i>${uv ? T.complete.lightsOn : T.complete.uvLight}</button></span>`;
   if (zoom.scale !== 'lab') return head;
-  return head + `<span class="results">${RESULTS.map((r) => `<span class="res${r.dish === 'glow' ? ' hit' : ''}">`
-    + `<span class="dish ${r.dish}"></span><span class="res-plate">${r.title}<em class="${r.sub[0] === '+' ? 'plus' : ''}">${r.sub}</em></span>`
-    + `<span class="res-out">${r.out}</span><span class="res-text">${r.text}</span></span>`).join('')}</span>`;
+  return head + `<span class="results">${PLATES.map((r) => `<span class="res${r.dish === 'glow' ? ' hit' : ''}">`
+    + `<span class="dish ${r.dish}"></span><span class="res-plate">${r.title}<em class="${r.src === 'plus' ? 'plus' : ''}">${r.sub}</em></span>`
+    + `<span class="res-out">${r.out}</span><span class="res-text">${r.result}</span></span>`).join('')}</span>`;
 };
 
 // =========================================================================
@@ -613,11 +581,11 @@ lesson = createLesson({
   panel: $('#stepsPanel'),
   completeHint,
   completeWhy: results,
-  completeCaption: { text: 'Only the arabinose plate glows', note: 'Its cells took up the plasmid, and arabinose switched GFP on' },
+  completeCaption: T.complete.caption,
   onEnter: (step) => {
     requestAnimationFrame(() => stage.resize()); // the card's new height changes the free area
     zoom.onStep();
-    if (!step) { stage.focus(VIEWS.results, 1.4); toast('Only the arabinose plate glows', { icon: 'ph-sparkle' }); return; }
+    if (!step) { stage.focus(VIEWS.results, 1.4); toast(T.complete.toast, { icon: 'ph-sparkle' }); return; }
     if (firstEnter) { firstEnter = false; intro.started.then(() => stage.focus(step.view, 2.2)); return; } // the opening move, after Start
     stage.focus(step.view);
   },
