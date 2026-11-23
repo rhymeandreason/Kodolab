@@ -98,6 +98,12 @@ const PAGES = {
     } },
   '/dna': { image: 'dna',
     description: 'The DNA double helix in 3D, built from real coordinates and taken apart piece by piece: the backbone, the bases, and how they pair.' },
+  '/labs/strawberry-dna': {
+    description: 'Extract DNA from a strawberry in a 3D virtual lab: mash, add soap and salt, filter, and pull the DNA out with cold alcohol, with live views of the cell and the molecules.' },
+  '/labs/glowing-ecoli': {
+    description: 'Bacterial transformation in a 3D virtual lab: heat-shock E. coli with a GFP plasmid, plate on ampicillin and arabinose, and see which colonies glow under UV.' },
+  '/labs/leaf-disks': {
+    description: 'The floating leaf disk lab in 3D: vacuum spinach disks in bicarbonate, shine a lamp, and time how fast photosynthesis floats them back up with oxygen.' },
   '/nodes': {
     description: 'All of Bio 101 as one interactive map: how the concepts connect, from molecules to cells to organisms and ecosystems.' },
   '/library': { image: 'library',
