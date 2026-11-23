@@ -2,9 +2,9 @@
 
 Shared pieces for 3D bench-lab simulations: stage, materials, props, clickable objects, and a lesson with Hands-on and Watch modes and a timeline you can step back and forth on.
 
-Ported into kodolab from `Experiments/Lab` with Strawberry and Ecoli. Photosynthesis, named below as worked examples, and the planning docs (ROADMAP, MICRO, …) are still in that repo.
+Ported into kodolab from `Experiments/Lab` with all three labs. The planning docs (ROADMAP, MICRO, …) are still in that repo.
 
-* `sims/Photosynthesis/` is the first lab built on it (not ported).
+* `photosynthesis/photosynthesis-lab.html` (floating leaf disks) is the first lab built on it.
 * `strawberry/strawberry-lab.html` (DNA extraction) is the second. It adds zoom levels: two live circles show one cell and the molecules, and all three views show the same moment.
 * `ecoli/ecoli-lab.html` (bacterial transformation, GFP) is the third. It has one zoom level (one E. coli cell), a UV step that darkens the room, an intro card with a 3D plasmid, and the results on the complete card.
 * `gallery.html` shows every prop on one bench. Use it as a catalog, and to check that a change to Lab didn't break anything.
