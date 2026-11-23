@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" data-lab-theme="indigo">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Glowing E. coli</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+  <link rel="stylesheet" href="../lab.css">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div class="uv-bg" id="uvBg"></div>
+    <div class="scale-bg bg-cell"></div>
+    <canvas id="scene"></canvas>
+    <div id="zoomLens" class="zoom-lens" aria-hidden="true"></div>
+    <div id="zoomLabels" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><i class="ph-fill ph-dna"></i></div>
+        <div>
+          <h1>Glowing E. coli</h1>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="btnView" title="Reset view"><i class="ph ph-crosshair-simple"></i></button>
+        <button class="icon-btn" id="btnInfo" title="About this experiment"><i class="ph ph-info"></i></button>
+        <button class="icon-btn" id="btnRestart" title="Restart lab"><i class="ph ph-arrow-counter-clockwise"></i></button>
+      </div>
+    </header>
+
+    <aside class="panel steps-panel" id="stepsPanel"></aside>
+
+    <!-- the level you're not looking at, live (zoom.js draws it) -->
+    <div class="zoom-insets" id="zoomInsets">
+      <button class="zoom-inset" data-scale="cell"><span class="zi-ring"></span><span class="zi-cap"><span class="zi-dir">Zoom in</span><span class="zi-name">Cell</span><span class="zi-meta">≈ 5 µm</span></span></button>
+    </div>
+
+    <!-- cell view, after the UV step: with or without arabinose -->
+    <div class="ara-seg" id="araSeg" hidden>
+      <button data-ara="1" class="on">+ arabinose</button><button data-ara="0">no arabinose</button>
+    </div>
+
+    <div class="modal" id="infoModal" hidden>
+      <div class="modal-card">
+        <button class="icon-btn modal-close" id="btnCloseInfo" title="Close"><i class="ph ph-x"></i></button>
+        <div class="modal-kicker"><i class="ph-fill ph-dna"></i>About the experiment</div>
+        <h2>How do you make bacteria glow?</h2>
+        <p>Give them a gene from a jellyfish. The gene sits on a <b>plasmid</b>, a small ring of DNA that bacteria can take up and copy.</p>
+        <ol class="info-list">
+          <li><span>1</span><div><b>Make the cells competent.</b> Ice-cold calcium chloride cancels the negative charges on the DNA and the cell membrane, so the plasmid can touch the cell.</div></li>
+          <li><span>2</span><div><b>Heat shock.</b> A sudden jump from 0 °C to 42 °C opens temporary pores in the membrane, and some plasmids slip in.</div></li>
+          <li><span>3</span><div><b>Select.</b> Only cells with the plasmid carry <b>bla</b>, so only they grow on ampicillin plates.</div></li>
+          <li><span>4</span><div><b>Switch it on.</b> <b>araC</b> turns the GFP gene on only when the sugar arabinose is present, so only those colonies glow under UV light.</div></li>
+        </ol>
+        <p class="muted"><i class="ph ph-magnifying-glass-plus"></i> Click the circle on the right to zoom into one cell. Both views show the same moment.</p>
+        <p class="muted"><i class="ph ph-mouse-left-click"></i> Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan · keys 1 2 switch levels</p>
+      </div>
+    </div>
+
+    <div class="intro" id="intro">
+      <div class="intro-card">
+        <div class="intro-art">
+          <div class="plasmid3d" id="plasmid3d">
+            <canvas id="plasmidCanvas"></canvas>
+            <div class="pcenter"><b>GFP plasmid</b><span>~5,400 base pairs</span></div>
+            <span class="plab" data-r="gfp" style="--c:#16a34a">GFP</span>
+            <span class="plab" data-r="bla" style="--c:#d97706">bla (amp<sup>R</sup>)</span>
+            <span class="plab" data-r="ara" style="--c:#7c3aed">araC</span>
+            <span class="plab" data-r="ori" style="--c:#64748b">ori</span>
+          </div>
+        </div>
+        <div>
+          <div class="modal-kicker"><i class="ph-fill ph-dna"></i>Interactive 3D lab</div>
+          <h2>Make bacteria <em>glow</em></h2>
+          <p>In this classic biology lab you add a small loop of DNA, called a <b>plasmid</b>, to <i>E. coli</i>. The plasmid carries a gene from a jellyfish. If the bacteria take it up, they glow green under UV light.</p>
+          <ul class="keys">
+            <li><i style="--c:#22c55e"></i><span><b>GFP</b> makes green fluorescent protein</span></li>
+            <li><i style="--c:#f59e0b"></i><span><b>bla</b> lets cells survive the antibiotic ampicillin</span></li>
+            <li><i style="--c:#8b5cf6"></i><span><b>araC</b> turns GFP on only when the sugar arabinose is present</span></li>
+          </ul>
+          <button class="btn intro-start" id="startBtn">Start the experiment <i class="ph-bold ph-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" async src="intro-art.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
