@@ -171,13 +171,17 @@ function rebuild() {
 // =========================================================================
 const SUN0 = stage.lights.sun.position.clone();
 const LIGHT0 = { hemi: stage.lights.hemi.intensity, sun: stage.lights.sun.intensity, fill: stage.lights.fill.intensity };
+// The overnight time-lapse keeps hard studio contrast: the sweeping shadows are the clock.
+// It eases in from the bench's softer light as the sun starts to move, and back out.
+const LIGHT_TL = { hemi: 0.42, sun: 0.95, fill: 0.25 };
 const SUN_WARM = new THREE.Color(0xffd7a3), SUN_WHITE = stage.lights.sun.color.clone();
 function applyLights() {
   const u = S ? S.uv : 0, d = S ? S.day : 0, a = S ? S.sunA : 0;
   const { hemi, sun, fill } = stage.lights;
-  hemi.intensity = LIGHT0.hemi * (1 - 0.43 * d) * (1 - u);
-  sun.intensity = LIGHT0.sun * (1 - 0.5 * d) * (1 - u);
-  fill.intensity = LIGHT0.fill * (1 - u);
+  const w = Math.min(1, 4 * Math.sin(a / 2)), base = (k) => LIGHT0[k] + (LIGHT_TL[k] - LIGHT0[k]) * w;
+  hemi.intensity = base('hemi') * (1 - 0.43 * d) * (1 - u);
+  sun.intensity = base('sun') * (1 - 0.5 * d) * (1 - u);
+  fill.intensity = base('fill') * (1 - u);
   sun.position.set(SUN0.x * Math.cos(a) + 90 * Math.sin(a), SUN0.y * (0.85 + 0.15 * Math.cos(a)), SUN0.z * Math.cos(a));
   sun.color.copy(SUN_WHITE).lerp(SUN_WARM, Math.sin(Math.min(Math.PI, a / 2)) * (a > 0 ? 1 : 0));
   if (!B) return;

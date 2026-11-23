@@ -99,7 +99,8 @@ export function createStage({
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = exposure;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // PCF, not PCFSoft: only PCF reads shadow.radius in r128, and the radius is what softens the edge
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.localClippingEnabled = true;
 
   const scene = new THREE.Scene();
@@ -117,18 +118,20 @@ export function createStage({
   const gEnv = glassEnv(renderer);
   const wgEnv = wideGlassEnv(renderer);
 
-  // lights
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.42);
+  // lights. A strong sky and a moderate sun, so a shadow grounds an object without
+  // reading as a hole in the bench: shadowed floor is ~0.9 of lit floor.
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.62);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfffaf2, 0.95);
+  const sun = new THREE.DirectionalLight(0xfffaf2, 0.78);
   sun.position.set(-35, 90, 50);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { near: 20, far: 220 }, shadow);
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.03;
+  sun.shadow.radius = 3;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xeaf2ff, 0.25);
+  const fill = new THREE.DirectionalLight(0xeaf2ff, 0.3);
   fill.position.set(60, 40, 80);
   scene.add(fill);
 

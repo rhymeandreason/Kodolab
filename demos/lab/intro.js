@@ -91,9 +91,9 @@ export function createPropArt(box, build, { tilt = 0.45, spin = 0.35, fill = 0.7
   const sc = new THREE.Scene();
   // lit like the bench (core/stage.js): the same studio room, sky fill, sun and fill light
   sc.environment = studioEnv(r);
-  sc.add(new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.42));
-  const sun = new THREE.DirectionalLight(0xfffaf2, 0.95); sun.position.set(-35, 90, 50); sc.add(sun);
-  const fillL = new THREE.DirectionalLight(0xeaf2ff, 0.25); fillL.position.set(60, 40, 80); sc.add(fillL);
+  sc.add(new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.62));
+  const sun = new THREE.DirectionalLight(0xfffaf2, 0.78); sun.position.set(-35, 90, 50); sc.add(sun);
+  const fillL = new THREE.DirectionalLight(0xeaf2ff, 0.3); fillL.position.set(60, 40, 80); sc.add(fillL);
 
   const mat = createMaterials(null);
   const obj = build(mat);
