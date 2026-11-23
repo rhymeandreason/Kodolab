@@ -18,7 +18,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { V3, clamp } from './math.js';
 import { anim, tickTweens } from './tween.js';
-import { srgbOut, LIGHT } from './three-compat.js';
+import { srgbOut, LIGHT, LEGACY } from './three-compat.js';
+const GLASS_BLUR = 0.07;
 import { createSketch } from './sketch.js';
 
 export function studioEnv(renderer) {
@@ -60,7 +61,9 @@ function glassEnv(renderer) {
   [[-7, 13], [8, 12], [-13, -6], [12, -8]].forEach(([x, z]) => {
     const st = new THREE.Mesh(new THREE.PlaneGeometry(1, 28), sm); st.position.set(x, 0, z); st.lookAt(0, 0, 0); s.add(st);
   });
-  const tex = pm.fromScene(s, 0.015).texture;
+  // r155+'s PMREM keeps the strips razor-sharp at glass's low roughness, so they read as stripes
+  // ruled down a tube; a wider blur gives back r128's soft streaks
+  const tex = pm.fromScene(s, LEGACY ? 0.015 : GLASS_BLUR).texture;
   pm.dispose();
   return tex;
 }
