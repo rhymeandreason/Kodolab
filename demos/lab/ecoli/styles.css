@@ -3,6 +3,9 @@
 /* ---------- UV: the room goes dark behind the bench (opacity set from the bench state) ---------- */
 .uv-bg { position: absolute; inset: 0; background: radial-gradient(1400px 800px at 55% 0%, #1a1440, #0b0920 75%); opacity: 0; pointer-events: none; }
 body.uv .brand h1 { color: #eef0ff; }
+body.uv .brand .mark img { filter: invert(1); }
+body.uv .brand .lmenu { color: #eef0ff; }
+body.uv .brand-title { border-left-color: rgba(238, 240, 255, 0.25); }
 
 /* ---------- the cell level's background ---------- */
 .bg-cell, .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%, #fbfcfe 0%, #eef1f8 50%, #dfe4f0 100%); }
@@ -17,7 +20,7 @@ body[data-scale='cell'] .bg-cell { opacity: 1; }
 .ara-seg[hidden] { display: none; }
 .ara-seg button {
   border: 0; background: transparent; padding: 7px 14px; border-radius: 9px; cursor: pointer;
-  font: 600 13px 'Inter', sans-serif; color: var(--muted);
+  font: 600 13px var(--sans); color: var(--muted);
 }
 .ara-seg button.on { background: var(--accent); color: #fff; }
 
@@ -26,7 +29,7 @@ body[data-scale='cell'] .bg-cell { opacity: 1; }
 .results li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; font-size: 13px; line-height: 1.4; }
 .results .dish {
   width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
-  background: #f2dfaa; box-shadow: inset 0 0 0 2px rgba(15, 29, 43, 0.12);
+  background: #f2dfaa; box-shadow: inset 0 0 0 2px rgba(23, 24, 26, 0.12);
 }
 .results .dish.col { background: radial-gradient(circle at 35% 40%, #fffaf0 2px, transparent 2.5px), radial-gradient(circle at 65% 55%, #fffaf0 2px, transparent 2.5px), radial-gradient(circle at 45% 72%, #fffaf0 2px, transparent 2.5px), #f2dfaa; }
 .results .dish.lawn { background: radial-gradient(#fffaf0 1px, transparent 1.5px) 0 0 / 4px 4px, #f6e6bb; }
@@ -36,7 +39,7 @@ body[data-scale='cell'] .bg-cell { opacity: 1; }
 .uv-toggle {
   display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; vertical-align: middle;
   border: 0; padding: 5px 11px; border-radius: 9px; cursor: pointer;
-  background: var(--ink); color: #fff; font: 600 12.5px 'Inter', sans-serif;
+  background: var(--ink); color: #fff; font: 600 12.5px var(--sans);
 }
 .uv-toggle:hover { background: #1e3347; }
 
@@ -59,7 +62,7 @@ body[data-scale='cell'] .bg-cell { opacity: 1; }
 .pcenter span { font-size: 11.5px; color: #64748b; font-weight: 500; }
 .plab {
   position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); font-size: 12px; font-weight: 700; color: var(--c);
-  background: rgba(255, 255, 255, 0.88); padding: 2px 8px; border-radius: 99px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.88); padding: 2px 8px; border-radius: 99px; box-shadow: 0 1px 4px rgba(23, 24, 26, 0.08);
   white-space: nowrap; pointer-events: none; transition: opacity .2s;
 }
 .plab sup { font-size: 8px; }

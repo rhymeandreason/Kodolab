@@ -2,11 +2,11 @@
 
 Shared pieces for 3D bench-lab simulations: stage, materials, props, clickable objects, and a lesson with Hands-on and Watch modes and a timeline you can step back and forth on.
 
-Ported into kodolab from `Experiments/Lab` with Strawberry only. Photosynthesis and Ecoli, named below as worked examples, and the planning docs (ROADMAP, MICRO, …) are still in that repo.
+Ported into kodolab from `Experiments/Lab` with Strawberry and Ecoli. Photosynthesis, named below as worked examples, and the planning docs (ROADMAP, MICRO, …) are still in that repo.
 
 * `sims/Photosynthesis/` is the first lab built on it (not ported).
 * `strawberry/strawberry-lab.html` (DNA extraction) is the second. It adds zoom levels: two live circles show one cell and the molecules, and all three views show the same moment.
-* `sims/Ecoli/` (bacterial transformation, GFP, not ported) is the third. It has one zoom level (one E. coli cell), a UV step that darkens the room, an intro card with a 3D plasmid, and the results on the complete card.
+* `ecoli/ecoli-lab.html` (bacterial transformation, GFP) is the third. It has one zoom level (one E. coli cell), a UV step that darkens the room, an intro card with a 3D plasmid, and the results on the complete card.
 * `gallery.html` shows every prop on one bench. Use it as a catalog, and to check that a change to Lab didn't break anything.
 * `themes.html` shows the colour themes side by side, with the UI pieces in each.
 * `props.html` shows one prop at a time on a turntable, with its size, anchors and sliders for its state (liquid level, plunger, lamp, …). Link to a prop with its key, e.g. `props.html#syringe`.
@@ -120,7 +120,7 @@ stage.start();
 
 Every lab opens with an intro card (from Ecoli) instead of a loading screen. Its markup sits in the sim's `index.html` (see the header of `intro.js`), so it shows at once while three.js and the bench load. Call `createIntro(stage, { art })` near the end of `main.js`: the Start button reads "Setting up the bench…" until the first frame has drawn, then starts the lab (Enter works too).
 
-* `art(box)` draws into `.intro-art` and returns `{ stop }`. `createPropArt(box, (mat) => makeStrawberry(mat).group, { tilt })` turns any lab prop on a small renderer lit like the bench (Strawberry, Photosynthesis). Ecoli draws its own plasmid (`sims/Ecoli/intro.js`). Each sim starts its art from a small `intro-art.js` (`<script type="module" async>` before `main.js`), so it shows without waiting for the whole library and the bench; `createIntro` picks it up from `box.introArt`.
+* `art(box)` draws into `.intro-art` and returns `{ stop }`. `createPropArt(box, (mat) => makeStrawberry(mat).group, { tilt })` turns any lab prop on a small renderer lit like the bench (Strawberry, Photosynthesis). Ecoli draws its own plasmid (`ecoli/intro.js`). Each sim starts its art from a small `intro-art.js` (`<script type="module" async>` before `main.js`), so it shows without waiting for the whole library and the bench; `createIntro` picks it up from `box.introArt`.
 * The card has a kicker, a title with one `<em>` word (coloured with the theme accent, or `--intro-em`), a short paragraph and three `.keys`: the ideas the lab is about.
 * The opening camera move waits for Start: the camera holds the overview behind the card, then glides to the first step's view. In `onEnter`, the first step does `intro.started.then(() => stage.focus(step.view, 2.2))`.
 * Add `?intro=0` to the URL to skip it while you work.
