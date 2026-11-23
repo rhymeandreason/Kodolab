@@ -42,7 +42,7 @@ export function createCell(env) {
   const scene = new THREE.Scene();
   scene.environment = env;
   const MBG = new THREE.Color('#f5f7fb'), MUV = new THREE.Color('#0a0820');
-  const BG = MBG.clone();
+  const BG = MBG.clone(), IBG = new THREE.Color();
   scene.background = BG;
   const hemi = new THREE.HemisphereLight('#ffffff', '#e3e6f3', 0.95); scene.add(hemi);
   const dir = new THREE.DirectionalLight('#ffffff', 0.65); dir.position.set(3, 6, 7); scene.add(dir);
@@ -267,6 +267,7 @@ export function createCell(env) {
 
   const api = {
     scene, labels, interactives, update,
+    insetBg: (bg) => IBG.copy(bg).lerp(MUV, M.uv), // the circle darkens with the room under UV
     fov: 32, near: 0.1, far: 100, minDist: 4, maxDist: 24,
     views: [{ pos: V3(1.2, 3.2, 12.5), target: V3(0, 0, 0) }],
   };

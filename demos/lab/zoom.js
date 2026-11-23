@@ -18,7 +18,8 @@
  *
  * A world: { scene, views: [{ pos, target }], labels: [{ text, sub?, anchor(), show(t) }],
  *   interactives: [{ root, info(t) → { title, text }, priority? }], update(t, time),
- *   fov?, near?, far?, minDist?, maxDist? }.
+ *   fov?, near?, far?, minDist?, maxDist?, insetBg?(bg) → THREE.Color }.
+ * insetBg tints the level's circle from its `bg` (Ecoli's cell goes dark with the room lights).
  *
  * The page provides one `.zoom-inset` button per level you're not looking at
  * (levels.length of them, each with .zi-ring and .zi-cap > .zi-dir/.zi-name/.zi-meta),
@@ -322,7 +323,7 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
       const w = worlds[k], ins = insets[i];
       positionInsetCam(w);
       const bg = w.scene.background;
-      w.scene.background = w.bg;
+      w.scene.background = w.insetBg ? w.insetBg(w.bg) : w.bg;
       renderer.setRenderTarget(ins.rt);
       renderer.render(w.scene, w.insetCam);
       w.scene.background = bg;

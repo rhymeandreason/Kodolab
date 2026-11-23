@@ -10,6 +10,7 @@ body.uv .brand-title { border-left-color: rgba(238, 240, 255, 0.25); }
 /* ---------- the cell level's background ---------- */
 .bg-cell, .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%, #fbfcfe 0%, #eef1f8 50%, #dfe4f0 100%); }
 body[data-scale='cell'] .bg-cell { opacity: 1; }
+body.uv .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%, #14123a 0%, #0a0820 70%); } /* the lens matches the cell's UV background */
 
 /* ---------- + / − arabinose, in the cell view after the UV step ---------- */
 .ara-seg {
