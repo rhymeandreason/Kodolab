@@ -98,7 +98,6 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 
 ## Upgrading three.js
 
-Everything is pinned to r128, the same as the original labs. To upgrade, change `THREE_VERSION` in `page.js` (every lab and bench reads its import map from there), then:
+Labs are pinned to r128 by `THREE_VERSION` in `page.js`. `props.html` runs r186.1 (`data-three` on its `page.js` tag); `?three=128` on any page overrides, to compare. `core/three-compat.js` holds every difference the shared modules hit (colour space, the ×π on lights, spot decay, the glass shader's chunk name) and keeps colour management off, so hex means the same on both. Still to port per lab: `zoom.js` and `intro.js` render targets (`encoding`), `strawberry/util.js` textures and shader hooks, Ecoli's UV point light. Then check every lab against the gallery and delete the compat file.
 
-* `materials.js`: the glass shader hooks `#include <output_fragment>`, which became `opaque_fragment` in r154.
-* `core/stage.js` and `core/canvas.js`: `outputEncoding`/`sRGBEncoding` became `outputColorSpace`/`SRGBColorSpace`. Lights use physical units from r155, so retune them. Colour management is on by default, so hex colours will shift. Check every lab against the gallery.
+`core/sketch.js` is the sketch outline: ink silhouettes and creases from a normal + depth pass, `stage.setRender(sketch.render)`. Prototyped in `props.html` (View → Sketch outline).

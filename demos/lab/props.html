@@ -70,7 +70,7 @@
   </div>
   <script type="module">
     import * as THREE from 'three';
-    import { V3, createStage, createMaterials, disposeTree } from './lab.js';
+    import { V3, createStage, createMaterials, createSketch, disposeTree, REVISION } from './lab.js';
     import { PROPS } from './props/catalog.js';
 
     const wide = () => window.innerWidth > 820;
@@ -82,6 +82,8 @@
       insets: (w, h) => (w > 820 ? { left: 280, right: 320, top: 90 } : { top: 70, bottom: h * 0.4 }),
     });
     const mat = createMaterials(stage);
+    const sketch = createSketch(stage);
+    stage.setRender(sketch.render);
 
     const ITEMS = PROPS.slice();
     // keep each group together in the list, in order of first appearance
@@ -102,6 +104,7 @@
     const barLine = new THREE.Mesh(new THREE.BoxGeometry(1, 0.02, 1), barMat);
     const tickA = new THREE.Mesh(new THREE.BoxGeometry(1, 0.02, 1), barMat), tickB = tickA.clone();
     scaleBar.add(barLine, tickA, tickB);
+    scaleBar.traverse((o) => { o.userData.noSketch = true; });
     stage.scene.add(scaleBar);
 
     const pivot = new THREE.Group();           // turntable spins this
@@ -111,7 +114,7 @@
     pivot.add(boundsHelper);
 
     /* ---------- state ---------- */
-    const opts = { spin: false, anchors: true, bounds: false };
+    const opts = { spin: false, anchors: true, bounds: false, sketch: true };
     let cur = null;   // { it, prop, center, radius, size, markers[] }
     const tagsEl = document.getElementById('tags');
     let tags = [];
@@ -180,6 +183,7 @@
     function frame(dur = 0.9) {
       if (!cur) return;
       const w = window.innerWidth, h = window.innerHeight, i = stage.insets();
+      if (!w || !h) return;   // a hidden pane: r / 0 would put the camera at infinity, then NaN
       const fov = THREE.MathUtils.degToRad(stage.camera.fov);
       const tanV = Math.tan(fov / 2) * (h - (i.top || 0) - (i.bottom || 0)) / h;
       const tanH = Math.tan(fov / 2) * (w / h) * (w - (i.left || 0) - (i.right || 0)) / w;
@@ -227,10 +231,15 @@
       html += `<h3>View</h3>
         <label class="toggle"><input type="checkbox" data-o-key="spin"${opts.spin ? ' checked' : ''}>Turntable</label>
         <label class="toggle"><input type="checkbox" data-o-key="anchors"${opts.anchors ? ' checked' : ''}>Show anchors</label>
-        <label class="toggle"><input type="checkbox" data-o-key="bounds"${opts.bounds ? ' checked' : ''}>Show bounding box</label>`;
+        <label class="toggle"><input type="checkbox" data-o-key="bounds"${opts.bounds ? ' checked' : ''}>Show bounding box</label>
+        <h3>Sketch outline · three r${REVISION}</h3>
+        <label class="toggle"><input type="checkbox" data-o-key="sketch"${opts.sketch ? ' checked' : ''}>Outline</label>
+        ${SKETCH.map(([k, label, min, max, st]) => `<div class="ctl"><label>${label}<output data-so="${k}">${sketch.params[k]}</output></label>
+          <input type="range" data-s="${k}" min="${min}" max="${max}" step="${st}" value="${sketch.params[k]}"></div>`).join('')}`;
       insEl.innerHTML = html;
       applyView();
     }
+    const SKETCH = [['width', 'Line weight', 0.5, 3, 0.1], ['wobble', 'Wobble', 0, 4, 0.1], ['ref', 'Full weight within (cm)', 10, 150, 5], ['minScale', 'Weight far away', 0.1, 1, 0.05], ['opacity', 'Ink', 0.2, 1, 0.05], ['grain', 'Pencil grain', 0, 1, 0.05], ['liquidWidth', 'Liquid line weight', 0.5, 4, 0.1], ['resolution', 'Resolution (× CSS px)', 1, 2, 0.25]];
     function showVal(ctl, v) {
       if (ctl.unit === 's') { const m = Math.floor(v / 60), s = Math.floor(v % 60); return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; }
       const d = ctl.step < 0.1 ? 2 : ctl.step < 1 ? 1 : 0;
@@ -239,10 +248,12 @@
     function applyView() {
       cur.markers.forEach((k) => { k.m.visible = opts.anchors; });
       boundsHelper.visible = opts.bounds;
+      sketch.enabled = opts.sketch;
     }
     insEl.addEventListener('input', (e) => {
       const el = e.target;
       if (el.dataset.oKey) { opts[el.dataset.oKey] = el.checked; applyView(); return; }
+      if (el.dataset.s) { sketch.set({ [el.dataset.s]: +el.value }); insEl.querySelector(`output[data-so="${el.dataset.s}"]`).textContent = el.value; return; }
       const ctl = cur.it.controls[+el.dataset.c];
       if (!ctl) return;
       const v = ctl.toggle ? el.checked : +el.value;
@@ -287,7 +298,7 @@
     // in three r128's very first render gets stuck throwing on every frame.
     stage.onFirstFrame(() => load(location.hash.slice(1) || ITEMS[0].key));
     stage.start();
-    window.VIEWER = { stage, load, get cur() { return cur; } };
+    window.VIEWER = { stage, sketch, load, get cur() { return cur; } };
   </script>
 </body>
 </html>

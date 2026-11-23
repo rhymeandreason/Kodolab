@@ -45,6 +45,7 @@ export function glassMaterial({ opacity = 0.32, color = '#e3ecf6', roughness = 0
       gl_FragColor = vec4(gCol, clamp(gA, 0.0, 1.0));
     `);
   };
+  m.userData.shell = true;  // core/sketch.js outlines what is inside it
   // distinct program per edge value
   m.customProgramCacheKey = () => 'lab-glass-' + edge;
   return m;
@@ -79,6 +80,7 @@ export function wideGlassMaterial({ opacity = 0.3, color = '#e6eef6', roughness 
       gl_FragColor = vec4(gCol, clamp(gA, 0.0, 1.0));
     `);
   };
+  m.userData.shell = true;
   m.customProgramCacheKey = () => 'lab-wide-glass-' + edge + '-' + back;
   return m;
 }
@@ -87,6 +89,7 @@ export function createMaterials(stage) {
   const glassEnv = stage && stage.glassEnv;
   const wideEnv = stage && (stage.wideGlassEnv || stage.glassEnv);
   const shared = (m) => { m.userData.shared = true; return m; };
+  const shell = (m) => { m.userData.shell = true; return m; };
   const std = (color, roughness = 0.45, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness }, o));
 
   const make = {
@@ -96,9 +99,13 @@ export function createMaterials(stage) {
     /* For beakers, cups, petri dishes: see wideGlassMaterial. */
     wideGlass: (o = {}) => wideGlassMaterial(Object.assign({ envMap: wideEnv }, o)),
     widePlastic: (o = {}) => wideGlassMaterial(Object.assign({ envMap: wideEnv, opacity: 0.28, color: '#d9e4ef', roughness: 0.14, envMapIntensity: 0.95, edge: 0.55 }, o)),
-    liquid: (color = 0x5aa9e6, opacity = 0.5, o = {}) => new THREE.MeshPhysicalMaterial(Object.assign({
-      color, roughness: 0.06, transparent: true, opacity, envMapIntensity: 1.2, depthWrite: false, side: THREE.DoubleSide,
-    }, o)),
+    liquid: (color = 0x5aa9e6, opacity = 0.5, o = {}) => {
+      const m = new THREE.MeshPhysicalMaterial(Object.assign({
+        color, roughness: 0.06, transparent: true, opacity, envMapIntensity: 1.2, depthWrite: false, side: THREE.DoubleSide,
+      }, o));
+      m.userData.liquid = true;  // core/sketch.js draws its outline stronger: the level is what a student reads
+      return m;
+    },
     solid: std,
     /* Any other lit material goes through these, never `new THREE.Mesh*Material` in a prop,
      * so one change here restyles every prop. Unlit effects (light cones, screens, ripples) may use MeshBasicMaterial. */
@@ -113,8 +120,8 @@ export function createMaterials(stage) {
     plastic: shared(make.plastic()),
     wideGlass: shared(make.wideGlass()),
     widePlastic: shared(make.widePlastic()),
-    frosted: shared(new THREE.MeshPhysicalMaterial({ color: 0xe9eef3, roughness: 0.35, transparent: true, opacity: 0.8, envMapIntensity: 1.2, depthWrite: false })),
-    ldpe: shared(new THREE.MeshPhysicalMaterial({ color: 0xdde5e0, roughness: 0.32, transparent: true, opacity: 0.88, envMapIntensity: 1.1, depthWrite: false })),
+    frosted: shell(shared(new THREE.MeshPhysicalMaterial({ color: 0xe9eef3, roughness: 0.35, transparent: true, opacity: 0.8, envMapIntensity: 1.2, depthWrite: false }))),
+    ldpe: shell(shared(new THREE.MeshPhysicalMaterial({ color: 0xdde5e0, roughness: 0.32, transparent: true, opacity: 0.88, envMapIntensity: 1.1, depthWrite: false }))),
     water: shared(make.liquid()),
     white: shared(std(0xf7f8f9, 0.42)),
     whiteMatte: shared(std(0xf2f3f4, 0.75)),

@@ -7,6 +7,7 @@ export * from './core/canvas.js';
 export * from './core/labels.js';
 export * from './core/geometry.js';
 export { createStage } from './core/stage.js';
+export { createSketch } from './core/sketch.js';
 export { createMaterials, glassMaterial, toLinear } from './materials.js';
 export { createInteraction } from './interact.js';
 export { createLesson, cues, cueAt } from './lesson.js';

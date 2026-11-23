@@ -45,6 +45,7 @@ export function wrapLabel({ rTop, rBot, y0, y1, arc, center = 0, w = 512, h = 25
   const m = mesh(geo, mat, { cast: false });
   m.position.y = (y0 + y1) / 2;
   m.renderOrder = order;
+  m.userData.noSketch = true;  // print on a surface: its rectangle is not a shape
   return m;
 }
 
