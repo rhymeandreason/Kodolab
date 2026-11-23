@@ -1,7 +1,7 @@
 /* The intro card every lab opens with (from Ecoli). page.js frames the page's .lab-intro into
  * it during parsing, so it shows at once while three.js and the bench load, and it stands in
  * for a loading screen:
- * the Start button waits ("Setting up the bench…") until the first frame has drawn.
+ * a "Setting up the bench…" line stands where Start goes until the first frame has drawn.
  *
  *   createIntro(stage, {
  *     art: (box) => createPropArt(box, (mat) => makeStrawberry(mat, { calyx: true }).group),
@@ -39,18 +39,15 @@ export function createIntro(stage, { art = null, onStart = () => {} } = {}) {
   if (!el) return { close() {}, get open() { return false; } };
   const btn = el.querySelector('.intro-start');
   const box = el.querySelector('.intro-art');
-  const label = btn.innerHTML;
+  const loading = el.querySelector('.intro-loading');
   let open = true, ready = false, begin;
   const started = new Promise((res) => { begin = res; });
 
-  btn.disabled = true;
-  btn.classList.add('wait');
-  btn.innerHTML = '<span class="intro-spin"></span>Setting up the bench…';
+  btn.hidden = true;
   stage.onFirstFrame(() => setTimeout(() => {
     ready = true;
-    btn.disabled = false;
-    btn.classList.remove('wait');
-    btn.innerHTML = label;
+    if (loading) loading.remove();
+    btn.hidden = false;
   }, 150));
 
   // the art may be started by the sim's small intro-art.js instead (see the header), before or after this

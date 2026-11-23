@@ -111,6 +111,11 @@
         text.appendChild(el('button', { class: 'btn intro-start', id: 'startBtn' },
           'Start the experiment <i class="ph-bold ph-arrow-right"></i>'));
       }
+      // intro.js swaps the loading line for Start once the bench has drawn its first frame
+      var startBtn = text.querySelector('.intro-start');
+      startBtn.hidden = true;
+      startBtn.insertAdjacentElement('afterend',
+        el('div', { class: 'intro-loading', role: 'status' }, '<span class="intro-spin"></span>Setting up the bench…'));
       icard.appendChild(art); icard.appendChild(text); wrap.appendChild(icard);
       intro.replaceWith(wrap);
     }
