@@ -1,5 +1,6 @@
 /* Powered bench equipment: desk lamp, lab timer, and from Ecoli a water bath and a handheld UV lamp. */
 import * as THREE from 'three';
+import { LIGHT, DECAY } from '../core/three-compat.js';
 import { V3, lerp } from '../core/math.js';
 import { makeCanvas, canvasTex, FONT } from '../core/canvas.js';
 import { mesh, rbox } from '../core/geometry.js';
@@ -42,7 +43,7 @@ export function makeLamp(mat, { color = toLinear('#2f8f8a'), glow = 0xffc93c } =
   const bulb = mesh(new THREE.SphereGeometry(1.7, 28, 18), bulbMat, { cast: false });
   bulb.position.set(0, 27.6, 24);
   bulb.userData.noHL = true;
-  const spot = new THREE.SpotLight(new THREE.Color(0xffffff).lerp(new THREE.Color(glow), 0.7), 0, 0, 0.72, 0.65, 1);
+  const spot = new THREE.SpotLight(new THREE.Color(0xffffff).lerp(new THREE.Color(glow), 0.7), 0, 0, 0.72, 0.65, DECAY);
   spot.position.set(0, 27.6, 24);
   spot.target.position.set(0, 0, 24);
   spot.castShadow = true;
@@ -82,7 +83,7 @@ export function makeLamp(mat, { color = toLinear('#2f8f8a'), glow = 0xffc93c } =
     anchors: { head: V3(0, 27.6, 24), spot: V3(0, 0, 24), switch: V3(2.8, 1.9, 2.6) },
     setOn(e) {
       this.on = e > 0.5;
-      spot.intensity = 1.9 * e;
+      spot.intensity = 1.9 * LIGHT * e;
       bulb.material.emissiveIntensity = 1.8 * e;
       shadeInner.material.emissiveIntensity = 0.55 * e;
       cone.material.uniforms.opacity.value = 0.2 * e;
@@ -204,13 +205,13 @@ export function makeUvLamp(mat, { glow = 0x8b5cf6, range = 70 } = {}) {
   handle.position.y = 0.6;
   const sw = mesh(new THREE.BoxGeometry(0.6, 0.2, 0.5), mat.make.solid(toLinear('#a78bfa'), 0.4));
   sw.position.set(3, 0.7, 0);
-  const spot = new THREE.SpotLight(glow, 0, range, 1.05, 0.6, 1);
+  const spot = new THREE.SpotLight(glow, 0, range, 1.05, 0.6, DECAY);
   spot.position.set(0, -0.8, 0);
   spot.target.position.set(0, -20, 0);
   g.add(body, win, handle, sw, spot, spot.target);
   return {
     group: g, spot,
     anchors: { spot: V3(0, -0.8, 0), top: V3(0, 2.2, 0) },
-    setOn(e) { winMat.emissiveIntensity = 0.35 + 2.6 * e; spot.intensity = 1.0 * e; },
+    setOn(e) { winMat.emissiveIntensity = 0.35 + 2.6 * e; spot.intensity = 1.0 * LIGHT * e; },
   };
 }

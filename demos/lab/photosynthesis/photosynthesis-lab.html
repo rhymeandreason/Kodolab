@@ -18,35 +18,35 @@
 <meta property="og:description" content="The floating leaf disk lab in 3D: vacuum spinach disks in bicarbonate, shine a lamp, and time how fast photosynthesis floats them back up with oxygen.">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
-  <script src="../page.js"></script>  <!-- import map, fonts, icons, lab.css -->
+  <script src="../page.js" data-text="text.js"></script>  <!-- import map, fonts, icons, lab.css, the words (text.js) -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
     <section class="panel data-panel" id="dataPanel" hidden>
       <div class="panel-head">
-        <span class="panel-title"><i class="ph ph-chart-line-up"></i>Observations</span>
+        <span class="panel-title"><i class="ph ph-chart-line-up"></i><span data-t="panel.title"></span></span>
         <span class="clock" id="clock">00:00</span>
       </div>
       <div class="stats">
         <div class="stat">
           <span class="swatch sw-a"></span>
           <div>
-            <div class="stat-label">Cup A · NaHCO<sub>3</sub></div>
-            <div class="stat-val"><b id="cntA">0</b><span>/10 floating</span></div>
+            <div class="stat-label" data-t="panel.cupA"></div>
+            <div class="stat-val"><b id="cntA">0</b><span class="of-floating"></span></div>
           </div>
         </div>
         <div class="stat">
           <span class="swatch sw-b"></span>
           <div>
-            <div class="stat-label">Cup B · control</div>
-            <div class="stat-val"><b id="cntB">0</b><span>/10 floating</span></div>
+            <div class="stat-label" data-t="panel.cupB"></div>
+            <div class="stat-val"><b id="cntB">0</b><span class="of-floating"></span></div>
           </div>
         </div>
       </div>
       <div class="chart-wrap"><canvas id="chart"></canvas></div>
       <div class="speed" id="speed">
-        <span><i class="ph ph-fast-forward"></i>Time</span>
+        <span><i class="ph ph-fast-forward"></i><span data-t="panel.time"></span></span>
         <button data-s="1" class="on">1×</button>
         <button data-s="2">2×</button>
         <button data-s="4">4×</button>
@@ -54,30 +54,6 @@
       <div class="result" id="result" hidden></div>
     </section>
 
-    <div class="lab-info" hidden>
-      <div class="modal-kicker"><i class="ph-fill ph-leaf"></i>About the experiment</div>
-      <h2>Why do leaf disks float?</h2>
-      <p>A spinach leaf is full of tiny air spaces in its <b>spongy mesophyll</b>. Air makes a fresh leaf disk float.</p>
-      <ol class="info-list">
-        <li><span>1</span><div><b>Sink the disks.</b> A syringe vacuum pulls the air out. Bicarbonate solution flows in, so the disks get denser than water and sink.</div></li>
-        <li><span>2</span><div><b>Add light.</b> Chloroplasts use light energy and CO<sub>2</sub> (from the bicarbonate) to photosynthesize.</div></li>
-        <li><span>3</span><div><b>Oxygen lifts them.</b> O<sub>2</sub> collects in the air spaces and the disks float back up. Faster floating means faster photosynthesis.</div></li>
-      </ol>
-      <div class="equation">6CO<sub>2</sub> + 6H<sub>2</sub>O <i class="ph ph-arrow-right"></i> C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + 6O<sub>2</sub></div>
-      <p class="muted">Measure the rate with <b>ET<sub>50</sub></b>: the time it takes half the disks to float. The control cup has no bicarbonate, so it has no CO<sub>2</sub> source.</p>
-      <p class="muted"><i class="ph ph-mouse-left-click"></i> Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan · use the timeline to go back or skip ahead</p>
-    </div>
-
-    <div class="lab-intro">
-      <div class="modal-kicker"><i class="ph-fill ph-leaf"></i>Interactive 3D lab</div>
-      <h2>Make leaf disks <em>float</em></h2>
-      <p>Leaves use light to turn carbon dioxide and water into sugar, and give off <b>oxygen</b>. Sink small disks of spinach leaf, shine a lamp on them, and time how fast the oxygen floats them back up.</p>
-      <ul class="keys">
-        <li><i style="--c:#38bdf8"></i><span><b>Bicarbonate</b> gives the leaf the CO<sub>2</sub> it needs</span></li>
-        <li><i style="--c:#f59e0b"></i><span><b>Light</b> powers photosynthesis in the chloroplasts</span></li>
-        <li><i style="--c:#22c55e"></i><span><b>Oxygen</b> fills the air spaces and lifts the disks</span></li>
-      </ul>
-    </div>
   </div>
   <script>LabPage.chrome()</script>
 

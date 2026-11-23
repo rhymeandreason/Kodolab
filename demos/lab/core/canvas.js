@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { srgb } from './three-compat.js';
 
 export const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -10,7 +11,7 @@ export function makeCanvas(w, h) {
 
 export function canvasTex(c) {
   const t = new THREE.CanvasTexture(c);
-  t.encoding = THREE.sRGBEncoding;
+  srgb(t);
   t.anisotropy = 8;
   return t;
 }

@@ -1,4 +1,5 @@
 /* Lab: shared pieces for 3D bench-lab simulations. See README.md. */
+export * from './core/three-compat.js';  // first: turns colour management off before any Color exists
 export * from './core/math.js';
 export * from './core/random.js';
 export * from './core/tween.js';

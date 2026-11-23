@@ -10,11 +10,16 @@ import {
   makePipette, makeDish, makeRod, makeTray, makeLamp, makeTimer, makePunch,
   makeJar, makeJarLid, makeScoop, makeSqueezeBottle, makeBench, makeWorkMat, makePaperTowel,
   makeStream, ripple, powderFall, drop, makeLeaf, makeLeafDisk,
-  createIntro, chromeInsets, bindChrome, PHONE,
+  createIntro, chromeInsets, bindChrome, PHONE, T, fmt,
 } from '../lab.js';
 
 const $ = (s) => document.querySelector(s);
 const say = (html, icon = 'ph-check-circle', warn = false) => toast(html, { icon, warn });
+const DISKS = 10;            // leaf disks per syringe, so per cup
+const TOTAL = 2 * DISKS;     // disks punched
+/** A text.js string with the lab's counts filled in, plus any of the caller's. */
+const tx = (s, vars) => (typeof s === 'string' ? fmt(s, { disks: DISKS, total: TOTAL, ...vars }) : s && { ...s, text: tx(s.text, vars), note: s.note && tx(s.note, vars) });
+const TT = T.toasts;
 
 // =========================================================================
 // Layout (units: cm, bench top at y = 0)
@@ -108,9 +113,9 @@ function rebuild() {
   const jar = place(makeJar(mat, { ingredient: 'bakingSoda' }), POS.jar);
   const lid = place(makeJarLid(mat, { ingredient: 'bakingSoda' }), POS.lid);
   const scoop = place(makeScoop(mat), POS.scoop); scoop.group.quaternion.copy(Q(0, 0.5, 0));
-  const beakerA = place(makeBeaker(mat, { label: '0.2% NaHCO₃', sub: 'bicarbonate', color: '#16a34a' }), POS.beakerA);
-  const beakerB = place(makeBeaker(mat, { label: 'Water', sub: 'control', color: '#94a3b8' }), POS.beakerB);
-  const soapBeaker = place(makeBeaker(mat, { r: 2.2, h: 4.8, level: 1.9, cap: 50, label: 'Soap 1%', color: '#ca8a04', liquidColor: 0xe0d64a }), POS.soapBeaker);
+  const beakerA = place(makeBeaker(mat, { ...T.props.beakerA, color: '#16a34a' }), POS.beakerA);
+  const beakerB = place(makeBeaker(mat, { ...T.props.beakerB, color: '#94a3b8' }), POS.beakerB);
+  const soapBeaker = place(makeBeaker(mat, { r: 2.2, h: 4.8, level: 1.9, cap: 50, ...T.props.soap, color: '#ca8a04', liquidColor: 0xe0d64a }), POS.soapBeaker);
   const soapBottle = place(makeSqueezeBottle(mat), POS.soapBottle, 0.3);
   const pipette = place(makePipette(mat), POS.pipette); pipette.group.quaternion.copy(Q_PIPETTE);
   const rodA = place(makeRod(mat), POS.rodA); rodA.group.quaternion.copy(Q_ROD);
@@ -127,8 +132,8 @@ function rebuild() {
     syr[n] = s;
   });
   place(makeTray(mat), POS.tray);
-  const cupA = place(makeCup(mat, { label: 'Cup A', sub: 'NaHCO₃ + light', color: '#16a34a' }), POS.cupA);
-  const cupB = place(makeCup(mat, { label: 'Cup B', sub: 'control · water', color: '#94a3b8' }), POS.cupB);
+  const cupA = place(makeCup(mat, { ...T.props.cupA, color: '#16a34a' }), POS.cupA);
+  const cupB = place(makeCup(mat, { ...T.props.cupB, color: '#94a3b8' }), POS.cupB);
   cupA.disks = []; cupB.disks = []; // the leaf disks dropped into each cup
   const lamp = place(makeLamp(mat), POS.lamp);
   const timer = place(makeTimer(mat), POS.timer);
@@ -140,26 +145,26 @@ function rebuild() {
     lampOn: false, observing: false, simT: 0, sampled: -1,
   };
 
-  ix.register('jar', jar.group, { name: 'Sodium bicarbonate', short: 'Baking soda', desc: 'NaHCO₃ powder. Dissolved in water it releases CO₂ for photosynthesis.', anchor: V3(0, 8.5, 0) });
+  ix.register('jar', jar.group, { ...T.objects.jar, anchor: V3(0, 8.5, 0) });
   ix.addGroup('jar', scoop.group);
-  ix.register('beakerA', beakerA.group, { name: 'Beaker · bicarbonate', short: 'Bicarbonate beaker', desc: '250 mL beaker of water that becomes the 0.2% NaHCO₃ solution.', anchor: V3(0, 11, 0) });
-  ix.register('beakerB', beakerB.group, { name: 'Beaker · water (control)', short: 'Water beaker', desc: 'Plain water with a drop of soap. No CO₂ source.', anchor: V3(0, 11, 0) });
-  ix.register('soap', soapBeaker.group, { name: 'Dilute soap', short: 'Soap', desc: '1% dish soap — a surfactant.', anchor: V3(0, 6, 0) });
+  ix.register('beakerA', beakerA.group, { ...T.objects.beakerA, anchor: V3(0, 11, 0) });
+  ix.register('beakerB', beakerB.group, { ...T.objects.beakerB, anchor: V3(0, 11, 0) });
+  ix.register('soap', soapBeaker.group, { ...T.objects.soap, anchor: V3(0, 6, 0) });
   ix.addGroup('soap', soapBottle.group);
-  ix.register('pipette', pipette.group, { name: 'Transfer pipette', short: 'Pipette', desc: 'For adding single drops of soap.', anchor: V3(0, 7, 1) });
-  ix.register('rodA', rodA.group, { name: 'Stirring rod · bicarbonate', short: 'Rod A', desc: 'Glass rod for the bicarbonate beaker.', anchor: V3(0, 9, 1) });
-  ix.register('rodB', rodB.group, { name: 'Stirring rod · control', short: 'Rod B', desc: 'Glass rod for the water (control) beaker.', anchor: V3(0, 9, 1) });
-  ix.register('leaf', leaf.group, { name: 'Spinach leaf', short: 'Spinach leaf', desc: 'Fresh spinach. Its spongy mesophyll is full of air spaces.', anchor: V3(0, 1, 0) });
+  ix.register('pipette', pipette.group, { ...T.objects.pipette, anchor: V3(0, 7, 1) });
+  ix.register('rodA', rodA.group, { ...T.objects.rodA, anchor: V3(0, 9, 1) });
+  ix.register('rodB', rodB.group, { ...T.objects.rodB, anchor: V3(0, 9, 1) });
+  ix.register('leaf', leaf.group, { ...T.objects.leaf, anchor: V3(0, 1, 0) });
   ix.addGroup('leaf', leaf2.group);
-  ix.register('punch', punch.group, { name: 'Hole punch', short: 'Hole punch', desc: 'Cuts uniform 6 mm leaf disks.', anchor: V3(5, 1.6, 0) });
-  ix.register('dish', dish.group, { name: 'Petri dish', short: 'Petri dish', desc: 'Holds the cut leaf disks.', anchor: V3(0, 2, 0) });
+  ix.register('punch', punch.group, { ...T.objects.punch, anchor: V3(5, 1.6, 0) });
+  ix.register('dish', dish.group, { ...T.objects.dish, anchor: V3(0, 2, 0) });
   [1, 2].forEach((n) => ix.register('syringe' + n, syr[n].group, {
-    name: `10 mL syringe ${n}`, short: `Syringe ${n}`, desc: 'Plastic syringe with no needle. Used to pull a vacuum on the leaf disks.', anchor: V3(0, 6, 0),
+    name: fmt(T.objects.syringe.name, { n }), short: fmt(T.objects.syringe.short, { n }), desc: T.objects.syringe.desc, anchor: V3(0, 6, 0),
   }));
-  ix.register('cupA', cupA.group, { name: 'Cup A · bicarbonate', short: 'Cup A', desc: 'Leaf disks + NaHCO₃ solution, under the lamp.', anchor: V3(0, 10.5, 0) });
-  ix.register('cupB', cupB.group, { name: 'Cup B · control', short: 'Cup B', desc: 'Leaf disks + water only (no bicarbonate).', anchor: V3(0, 10.5, 0) });
-  ix.register('lamp', lamp.group, { name: 'Desk lamp', short: 'Lamp', desc: 'Bright LED lamp — the light energy for photosynthesis.', anchor: V3(0, 33.5, 24) });
-  ix.register('timer', timer.group, { name: 'Lab timer', short: 'Timer', desc: 'Time how long the disks take to float.', anchor: V3(0, 4.5, 0) });
+  ix.register('cupA', cupA.group, { ...T.objects.cupA, anchor: V3(0, 10.5, 0) });
+  ix.register('cupB', cupB.group, { ...T.objects.cupB, anchor: V3(0, 10.5, 0) });
+  ix.register('lamp', lamp.group, { ...T.objects.lamp, anchor: V3(0, 33.5, 24) });
+  ix.register('timer', timer.group, { ...T.objects.timer, anchor: V3(0, 4.5, 0) });
 
   // observation UI back to its starting state
   $('#dataPanel').hidden = true;
@@ -192,7 +197,7 @@ async function actSoda() {
   await fall;
   scoop.heap.visible = false;
   await Promise.all([anim(0.6, (e) => beakerA.liquid.setCloud(e)), moveTo(sp, { pos: rp, quat: rq, dur: 1.1, arc: 3 })]);
-  say('Baking soda added — stir it in later', 'ph-flask');
+  say(TT.soda, 'ph-flask');
 }
 
 function squeeze(p, a, dur) {
@@ -222,12 +227,12 @@ async function actSoap() {
     await squeeze(p, 0, 0.2);
   }
   await moveTo(p.group, { pos: POS.pipette, quat: Q_PIPETTE, dur: 1.0, arc: 4 });
-  say('One drop of soap in each beaker', 'ph-drop');
+  say(TT.soap, 'ph-drop');
 }
 
 async function actStir(key) {
   const which = key === 'rodA' ? 'A' : 'B';
-  if (S.stirred[which]) { say(`Beaker ${which} is already stirred`, 'ph-info', true); return; }
+  if (S.stirred[which]) { say(fmt(TT.stirredAlready, { which }), 'ph-info', true); return; }
   const r = (which === 'A' ? B.rodA : B.rodB).group, b = which === 'A' ? B.beakerA : B.beakerB;
   const rp = r.position.clone(), rq = r.quaternion.clone();
   const bp = b.group.position;
@@ -244,15 +249,15 @@ async function actStir(key) {
   await moveTo(r, { pos: V3(bp.x + 1.3, 12, bp.z), dur: 0.45 });
   await moveTo(r, { pos: rp, quat: rq, dur: 1.0, arc: 3 });
   S.stirred[which] = true;
-  say(which === 'A' ? 'Bicarbonate dissolved' : 'Control stirred', 'ph-check-circle');
+  say(which === 'A' ? TT.dissolved : TT.controlStirred, 'ph-check-circle');
 }
 
 async function actFill(key) {
   const which = key.endsWith('A') ? 'A' : 'B';
-  if (S.filled[which]) { say(`Cup ${which} is already filled`, 'ph-info', true); return; }
+  if (S.filled[which]) { say(fmt(TT.filledAlready, { which }), 'ph-info', true); return; }
   await pour(which === 'A' ? B.beakerA : B.beakerB, which === 'A' ? B.cupA : B.cupB, 150);
   S.filled[which] = true;
-  say(`Cup ${which} filled with ${which === 'A' ? 'bicarbonate solution' : 'water (control)'}`, 'ph-drop');
+  say(which === 'A' ? TT.filledA : TT.filledB, 'ph-drop');
 }
 
 async function pour(b, cup, mL) {
@@ -318,7 +323,7 @@ async function actPunch() {
   }
   await wait(0.3);
   await Promise.all([moveTo(pg, { pos: prp, quat: prq, dur: 0.9, arc: 3 }), moveTo(lg, { pos: lrp, quat: lrq, dur: 1.0, arc: 3 })]);
-  say('20 leaf disks cut — notice they float on water', 'ph-leaf');
+  say(tx(TT.punched), 'ph-leaf');
 }
 
 async function actLoad(n) {
@@ -327,7 +332,7 @@ async function actLoad(n) {
   await moveTo(sy.group, { pos: SY_WORK, quat: new THREE.Quaternion(), dur: 1.0, arc: 5 });
   await anim(0.45, (e) => sy.setPlunger(lerp(SY_BOT, 12.8, e)));
   await anim(0.35, (e) => { sy.plunger.position.x = 3.2 * e; sy.plunger.rotation.z = -0.25 * e; });
-  const disks = S.dishDisks.splice(0, 10);
+  const disks = S.dishDisks.splice(0, DISKS);
   sy.disks = disks;
   // pick every random value up front so the order never depends on timing
   disks.forEach((d, i) => {
@@ -346,7 +351,7 @@ async function actLoad(n) {
   await anim(0.35, (e) => { sy.plunger.position.x = 3.2 * (1 - e); sy.plunger.rotation.z = -0.25 * (1 - e); });
   const stopY = 1.46 + 10 * 0.075 + 0.3;
   await anim(0.6, (e) => sy.setPlunger(lerp(12.8, stopY, e)));
-  say(`10 disks loaded into syringe ${n}`, 'ph-syringe');
+  say(tx(TT.loaded, { n }), 'ph-syringe');
 }
 
 async function actDraw(n) {
@@ -366,7 +371,7 @@ async function actDraw(n) {
   await moveTo(sy.group, { pos: V3(bp.x, 13.5, bp.z), dur: 0.6 });
   stage.focus('syrWork');
   await moveTo(sy.group, { pos: SY_WORK, dur: 1.2, arc: 4 });
-  say(`5 mL of ${n === 1 ? 'bicarbonate solution' : 'water'} drawn — the disks float`, 'ph-drop');
+  say(n === 1 ? TT.drawnA : TT.drawnB, 'ph-drop');
 }
 
 function bubbleBurst(sy, disks, topY) {
@@ -396,7 +401,7 @@ async function actVac(n) {
     sy.cap.visible = true;
     await anim(0.45, (e) => { sy.cap.position.y = lerp(-2.5, 0.32, e); }, Ease.out);
     sy.capped = true;
-    say('Tip capped — now the plunger can pull a vacuum', 'ph-push-pin');
+    say(TT.capped, 'ph-push-pin');
   }
   const base = sy.py;
   const top = SY_BOT + sy.vol * ML;
@@ -428,8 +433,8 @@ async function actVac(n) {
     }, Ease.inOut));
   }));
   const sunk = sunkCount(n);
-  if (sunk === 10) say('All 10 disks sank — the air spaces are full of solution', 'ph-check-circle');
-  else say(`${sinkers.length} disk${sinkers.length === 1 ? '' : 's'} sank · ${sunk}/10 — pull again`, 'ph-arrow-down', sinkers.length === 0);
+  if (sunk === DISKS) say(tx(TT.allSunk), 'ph-check-circle');
+  else say(tx(sinkers.length ? TT.someSunk : TT.noneSunk, { n: sinkers.length, sunk }), 'ph-arrow-down', sinkers.length === 0);
 }
 
 function bottomSpots(cup, n) {
@@ -517,14 +522,14 @@ async function actEmpty(n) {
     moveTo(g, { pos: home, quat: Q_LYING, dur: 1.5, arc: 8 }),
     moveTo(sy.plunger, { pos: V3(home.x + 1.3, 1.15, home.z + (n === 1 ? -2.1 : 2.1)), quat: Q_LYING, dur: 1.6, arc: 8 }),
   ]);
-  say(`Disks in cup ${n === 1 ? 'A' : 'B'} — they rest on the bottom`, 'ph-arrow-down');
+  say(fmt(TT.poured, { cup: n === 1 ? 'A' : 'B' }), 'ph-arrow-down');
 }
 
 async function actLamp() {
   await anim(0.2, (e) => B.lamp.setLever(e));
   await anim(0.9, (e) => B.lamp.setOn(e), Ease.out);
   S.lampOn = true;
-  say('Lamp on — light energy for the chloroplasts', 'ph-lightbulb');
+  say(TT.lamp, 'ph-lightbulb');
 }
 
 async function actTimer() {
@@ -588,7 +593,7 @@ function startObservation() {
   stage.resize();
   sizeChart();
   setSimTime(0);
-  say('Timer started — watch for oxygen bubbles', 'ph-timer');
+  say(TT.timer, 'ph-timer');
 }
 
 const floatedBy = (cup, t) => cup.disks.filter((d) => d.ft !== Infinity && t >= d.ft + 0.7).length;
@@ -628,7 +633,7 @@ function setSimTime(t) {
   $('#cntA').textContent = counts.A;
   $('#cntB').textContent = counts.B;
   const sec = S.simT * 60;
-  $('#clock').textContent = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+  $('#clock').textContent = fmt(T.panel.clock, { mm: String(Math.floor(sec / 60)).padStart(2, '0'), ss: String(Math.floor(sec % 60)).padStart(2, '0') });
   B.timer.draw(sec, S.simT < SIM_END);
   const sample = Math.floor(S.simT / 0.25 + 1e-9);
   if (sample !== S.sampled) { S.sampled = sample; drawChart(); }
@@ -650,14 +655,15 @@ function showResult() {
   const eA = et50(seriesUpTo(B.cupA, SIM_END));
   res.hidden = false;
   res.innerHTML = `
-    <div class="res-row"><span class="swatch sw-a"></span><span>Cup A (NaHCO₃): ET<sub>50</sub> ≈ <b>${eA ? eA.toFixed(1) + ' min' : 'not reached'}</b> · ${S.counts.A}/10 floated</span></div>
-    <div class="res-row"><span class="swatch sw-b"></span><span>Cup B (control): <b>${S.counts.B}/10</b> floated</span></div>
-    <p>In the light, the disks with bicarbonate photosynthesized. O<sub>2</sub> filled their air spaces and they rose. The control disks had no CO<sub>2</sub> source, so they made no O<sub>2</sub> and stayed down.</p>
-    <button class="btn" id="btnAgain"><i class="ph ph-arrow-counter-clockwise"></i>Run the lab again</button>`;
+    <div class="res-row"><span class="swatch sw-a"></span><span>${tx(T.panel.resultA, { et: eA ? fmt(T.panel.minutes, { t: eA.toFixed(1) }) : T.panel.notReached, n: S.counts.A })}</span></div>
+    <div class="res-row"><span class="swatch sw-b"></span><span>${tx(T.panel.resultB, { n: S.counts.B })}</span></div>
+    <p>${T.panel.explain}</p>
+    <button class="btn" id="btnAgain"><i class="ph ph-arrow-counter-clockwise"></i>${T.panel.again}</button>`;
   $('#btnAgain').addEventListener('click', restart);
 }
 
 // ---------- chart ----------
+document.querySelectorAll('.of-floating').forEach((n) => { n.innerHTML = tx(T.panel.floating); });
 const chart = $('#chart');
 function sizeChart() {
   const r = chart.getBoundingClientRect();
@@ -672,18 +678,18 @@ function drawChart() {
   const W = chart.width / dpr, H = chart.height / dpr;
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.clearRect(0, 0, W, H);
-  const L = 30, R = 8, T = 10, Bm = 24;
+  const L = 30, R = 8, Tp = 10, Bm = 24;
   const x = (t) => L + (t / SIM_END) * (W - L - R);
-  const y = (n) => T + (1 - n / 10) * (H - T - Bm);
+  const y = (n) => Tp + (1 - n / DISKS) * (H - Tp - Bm);
   c.font = `500 10.5px ${FONT}`;
   c.fillStyle = '#7b8a9b'; c.strokeStyle = 'rgba(15,29,43,0.07)'; c.lineWidth = 1;
   c.textAlign = 'right'; c.textBaseline = 'middle';
-  for (let n = 0; n <= 10; n += 5) {
+  for (let n = 0; n <= DISKS; n += DISKS / 2) {
     c.beginPath(); c.moveTo(L, y(n)); c.lineTo(W - R, y(n)); c.stroke();
     c.fillText(String(n), L - 7, y(n));
   }
   c.textBaseline = 'top';
-  for (let t = 0; t <= SIM_END; t += 5) { c.textAlign = t === SIM_END ? 'right' : 'center'; c.fillText(t === SIM_END ? `${t} min` : `${t}`, t === SIM_END ? W - R : x(t), H - Bm + 7); }
+  for (let t = 0; t <= SIM_END; t += 5) { c.textAlign = t === SIM_END ? 'right' : 'center'; c.fillText(t === SIM_END ? fmt(T.panel.axisEnd, { t }) : `${t}`, t === SIM_END ? W - R : x(t), H - Bm + 7); }
   c.setLineDash([3, 4]); c.strokeStyle = 'rgba(15,29,43,0.22)';
   c.beginPath(); c.moveTo(L, y(5)); c.lineTo(W - R, y(5)); c.stroke();
   c.setLineDash([]);
@@ -706,7 +712,7 @@ function drawChart() {
     c.strokeStyle = 'rgba(22,163,74,0.35)'; c.setLineDash([3, 3]);
     c.beginPath(); c.moveTo(x(eA), y(5)); c.lineTo(x(eA), H - Bm); c.stroke(); c.setLineDash([]);
     c.font = `600 11px ${FONT}`; c.textAlign = 'left'; c.textBaseline = 'bottom';
-    c.fillText(`ET₅₀ ${eA.toFixed(1)} min`, Math.min(x(eA) + 6, W - R - 78), y(5) - 5);
+    c.fillText(fmt(T.panel.et50, { t: eA.toFixed(1) }), Math.min(x(eA) + 6, W - R - 78), y(5) - 5);
   }
 }
 document.querySelectorAll('#speed button').forEach((b) => b.addEventListener('click', () => {
@@ -717,136 +723,78 @@ document.querySelectorAll('#speed button').forEach((b) => b.addEventListener('cl
 // =========================================================================
 // Procedure
 // =========================================================================
+/** A step's card text from text.js, counts filled in. */
+function card(id, vars) {
+  const { title, short, action, hint, detail, why, caption } = T.steps[id];
+  const o = { title, short, action, hint, detail, why, caption };
+  for (const k in o) if (o[k] === undefined) delete o[k]; else o[k] = tx(o[k], vars);
+  return o;
+}
+
+card.phase = (k) => ({ title: tx(T.phases[k].title), desc: tx(T.phases[k].desc) });
+
 function syringeSteps(n) {
-  const A = n === 1;
+  const A = n === 1, V = T.vacuum;
   return [
+    { id: 'load' + n, ...card('load' + n), targets: ['syringe' + n], view: 'syrRest', run: () => actLoad(n) },
+    { id: 'draw' + n, ...card('draw' + n), targets: [A ? 'beakerA' : 'beakerB'], view: 'draw', run: () => actDraw(n) },
     {
-      id: 'load' + n, title: A ? 'Load syringe 1' : 'Load syringe 2 (control)', short: `Load ${n}`, targets: ['syringe' + n], view: 'syrRest',
-      action: 'load 10 disks',
-      hint: `Click <b>syringe ${n}</b> to load 10 disks`,
-      detail: 'Pull out the plunger, drop in 10 leaf disks, and put the plunger back.',
-      why: A ? 'Each cup gets its own set of fresh disks, so the trials are independent.' : 'A separate syringe for the control stops bicarbonate from syringe 1 getting into it.',
-      caption: A ? 'Load 10 leaf disks into syringe 1' : { text: 'Load 10 fresh disks into syringe 2', note: 'A clean syringe for the control' },
-      run: () => actLoad(n),
-    },
-    {
-      id: 'draw' + n, title: A ? 'Draw up bicarbonate solution' : 'Draw up water', short: `Draw ${n}`, targets: [A ? 'beakerA' : 'beakerB'], view: 'draw',
-      action: 'draw up 5 mL',
-      hint: `Click the <b>${A ? 'bicarbonate' : 'water'} beaker</b> to draw up 5 mL`,
-      detail: `Put the tip in the ${A ? 'bicarbonate solution' : 'water'} and pull the plunger back to draw up about 5 mL. The disks float at the top.`,
-      why: 'The disks still float because their spongy mesophyll is full of air.',
-      caption: { text: `Draw up 5 mL of ${A ? 'bicarbonate solution' : 'plain soapy water'}`, note: 'The disks float: the leaf is full of air' },
-      run: () => actDraw(n),
-    },
-    {
-      id: 'vac' + n, title: 'Pull a vacuum', short: `Vacuum ${n}`, targets: ['syringe' + n], view: 'syringe',
-      action: 'pull the plunger',
-      hint: () => `Click <b>syringe ${n}</b> to pull the plunger · <b>${sunkCount(n)}/10</b> sunk`,
-      detail: 'Cap the tip, then pull the plunger back and let it go. Repeat until every disk sinks.',
-      why: 'The vacuum pulls air out of the leaf. When you let go, solution flows into the air spaces, so the disks become denser and sink.',
+      id: 'vac' + n, ...card('vac' + n), targets: ['syringe' + n], view: 'syringe',
+      hint: () => tx(T.steps['vac' + n].hint, { sunk: sunkCount(n) }),
       caption: () => {
-        const pulls = B.syr[n].pulls, sunk = sunkCount(n), note = `${sunk}/10 sunk`;
-        if (sunk === 10) return { text: 'Every disk has sunk', note: 'Solution now fills the air spaces' };
-        if (pulls === 0) return 'Cap the tip and pull back the plunger to make a vacuum';
-        if (pulls === 1) return { text: 'Air bubbles out of the leaf disks', note };
-        return { text: 'Pull again until every disk sinks', note };
+        const pulls = B.syr[n].pulls, sunk = sunkCount(n), note = tx(V.sunkNote, { sunk });
+        if (sunk === DISKS) return V.done;
+        if (pulls === 0) return V.start;
+        if (pulls === 1) return { text: V.bubbles, note };
+        return { text: V.again, note };
       },
-      run: () => actVac(n), isDone: () => sunkCount(n) === 10, progress: () => sunkCount(n) / 10,
+      run: () => actVac(n), isDone: () => sunkCount(n) === DISKS, progress: () => sunkCount(n) / DISKS,
     },
-    {
-      id: 'empty' + n, title: `Pour into cup ${A ? 'A' : 'B'}`, short: `Pour ${n}`, targets: [A ? 'cupA' : 'cupB'], view: 'cups',
-      action: 'pour in the disks',
-      hint: `Click <b>cup ${A ? 'A' : 'B'}</b> to pour in the disks`,
-      detail: `Take out the plunger and pour the disks into cup ${A ? 'A' : 'B'}. They should rest on the bottom.`,
-      why: 'Every disk starts at the bottom, so each one that floats later is a measurable result.',
-      caption: { text: `Pour the disks into cup ${A ? 'A' : 'B'}`, note: 'They rest on the bottom' },
-      run: () => actEmpty(n),
-    },
+    { id: 'empty' + n, ...card('empty' + n), targets: [A ? 'cupA' : 'cupB'], view: 'cups', run: () => actEmpty(n) },
   ];
 }
 
+const ST = T.steps;
 const STEPS = [
+  { id: 'soda', ...card('soda'), targets: ['jar'], view: 'prep', run: actSoda },
+  { id: 'soap', ...card('soap'), targets: ['pipette'], view: 'prep', run: actSoap },
   {
-    id: 'soda', title: 'Add baking soda', short: 'Baking soda', targets: ['jar'], view: 'prep', action: 'add a scoop to the left beaker',
-    hint: 'Click the <b>sodium bicarbonate</b> jar',
-    detail: 'Add one scoop of baking soda (NaHCO<sub>3</sub>) to the left beaker of water to make a ~0.2% bicarbonate solution.',
-    why: 'Dissolved bicarbonate releases CO<sub>2</sub>, the carbon source the leaf needs for photosynthesis.',
-    caption: { text: 'Add a scoop of baking soda to the left beaker', note: 'It gives the leaves CO₂' },
-    run: actSoda,
-  },
-  {
-    id: 'soap', title: 'Add a drop of soap', short: 'Soap', targets: ['pipette'], view: 'prep', action: 'add a drop to each beaker',
-    hint: 'Click the <b>pipette</b> to add soap',
-    detail: 'Use the pipette to add one drop of dilute soap to each beaker.',
-    why: 'Soap is a surfactant. It wets the waxy, water-repelling leaf surface so solution can get into the leaf.',
-    caption: 'Add one drop of soap to each beaker',
-    run: actSoap,
-  },
-  {
-    id: 'stir', title: 'Stir the solutions', short: 'Stir', targets: ['rodA', 'rodB'], view: 'prep', action: 'stir its beaker',
+    id: 'stir', ...card('stir'), targets: ['rodA', 'rodB'], view: 'prep',
     activeTargets: () => [!S.stirred.A && 'rodA', !S.stirred.B && 'rodB'].filter(Boolean),
-    hint: () => (!S.stirred.A && !S.stirred.B ? 'Click each <b>stirring rod</b> to stir its beaker' : 'Now click the other <b>stirring rod</b>'),
-    detail: 'Stir each beaker with its own rod until the bicarbonate dissolves and the solution is clear.',
-    why: 'A separate rod for each beaker keeps bicarbonate out of the control. Fully dissolved powder gives a known CO<sub>2</sub> concentration.',
-    caption: () => (!S.stirred.A ? 'Stir the left beaker until the baking soda dissolves' : 'Stir the right beaker with its own rod'),
+    hint: () => (!S.stirred.A && !S.stirred.B ? ST.stir.hint : ST.stir.hintMore),
+    caption: () => (!S.stirred.A ? ST.stir.captions.left : ST.stir.captions.right),
     run: actStir, isDone: () => S.stirred.A && S.stirred.B, progress: () => (S.stirred.A + S.stirred.B) / 2,
   },
   {
-    id: 'fill', title: 'Fill both cups', short: 'Fill cups', targets: ['cupA', 'cupB'], view: 'fill', action: 'pour 150 mL into it',
+    id: 'fill', ...card('fill'), targets: ['cupA', 'cupB'], view: 'fill',
     activeTargets: () => [!S.filled.A && 'cupA', !S.filled.B && 'cupB'].filter(Boolean),
-    hint: () => (!S.filled.A && !S.filled.B ? 'Click <b>cup A</b> and <b>cup B</b> to fill them' : `Now click <b>cup ${S.filled.A ? 'B' : 'A'}</b>`),
-    detail: 'Pour 150 mL of bicarbonate solution into cup A, and 150 mL of plain soapy water into cup B, the control.',
-    why: 'The control has no CO<sub>2</sub> source, so any difference between the cups comes from the bicarbonate.',
-    caption: () => (!S.filled.A ? 'Pour 150 mL of bicarbonate solution into cup A'
-      : { text: 'Pour 150 mL of plain soapy water into cup B', note: 'Cup B is the control: no CO₂' }),
+    hint: () => (!S.filled.A && !S.filled.B ? ST.fill.hint : fmt(ST.fill.hintMore, { cup: S.filled.A ? 'B' : 'A' })),
+    caption: () => (!S.filled.A ? ST.fill.captions.a : ST.fill.captions.b),
     run: actFill, isDone: () => S.filled.A && S.filled.B, progress: () => (S.filled.A + S.filled.B) / 2,
   },
-  {
-    id: 'punch', title: 'Punch 20 leaf disks', short: 'Punch disks', targets: ['punch', 'leaf'], view: 'leaf', action: 'punch 20 disks',
-    hint: 'Click the <b>hole punch</b> to cut leaf disks',
-    detail: 'Punch 20 disks from the spinach leaf into the petri dish. Avoid the big midrib vein.',
-    why: 'Same-sized disks make the groups comparable. Veins have no air-filled mesophyll.',
-    caption: { text: 'Punch 20 disks from the spinach leaf', note: 'Avoid the big vein' },
-    run: actPunch,
-  },
+  { id: 'punch', ...card('punch'), targets: ['punch', 'leaf'], view: 'leaf', run: actPunch },
   ...syringeSteps(1),
   ...syringeSteps(2),
+  { id: 'lamp', ...card('lamp'), targets: ['lamp'], view: 'lamp', run: actLamp },
+  { id: 'timer', ...card('timer'), targets: ['timer'], view: 'cups', run: actTimer },
   {
-    id: 'lamp', title: 'Turn on the light', short: 'Lamp', targets: ['lamp'], view: 'lamp', action: 'switch it on',
-    hint: 'Click the <b>lamp</b> to switch it on',
-    detail: 'Place both cups under the lamp and switch it on.',
-    why: 'Light drives the light-dependent reactions that split water and release O<sub>2</sub>.',
-    caption: 'Place both cups under the lamp and switch it on',
-    run: actLamp,
-  },
-  {
-    id: 'timer', title: 'Start the timer', short: 'Timer', targets: ['timer'], view: 'cups', action: 'start timing',
-    hint: 'Click the <b>timer</b> to start counting',
-    detail: 'Start timing as soon as the light is on.',
-    caption: 'Start the timer',
-    run: actTimer,
-  },
-  {
-    id: 'observe', title: 'Count floating disks', short: 'Observe', targets: [], view: 'observe',
-    hint: 'Watch the cups — drag the timeline to scrub through the 20 minutes',
-    detail: 'Count the floating disks in each cup every minute. Look for tiny O<sub>2</sub> bubbles on the disks.',
-    why: 'The faster a group reaches 50% floating (ET<sub>50</sub>), the faster it is photosynthesizing.',
-    // the caption follows what the cups are doing over the 20 simulated minutes
+    id: 'observe', ...card('observe', { min: SIM_END }), targets: [], view: 'observe',
+    // the caption follows what the cups are doing over the simulated minutes
     caption: () => {
-      const a = (S.counts && S.counts.A) || 0;
-      if (a === 0) return { text: 'Watch for tiny oxygen bubbles on the disks', note: 'Count the floating disks every minute' };
-      if (a < 5) return { text: 'Oxygen bubbles lift the disks in cup A', note: `${a}/10 floating` };
-      if (S.simT < SIM_END - 4) return { text: 'Cup A passed half floating: that time is its ET₅₀', note: `${a}/10 floating` };
-      return { text: 'Cup B stays on the bottom', note: 'Without CO₂, its leaves can’t photosynthesize' };
+      const a = (S.counts && S.counts.A) || 0, C = ST.observe.captions;
+      if (a === 0) return C.watch;
+      if (a < DISKS / 2) return tx(C.rising, { n: a });
+      if (S.simT < SIM_END - 4) return tx(C.half, { n: a });
+      return C.control;
     },
     watch: { duration: SIM_END, get: () => S.simT, set: setSimTime, rate: () => BASE_RATE * speed * debugSpeed },
   },
 ];
 const PHASES = [
-  { title: 'Prepare solutions', desc: 'Bicarbonate & soapy water', icon: 'ph-flask', steps: ['soda', 'soap', 'stir', 'fill'] },
-  { title: 'Cut leaf disks', desc: '20 disks from a spinach leaf', icon: 'ph-leaf', steps: ['punch'] },
-  { title: 'Sink the disks', desc: 'Vacuum the air out in a syringe', icon: 'ph-syringe', steps: ['load1', 'draw1', 'vac1', 'empty1', 'load2', 'draw2', 'vac2', 'empty2'] },
-  { title: 'Light & observe', desc: 'Count floating disks over time', icon: 'ph-lightbulb', steps: ['lamp', 'timer', 'observe'] },
+  { ...card.phase('prepare'), icon: 'ph-flask', steps: ['soda', 'soap', 'stir', 'fill'] },
+  { ...card.phase('cut'), icon: 'ph-leaf', steps: ['punch'] },
+  { ...card.phase('sink'), icon: 'ph-syringe', steps: ['load1', 'draw1', 'vac1', 'empty1', 'load2', 'draw2', 'vac2', 'empty2'] },
+  { ...card.phase('observe'), icon: 'ph-lightbulb', steps: ['lamp', 'timer', 'observe'] },
 ];
 
 // =========================================================================
@@ -858,11 +806,11 @@ const lesson = createLesson({
   phases: PHASES,
   rebuild,
   panel: $('#stepsPanel'),
-  completeHint: '<b>Lab complete</b> — compare the two cups',
-  completeCaption: { text: 'Experiment complete: compare the two cups', note: 'Only cup A had CO₂ for photosynthesis' },
+  completeHint: T.complete.hint,
+  completeCaption: T.complete.caption,
   onEnter: (step) => {
     requestAnimationFrame(() => stage.resize()); // the card's new height changes the free area
-    if (!step) { say('Experiment complete — check your ET₅₀', 'ph-chart-line-up'); return; }
+    if (!step) { say(TT.complete, 'ph-chart-line-up'); return; }
     if (firstEnter) { firstEnter = false; intro.started.then(() => stage.focus(step.view, 2.2)); return; } // the opening move, after Start
     stage.focus(step.view);
   },

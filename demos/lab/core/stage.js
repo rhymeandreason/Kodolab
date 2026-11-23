@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { V3, clamp } from './math.js';
 import { anim, tickTweens } from './tween.js';
+import { srgbOut, LIGHT } from './three-compat.js';
 
 export function studioEnv(renderer) {
   const pm = new THREE.PMREMGenerator(renderer);
@@ -95,7 +96,7 @@ export function createStage({
 }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  srgbOut(renderer);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = exposure;
   renderer.shadowMap.enabled = true;
@@ -120,9 +121,9 @@ export function createStage({
 
   // lights. A strong sky and a moderate sun, so a shadow grounds an object without
   // reading as a hole in the bench: shadowed floor is ~0.9 of lit floor.
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.62);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.62 * LIGHT);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfffaf2, 0.78);
+  const sun = new THREE.DirectionalLight(0xfffaf2, 0.78 * LIGHT);
   sun.position.set(-35, 90, 50);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -131,7 +132,7 @@ export function createStage({
   sun.shadow.normalBias = 0.03;
   sun.shadow.radius = 3;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xeaf2ff, 0.3);
+  const fill = new THREE.DirectionalLight(0xeaf2ff, 0.3 * LIGHT);
   fill.position.set(60, 40, 80);
   scene.add(fill);
 

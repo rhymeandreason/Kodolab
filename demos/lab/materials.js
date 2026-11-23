@@ -6,7 +6,7 @@
  *   mesh(geo, mat.make.glass({ opacity: .2, color: '#dbe7f2' }));   // your own copy
  *   mesh(geo, mat.make.liquid(0xe0d64a));
  *
- * Colours are raw hex (r128, no colour management), matching the labs. The
+ * Colours are raw hex (colour management off, as on r128), matching the labs. The
  * renderer outputs sRGB, so a raw hex renders lighter than it looks in a colour
  * picker. To get the colour you picked, pass toLinear('#9fcfae').
  *
@@ -14,6 +14,7 @@
  * rims 4, printed labels 5-6. Glass after liquid, or the liquid disappears.
  */
 import * as THREE from 'three';
+import { OUTPUT_CHUNK } from './core/three-compat.js';
 
 /** A hex picked in sRGB (a colour picker, a photo) as the value three wants, so it renders as picked. */
 export const toLinear = (hex) => new THREE.Color(hex).convertSRGBToLinear().getHex();
@@ -25,15 +26,14 @@ export const toLinear = (hex) => new THREE.Color(hex).convertSRGBToLinear().getH
  * highlights pushed into alpha so they stay bright instead of being faded by
  * the transparency.
  *
- * NOTE: hooks the r128 shader chunk `output_fragment`, renamed
- * `opaque_fragment` in three r154+. Update here when upgrading three. */
+ * Replaces the last fragment chunk (OUTPUT_CHUNK, renamed in r154). */
 export function glassMaterial({ opacity = 0.32, color = '#e3ecf6', roughness = 0.03, envMap = null, envMapIntensity = 1.5, edge = 0.85, side = THREE.DoubleSide } = {}) {
   const m = new THREE.MeshPhysicalMaterial({
     color, roughness, metalness: 0, transparent: true, opacity,
     clearcoat: 1, clearcoatRoughness: 0.02, side, depthWrite: false, envMap, envMapIntensity,
   });
   m.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace('#include <output_fragment>', `
+    sh.fragmentShader = sh.fragmentShader.replace(OUTPUT_CHUNK, `
       float gFr  = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
       float gEdge = smoothstep(.3, 1.0, gFr);            // 0 face-on -> 1 at the silhouette
       gEdge *= gEdge;
@@ -65,7 +65,7 @@ export function wideGlassMaterial({ opacity = 0.3, color = '#e6eef6', roughness 
     clearcoat: 0.6, clearcoatRoughness: 0.08, side, depthWrite: false, envMap, envMapIntensity,
   });
   m.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace('#include <output_fragment>', `
+    sh.fragmentShader = sh.fragmentShader.replace(OUTPUT_CHUNK, `
       float gFr  = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
       float gEdge = smoothstep(.62, 1.0, gFr);           // thin line at the silhouette only
       gEdge *= gEdge;

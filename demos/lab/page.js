@@ -33,7 +33,11 @@
  */
 (function () {
   'use strict';
-  var THREE_VERSION = '0.128.0';  // the only place three.js is pinned; README "Upgrading three.js"
+  // The only place three.js is pinned; README "Upgrading three.js". A page trying a newer one
+  // says so on its tag (data-three="0.186.1"); ?three=186.1 overrides either, to compare.
+  var THREE_VERSION = '0.128.0';
+  var want = new URLSearchParams(location.search).get('three') || document.currentScript.dataset.three;
+  if (want && /^[0-9.]+$/.test(want)) THREE_VERSION = /^0\./.test(want) ? want : '0.' + want + (want.indexOf('.') < 0 ? '.0' : '');
   var PHOSPHOR = 'https://unpkg.com/@phosphor-icons/web@2.1.1/src/';
   var here = document.currentScript.src;
   var textFile = document.currentScript.dataset.text;
@@ -117,6 +121,8 @@
         + (F.steps ? '<ol class="info-list">' + F.steps.map(function (st, i) {
           return '<li><span>' + (i + 1) + '</span><div><b>' + st.head + '</b> ' + st.text + '</div></li>';
         }).join('') + '</ol>' : '')
+        + (F.equation ? '<div class="equation">' + F.equation + '</div>' : '')
+        + (F.notes || []).map(function (p) { return '<p class="muted">' + p + '</p>'; }).join('')
         + (F.tips || []).map(function (t) { return '<p class="muted"><i class="ph ' + t.icon + '"></i> ' + t.text + '</p>'; }).join('');
     }
   }

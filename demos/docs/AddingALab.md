@@ -80,7 +80,7 @@ stage.start();
 
 ## 3. Write the steps
 
-**Every word a student reads goes in `<lab>/text.js`, never in the code.** Teachers edit it and translators copy it, so the code names keys and keeps everything else: timings, colours, which label a caption points at. `strawberry/text.js` is the worked example and its key scheme is the one to copy: `intro`, `info`, `phases`, `steps.<id>` (card fields plus `captions`), `complete`, `why`, `objects`, `props`, `levels.<key>` (`name`, `labels`, `info`, `legend`, `cues`). Modules read it as `T` from `lab.js`; `{name}` slots are filled with `fmt()`, so a sentence with a number in it stays one string a translator can reorder. Shared UI words are `lab/strings.js` (`UI`). A translation is `text.<lang>.js` beside it, with only the keys it translates, loaded for `?lang=<lang>`: `page.js`'s header.
+**Every word a student reads goes in `<lab>/text.js`, never in the code.** Teachers edit it and translators copy it, so the code names keys and keeps everything else: timings, colours, which label a caption points at. `strawberry/text.js` is the worked example and its key scheme is the one to copy: `intro`, `info`, `phases`, `steps.<id>` (card fields plus `captions`), `complete`, `why`, `objects`, `props`, `levels.<key>` (`name`, `labels`, `info`, `legend`, `cues`). Modules read it as `T` from `lab.js`; `{name}` slots are filled with `fmt()`, so a sentence with a number in it stays one string a translator can reorder. A count the sim owns goes in as a slot, not typed (Photosynthesis's `{disks}`), so editing the sentence can never contradict the bench. Shared UI words are `lab/strings.js` (`UI`). A translation is `text.<lang>.js` beside it, with only the keys it translates, loaded for `?lang=<lang>`: `page.js`'s header.
 
 Each field has one job, and putting text in the wrong one is what makes the card long:
 
@@ -111,7 +111,7 @@ Going back or jumping ahead calls `rebuild()`, replays the earlier clicks instan
 
 ## 5. The intro card
 
-Its text is `intro` in `text.js`, built by `page.js` before any module loads, so it shows at once while the bench loads: a kicker, a title with one `<em>` word, a short paragraph and three `keys`, the ideas the lab is about. `info` is the (i) modal. (Ecoli and Photosynthesis still write both as `.lab-intro` / `.lab-info` markup in the page, which `page.js` keeps when the text has none.) The Start button is added for you; a `.intro-art` in the page's `.lab-intro` replaces the default empty one (Ecoli's plasmid). Call `createIntro(stage, { art })` near the end of `main.js`.
+Its text is `intro` in `text.js`, built by `page.js` before any module loads, so it shows at once while the bench loads: a kicker, a title with one `<em>` word, a short paragraph and three `keys`, the ideas the lab is about. `info` is the (i) modal: `body`, numbered `steps`, an `equation`, muted `notes` and icon `tips`, all optional. Markup the page keeps for itself (a panel, the intro art) takes its words from `data-t="key.path"`. The Start button is added for you; a `.intro-art` in the page's `.lab-intro` replaces the default empty one (Ecoli's plasmid). Call `createIntro(stage, { art })` near the end of `main.js`.
 
 * Start the art from a small `intro-art.js`, loaded `<script type="module" async>` before `main.js`, so it shows before the library has loaded. `createPropArt(box, (mat) => makeStrawberry(mat).group)` turns any prop.
 * The opening camera move waits for Start: in `onEnter`, the first step does `intro.started.then(() => stage.focus(step.view, 2.2))`.
