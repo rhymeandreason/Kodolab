@@ -1,0 +1,21 @@
+/* Strawberry DNA: only what's specific to this lab. Shared chrome is in ../lab.css. */
+
+/* ---------- backgrounds per zoom level (the bench uses lab.css's; the zoom circles are in lab.css) ---------- */
+.bg-cell, .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%, #fbfdfc 0%, #ecf4f0 50%, #dbe8e2 100%); }
+.bg-mol, .zoom-lens.bg-mol { background: radial-gradient(1400px 900px at 58% 35%, #fdfcff 0%, #efedf8 50%, #dfdcef 100%); }
+body[data-scale='cell'] .bg-cell, body[data-scale='mol'] .bg-mol { opacity: 1; }
+
+/* ---------- info modal ---------- */
+.info-list { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
+.info-list li { display: flex; gap: 12px; }
+.info-list li > span {
+  width: 24px; height: 24px; border-radius: 8px; flex: none;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent-ink);
+  font-weight: 700; font-size: 12.5px;
+}
+
+/* the card sits between the procedure list and the circles */
+@media (min-width: 821px) {
+  .lab-card { width: min(480px, calc(100% - 300px - 200px - var(--gutter) * 2)); left: calc(300px + (100% - 300px - 200px) / 2); }
+}
