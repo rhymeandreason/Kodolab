@@ -10,7 +10,7 @@ import {
   makePipette, makeDish, makeRod, makeTray, makeLamp, makeTimer, makePunch,
   makeJar, makeJarLid, makeScoop, makeSqueezeBottle, makeBench, makeWorkMat, makePaperTowel,
   makeStream, ripple, powderFall, drop, makeLeaf, makeLeafDisk,
-  createIntro,
+  createIntro, chromeInsets, bindChrome, PHONE,
 } from '../lab.js';
 
 const $ = (s) => document.querySelector(s);
@@ -58,19 +58,17 @@ const stage = createStage({
   canvas: $('#scene'),
   views: VIEWS,
   insets: (w, h) => {
-    // bottom: the instruction card (or the timeline, whichever is higher); hidden ones don't count
-    // (on phones the data panel sits at the bottom too)
-    // (on phones the data panel sits at the bottom too, and Watch mode's captions move to the top)
-    const capsTop = w <= 820 && observing();
-    const tops = ['.lab-card', '.lab-timeline', ...(capsTop ? [] : ['.lab-captions']), ...(w > 820 ? [] : ['.data-panel'])]
-      .map((q) => document.querySelector(q))
-      .map((el) => el && el.getBoundingClientRect()).filter((r) => r && r.height).map((r) => r.top);
-    const bottom = tops.length ? h - Math.min(...tops) : 0;
-    const panel = $('#stepsPanel').getBoundingClientRect(); // hidden in Watch mode
-    const left = panel.width ? panel.right + (observing() ? 0 : 20) : 0;
-    if (w > 820) return observing() ? { left, right: Math.min(380, w * 0.26), bottom } : { left, bottom };
+    // on phones the data panel sits at the bottom too, and Watch mode's captions move to the top;
+    // while observing on a desktop the data panel takes the right and the list hugs the left
+    const capsTop = w <= PHONE && observing();
+    const r = chromeInsets(w, h, { bottom: w > PHONE ? [] : ['.data-panel'], captions: !capsTop, phoneTop: 0 });
+    if (w > PHONE) {
+      if (observing()) { r.left = Math.max(0, r.left - 20); r.right = Math.min(380, w * 0.26); }
+      return r;
+    }
     const caps = capsTop && document.querySelector('.lab-captions').getBoundingClientRect();
-    return caps && caps.height ? { top: caps.bottom, bottom } : { bottom };
+    if (caps && caps.height) r.top = caps.bottom;
+    return r;
   },
 });
 const { scene } = stage;
@@ -900,18 +898,11 @@ stage.onFrame((dt, now) => {
 });
 stage.onResize(() => { if (S && S.observing) { sizeChart(); drawChart(); } });
 
-$('#btnView').addEventListener('click', () => stage.focus(stage.lastView));
-$('#btnRestart').addEventListener('click', restart);
-$('#btnInfo').addEventListener('click', () => { $('#infoModal').hidden = false; });
-$('#btnCloseInfo').addEventListener('click', () => { $('#infoModal').hidden = true; });
-$('#infoModal').addEventListener('click', (e) => { if (e.target.id === 'infoModal') $('#infoModal').hidden = true; });
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#infoModal').hidden = true; });
 
-// debug / testing hook
 // the intro card (its leaf is started early by intro-art.js)
 const intro = createIntro(stage);
 
-window.LAB = { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, STEPS, intro };
+bindChrome({ stage, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, STEPS, intro } });
 
 stage.focus(VIEWS.overview, 0);
 lesson.start();

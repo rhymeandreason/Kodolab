@@ -12,6 +12,7 @@ export { createLesson, cues } from './lesson.js';
 export { createFollowCam } from './follow.js';
 export { createZoom } from './zoom.js';
 export { createIntro, createPropArt } from './intro.js';
+export { chromeInsets, bindChrome, PHONE } from './chrome.js';
 export { toast, ensureEl, uiRoot, stripTags, THEMES, setTheme, getTheme, themeColor } from './ui.js';
 
 export { makeBench, makeWorkMat, makePaperTowel, makeTray, makeWasteBin, makeBenchCard } from './props/surfaces.js';

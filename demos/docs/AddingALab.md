@@ -6,21 +6,30 @@ A lab is one experiment on a bench: the student clicks the equipment through the
 
 ## 1. Copy a lab
 
-Copy `lab/strawberry/` to `lab/<name>/` and rename the page `<name>-lab.html`. Keep its skeleton:
-
-* `<script defer src="/demos/lib/site.js">`, first in `<head>`
-* the wordmark in the topbar, written exactly as Strawberry has it: `<div class="brand lab-brand chrome-title">`, then `<a class="mark">`, then `.brand-title` with the `<h1>`. `site.js` turns the mark into the lesson menu
-* `../lab.css`, then the lab's own `styles.css`; the Phosphor icon CSS
-* the import map. Import maps can't be shared, so every lab carries its own:
+Copy `lab/strawberry/` to `lab/<name>/` and rename the page `<name>-lab.html`. **The page holds only what is this lab's**; `lab/page.js` writes everything every lab shares, so a change to the chrome or the three.js version is one edit:
 
 ```html
-<script type="importmap">
-  { "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
-  } }
-</script>
+<head>
+  <meta charset="utf-8">
+  <script defer src="/demos/lib/site.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Strawberry DNA</title>                 <!-- also the topbar's title -->
+  <script src="../page.js"></script>           <!-- import map, fonts, icons, lab.css -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- the lab's own backgrounds and panels, if any -->
+    <div class="lab-info" hidden>…kicker, h2, paragraphs…</div>   <!-- becomes the info modal -->
+    <div class="lab-intro">…kicker, h2, p, .keys…</div>           <!-- becomes the intro card -->
+  </div>
+  <script>LabPage.chrome()</script>
+  <script type="module" async src="intro-art.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
 ```
+
+`LabPage.chrome()` adds the canvas, the topbar with the wordmark (`site.js` turns it into the lesson menu), the procedure panel, the modal and the intro frame; `zoom.js` adds the zoom circles. Never write those into a page. A chrome element every lab needs goes in `page.js`.
 
 Pick the accent on the root: `<html lang="en" data-lab-theme="teal">`. The themes are in `lab/themes.html`, and the lab's CSS uses the `--accent*` tokens, never hex, for anything themed (README, "Colour themes").
 
@@ -28,11 +37,12 @@ Pick the accent on the root: `<html lang="en" data-lab-theme="teal">`. The theme
 
 ```js
 import * as THREE from 'three';
-import { V3, createStage, createMaterials, createInteraction, createLesson,
-         createFollowCam, disposeTree, makeBench, makeBeaker, moveTo } from '../lab.js';
+import { V3, createStage, createMaterials, createInteraction, createLesson, createFollowCam,
+         chromeInsets, bindChrome, disposeTree, makeBench, makeBeaker, moveTo } from '../lab.js';
 
 const stage = createStage({ canvas: document.getElementById('scene'),
-  views: { bench: { t: V3(0, 4, 0), p: V3(0, 40, 60) } } });
+  views: { bench: { t: V3(0, 4, 0), p: V3(0, 40, 60) } },
+  insets: (w, h) => chromeInsets(w, h) });
 const mat = createMaterials(stage);
 
 let root, B;
@@ -63,6 +73,7 @@ const ix = createInteraction(stage, { targets: lesson.targets, busy: lesson.isBu
                                       markerStyle: 'circle' });
 const follow = createFollowCam(stage, ix, { acting: lesson.acting });
 stage.onFrame((dt) => { lesson.update(dt); follow.update(dt); ix.update(); });
+bindChrome({ stage, restart: () => lesson.restart(), expose: { get B() { return B; }, lesson, stage } });
 lesson.start();
 stage.start();
 ```
@@ -100,20 +111,20 @@ Going back or jumping ahead calls `rebuild()`, replays the earlier clicks instan
 
 ## 5. The intro card
 
-Its markup is in the page (the header of `lab/intro.js`), so it shows at once while the bench loads: a kicker, a title with one `<em>` word, a short paragraph and three `.keys`, the ideas the lab is about. Call `createIntro(stage, { art })` near the end of `main.js`.
+Its text is the page's `.lab-intro`, framed by `page.js` before any module loads, so it shows at once while the bench loads: a kicker, a title with one `<em>` word, a short paragraph and three `.keys`, the ideas the lab is about. The Start button is added for you; a `.intro-art` inside `.lab-intro` replaces the default empty one (Ecoli's plasmid). Call `createIntro(stage, { art })` near the end of `main.js`.
 
 * Start the art from a small `intro-art.js`, loaded `<script type="module" async>` before `main.js`, so it shows before the library has loaded. `createPropArt(box, (mat) => makeStrawberry(mat).group)` turns any prop.
 * The opening camera move waits for Start: in `onEnter`, the first step does `intro.started.then(() => stage.focus(step.view, 2.2))`.
 
 ## 6. Zoom levels, if the bench needs explaining
 
-`createZoom(stage, { levels: [{ key: 'cell', world, name, meta, bg }], getT, getStep })`. A world is the lab's own scene, in its folder (`strawberry/cell.js`); its shape is the header of `lab/zoom.js`. The page gives one `.zoom-inset` circle per level you're not looking at, and the lab's CSS sets `.bg-<key>`.
+`createZoom(stage, { levels: [{ key: 'cell', world, name, meta, bg }], getT, getStep })`. A world is the lab's own scene, in its folder (`strawberry/cell.js`); its shape is the header of `lab/zoom.js`. `zoom.js` makes the circles and the per-level backgrounds; the lab's CSS only colours `.bg-<key>`.
 
 **Every level shows the same moment.** Pose bench, cell and molecule from one number (Strawberry's clock `S.t`, animated between resting points with `anim()`), or have the world ease toward a stage the bench sets (Ecoli's `S.micro`). Either way replay needs no extra code. A world whose background changes with the bench (Ecoli's UV) returns `insetBg(bg)` so its circle follows.
 
 ## 7. The camera
 
-* `insets(w, h)`, passed to `createStage`, says how much of the screen the UI covers. Measure the real elements: the top of the card, captions or timeline (whichever is higher; a hidden one counts as 0) and the procedure panel's width. `.lab-captions` keeps a fixed height, so the camera doesn't shift per caption.
+* `insets: (w, h) => chromeInsets(w, h)`, passed to `createStage`, measures the standard chrome so views centre in the free area. A lab with panels of its own passes extras (`chromeInsets(w, h, { bottom: ['.data-panel'] })`) or adjusts the result; Photosynthesis's observation step is the example.
 * The card's height changes per step: call `stage.resize()` in `onEnter`.
 * Watch mode's camera takes `rig: { t, p }` (the one default zoom) and `special: [...]`, the view names allowed to zoom in, as `createFollowCam` options. Everything else only pans (README, "Watch camera").
 

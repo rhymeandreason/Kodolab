@@ -83,6 +83,8 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | `follow.js` | Watch mode's camera | new |
 | `zoom.js` | zoom levels: live circles, lens transition, a camera and labels per level | Strawberry |
 | `intro.js` | the intro card, and `createPropArt` (a prop turning on its own renderer) | Ecoli |
+| `page.js` | the page around a lab: head (import map, fonts, icons, lab.css) and chrome (topbar, procedure panel, info modal, intro frame), so a lab page holds only its content | new |
+| `chrome.js` | `chromeInsets` (the camera's free area) and `bindChrome` (view and restart buttons, `window.LAB`) | new |
 | `core/liquid.js` | the liquid in every container | new, merging three versions |
 | `core/labels.js` | label drawers: tape, band, card | Photosynthesis, plus the jar and bottle labels |
 | `core/random.js` | `rand()`/`gauss()` for the lesson, plus `seeded(seed)`, a fixed stream for props whose look is set by a seed | Photosynthesis, Strawberry |
@@ -94,7 +96,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 
 ## Upgrading three.js
 
-Everything is pinned to r128, the same as the original labs. To upgrade, change the import map in each lab and in the benches, then:
+Everything is pinned to r128, the same as the original labs. To upgrade, change `THREE_VERSION` in `page.js` (every lab and bench reads its import map from there), then:
 
 * `materials.js`: the glass shader hooks `#include <output_fragment>`, which became `opaque_fragment` in r154.
 * `core/stage.js` and `core/canvas.js`: `outputEncoding`/`sRGBEncoding` became `outputColorSpace`/`SRGBColorSpace`. Lights use physical units from r155, so retune them. Colour management is on by default, so hex colours will shift. Check every lab against the gallery.

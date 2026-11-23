@@ -4,13 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lab Props</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
-  <link rel="stylesheet" href="lab.css">
+  <script src="page.js"></script>  <!-- import map, fonts, icons, lab.css -->
   <style>
     .catalog { top: 76px; left: var(--gutter); width: 300px; max-height: calc(100% - 96px); overflow: auto; padding-bottom: 10px; }
     .catalog ul { list-style: none; margin: 0; padding: 0 8px 4px; }
@@ -20,12 +14,6 @@
     .catalog h3 { margin: 10px 18px 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
     @media (max-width: 820px) { .catalog { top: auto; bottom: var(--gutter); right: var(--gutter); width: auto; max-height: 38%; } }
   </style>
-  <script type="importmap">
-    { "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
-    } }
-  </script>
 </head>
 <body>
   <div id="app">

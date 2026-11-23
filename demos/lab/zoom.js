@@ -21,14 +21,42 @@
  *   fov?, near?, far?, minDist?, maxDist?, insetBg?(bg) → THREE.Color }.
  * insetBg tints the level's circle from its `bg` (Ecoli's cell goes dark with the room lights).
  *
- * The page provides one `.zoom-inset` button per level you're not looking at
- * (levels.length of them, each with .zi-ring and .zi-cap > .zi-dir/.zi-name/.zi-meta),
- * #zoomLens and #zoomLabels; lab.css styles them. Backgrounds per level are the
- * sim's: .bg-<key> on .scale-bg and .zoom-lens. Keys 1, 2, 3 … switch levels.
+ * It builds its own DOM: one `.zoom-inset` circle per level you're not looking at, in
+ * #zoomInsets, and a `.scale-bg.bg-<key>` behind the canvas per level. page.js makes #zoomLens
+ * and #zoomLabels; lab.css styles all of it. The level's background colour is the lab's CSS:
+ * `.bg-<key>` on .scale-bg and .zoom-lens. Keys 1, 2, 3 … switch levels.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { clamp, lerp, Ease } from './core/math.js';
+
+/* The circles and the per-level backgrounds, made here so a lab page doesn't carry them.
+ * The circles' captions are filled by refreshInsets(); body.has-zoom lets lab.css centre the
+ * instruction card between the procedure panel and the circles. */
+function buildDom(keys) {
+  const app = document.getElementById('app') || document.body;
+  const canvas = document.getElementById('scene');
+  for (const k of keys) {
+    if (app.querySelector(`.scale-bg.bg-${k}`)) continue;
+    const bg = document.createElement('div');
+    bg.className = `scale-bg bg-${k}`;
+    app.insertBefore(bg, canvas);
+  }
+  let box = document.getElementById('zoomInsets');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'zoom-insets'; box.id = 'zoomInsets';
+    const after = document.getElementById('stepsPanel');
+    app.insertBefore(box, after ? after.nextSibling : null);
+  }
+  for (let i = box.querySelectorAll('.zoom-inset').length; i < keys.length; i++) {
+    const b = document.createElement('button');
+    b.className = 'zoom-inset';
+    b.innerHTML = '<span class="zi-ring"></span><span class="zi-cap"><span class="zi-dir"></span><span class="zi-name"></span><span class="zi-meta"></span></span>';
+    box.appendChild(b);
+  }
+  document.body.classList.add('has-zoom');
+}
 
 export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, lab = {} }) {
   const ORDER = ['lab', ...levels.map((l) => l.key)];
@@ -37,6 +65,7 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
   const DEEP = ORDER.slice(1);
   const { renderer, canvas } = stage;
   const $ = (s) => document.querySelector(s);
+  buildDom(DEEP);
   let active = 'lab';
   let transition = null;
   let time = 0;

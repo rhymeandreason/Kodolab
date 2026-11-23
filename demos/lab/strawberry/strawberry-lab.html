@@ -18,87 +18,37 @@
 <meta property="og:description" content="Extract DNA from a strawberry in a 3D virtual lab: mash, add soap and salt, filter, and pull the DNA out with cold alcohol, with live views of the cell and the molecules.">
 <meta name="twitter:card" content="summary">
 <!-- /seo -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
-  <link rel="stylesheet" href="../lab.css">
+  <script src="../page.js"></script>  <!-- import map, fonts, icons, lab.css -->
   <link rel="stylesheet" href="styles.css">
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
-      }
-    }
-  </script>
 </head>
 <body>
   <div id="app">
-    <div class="scale-bg bg-cell"></div>
-    <div class="scale-bg bg-mol"></div>
-    <canvas id="scene"></canvas>
-    <div id="zoomLens" class="zoom-lens" aria-hidden="true"></div>
-    <div id="zoomLabels" aria-hidden="true"></div>
-
-    <header class="topbar">
-      <div class="brand lab-brand chrome-title">
-        <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
-        <div class="brand-title">
-          <h1>Strawberry DNA</h1>
-        </div>
-      </div>
-      <div class="top-actions">
-        <button class="icon-btn" id="btnView" title="Reset view"><i class="ph ph-crosshair-simple"></i></button>
-        <button class="icon-btn" id="btnInfo" title="About this experiment"><i class="ph ph-info"></i></button>
-        <button class="icon-btn" id="btnRestart" title="Restart lab"><i class="ph ph-arrow-counter-clockwise"></i></button>
-      </div>
-    </header>
-
-    <aside class="panel steps-panel" id="stepsPanel"></aside>
-
-    <!-- the two zoom levels you're not looking at, live (zoom.js draws them) -->
-    <div class="zoom-insets" id="zoomInsets">
-      <button class="zoom-inset" data-scale="cell"><span class="zi-ring"></span><span class="zi-cap"><span class="zi-dir">Zoom in</span><span class="zi-name">Cell</span><span class="zi-meta">≈ 100 µm</span></span></button>
-      <button class="zoom-inset" data-scale="mol"><span class="zi-ring"></span><span class="zi-cap"><span class="zi-dir">Zoom in</span><span class="zi-name">Molecule</span><span class="zi-meta">≈ 10 nm</span></span></button>
+    <div class="lab-info" hidden>
+      <div class="modal-kicker"><i class="ph-fill ph-dna"></i>About the experiment</div>
+      <h2>How do you see DNA?</h2>
+      <p>One DNA molecule is far too thin to see. But a strawberry has a lot of it: every cell carries <b>eight copies</b> of each chromosome. Free enough of it and clump it together, and you can hold it on a stick.</p>
+      <ol class="info-list">
+        <li><span>1</span><div><b>Break the cells open.</b> Mashing tears the cellulose cell walls. Soap dissolves the fatty membranes around each cell and its nucleus, so the DNA spills out.</div></li>
+        <li><span>2</span><div><b>Strip and shield it.</b> Na<sup>+</sup> from the salt pulls proteins off the DNA and cancels the negative charge on its backbone.</div></li>
+        <li><span>3</span><div><b>Filter.</b> The coffee filter keeps pulp, seeds and cell walls out. DNA stays dissolved in the pink liquid.</div></li>
+        <li><span>4</span><div><b>Precipitate.</b> DNA can't dissolve in cold alcohol, so the strands clump together into white threads where the layers meet.</div></li>
+      </ol>
+      <p class="muted"><i class="ph ph-magnifying-glass-plus"></i> Click the circles on the right to zoom into a cell or the molecules. All three views show the same moment.</p>
+      <p class="muted"><i class="ph ph-mouse-left-click"></i> Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan · keys 1 2 3 switch levels</p>
     </div>
 
-    <div class="modal" id="infoModal" hidden>
-      <div class="modal-card">
-        <button class="icon-btn modal-close" id="btnCloseInfo" title="Close"><i class="ph ph-x"></i></button>
-        <div class="modal-kicker"><i class="ph-fill ph-dna"></i>About the experiment</div>
-        <h2>How do you see DNA?</h2>
-        <p>One DNA molecule is far too thin to see. But a strawberry has a lot of it: every cell carries <b>eight copies</b> of each chromosome. Free enough of it and clump it together, and you can hold it on a stick.</p>
-        <ol class="info-list">
-          <li><span>1</span><div><b>Break the cells open.</b> Mashing tears the cellulose cell walls. Soap dissolves the fatty membranes around each cell and its nucleus, so the DNA spills out.</div></li>
-          <li><span>2</span><div><b>Strip and shield it.</b> Na<sup>+</sup> from the salt pulls proteins off the DNA and cancels the negative charge on its backbone.</div></li>
-          <li><span>3</span><div><b>Filter.</b> The coffee filter keeps pulp, seeds and cell walls out. DNA stays dissolved in the pink liquid.</div></li>
-          <li><span>4</span><div><b>Precipitate.</b> DNA can't dissolve in cold alcohol, so the strands clump together into white threads where the layers meet.</div></li>
-        </ol>
-        <p class="muted"><i class="ph ph-magnifying-glass-plus"></i> Click the circles on the right to zoom into a cell or the molecules. All three views show the same moment.</p>
-        <p class="muted"><i class="ph ph-mouse-left-click"></i> Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan · keys 1 2 3 switch levels</p>
-      </div>
-    </div>
-
-    <div class="intro" id="intro">
-      <div class="intro-card">
-        <div class="intro-art"></div>
-        <div>
-          <div class="modal-kicker"><i class="ph-fill ph-dna"></i>Interactive 3D lab</div>
-          <h2>Pull <em>DNA</em> out of a strawberry</h2>
-          <p>Every living thing keeps its instructions in <b>DNA</b>. One molecule is far too thin to see, but a strawberry holds so much of it that you can free it from the cells and lift it out on a stick.</p>
-          <ul class="keys">
-            <li><i style="--c:#38bdf8"></i><span><b>Soap</b> breaks open the membranes around each cell and nucleus</span></li>
-            <li><i style="--c:#94a3b8"></i><span><b>Salt</b> pulls proteins off the DNA</span></li>
-            <li><i style="--c:#6366f1"></i><span><b>Cold alcohol</b> makes the DNA clump into white threads</span></li>
-          </ul>
-          <button class="btn intro-start" id="startBtn">Start the experiment <i class="ph-bold ph-arrow-right"></i></button>
-        </div>
-      </div>
+    <div class="lab-intro">
+      <div class="modal-kicker"><i class="ph-fill ph-dna"></i>Interactive 3D lab</div>
+      <h2>Pull <em>DNA</em> out of a strawberry</h2>
+      <p>Every living thing keeps its instructions in <b>DNA</b>. One molecule is far too thin to see, but a strawberry holds so much of it that you can free it from the cells and lift it out on a stick.</p>
+      <ul class="keys">
+        <li><i style="--c:#38bdf8"></i><span><b>Soap</b> breaks open the membranes around each cell and nucleus</span></li>
+        <li><i style="--c:#94a3b8"></i><span><b>Salt</b> pulls proteins off the DNA</span></li>
+        <li><i style="--c:#6366f1"></i><span><b>Cold alcohol</b> makes the DNA clump into white threads</span></li>
+      </ul>
     </div>
   </div>
+  <script>LabPage.chrome()</script>
 
   <script type="module" async src="intro-art.js"></script>
   <script type="module" src="main.js"></script>

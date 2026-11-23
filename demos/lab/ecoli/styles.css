@@ -52,16 +52,6 @@ body.uv .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%
 }
 .uv-toggle:hover { background: #000; }
 
-/* ---------- info modal ---------- */
-.info-list { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
-.info-list li { display: flex; gap: 12px; }
-.info-list li > span {
-  width: 24px; height: 24px; border-radius: 8px; flex: none;
-  display: grid; place-items: center;
-  background: var(--accent-soft); color: var(--accent-ink);
-  font-weight: 700; font-size: 12.5px;
-}
-
 /* ---------- intro art: the spinning plasmid (intro.js); the card itself is in lab.css ---------- */
 .intro-card { --intro-em: linear-gradient(90deg, #16a34a, #22c55e); }
 .plasmid3d { position: relative; width: 100%; aspect-ratio: 1 / 1; }
@@ -76,10 +66,9 @@ body.uv .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%
 }
 .plab sup { font-size: 8px; }
 
-/* the card sits between the procedure list and the circle */
+/* the results need a wider complete card (the card's position is lab.css's body.has-zoom) */
 @media (min-width: 821px) {
-  .lab-card { width: min(480px, calc(100% - 300px - 200px - var(--gutter) * 2)); left: calc(300px + (100% - 300px - 200px) / 2); }
-  .lab-card.complete { width: min(760px, calc(100% - 300px - 200px - var(--gutter) * 2)); }
+  body.has-zoom .lab-card.complete { width: min(760px, calc(100% - 300px - 200px - var(--gutter) * 2)); }
 }
 @media (max-width: 1100px) { .results { grid-template-columns: repeat(2, 1fr); } }
 /* the four plates deal in after the card arrives (lab.css's .arrive) */

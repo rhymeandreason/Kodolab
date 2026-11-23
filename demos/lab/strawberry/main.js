@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import {
   V3, lerp, Ease, anim, newSession, disposeTree, toast, isInstant,
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, cues, createZoom,
-  createIntro,
+  createIntro, chromeInsets, bindChrome,
 } from '../lab.js';
 import { buildBench } from './bench.js';
 import { createCell } from './cell.js';
@@ -43,18 +43,7 @@ const stage = createStage({
   canvas: $('#scene'),
   views: VIEWS,
   controls: { minDistance: 8, maxDistance: 140 },
-  insets: (w, h) => {
-    // bottom: the instruction card, captions or timeline, whichever is higher (hidden ones don't count)
-    const tops = ['.lab-card', '.lab-captions', '.lab-timeline'].map((q) => document.querySelector(q))
-      .map((el) => el && el.getBoundingClientRect()).filter((r) => r && r.height).map((r) => r.top);
-    const bottom = tops.length ? h - Math.min(...tops) : 0;
-    if (w > 820) {
-      const z = $('#zoomInsets').getBoundingClientRect();
-      const panel = $('#stepsPanel').getBoundingClientRect(); // hidden in Watch mode
-      return { left: panel.width ? panel.right + 20 : 0, right: w - z.left + 10, bottom };
-    }
-    return { top: 60, bottom };
-  },
+  insets: (w, h) => chromeInsets(w, h),
 });
 const mat = createMaterials(stage);
 
@@ -325,20 +314,11 @@ stage.onFrame((dt, now) => {
   ix.update();
 });
 
-$('#btnView').addEventListener('click', () => {
-  if (zoom.scale === 'lab') stage.focus(stage.lastView); else zoom.onStep();
-});
-$('#btnRestart').addEventListener('click', restart);
-$('#btnInfo').addEventListener('click', () => { $('#infoModal').hidden = false; });
-$('#btnCloseInfo').addEventListener('click', () => { $('#infoModal').hidden = true; });
-$('#infoModal').addEventListener('click', (e) => { if (e.target.id === 'infoModal') $('#infoModal').hidden = true; });
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#infoModal').hidden = true; });
 
-// debug / testing hook
 // the intro card (its strawberry is started early by intro-art.js)
 const intro = createIntro(stage);
 
-window.LAB = { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, STEPS, intro };
+bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, STEPS, intro } });
 
 stage.focus(VIEWS.overview, 0);
 lesson.start();

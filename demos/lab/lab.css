@@ -451,6 +451,22 @@ html, body {
   .intro-card h2 { font-size: 26px; }
 }
 
+/* ---------- info modal's numbered list ---------- */
+.info-list { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
+.info-list li { display: flex; gap: 12px; }
+.info-list li > span {
+  width: 24px; height: 24px; border-radius: 8px; flex: none;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent-ink);
+  font-weight: 700; font-size: 12.5px;
+}
+
+/* a lab with zoom circles (zoom.js sets body.has-zoom): the card sits between the
+   procedure list and the circles */
+@media (min-width: 821px) {
+  body.has-zoom .lab-card { width: min(480px, calc(100% - 300px - 200px - var(--gutter) * 2)); left: calc(300px + (100% - 300px - 200px) / 2); }
+}
+
 /* ---------- responsive ---------- */
 @media (max-width: 820px) {
   :root { --gutter: 12px; --timeline-h: 58px; }

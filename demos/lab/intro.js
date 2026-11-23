@@ -1,12 +1,13 @@
-/* The intro card every lab opens with (from Ecoli). It is in each sim's index.html, so it
- * shows at once while three.js and the bench load, and it stands in for a loading screen:
+/* The intro card every lab opens with (from Ecoli). page.js frames the page's .lab-intro into
+ * it during parsing, so it shows at once while three.js and the bench load, and it stands in
+ * for a loading screen:
  * the Start button waits ("Setting up the bench…") until the first frame has drawn.
  *
  *   createIntro(stage, {
  *     art: (box) => createPropArt(box, (mat) => makeStrawberry(mat, { calyx: true }).group),
  *   });
  *
- * Markup (styles in lab.css):
+ * The markup page.js builds (styles in lab.css):
  *   <div class="intro" id="intro"><div class="intro-card">
  *     <div class="intro-art"></div>
  *     <div>
@@ -21,7 +22,7 @@
  *
  * art(box) draws into .intro-art and returns { stop } (called when the card closes).
  * To show the art sooner, start it from its own small module, loaded before main.js, so it
- * doesn't wait for the whole library and the bench (sims/Strawberry/intro-art.js):
+ * doesn't wait for the whole library and the bench (strawberry/intro-art.js):
  *   <script type="module" async src="intro-art.js"></script>
  *   // intro-art.js
  *   const box = document.querySelector('.intro-art');

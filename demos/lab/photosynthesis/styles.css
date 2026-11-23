@@ -54,14 +54,6 @@
 .result p { margin: 8px 0 12px; }
 
 /* ---------- info modal ---------- */
-.info-list { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
-.info-list li { display: flex; gap: 12px; }
-.info-list li > span {
-  width: 24px; height: 24px; border-radius: 8px; flex: none;
-  display: grid; place-items: center;
-  background: var(--accent-soft); color: var(--accent-ink);
-  font-weight: 700; font-size: 12.5px;
-}
 .equation {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   margin: 14px 0; padding: 12px; border-radius: 12px;
