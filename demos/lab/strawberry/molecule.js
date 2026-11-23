@@ -235,7 +235,8 @@ export function createMolecule(env) {
 
   /* ---------- update ---------- */
   const qI = new THREE.Quaternion();
-  let spin = 0, lastTime = 0;
+  let spin = 0, spoolSpin = 0, lastTime = 0;
+  const X = V(1, 0, 0), qSpin = new THREE.Quaternion();
   function update(t, time) {
     // DNA spin + bundle
     const ionBind = ph(t, 2.6, 2.95);
@@ -259,28 +260,33 @@ export function createMolecule(env) {
       tmp.lerpVectors(o.far, o.free, enter);
       tmp.y += Math.sin(time * 0.5 + o.p) * 0.6;
       tmp.x += Math.cos(time * 0.4 + o.p) * 0.6;
-      o.h.group.position.lerpVectors(tmp, o.bundle, k);
+      // bundled, a strand turns rigidly with the main helix: same spin about x, its slot carried round
+      qSpin.setFromAxisAngle(X, spin);
+      o.h.group.position.lerpVectors(tmp, tmp2.copy(o.bundle).applyQuaternion(qSpin), k);
       tmpQ.setFromAxisAngle(o.axis, time * 0.12 + o.p).multiply(o.q0);
-      o.h.group.quaternion.copy(tmpQ).slerp(qI, k);
-      if (k > 0) o.h.group.rotation.x += time * 0.12 * k;
+      o.h.group.quaternion.copy(tmpQ).slerp(qSpin, k);
     });
-    dnaRoot.rotation.set(spool * time * 0.35, 0, spool * 0.35);
+    spoolSpin += dt * 0.35 * spool;
+    dnaRoot.rotation.set(spoolSpin, 0, spool * 0.35);
     dnaRoot.position.y = -spool * 0.5;
+    // lifted out on the skewer: everything still dissolved falls away below the DNA
+    const lift = ph(t, 5.72, 6.0);
+    const drop = lift * 30;
 
     // histones release (salt) and drift away
     const hr = ph(t, 2.55, 2.95);
     histones.forEach((h) => {
       h.g.position.lerpVectors(h.home, h.away, hr);
-      h.g.position.y += Math.sin(time * 0.6 + h.p) * 0.3 * hr;
+      h.g.position.y += Math.sin(time * 0.6 + h.p) * 0.3 * hr - drop;
       h.g.quaternion.setFromAxisAngle(h.axis, (time * 0.2 + h.p) * hr).multiply(h.q);
     });
-    Object.values(histMats).forEach((m) => { m.opacity = 1 - 0.45 * hr; });
+    Object.values(histMats).forEach((m) => { m.opacity = (1 - 0.45 * hr) * (1 - lift); });
 
     // bilayer → micelles
     const micOut = ph(t, 2.8, 4.6);
     micelles.forEach((m) => {
       m.c.copy(m.c0).addScaledVector(m.drift, micOut * 3);
-      m.c.y += Math.sin(time * 0.5 + m.p) * 0.3;
+      m.c.y += Math.sin(time * 0.5 + m.p) * 0.3 - drop;
     });
     const rotY = time * 0.25;
     for (let i = 0; i < lipids.length; i++) {
@@ -335,14 +341,15 @@ export function createMolecule(env) {
     // water + alcohol
     water.rotation.y = time * 0.01;
     water.rotation.x = Math.sin(time * 0.05) * 0.05;
-    waterMat.opacity = 0.5 - 0.3 * ph(t, 4.3, 4.8);
+    waterMat.opacity = (0.5 - 0.3 * ph(t, 4.3, 4.8)) * (1 - lift);
+    water.position.y = -drop;
     const alcIn = ph(t, 4.05, 4.6);
     alc.visible = alcIn > 0.001;
     for (let i = 0; i < NALC; i++) {
       const a = alcData[i];
       const k = ph(t, 4.05 + a.delay * 0.15, 4.45 + a.delay * 0.15);
       tmp.lerpVectors(a.from, a.p, k);
-      tmp.y += Math.sin(time * a.sp + i) * 0.4;
+      tmp.y += Math.sin(time * a.sp + i) * 0.4 - drop;
       tmpQ.setFromAxisAngle(a.axis, time * a.sp).multiply(a.q);
       tmpM.compose(tmp, tmpQ, tmpS.setScalar(k > 0.001 ? 1 : 0));
       alc.setMatrixAt(i, tmpM);
@@ -360,13 +367,15 @@ export function createMolecule(env) {
     { text: 'Histone proteins', sub: 'DNA wraps around them', anchor: () => histones[1].g.position.clone().add(V(0, -3.4, 0)), show: (t) => t < 2.55 },
     { text: 'Membrane', sub: 'phospholipid bilayer', anchor: () => V(-6, BY + 2, 3.2), show: (t) => t < 2.3 },
     { text: 'Detergent (soap)', anchor: () => instPos(dHeads, 5), show: (t) => t >= 2.08 && t < 2.4 },
-    { text: 'Micelle', sub: 'soap + lipids', anchor: () => micelles[1].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 2.72 && t < 3.6 },
+    { text: 'Micelle', sub: 'soap + lipids', anchor: () => micelles[1].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 2.72 && t < 3.15 },
     { text: 'Na⁺ ions', sub: 'shield negative phosphates', anchor: () => instPos(ions, 20), show: (t) => t >= 2.85 && t < 3.9 },
-    { text: 'Proteins drift away', anchor: () => histones[0].g.position.clone(), show: (t) => t >= 2.9 && t < 3.4 },
-    { text: 'DNA unwinds', sub: 'free of its proteins', anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair)), show: (t) => t >= 2.95 && t < 3.6 },
+    { text: 'Proteins drift away', anchor: () => histones[0].g.position.clone(), show: (t) => t >= 2.9 && t < 3.15 },
+    { text: 'Everything here passes the filter', sub: 'its pores are thousands of times wider', anchor: () => micelles[2].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 3.15 && t < 3.55 },
+    { text: 'DNA unwinds', sub: 'free of its proteins', anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair)), show: (t) => t >= 2.95 && t < 3.15 },
     { text: 'DNA from many cells', anchor: () => others[1].h.group.position.clone(), show: (t) => t >= 3.6 && t < 4.3 },
     { text: 'Alcohol', anchor: () => instPos(alc, 7), show: (t) => t >= 4.45 && t < 4.9 },
-    { text: 'Strands stick together', sub: 'and precipitate', anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 4.85 },
+    { text: 'Strands stick together', sub: 'and precipitate', anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 4.85 && t < 5.78 },
+    { text: 'Lifted out of the liquid', sub: 'proteins, soap and lipids stay behind', anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 5.78 },
   ];
 
   const interactives = [
