@@ -170,6 +170,21 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
     return { el, rt, quad, mat, size: 0 };
   });
   const others = () => ORDER.filter((k) => k !== active);
+  /* On r155+ a circle (a linear render target) and the full screen are different shader
+     variants, so the first time a level fills the screen, or the bench shrinks into a circle,
+     every material compiles then: a stall of most of a second. Compile both up front, in the
+     background where the browser can (KHR_parallel_shader_compile). */
+  function warm() {
+    if (LEGACY || !renderer.compileAsync) return;
+    const prev = renderer.getRenderTarget();
+    ORDER.forEach((k) => {
+      const w = worlds[k];
+      renderer.setRenderTarget(null); renderer.compileAsync(w.scene, w.camera);
+      renderer.setRenderTarget(insets[0].rt); renderer.compileAsync(w.scene, w.insetCam);
+    });
+    renderer.setRenderTarget(prev);
+  }
+  stage.onFirstFrame(warm);
   function refreshInsets() {
     const ai = ORDER.indexOf(active);
     others().forEach((k, i) => {
