@@ -34,6 +34,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { clamp, lerp, Ease } from './core/math.js';
+import { LEGACY } from './core/three-compat.js';
 import { UI, fmt } from './text.js';
 
 /* The circles and the per-level backgrounds, made here so a lab page doesn't carry them.
@@ -127,7 +128,12 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
   /* ---------- the circles: render-to-texture, drawn as discs over the canvas ---------- */
   const overlayScene = new THREE.Scene();
   const overlayCam = new THREE.OrthographicCamera(0, 1, 1, 0, -1, 1);
+  /* r155+ neither tone-maps nor encodes into a render target, so a level is drawn linear (half
+     float) on a clear background and the disc does both, then lays the level's flat colour
+     behind: tone mapping the background too would shift it off the CSS one. r128 does it all
+     in the target. */
   function makeRT(size) {
+    if (!LEGACY) return new THREE.WebGLRenderTarget(size, size, { type: THREE.HalfFloatType, samples: 4 });
     const opts = { format: THREE.RGBAFormat, encoding: THREE.sRGBEncoding };
     const rt = renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget
       ? new THREE.WebGLMultisampleRenderTarget(size, size, opts)
@@ -136,12 +142,23 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
     rt.texture.encoding = THREE.sRGBEncoding;
     return rt;
   }
+  const DISC = LEGACY
+    ? 'uniform sampler2D map; uniform float uFade; varying vec2 vUv; void main(){ float d = length(vUv - 0.5) * 2.0; float a = 1.0 - smoothstep(0.975, 1.0, d); vec4 c = texture2D(map, vUv); gl_FragColor = vec4(c.rgb, a * uFade); }'
+    : `uniform sampler2D map; uniform float uFade; uniform vec3 uBg; varying vec2 vUv;
+      void main(){
+        float d = length(vUv - 0.5) * 2.0; float a = 1.0 - smoothstep(0.975, 1.0, d);
+        vec4 c = texture2D(map, vUv);
+        gl_FragColor = vec4(c.rgb / max(c.a, 1e-4), 1.0);   // the target's colour is premultiplied by coverage
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        gl_FragColor = vec4(mix(uBg, gl_FragColor.rgb, clamp(c.a, 0.0, 1.0)), a * uFade);
+      }`;
   const insets = [...document.querySelectorAll('.zoom-inset')].map((el) => {
     const rt = makeRT(256);
     const mat = new THREE.ShaderMaterial({
-      uniforms: { map: { value: rt.texture }, uFade: { value: 1 } },
+      uniforms: { map: { value: rt.texture }, uFade: { value: 1 }, uBg: { value: new THREE.Color() } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'uniform sampler2D map; uniform float uFade; varying vec2 vUv; void main(){ float d = length(vUv - 0.5) * 2.0; float a = 1.0 - smoothstep(0.975, 1.0, d); vec4 c = texture2D(map, vUv); gl_FragColor = vec4(c.rgb, a * uFade); }',
+      fragmentShader: DISC,
       transparent: true, depthTest: false, depthWrite: false,
     });
     const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
@@ -365,10 +382,14 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
     others().forEach((k, i) => {
       const w = worlds[k], ins = insets[i];
       positionInsetCam(w);
-      const bg = w.scene.background;
-      w.scene.background = w.insetBg ? w.insetBg(w.bg) : w.bg;
+      const bg = w.scene.background, ibg = w.insetBg ? w.insetBg(w.bg) : w.bg;
+      if (LEGACY) w.scene.background = ibg;
+      else { w.scene.background = null; ins.mat.uniforms.uBg.value.copy(ibg); }
+      const clear = renderer.getClearColor(new THREE.Color()), clearA = renderer.getClearAlpha();
+      renderer.setClearColor(0x000000, 0);
       renderer.setRenderTarget(ins.rt);
       renderer.render(w.scene, w.insetCam);
+      renderer.setClearColor(clear, clearA);
       w.scene.background = bg;
     });
     renderer.setRenderTarget(null);

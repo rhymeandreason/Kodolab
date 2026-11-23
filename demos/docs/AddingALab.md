@@ -2,7 +2,7 @@
 
 # Adding a lab
 
-A lab is one experiment on a bench: the student clicks the equipment through the procedure, or watches it play. It lives in `lab/<name>/` and runs on `lab/`'s ES modules (three r128 on an import map), never on the classic-script stack the rest of `demos/` uses.
+A lab is one experiment on a bench: the student clicks the equipment through the procedure, or watches it play. It lives in `lab/<name>/` and runs on `lab/`'s ES modules (three r186 on an import map), never on the classic-script stack the rest of `demos/` uses.
 
 ## 1. Copy a lab
 

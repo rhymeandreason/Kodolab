@@ -10,7 +10,7 @@
  * Each quantity eases toward its value for the stage (from the original), so a
  * jump on the timeline settles in a second or two. Its look is fixed by a seed. */
 import * as THREE from 'three';
-import { clamp, smooth, Ease, seeded, T } from '../lab.js';
+import { clamp, smooth, Ease, seeded, T, LIGHT, DECAY } from '../lab.js';
 
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 
@@ -34,9 +34,9 @@ export function createCell(env) {
   const MBG = new THREE.Color('#f5f7fb'), MUV = new THREE.Color('#0a0820');
   const BG = MBG.clone(), IBG = new THREE.Color();
   scene.background = BG;
-  const hemi = new THREE.HemisphereLight('#ffffff', '#e3e6f3', 0.95); scene.add(hemi);
-  const dir = new THREE.DirectionalLight('#ffffff', 0.65); dir.position.set(3, 6, 7); scene.add(dir);
-  const uvLight = new THREE.PointLight('#7c3aed', 0, 30); uvLight.position.set(0, 6, 6); scene.add(uvLight);
+  const hemi = new THREE.HemisphereLight('#ffffff', '#e3e6f3', 0.95 * LIGHT); scene.add(hemi);
+  const dir = new THREE.DirectionalLight('#ffffff', 0.65 * LIGHT); dir.position.set(3, 6, 7); scene.add(dir);
+  const uvLight = new THREE.PointLight('#7c3aed', 0, 30, DECAY); uvLight.position.set(0, 6, 6); scene.add(uvLight);
   const GLOW = glowTexture();
   const dummy = new THREE.Object3D();
 
@@ -194,7 +194,7 @@ export function createCell(env) {
     shellOuter.material.uniforms.uColor.value.copy(tmpC); shellInner.material.uniforms.uColor.value.copy(tmpC).lerp(WHITE, 0.25);
     fillMat.color.copy(F_BASE).lerp(F_UV, M.uv).lerp(F_GFP, M.uv * M.gfp);
     BG.copy(MBG).lerp(MUV, M.uv);
-    hemi.intensity = 0.95 * (1 - 0.8 * M.uv); dir.intensity = 0.65 * (1 - 0.75 * M.uv); uvLight.intensity = 1.4 * M.uv;
+    hemi.intensity = 0.95 * LIGHT * (1 - 0.8 * M.uv); dir.intensity = 0.65 * LIGHT * (1 - 0.75 * M.uv); uvLight.intensity = 1.4 * LIGHT * M.uv;
     flagella.forEach((f, i) => { f.rotation.x += dt * (9 + i) * motion; });
 
     caMat.opacity = M.ca;

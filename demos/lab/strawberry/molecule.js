@@ -6,6 +6,7 @@
  * so this view and the protein benches agree. strawberry-lab.html loads all three
  * as classic scripts; Duplex and MolPalette are read by their global names. */
 import * as THREE from 'three';
+import { LIGHT } from '../core/three-compat.js';
 import { cueAt } from '../lesson.js';
 import { T as TEXT } from '../text.js';
 import { C, V, ph, win, clamp, lerp, rng, linear, easeOut, randDir, fibSphere, makeGlass, makeDissolve, makeTexture, dotTexture, mergeColored } from './util.js';
@@ -19,11 +20,11 @@ export function createMolecule(env) {
   const TX = TEXT.levels.mol;
   const scene = new THREE.Scene();
   scene.environment = env;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xe0e2ee, 0.7));
-  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xe0e2ee, 0.7 * LIGHT));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9 * LIGHT);
   key.position.set(-10, 18, 14);
   scene.add(key);
-  const back = new THREE.DirectionalLight(0xf0ecff, 0.4);
+  const back = new THREE.DirectionalLight(0xf0ecff, 0.4 * LIGHT);
   back.position.set(12, -8, -14);
   scene.add(back);
 

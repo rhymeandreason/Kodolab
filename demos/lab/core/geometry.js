@@ -8,8 +8,13 @@ export function mesh(geo, mat, { cast = true, receive = true } = {}) {
   return m;
 }
 
-/** Lathe from [[r, y], ...] pairs. */
-export const lathe = (pts, seg = 48) => new THREE.LatheGeometry(pts.map((p) => (p.isVector2 ? p : V2(p[0], p[1]))), seg);
+/** Lathe from [[r, y], ...] pairs. LatheGeometry leaves the last profile point's normal unnormalized,
+ *  which lights that ring too bright or dark, so normalize every one. */
+export const lathe = (pts, seg = 48) => {
+  const geo = new THREE.LatheGeometry(pts.map((p) => (p.isVector2 ? p : V2(p[0], p[1]))), seg);
+  geo.normalizeNormals();
+  return geo;
+};
 
 export function roundedRectShape(w, h, r) {
   const s = new THREE.Shape(); const x = -w / 2, y = -h / 2;

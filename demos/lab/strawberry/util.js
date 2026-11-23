@@ -2,6 +2,7 @@
  * lab (/Strawberry/js/utils.js). Sim-local: the bench uses Lab instead.
  * Colours here go through C(), which converts from sRGB like the original. */
 import * as THREE from 'three';
+import { srgb } from '../core/three-compat.js';
 
 export const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 export const lerp = (a, b, t) => a + (b - a) * t;
@@ -47,7 +48,7 @@ export function makeTexture(draw, w = 256, h = 256) {
   c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
   const tex = new THREE.CanvasTexture(c);
-  tex.encoding = THREE.sRGBEncoding;
+  srgb(tex);
   tex.anisotropy = 4;
   return tex;
 }

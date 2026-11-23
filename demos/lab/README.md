@@ -70,7 +70,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | Liquids | Every container with a liquid has `prop.liquid` from `core/liquid.js`: `setVolume(mL)`, `setLevel(cm)`, `setFraction(f)`, `setRange(f0, f1)` for layers, `setPour(k)` while tilting, `setColor`, `setCloud`, world-space `surfaceY()`. The container's inner wall profile sets the volume, and the surface stays level as it moves or tilts with no per-frame code. |
 | Ingredients | One look in every lab, from `props/ingredients.js`: `makeJar(mat, { ingredient: 'salt' })`. Baking soda is peach with an orange label, salt lilac with purple. |
 | Labels | `wrapLabel()` geometry drawn with `core/labels.js`: `tapeLabel` (lab tape), `bandLabel` (reagent bottles), `cardLabel` (consumer bottles). |
-| Colours | Raw hex: r128 has no colour management. The renderer outputs sRGB, so a raw hex renders lighter than in a picker; `toLinear('#9fcfae')` gives what you picked. Props default to real colours, not white, so things read apart on the bench. |
+| Colours | Raw hex: colour management is off (`core/three-compat.js`). The renderer outputs sRGB, so a raw hex renders lighter than in a picker; `toLinear('#9fcfae')` gives what you picked. Props default to real colours, not white, so things read apart on the bench. |
 | Draw order | Transparent `renderOrder`: liquid 1, stream 2, glass/plastic 3, rims 4, printed labels 5–6. Glass renders after the liquid inside it. |
 | Materials | Everything from `createMaterials` is shared (`userData.shared`): never mutate one. `mat.make.glass({...})`, `mat.make.liquid(color)`, `mat.make.solid`, `mat.make.standard({...})`, `mat.make.physical({...})` make your own copy, so a change in `materials.js` reaches every prop. Only unlit effects (light cones, screens) use `MeshBasicMaterial` directly. |
 
@@ -98,6 +98,6 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 
 ## Upgrading three.js
 
-Labs are pinned to r128 by `THREE_VERSION` in `page.js`. `props.html` runs r186.1 (`data-three` on its `page.js` tag); `?three=128` on any page overrides, to compare. `core/three-compat.js` holds every difference the shared modules hit (colour space, the ×π on lights, spot decay, the glass shader's chunk name) and keeps colour management off, so hex means the same on both. Still to port per lab: `zoom.js` and `intro.js` render targets (`encoding`), `strawberry/util.js` textures and shader hooks, Ecoli's UV point light. Then check every lab against the gallery and delete the compat file.
+Every lab and bench runs r186.1, pinned by `THREE_VERSION` in `page.js`. `?three=128` on any page loads r128 instead, to compare, and still works: `core/three-compat.js` holds every difference the labs hit (colour space, the ×π on lights, punctual decay, the glass shader's chunk name, render targets that are no longer tone mapped, and r163+ ignoring a material's `envMapIntensity` under `scene.environment`). It keeps colour management off, so a hex means the same on both. Once r128 is no longer worth comparing against, inline it and delete the file.
 
 `core/sketch.js` is the sketch outline: ink silhouettes and creases from a normal + depth pass, `stage.setRender(sketch.render)`. Prototyped in `props.html` (View → Sketch outline).

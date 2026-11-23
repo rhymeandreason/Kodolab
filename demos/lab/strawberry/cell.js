@@ -3,6 +3,7 @@
  * experiment clock t (0..6, one unit per original step), so the lesson can
  * replay and scrub it. */
 import * as THREE from 'three';
+import { LIGHT } from '../core/three-compat.js';
 import { cueAt } from '../lesson.js';
 import { T as TEXT } from '../text.js';
 import { C, V, ph, win, clamp, lerp, rng, linear, easeOut, randDir, fibSphere, makeGlass, makeDissolve, makeTexture, dotTexture, mergeColored } from './util.js';
@@ -13,11 +14,11 @@ export function createCell(env) {
   const TX = TEXT.levels.cell;
   const scene = new THREE.Scene();
   scene.environment = env;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xdfe7ee, 0.75));
-  const key = new THREE.DirectionalLight(0xffffff, 0.85);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xdfe7ee, 0.75 * LIGHT));
+  const key = new THREE.DirectionalLight(0xffffff, 0.85 * LIGHT);
   key.position.set(-8, 14, 12);
   scene.add(key);
-  const back = new THREE.DirectionalLight(0xfff0f4, 0.45);
+  const back = new THREE.DirectionalLight(0xfff0f4, 0.45 * LIGHT);
   back.position.set(10, -6, -12);
   scene.add(back);
 

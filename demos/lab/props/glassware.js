@@ -84,9 +84,6 @@ export function makeCup(mat, { label, sub, color = '#94a3b8', liquidColor = 0x5a
   rim.rotation.x = Math.PI / 2; rim.position.y = h; rim.renderOrder = 4;
   g.add(rim);
   const rAt = (y) => rb + (rt - rb) * (y / h);
-  const ridge = mesh(new THREE.TorusGeometry(rAt(h - 1.3) + 0.02, 0.035, 6, 64), mat.glassRim, { cast: false });
-  ridge.rotation.x = Math.PI / 2; ridge.position.y = h - 1.3; ridge.renderOrder = 4;
-  g.add(ridge);
   if (label) {
     const ly0 = 6.3, ly1 = 8.0;
     g.add(wrapLabel({

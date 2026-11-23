@@ -33,6 +33,7 @@
 import * as THREE from 'three';
 import { studioEnv } from './core/stage.js';
 import { createMaterials } from './materials.js';
+import { srgbOut, LIGHT } from './core/three-compat.js';
 
 export function createIntro(stage, { art = null, onStart = () => {} } = {}) {
   const el = document.getElementById('intro');
@@ -83,15 +84,15 @@ export function createPropArt(box, build, { tilt = 0.45, spin = 0.35, fill = 0.7
   const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
   r.setPixelRatio(Math.min(devicePixelRatio, 2));
   r.setClearColor(0, 0);
-  r.outputEncoding = THREE.sRGBEncoding;
+  srgbOut(r);
   r.toneMapping = THREE.ACESFilmicToneMapping;
   r.toneMappingExposure = 0.88;
   const sc = new THREE.Scene();
   // lit like the bench (core/stage.js): the same studio room, sky fill, sun and fill light
   sc.environment = studioEnv(r);
-  sc.add(new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.62));
-  const sun = new THREE.DirectionalLight(0xfffaf2, 0.78); sun.position.set(-35, 90, 50); sc.add(sun);
-  const fillL = new THREE.DirectionalLight(0xeaf2ff, 0.3); fillL.position.set(60, 40, 80); sc.add(fillL);
+  sc.add(new THREE.HemisphereLight(0xffffff, 0xc4ccd4, 0.62 * LIGHT));
+  const sun = new THREE.DirectionalLight(0xfffaf2, 0.78 * LIGHT); sun.position.set(-35, 90, 50); sc.add(sun);
+  const fillL = new THREE.DirectionalLight(0xeaf2ff, 0.3 * LIGHT); fillL.position.set(60, 40, 80); sc.add(fillL);
 
   const mat = createMaterials(null);
   const obj = build(mat);

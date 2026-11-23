@@ -6,16 +6,18 @@
  *   art.stop();
  */
 import * as THREE from 'three';
+import { linearOut, LIGHT } from '../core/three-compat.js';
 
 export function createPlasmidArt(box, cv) {
   const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
   const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
   r.setPixelRatio(Math.min(devicePixelRatio, 2));
   r.setClearColor(0, 0);
+  linearOut(r);
   const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
   cam.position.set(0, 0, 8.6);
-  sc.add(new THREE.HemisphereLight('#ffffff', '#cbd5e1', 0.75));
-  const dl = new THREE.DirectionalLight('#ffffff', 0.65); dl.position.set(2, 4, 5); sc.add(dl);
+  sc.add(new THREE.HemisphereLight('#ffffff', '#cbd5e1', 0.75 * LIGHT));
+  const dl = new THREE.DirectionalLight('#ffffff', 0.65 * LIGHT); dl.position.set(2, 4, 5); sc.add(dl);
   const R = 1.6, HR = 0.2, TURNS = 30;
   const REG = [{ k: 'gfp', a: 0.02, b: 0.25, c: '#22c55e' }, { k: 'bla', a: 0.36, b: 0.54, c: '#f59e0b' }, { k: 'ara', a: 0.65, b: 0.77, c: '#8b5cf6' }, { k: 'ori', a: 0.86, b: 0.93, c: '#64748b' }];
   const BASE = new THREE.Color('#a8b4c6');
