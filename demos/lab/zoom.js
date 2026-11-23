@@ -22,7 +22,8 @@
  *   fov?, near?, far?, minDist?, maxDist?, insetBg?(bg) → THREE.Color,
  *   cue?(t) → { text, note?, mark? } | null }.
  * cue(t) is what is happening at this level now, shown as Watch's caption while it is the main
- * view. mark names one of its labels: that tag is spotlit while the cue is up, the others dim.
+ * view. mark names one of its labels by key (or text, if it has no key): that tag is spotlit
+ * while the cue is up, the others dim. A world's labels: [{ key?, text, sub?, anchor(), show(t) }].
  * insetBg tints the level's circle from its `bg` (Ecoli's cell goes dark with the room lights).
  *
  * It builds its own DOM: one `.zoom-inset` circle per level you're not looking at, in
@@ -33,6 +34,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { clamp, lerp, Ease } from './core/math.js';
+import { UI, fmt } from './text.js';
 
 /* The circles and the per-level backgrounds, made here so a lab page doesn't carry them.
  * The circles' captions are filled by refreshInsets(); body.has-zoom lets lab.css centre the
@@ -157,10 +159,10 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
       const el = insets[i].el;
       const dirIn = ORDER.indexOf(k) > ai;
       el.dataset.scale = k;
-      el.querySelector('.zi-dir').textContent = dirIn ? 'Zoom in' : 'Zoom out';
+      el.querySelector('.zi-dir').textContent = dirIn ? UI.zoomIn : UI.zoomOut;
       el.querySelector('.zi-name').textContent = NAMES[k];
       el.querySelector('.zi-meta').textContent = META[k];
-      el.setAttribute('aria-label', `${dirIn ? 'Zoom in' : 'Zoom out'} to the ${NAMES[k].toLowerCase()} level`);
+      el.setAttribute('aria-label', fmt(UI.zoomTo, { dir: dirIn ? UI.zoomIn : UI.zoomOut, level: NAMES[k].toLowerCase() }));
       el.title = `${NAMES[k]} level · ${META[k]}`;
     });
   }
@@ -280,7 +282,7 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
       const w = worlds[k];
       w.labels.forEach((L, i) => {
         const el = w.labelEls[i];
-        el.classList.toggle('hot', k === active && L.text === mark);
+        el.classList.toggle('hot', k === active && !!mark && (L.key || L.text) === mark);
         if (k !== active || transition || !L.show(t)) { el.classList.remove('on'); return; }
         _v.copy(L.anchor()).project(w.camera);
         if (_v.z > 1 || Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) { el.classList.remove('on'); return; }

@@ -7,6 +7,7 @@
  * as classic scripts; Duplex and MolPalette are read by their global names. */
 import * as THREE from 'three';
 import { cueAt } from '../lesson.js';
+import { T as TEXT } from '../text.js';
 import { C, V, ph, win, clamp, lerp, rng, linear, easeOut, randDir, fibSphere, makeGlass, makeDissolve, makeTexture, dotTexture, mergeColored } from './util.js';
 const phys = (c, o) => new THREE.MeshPhysicalMaterial(Object.assign({ color: C(c), roughness: 0.4, metalness: 0 }, o || {}));
 const UP = V(0, 1, 0);
@@ -15,6 +16,7 @@ const PAL = globalThis.MolPalette;
 const css = (n) => '#' + n.toString(16).padStart(6, '0');
 
 export function createMolecule(env) {
+  const TX = TEXT.levels.mol;
   const scene = new THREE.Scene();
   scene.environment = env;
   scene.add(new THREE.HemisphereLight(0xffffff, 0xe0e2ee, 0.7));
@@ -363,32 +365,32 @@ export function createMolecule(env) {
   const _m4 = new THREE.Matrix4();
   const instPos = (mesh, i) => { mesh.getMatrixAt(i, _m4); return V().setFromMatrixPosition(_m4); };
   const labels = [
-    { text: 'Sugar–phosphate backbone', anchor: () => { const p = mainTrace.chains.A.P[linkerPair - 4]; return wpos(main.group, V(p[0] * S, p[1] * S, p[2] * S)); }, show: (t) => t < 2.35 },
-    { text: 'Base pairs', sub: 'A–T · G–C', anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair + 6)), show: (t) => t < 2.35 },
-    { text: 'Histone proteins', sub: 'DNA wraps around them', anchor: () => histones[1].g.position.clone().add(V(0, -3.4, 0)), show: (t) => t < 2.55 },
-    { text: 'Membrane', sub: 'phospholipid bilayer', anchor: () => V(-6, BY + 2, 3.2), show: (t) => t < 2.3 },
-    { text: 'Detergent (soap)', anchor: () => instPos(dHeads, 5), show: (t) => t >= 2.08 && t < 2.4 },
-    { text: 'Micelle', sub: 'soap + lipids', anchor: () => micelles[1].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 2.72 && t < 3.15 },
-    { text: 'Na⁺ ions', sub: 'shield negative phosphates', anchor: () => instPos(ions, 20), show: (t) => t >= 2.85 && t < 3.9 },
-    { text: 'Proteins drift away', anchor: () => histones[0].g.position.clone(), show: (t) => t >= 2.9 && t < 3.15 },
-    { text: 'Everything here passes the filter', sub: 'its pores are thousands of times wider', anchor: () => micelles[2].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 3.15 && t < 3.55 },
-    { text: 'DNA unwinds', sub: 'free of its proteins', anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair)), show: (t) => t >= 2.95 && t < 3.15 },
-    { text: 'DNA from many cells', anchor: () => others[1].h.group.position.clone(), show: (t) => t >= 3.6 && t < 4.3 },
-    { text: 'Alcohol', anchor: () => instPos(alc, 7), show: (t) => t >= 4.45 && t < 4.9 },
-    { text: 'Strands stick together', sub: 'and precipitate', anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 4.85 && t < 5.78 },
-    { text: 'Lifted out of the liquid', sub: 'proteins, soap and lipids stay behind', anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 5.78 },
+    { key: 'backbone', ...TX.labels.backbone, anchor: () => { const p = mainTrace.chains.A.P[linkerPair - 4]; return wpos(main.group, V(p[0] * S, p[1] * S, p[2] * S)); }, show: (t) => t < 2.35 },
+    { key: 'bases', ...TX.labels.bases, anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair + 6)), show: (t) => t < 2.35 },
+    { key: 'histones', ...TX.labels.histones, anchor: () => histones[1].g.position.clone().add(V(0, -3.4, 0)), show: (t) => t < 2.55 },
+    { key: 'membrane', ...TX.labels.membrane, anchor: () => V(-6, BY + 2, 3.2), show: (t) => t < 2.3 },
+    { key: 'soap', ...TX.labels.soap, anchor: () => instPos(dHeads, 5), show: (t) => t >= 2.08 && t < 2.4 },
+    { key: 'micelle', ...TX.labels.micelle, anchor: () => micelles[1].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 2.72 && t < 3.15 },
+    { key: 'ions', ...TX.labels.ions, anchor: () => instPos(ions, 20), show: (t) => t >= 2.85 && t < 3.9 },
+    { key: 'drift', ...TX.labels.drift, anchor: () => histones[0].g.position.clone(), show: (t) => t >= 2.9 && t < 3.15 },
+    { key: 'passes', ...TX.labels.passes, anchor: () => micelles[2].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 3.15 && t < 3.55 },
+    { key: 'unwinds', ...TX.labels.unwinds, anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair)), show: (t) => t >= 2.95 && t < 3.15 },
+    { key: 'many', ...TX.labels.many, anchor: () => others[1].h.group.position.clone(), show: (t) => t >= 3.6 && t < 4.3 },
+    { key: 'alcohol', ...TX.labels.alcohol, anchor: () => instPos(alc, 7), show: (t) => t >= 4.45 && t < 4.9 },
+    { key: 'stick', ...TX.labels.stick, anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 4.85 && t < 5.78 },
+    { key: 'lifted', ...TX.labels.lifted, anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 5.78 },
   ];
 
   const interactives = [
-    { root: main.group, priority: 2, info: (t) => ({ title: t < 2.6 ? 'Chromatin' : 'DNA double helix', text: t < 2.6 ? 'DNA wound around histone proteins, about twice round each one. Two backbones, base pairs A–T and G–C between them.' : 'About 2 nm wide. Two backbones twisted around base pairs A–T and G–C.' }) },
-    { root: lHeads, priority: 1, info: () => ({ title: 'Phospholipids', text: 'Water-loving heads, fat-loving tails. Two layers make a membrane.' }) },
-    { root: lTails, priority: 1, info: () => ({ title: 'Phospholipids', text: 'Water-loving heads, fat-loving tails. Two layers make a membrane.' }) },
-    { root: dHeads, priority: 1, info: () => ({ title: 'Detergent molecule', text: 'Pries lipids out of the membrane and wraps them into micelles.' }) },
-    { root: ions, priority: 2, info: () => ({ title: 'Na⁺ ion', text: 'From the salt. Neutralizes the negative phosphate groups on DNA.' }) },
-    { root: alc, priority: 1, info: () => ({ title: 'Isopropyl alcohol', text: 'DNA can’t dissolve in it, so the strands come out of solution.' }) },
+    { root: main.group, priority: 2, info: (t) => TX.info[t < 2.6 ? 'chromatin' : 'helix'] },
+    { root: lHeads, priority: 1, info: () => TX.info.lipids },
+    { root: lTails, priority: 1, info: () => TX.info.lipids },
+    { root: dHeads, priority: 1, info: () => TX.info.soap },
+    { root: ions, priority: 2, info: () => TX.info.ion },
+    { root: alc, priority: 1, info: () => TX.info.alcohol },
   ];
-  histones.forEach((h) => interactives.push({ root: h.g, priority: 3, info: () => ({ title: 'Histone proteins', text: 'Eight proteins, two each of four kinds, that DNA winds around. Salt helps pull them off.' }) }));
-  others.forEach((o) => interactives.push({ root: o.h.group, priority: 1, info: () => ({ title: 'DNA molecule', text: 'Freed DNA from other cells, floating in the buffer.' }) }));
+  histones.forEach((h) => interactives.push({ root: h.g, priority: 3, info: () => TX.info.histones }));
+  others.forEach((o) => interactives.push({ root: o.h.group, priority: 1, info: () => TX.info.other }));
 
   const views = [
     { pos: V(9, 8, 36), target: V(0, 2.5, 0) },
@@ -399,29 +401,19 @@ export function createMolecule(env) {
     { pos: V(16, 9, 33), target: V(0, 0, 0) },
   ];
   const legend = [
-    { c: css(PAL.bases.A), l: 'Adenine' }, { c: css(PAL.bases.T), l: 'Thymine' }, { c: css(PAL.bases.G), l: 'Guanine' }, { c: css(PAL.bases.C), l: 'Cytosine' },
-    { c: css(PAL.strands.a), l: 'Backbone' }, { c: css(PAL.strands.b), l: 'Backbone (partner strand)' }, { c: css(PAL.atoms.Na), l: 'Na⁺ ion' },
-    { c: css(PAL.histones.H3), l: 'Histone' }, { c: css(PAL.organelles.plasma.head), l: 'Lipid' }, { c: css(PAL.atoms.S), l: 'Detergent' }, { c: css(PAL.atoms.C), l: 'Alcohol' },
+    { c: css(PAL.bases.A), l: TX.legend.A }, { c: css(PAL.bases.T), l: TX.legend.T }, { c: css(PAL.bases.G), l: TX.legend.G }, { c: css(PAL.bases.C), l: TX.legend.C },
+    { c: css(PAL.strands.a), l: TX.legend.backbone }, { c: css(PAL.strands.b), l: TX.legend.partner }, { c: css(PAL.atoms.Na), l: TX.legend.ion },
+    { c: css(PAL.histones.H3), l: TX.legend.histone }, { c: css(PAL.organelles.plasma.head), l: TX.legend.lipid }, { c: css(PAL.atoms.S), l: TX.legend.soap }, { c: css(PAL.atoms.C), l: TX.legend.alcohol },
   ];
 
   /* Watch's caption at this level; times match the labels' windows above */
-  const CUES = [
-    [0, { text: 'Strawberries are <b>octoploid</b>: eight copies of every chromosome, so lots of DNA' }],
-    [0.3, { text: 'DNA is a double helix: two backbones joined by <b>base pairs</b>', mark: 'Base pairs' }],
-    [0.6, { text: 'It winds around <b>histone proteins</b>', mark: 'Histone proteins' }],
-    [0.95, { text: 'A phospholipid <b>membrane</b> walls it in', mark: 'Membrane' }],
-    [1.28, { text: 'Mashing changes nothing at this scale. The membranes are still whole', mark: 'Membrane' }],
-    [2.0, { text: '<b>Soap</b> arrives: a water-loving head, a fat-loving tail', mark: 'Detergent (soap)' }],
-    [2.2, { text: 'Soap pries lipids out of the membrane', mark: 'Detergent (soap)' }],
-    [2.72, { text: 'It wraps them into <b>micelles</b>, and the membrane is gone', mark: 'Micelle' }],
-    [2.85, { text: '<b>Na⁺</b> from the salt shields DNA’s negative phosphates', mark: 'Na⁺ ions' }],
-    [2.95, { text: 'The histones let go and the <b>DNA unwinds</b>', mark: 'DNA unwinds' }],
-    [3.15, { text: 'All of this is far smaller than the filter’s pores', mark: 'Everything here passes the filter' }],
-    [3.6, { text: 'DNA from many cells floats free, still dissolved in water', mark: 'DNA from many cells' }],
-    [4.45, { text: '<b>Alcohol</b> pulls water away from the DNA', mark: 'Alcohol' }],
-    [4.85, { text: 'Its charge shielded, the helices <b>stick together</b> and precipitate', mark: 'Strands stick together' }],
-    [5.78, { text: 'Lifted out. Proteins, soap and lipids stay in the liquid', mark: 'Lifted out of the liquid' }],
-  ];
+  const CUES = [   // [t, caption key in text.js, label key it points at]
+    [0, 'octoploid', null], [0.3, 'helix', 'bases'], [0.6, 'histones', 'histones'], [0.95, 'membrane', 'membrane'],
+    [1.28, 'mash', 'membrane'],
+    [2.0, 'soap', 'soap'], [2.2, 'pry', 'soap'], [2.72, 'micelles', 'micelle'], [2.85, 'ions', 'ions'], [2.95, 'unwind', 'unwinds'],
+    [3.15, 'filter', 'passes'], [3.6, 'free', 'many'],
+    [4.45, 'alcohol', 'alcohol'], [4.85, 'stick', 'stick'], [5.78, 'lifted', 'lifted'],
+  ].map(([t, k, mark]) => [t, { text: TX.cues[k], mark }]);
   const cue = (t) => cueAt(CUES, t);
 
   return { scene, update, labels, interactives, views, legend, cue, minDist: 6, maxDist: 70, fov: 38, near: 0.1, far: 400 };

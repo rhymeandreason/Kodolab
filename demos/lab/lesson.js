@@ -60,6 +60,7 @@ import { clamp } from './core/math.js';
 import { clearTweens, setInstant, setPaused, setMeasuring, measured } from './core/tween.js';
 import { reseed } from './core/random.js';
 import { toast, setToastMuted, ensureEl, stripTags, uiRoot } from './ui.js';
+import { UI, fmt } from './text.js';
 
 /** A caption that follows a clock: cues(() => S.t, [[0, 'Pull off the leaves'], [0.42, 'Into the bag']])
  * shows the last cue whose time has been reached (the first one before that). A cue's
@@ -85,17 +86,17 @@ export function createLesson({
   panel = null,
   onEnter = () => {},
   onComplete = () => {},
-  completeHint = '<b>Lab complete</b>', // the complete card's text (string or function)
+  completeHint = `<b>${UI.labComplete}</b>`, // the complete card's text (string or function)
   completeWhy = null,              // optional blue note on the complete card (string or function)
-  completeCaption = 'Lab complete', // Watch mode's last caption (string, { text, note } or function)
-  introCaption = 'Press <b>Play</b> to watch the experiment',
+  completeCaption = UI.labComplete, // Watch mode's last caption (string, { text, note } or function)
+  introCaption = UI.introCaption,
   levelCaption = null,             // Watch mode, zoomed in: () => the level's caption, or null (zoom.caption)
   mode = new URLSearchParams(location.search).get('mode') === 'watch' ? 'watch' : 'do',
   autoDwell = 1.1,                 // Watch mode: seconds to read the hint before each auto-click
 }) {
   const N = steps.length;
   const numberByPhase = !!phases;
-  phases = phases || [{ title: 'Procedure', icon: 'ph-list-checks', steps: steps.map((s) => s.id) }];
+  phases = phases || [{ title: UI.procedure, icon: 'ph-list-checks', steps: steps.map((s) => s.id) }];
   const indexOf = (id) => steps.findIndex((s) => s.id === id);
   const phaseIdx = phases.map((p) => p.steps.map(indexOf));
   /** The chip's label: "Step 3b of 6" (by phase, a/b/c within a phase), else "Step 4 of 8". */
@@ -104,10 +105,10 @@ export function createLesson({
       const p = phaseIdx.findIndex((ids) => ids.includes(i));
       if (p >= 0) {
         const j = phaseIdx[p].indexOf(i);
-        return `Step ${p + 1}${phaseIdx[p].length > 1 ? 'abcdefgh'[j] : ''} of ${phases.length}`;
+        return fmt(UI.stepOf, { n: `${p + 1}${phaseIdx[p].length > 1 ? 'abcdefgh'[j] : ''}`, total: phases.length });
       }
     }
-    return `Step ${i + 1} of ${N}`;
+    return fmt(UI.stepOf, { n: i + 1, total: N });
   }
 
   const S = { step: 0, busy: false, replaying: false, playing: false, scrubbing: false, mode, auto: false, log: steps.map(() => []) };
@@ -209,7 +210,7 @@ export function createLesson({
     if (!s) return;
     if (!key || !clickable(i).includes(key)) {
       if (key && clickable(i).length) {
-        toast(`Not yet — ${stripTags(text(s.hint))}`, { icon: 'ph-hand-pointing', warn: true });
+        toast(fmt(UI.notYet, { hint: stripTags(text(s.hint)) }), { icon: 'ph-hand-pointing', warn: true });
         C.action.classList.remove('shake'); void C.action.offsetWidth; C.action.classList.add('shake');
       }
       return;
@@ -403,8 +404,8 @@ export function createLesson({
    * why (once clicked), and the click action (until clicked). */
   const card = ensureEl('lab-card', 'panel lab-card', 'section');
   card.innerHTML = `
-    <div class="card-head"><span class="chip"></span><span class="card-clock" hidden title="Time-lapse"><i class="ph-bold ph-timer"></i><span></span></span></div>
-    <button class="card-fold" type="button" aria-expanded="true" aria-label="Collapse" hidden><i class="ph-bold ph-caret-down"></i></button>
+    <div class="card-head"><span class="chip"></span><span class="card-clock" hidden title="${UI.timeLapse}"><i class="ph-bold ph-timer"></i><span></span></span></div>
+    <button class="card-fold" type="button" aria-expanded="true" aria-label="${UI.collapse}" hidden><i class="ph-bold ph-caret-down"></i></button>
     <h2></h2>
     <div class="card-body"><div>
       <p class="card-text"></p>
@@ -424,7 +425,7 @@ export function createLesson({
   function setFolded(on) {
     card.classList.toggle('folded', on);
     C.fold.setAttribute('aria-expanded', String(!on));
-    C.fold.setAttribute('aria-label', on ? 'Expand' : 'Collapse');
+    C.fold.setAttribute('aria-label', on ? UI.expand : UI.collapse);
   }
   function toggleFold() {
     if (!card.classList.contains('complete')) return;
@@ -448,11 +449,11 @@ export function createLesson({
   const capClock = caps.querySelector('.cap-clock');
   const tl = ensureEl('lab-timeline', 'lab-timeline', 'footer');
   tl.innerHTML = `
-    <button class="tl-btn tl-play" data-act="play" title="Play" aria-label="Play"><i class="ph-fill ph-play"></i><span>Play</span></button>
-    <button class="tl-btn" data-act="prev" title="Previous step" aria-label="Previous step"><i class="ph-bold ph-caret-left"></i></button>
-    <button class="tl-btn" data-act="next" title="Next step" aria-label="Next step"><i class="ph-bold ph-caret-right"></i></button>
+    <button class="tl-btn tl-play" data-act="play" title="${UI.play}" aria-label="${UI.play}"><i class="ph-fill ph-play"></i><span>${UI.play}</span></button>
+    <button class="tl-btn" data-act="prev" title="${UI.prevStep}" aria-label="${UI.prevStep}"><i class="ph-bold ph-caret-left"></i></button>
+    <button class="tl-btn" data-act="next" title="${UI.nextStep}" aria-label="${UI.nextStep}"><i class="ph-bold ph-caret-right"></i></button>
     <div class="tl-track"></div>
-    <button class="tl-btn" data-act="replay" title="Restart this step" aria-label="Restart this step"><i class="ph-bold ph-arrow-counter-clockwise"></i></button>`;
+    <button class="tl-btn" data-act="replay" title="${UI.replayStep}" aria-label="${UI.replayStep}"><i class="ph-bold ph-arrow-counter-clockwise"></i></button>`;
   const track = tl.querySelector('.tl-track');
   const segs = [];
   phases.forEach((ph, p) => {
@@ -484,10 +485,10 @@ export function createLesson({
   const modeEl = document.createElement('div');
   modeEl.className = 'lab-mode';
   modeEl.setAttribute('role', 'radiogroup');
-  modeEl.setAttribute('aria-label', 'Mode');
+  modeEl.setAttribute('aria-label', UI.mode);
   modeEl.innerHTML = `
-    <button data-mode="do" role="radio" title="Do the experiment yourself"><i class="ph ph-hand-pointing"></i><span>Hands-on</span></button>
-    <button data-mode="watch" role="radio" title="Watch the whole experiment play"><i class="ph ph-play-circle"></i><span>Watch</span></button>`;
+    <button data-mode="do" role="radio" title="${UI.handsOnTip}"><i class="ph ph-hand-pointing"></i><span>${UI.handsOn}</span></button>
+    <button data-mode="watch" role="radio" title="${UI.watchTip}"><i class="ph ph-play-circle"></i><span>${UI.watch}</span></button>`;
   const actions = document.querySelector('.top-actions');
   if (actions) actions.prepend(modeEl); else { modeEl.classList.add('floating'); uiRoot().appendChild(modeEl); }
   modeEl.addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
@@ -501,7 +502,7 @@ export function createLesson({
     if (on && heldFrom === null) { heldFrom = S.mode; setMode('watch'); }
     else if (!on && heldFrom !== null) { const m = heldFrom; heldFrom = null; setMode(m); }
     doBtn.disabled = on;
-    doBtn.title = on ? 'Hands-on works in the Lab view' : 'Do the experiment yourself';
+    doBtn.title = on ? UI.handsOnHeld : UI.handsOnTip;
   }
   function applyMode() {
     uiRoot().classList.toggle('lab-watch', watching());
@@ -576,7 +577,7 @@ export function createLesson({
     });
     const s = steps[S.step];
     const play = tl.querySelector('.tl-play');
-    const label = S.auto ? 'Pause' : S.step >= N ? 'Play again' : 'Play';
+    const label = S.auto ? UI.pause : S.step >= N ? UI.playAgain : UI.play;
     if (play.dataset.state !== label) {
       play.dataset.state = label;
       play.title = label; play.setAttribute('aria-label', label);
@@ -601,8 +602,8 @@ export function createLesson({
     C.fold.hidden = !!s;
     if (entering) setFolded(false);
     if (!s) {
-      C.chip.textContent = 'Complete';
-      C.title.textContent = 'Lab complete';
+      C.chip.textContent = UI.complete;
+      C.title.textContent = UI.labComplete;
       C.text.innerHTML = text(completeHint); C.text.hidden = false;
       const cw = text(completeWhy);
       C.whyText.innerHTML = cw || ''; C.why.hidden = !cw;
@@ -666,8 +667,8 @@ export function createLesson({
     if (S.busy || S.replaying) return null;
     if (watching()) return null;
     const s = steps[S.step];
-    if (isTarget) return { text: `Click to ${(s && s.action) || 'use'}`, kind: 'ok' };
-    if (s && clickable(S.step).includes(key)) return { text: 'Already done for this step', kind: 'warn' };
+    if (isTarget) return { text: s && s.action ? fmt(UI.clickTo, { action: s.action }) : UI.clickToUse, kind: 'ok' };
+    if (s && clickable(S.step).includes(key)) return { text: UI.alreadyDone, kind: 'warn' };
     // (objects used in an earlier or later step get no status line: just their name and description)
     return null;
   }

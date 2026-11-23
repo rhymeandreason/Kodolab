@@ -16,7 +16,7 @@ import {
   makeBench, makeBeaker, makeWasteBin, makeJar, makeSqueezeBottle,
   makeStrawberry, makeCalyx, STRAWBERRY_H as BH, strawberrySeed,
   makeZipBag, makeTestTube, makeTubeRack, makeFunnel, makePlate, makeBowl,
-  makeReagentBottle, makeIceBath, makeSkewer, makeDnaPrecipitate, makeStream, makeBubbles, mesh,
+  makeReagentBottle, makeIceBath, makeSkewer, makeDnaPrecipitate, makeStream, makeBubbles, mesh, T,
 } from '../lab.js';
 
 const linear = (k) => k;
@@ -87,7 +87,7 @@ export function buildBench(mat, root) {
 
   // ----- buffer beaker, soap, salt -----
   const BK_H = 8.6;
-  const beaker = add(makeBeaker(mat, { r: 3.2, h: BK_H, level: 6, cap: 250, label: 'Buffer', sub: 'water · soap · salt', liquidColor: 0xbfe2f5 }), POS.beaker);
+  const beaker = add(makeBeaker(mat, { r: 3.2, h: BK_H, level: 6, cap: 250, ...T.props.beaker, liquidColor: 0xbfe2f5 }), POS.beaker);
   const soap = add(makeSqueezeBottle(mat), POS.soap, 0.4, 0.62);
   const salt = add(makeJar(mat, { ingredient: 'salt' }), POS.salt, 0.3, 0.62);
 
@@ -108,7 +108,7 @@ export function buildBench(mat, root) {
   const FUNNEL_CUP = V3(POS.cup.x, 2.6, POS.cup.z); // stem down inside the bin
   funnel.group.position.copy(FUNNEL_HOME);
   root.add(funnel.group);
-  const cup = add(makeWasteBin(mat, { label: 'WASTE', symbol: null }), POS.cup, 0.2);
+  const cup = add(makeWasteBin(mat, { label: T.props.waste, symbol: null }), POS.cup, 0.2);
 
   // ----- ice bath, alcohol bottle, skewer -----
   const ice = add(makeIceBath(mat), POS.ice);

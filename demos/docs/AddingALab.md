@@ -13,15 +13,13 @@ Copy `lab/strawberry/` to `lab/<name>/` and rename the page `<name>-lab.html`. *
   <meta charset="utf-8">
   <script defer src="/demos/lib/site.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Strawberry DNA</title>                 <!-- also the topbar's title -->
-  <script src="../page.js"></script>           <!-- import map, fonts, icons, lab.css -->
+  <title>Strawberry DNA</title>                 <!-- the tab's; text.js's title is the topbar's -->
+  <script src="../page.js" data-text="text.js"></script>  <!-- import map, fonts, icons, lab.css, the words -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
-    <!-- the lab's own backgrounds and panels, if any -->
-    <div class="lab-info" hidden>…kicker, h2, paragraphs…</div>   <!-- becomes the info modal -->
-    <div class="lab-intro">…kicker, h2, p, .keys…</div>           <!-- becomes the intro card -->
+    <!-- the lab's own backgrounds and panels, if any; the intro card and info modal come from text.js -->
   </div>
   <script>LabPage.chrome()</script>
   <script type="module" async src="intro-art.js"></script>
@@ -82,6 +80,8 @@ stage.start();
 
 ## 3. Write the steps
 
+**Every word a student reads goes in `<lab>/text.js`, never in the code.** Teachers edit it and translators copy it, so the code names keys and keeps everything else: timings, colours, which label a caption points at. `strawberry/text.js` is the worked example and its key scheme is the one to copy: `intro`, `info`, `phases`, `steps.<id>` (card fields plus `captions`), `complete`, `why`, `objects`, `props`, `levels.<key>` (`name`, `labels`, `info`, `legend`, `cues`). Modules read it as `T` from `lab.js`; `{name}` slots are filled with `fmt()`, so a sentence with a number in it stays one string a translator can reorder. Shared UI words are `lab/strings.js` (`UI`). A translation is `text.<lang>.js` beside it, with only the keys it translates, loaded for `?lang=<lang>`: `page.js`'s header.
+
 Each field has one job, and putting text in the wrong one is what makes the card long:
 
 | Field | Holds |
@@ -111,7 +111,7 @@ Going back or jumping ahead calls `rebuild()`, replays the earlier clicks instan
 
 ## 5. The intro card
 
-Its text is the page's `.lab-intro`, framed by `page.js` before any module loads, so it shows at once while the bench loads: a kicker, a title with one `<em>` word, a short paragraph and three `.keys`, the ideas the lab is about. The Start button is added for you; a `.intro-art` inside `.lab-intro` replaces the default empty one (Ecoli's plasmid). Call `createIntro(stage, { art })` near the end of `main.js`.
+Its text is `intro` in `text.js`, built by `page.js` before any module loads, so it shows at once while the bench loads: a kicker, a title with one `<em>` word, a short paragraph and three `keys`, the ideas the lab is about. `info` is the (i) modal. (Ecoli and Photosynthesis still write both as `.lab-intro` / `.lab-info` markup in the page, which `page.js` keeps when the text has none.) The Start button is added for you; a `.intro-art` in the page's `.lab-intro` replaces the default empty one (Ecoli's plasmid). Call `createIntro(stage, { art })` near the end of `main.js`.
 
 * Start the art from a small `intro-art.js`, loaded `<script type="module" async>` before `main.js`, so it shows before the library has loaded. `createPropArt(box, (mat) => makeStrawberry(mat).group)` turns any prop.
 * The opening camera move waits for Start: in `onEnter`, the first step does `intro.started.then(() => stage.focus(step.view, 2.2))`.
@@ -121,6 +121,8 @@ Its text is the page's `.lab-intro`, framed by `page.js` before any module loads
 `createZoom(stage, { levels: [{ key: 'cell', world, name, meta, bg }], getT, getStep })`. A world is the lab's own scene, in its folder (`strawberry/cell.js`); its shape is the header of `lab/zoom.js`. `zoom.js` makes the circles and the per-level backgrounds; the lab's CSS only colours `.bg-<key>`.
 
 **Every level shows the same moment.** Pose bench, cell and molecule from one number (Strawberry's clock `S.t`, animated between resting points with `anim()`), or have the world ease toward a stage the bench sets (Ecoli's `S.micro`). Either way replay needs no extra code. A world whose background changes with the bench (Ecoli's UV) returns `insetBg(bg)` so its circle follows.
+
+**Each level narrates itself in Watch.** A world's `cue(t)` returns `{ text, mark }`: what is happening at that scale, not the bench step. `cueAt([[t, cue], …], t)` from `lesson.js` picks one off a clock; Ecoli's switches on stage and its eased state. `mark` is a label's `text`, spotlit while the cue is up. Pass `levelCaption: () => zoom.caption()` to `createLesson`; Play then holds on each cue until it is readable, so a level's beats may sit closer than the bench's. Time cues to the labels' `show` windows, and give a step that changes nothing at this scale one short line rather than none.
 
 ## 7. The camera
 

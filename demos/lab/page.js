@@ -3,7 +3,18 @@
  * before any module loads, and the chrome is on screen before three.js has downloaded.
  *
  * In <head>, after the <title> (and the seo block):
- *   <script src="../page.js"></script>     writes the import map, fonts, icons and lab.css
+ *   <script src="../page.js" data-text="text.js"></script>
+ *                                          writes the import map, fonts, icons, lab.css and the text
+ *   <link rel="stylesheet" href="styles.css">   the lab's own sheet, after lab.css
+ *
+ * Text: every word a student reads lives in text files, not in the code. lab/strings.js is the
+ * shared UI's; data-text names the lab's own (strawberry/text.js). Each is a classic script,
+ * LabText.add('en', {...}), written here so it runs before any module. ?lang=es also loads
+ * strings.es.js and text.es.js beside them: a translation holds only the keys it translates,
+ * merged over the English, so a missing key or a missing file falls back to English. Modules
+ * read the merged result from lab/text.js.
+ *
+ * The rest of <head>:
  *   <link rel="stylesheet" href="styles.css">   the lab's own sheet, after lab.css
  *
  * In <body>, the page writes only its own content, then builds the rest:
@@ -25,6 +36,31 @@
   var THREE_VERSION = '0.128.0';  // the only place three.js is pinned; README "Upgrading three.js"
   var PHOSPHOR = 'https://unpkg.com/@phosphor-icons/web@2.1.1/src/';
   var here = document.currentScript.src;
+  var textFile = document.currentScript.dataset.text;
+
+  /* The text, merged in load order: English, then the page's language over it. */
+  var LANG = (new URLSearchParams(location.search).get('lang') || 'en').toLowerCase().replace(/[^a-z-]/g, '') || 'en';
+  document.documentElement.lang = LANG;
+  function merge(a, b) {
+    for (var k in b) {
+      var x = a[k], y = b[k];
+      if (x && y && typeof x === 'object' && typeof y === 'object' && Array.isArray(x) === Array.isArray(y)) merge(x, y);
+      else a[k] = y;
+    }
+    return a;
+  }
+  window.LabText = {
+    lang: LANG,
+    data: {},
+    add: function (lang, obj) { if (lang === 'en' || lang === LANG) merge(this.data, obj); },
+  };
+  var texts = [new URL('strings.js', here).href];
+  if (textFile) texts.push(new URL(textFile, document.baseURI).href);
+  var scripts = [];
+  texts.forEach(function (src) {
+    scripts.push('<script src="' + src + '"></script>');
+    if (LANG !== 'en') scripts.push('<script src="' + src.replace(/\.js$/, '.' + LANG + '.js') + '"></script>');
+  });
 
   // document.write, not appendChild: an import map is only honoured if it is in the document
   // before the first module script, and a parser-inserted one is the case every browser
@@ -41,7 +77,7 @@
     css('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&display=swap'),
     css(PHOSPHOR + 'regular/style.css'), css(PHOSPHOR + 'fill/style.css'), css(PHOSPHOR + 'bold/style.css'),
     css(new URL('lab.css', here).href),
-  ].join('\n'));
+  ].concat(scripts).join('\n'));
 
   function el(tag, attrs, html) {
     var e = document.createElement(tag);
@@ -50,6 +86,35 @@
     return e;
   }
   function moveChildren(from, to) { while (from.firstChild) to.appendChild(from.firstChild); }
+
+  /* The intro card and the info modal from the lab's text (intro, info), into the page's
+     .lab-intro and .lab-info (made if the page has none). A page without them in its text
+     keeps whatever markup it wrote. */
+  function fillContent(app, T) {
+    var icon = T.icon ? '<i class="ph-fill ' + T.icon + '"></i>' : '';
+    var block = function (cls, extra) {
+      var n = app.querySelector(':scope > .' + cls);
+      if (!n) { n = el('div', extra || {}); n.className = cls; app.appendChild(n); }
+      return n;
+    };
+    if (T.intro) {
+      var I = T.intro, n = block('lab-intro'), art = n.querySelector(':scope > .intro-art');
+      n.innerHTML = '<div class="modal-kicker">' + icon + I.kicker + '</div><h2>' + I.title + '</h2><p>' + I.body + '</p>'
+        + (I.keys ? '<ul class="keys">' + I.keys.map(function (k) {
+          return '<li><i style="--c:' + k.color + '"></i><span>' + k.text + '</span></li>';
+        }).join('') + '</ul>' : '');
+      if (art) n.insertBefore(art, n.firstChild);
+    }
+    if (T.info) {
+      var F = T.info, m = block('lab-info', { hidden: '' });
+      m.innerHTML = '<div class="modal-kicker">' + icon + F.kicker + '</div><h2>' + F.title + '</h2>'
+        + (F.body || []).map(function (p) { return '<p>' + p + '</p>'; }).join('')
+        + (F.steps ? '<ol class="info-list">' + F.steps.map(function (st, i) {
+          return '<li><span>' + (i + 1) + '</span><div><b>' + st.head + '</b> ' + st.text + '</div></li>';
+        }).join('') + '</ol>' : '')
+        + (F.tips || []).map(function (t) { return '<p class="muted"><i class="ph ' + t.icon + '"></i> ' + t.text + '</p>'; }).join('');
+    }
+  }
 
   function chrome() {
     var app = document.getElementById('app');
@@ -63,15 +128,17 @@
       el('div', { id: 'zoomLens', class: 'zoom-lens', 'aria-hidden': 'true' }),
       el('div', { id: 'zoomLabels', 'aria-hidden': 'true' }),
     ];
-    var title = app.dataset.title || document.title;
+    var T = LabText.data, UI = T.ui || {};
+    fillContent(app, T);
+    var title = T.title || app.dataset.title || document.title;
     var top = el('header', { class: 'topbar' },
       '<div class="brand lab-brand chrome-title">'
       + '<a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>'
       + '<div class="brand-title"><h1></h1></div></div>'
       + '<div class="top-actions">'
-      + '<button class="icon-btn" id="btnView" title="Reset view" aria-label="Reset view"><i class="ph ph-crosshair-simple"></i></button>'
-      + '<button class="icon-btn" id="btnInfo" title="About this experiment" aria-label="About this experiment"><i class="ph ph-info"></i></button>'
-      + '<button class="icon-btn" id="btnRestart" title="Restart lab" aria-label="Restart lab"><i class="ph ph-arrow-counter-clockwise"></i></button>'
+      + '<button class="icon-btn" id="btnView" title="' + UI.resetView + '" aria-label="' + UI.resetView + '"><i class="ph ph-crosshair-simple"></i></button>'
+      + '<button class="icon-btn" id="btnInfo" title="' + UI.about + '" aria-label="' + UI.about + '"><i class="ph ph-info"></i></button>'
+      + '<button class="icon-btn" id="btnRestart" title="' + UI.restartLab + '" aria-label="' + UI.restartLab + '"><i class="ph ph-arrow-counter-clockwise"></i></button>'
       + '</div>');
     top.querySelector('h1').textContent = title;
     var panel = el('aside', { class: 'panel steps-panel', id: 'stepsPanel' });
@@ -85,7 +152,7 @@
     if (info) {
       var modal = el('div', { class: 'modal', id: 'infoModal', role: 'dialog', 'aria-modal': 'true', hidden: '' });
       var card = el('div', { class: 'modal-card' },
-        '<button class="icon-btn modal-close" id="btnCloseInfo" title="Close" aria-label="Close"><i class="ph ph-x"></i></button>');
+        '<button class="icon-btn modal-close" id="btnCloseInfo" title="' + UI.close + '" aria-label="' + UI.close + '"><i class="ph ph-x"></i></button>');
       moveChildren(info, card);
       modal.appendChild(card);
       info.replaceWith(modal);
@@ -109,13 +176,13 @@
       if (art.parentNode === text) text.removeChild(art);
       if (!text.querySelector('.intro-start')) {
         text.appendChild(el('button', { class: 'btn intro-start', id: 'startBtn' },
-          'Start the experiment <i class="ph-bold ph-arrow-right"></i>'));
+          UI.start + ' <i class="ph-bold ph-arrow-right"></i>'));
       }
       // intro.js swaps the loading line for Start once the bench has drawn its first frame
       var startBtn = text.querySelector('.intro-start');
       startBtn.hidden = true;
       startBtn.insertAdjacentElement('afterend',
-        el('div', { class: 'intro-loading', role: 'status' }, '<span class="intro-spin"></span>Setting up the bench…'));
+        el('div', { class: 'intro-loading', role: 'status' }, '<span class="intro-spin"></span>' + UI.loading));
       icard.appendChild(art); icard.appendChild(text); wrap.appendChild(icard);
       intro.replaceWith(wrap);
     }

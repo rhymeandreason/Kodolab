@@ -30,6 +30,7 @@
 import * as THREE from 'three';
 import { V3, worldOf } from './core/math.js';
 import { ensureEl, themeColor, getThemeVersion } from './ui.js';
+import { UI } from './text.js';
 
 const STATUS_ICON = { ok: 'ph-bold ph-hand-tap', warn: 'ph-bold ph-warning', muted: 'ph-bold ph-clock' };
 
@@ -175,7 +176,7 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
     if (!o) { tooltip.classList.remove('show'); return; }
     const t = isTarget(key);
     let st = status ? status(key, t) : null;
-    if (st === undefined || (st === null && t)) st = t ? { text: 'Click to use', kind: 'ok' } : null;
+    if (st === undefined || (st === null && t)) st = t ? { text: UI.clickToUse, kind: 'ok' } : null;
     tooltip.innerHTML = `<div class="tt-name">${o.name}</div>${o.desc ? `<div class="tt-desc">${o.desc}</div>` : ''}`
       + (st ? `<div class="tt-status ${st.kind || 'muted'}"><i class="${STATUS_ICON[st.kind] || STATUS_ICON.muted}"></i><span>${st.text}</span></div>` : '');
     tooltip.classList.add('show');

@@ -4,11 +4,13 @@
  * replay and scrub it. */
 import * as THREE from 'three';
 import { cueAt } from '../lesson.js';
+import { T as TEXT } from '../text.js';
 import { C, V, ph, win, clamp, lerp, rng, linear, easeOut, randDir, fibSphere, makeGlass, makeDissolve, makeTexture, dotTexture, mergeColored } from './util.js';
 
 const phys = (c, o) => new THREE.MeshPhysicalMaterial(Object.assign({ color: C(c), roughness: 0.4, metalness: 0 }, o || {}));
 
 export function createCell(env) {
+  const TX = TEXT.levels.cell;
   const scene = new THREE.Scene();
   scene.environment = env;
   scene.add(new THREE.HemisphereLight(0xffffff, 0xdfe7ee, 0.75));
@@ -348,33 +350,31 @@ export function createCell(env) {
 
   /* ---------- labels / interactives / views ---------- */
   const labels = [
-    { text: 'Cell wall', sub: 'tough cellulose', anchor: () => wallLabelPatch.mesh.position.clone(), show: (t) => t < 1.3 },
-    { text: 'Cell membrane', anchor: () => V(0, -RAD.y * 0.95, RAD.z * 0.25), show: (t) => t < 2.1 },
-    { text: 'Nucleus', sub: 'holds the DNA', anchor: () => N0.clone().add(V(0, NR, 0)), show: (t) => t < 2.35 },
-    { text: 'Vacuole', sub: 'red anthocyanin pigment', anchor: () => VAC.clone().add(V(0.8, 2.6, 0.5)), show: (t) => t < 2.05 },
-    { text: 'Plastid', anchor: () => organelles[0].m.position.clone(), show: (t) => t < 1.0 },
-    { text: 'Broken cell wall', anchor: () => patches[NT * 2 + 2].mesh.position.clone(), show: (t) => t >= 1.75 && t < 2.1 },
-    { text: 'Micelles', sub: 'membrane fragments', anchor: () => micelles.localToWorld(tmp2.setFromMatrixPosition(getInst(micelles, 3))), show: (t) => t >= 2.5 && t < 3.1 },
-    { text: 'Released DNA', anchor: () => chromGroup.localToWorld(relPts[2].clone()), show: (t) => t >= 2.85 && t < 4.25 },
-    { text: 'Debris caught by the filter', anchor: () => patches[NT * 6 + 3].mesh.position.clone(), show: (t) => t >= 3.04 && t < 3.25 },
-    { text: 'DNA strands clump together', anchor: () => V(0, 1.7, 0), show: (t) => t >= 4.7 && t < 5.25 },
-    { text: 'Fibres wind around each other', anchor: () => chromGroup.localToWorld(ropeB.clone().lerp(ropeA, 0.2)), show: (t) => t >= 5.65 },
+    { key: 'wall', ...TX.labels.wall, anchor: () => wallLabelPatch.mesh.position.clone(), show: (t) => t < 1.3 },
+    { key: 'membrane', ...TX.labels.membrane, anchor: () => V(0, -RAD.y * 0.95, RAD.z * 0.25), show: (t) => t < 2.1 },
+    { key: 'nucleus', ...TX.labels.nucleus, anchor: () => N0.clone().add(V(0, NR, 0)), show: (t) => t < 2.35 },
+    { key: 'vacuole', ...TX.labels.vacuole, anchor: () => VAC.clone().add(V(0.8, 2.6, 0.5)), show: (t) => t < 2.05 },
+    { key: 'plastid', ...TX.labels.plastid, anchor: () => organelles[0].m.position.clone(), show: (t) => t < 1.0 },
+    { key: 'brokenWall', ...TX.labels.brokenWall, anchor: () => patches[NT * 2 + 2].mesh.position.clone(), show: (t) => t >= 1.75 && t < 2.1 },
+    { key: 'micelles', ...TX.labels.micelles, anchor: () => micelles.localToWorld(tmp2.setFromMatrixPosition(getInst(micelles, 3))), show: (t) => t >= 2.5 && t < 3.1 },
+    { key: 'released', ...TX.labels.released, anchor: () => chromGroup.localToWorld(relPts[2].clone()), show: (t) => t >= 2.85 && t < 4.25 },
+    { key: 'debris', ...TX.labels.debris, anchor: () => patches[NT * 6 + 3].mesh.position.clone(), show: (t) => t >= 3.04 && t < 3.25 },
+    { key: 'clump', ...TX.labels.clump, anchor: () => V(0, 1.7, 0), show: (t) => t >= 4.7 && t < 5.25 },
+    { key: 'fibres', ...TX.labels.fibres, anchor: () => chromGroup.localToWorld(ropeB.clone().lerp(ropeA, 0.2)), show: (t) => t >= 5.65 },
   ];
   const _m4 = new THREE.Matrix4();
   function getInst(mesh, i) { mesh.getMatrixAt(i, _m4); return _m4; }
 
   const interactives = [
-    { root: chromGroup, priority: 3, info: (t) => ({ title: t < 4.3 ? 'DNA (chromatin)' : 'Precipitated DNA', text: t < 2.4 ? 'Long DNA molecules packed with proteins inside the nucleus.' : t < 4.3 ? 'Freed DNA strands floating in the salty buffer.' : 'Strands stuck together in the alcohol.', dive: 'mol' }) },
-    { root: envelope, priority: 2, info: () => ({ title: 'Nucleus', text: 'Wrapped in a double membrane (the nuclear envelope).', dive: 'mol' }) },
-    { root: nucleolus, priority: 2, info: () => ({ title: 'Nucleolus', text: 'Where ribosomes are assembled.', dive: 'mol' }) },
-    { root: vacuole, priority: 1, info: () => ({ title: 'Central vacuole', text: 'Stores water, sugars and red anthocyanin pigments.' }) },
-    { root: membrane, priority: 0, info: () => ({ title: 'Cell membrane', text: 'A thin, fatty phospholipid bilayer. Soap dissolves it.', dive: 'mol' }) },
-    { root: wall, priority: 0, info: () => ({ title: 'Cell wall', text: 'Rigid cellulose fibres. Mashing breaks it open.' }) },
-    { root: micelles, priority: 1, info: () => ({ title: 'Micelles', text: 'Tiny balls of soap and membrane lipids.', dive: 'mol' }) },
+    { root: chromGroup, priority: 3, info: (t) => ({ ...TX.info[t < 2.4 ? 'chromatin' : t < 4.3 ? 'freed' : 'precipitated'], dive: 'mol' }) },
+    { root: envelope, priority: 2, info: () => ({ ...TX.info.nucleus, dive: 'mol' }) },
+    { root: nucleolus, priority: 2, info: () => ({ ...TX.info.nucleolus, dive: 'mol' }) },
+    { root: vacuole, priority: 1, info: () => TX.info.vacuole },
+    { root: membrane, priority: 0, info: () => ({ ...TX.info.membrane, dive: 'mol' }) },
+    { root: wall, priority: 0, info: () => TX.info.wall },
+    { root: micelles, priority: 1, info: () => ({ ...TX.info.micelles, dive: 'mol' }) },
   ];
-  organelles.forEach((o) => interactives.push({ root: o.m, priority: 1, info: () => (o.isP
-    ? { title: 'Chromoplast', text: 'Plastids that store coloured pigments in ripe fruit.' }
-    : { title: 'Mitochondrion', text: 'Releases energy from sugars for the cell.' }) }));
+  organelles.forEach((o) => interactives.push({ root: o.m, priority: 1, info: () => TX.info[o.isP ? 'chromoplast' : 'mitochondrion'] }));
 
   const views = [
     { pos: V(5, 7, 25), target: V(0, 0, 0) },
@@ -386,28 +386,19 @@ export function createCell(env) {
   ];
 
   const legend = [
-    { c: '#9fd49a', l: 'Cell wall' }, { c: '#f39bb0', l: 'Membrane' }, { c: '#9d8df1', l: 'Nucleus' },
-    { c: '#6a4cf0', l: 'DNA' }, { c: '#e2445f', l: 'Vacuole / pigment' }, { c: '#ff8c42', l: 'Plastids' },
+    { c: '#9fd49a', l: TX.legend.wall }, { c: '#f39bb0', l: TX.legend.membrane }, { c: '#9d8df1', l: TX.legend.nucleus },
+    { c: '#6a4cf0', l: TX.legend.dna }, { c: '#e2445f', l: TX.legend.vacuole }, { c: '#ff8c42', l: TX.legend.plastids },
   ];
 
   /* Watch's caption at this level; times match the labels' windows above */
-  const CUES = [
-    [0, { text: 'One cell of the fruit, boxed in by a rigid <b>cellulose wall</b>', mark: 'Cell wall' }],
-    [0.45, { text: 'Its DNA is packed inside the <b>nucleus</b>', mark: 'Nucleus' }],
-    [0.9, { text: 'The big <b>vacuole</b> stores the red pigment', mark: 'Vacuole' }],
-    [1.28, { text: 'Mashing tears the cell walls apart', mark: 'Cell wall' }],
-    [1.75, { text: 'Cells separate. Only a thin <b>membrane</b> holds each one together', mark: 'Broken cell wall' }],
-    [2.0, { text: 'Soap dissolves the <b>cell membrane</b>', mark: 'Cell membrane' }],
-    [2.15, { text: 'The vacuole and the nucleus break open too', mark: 'Nucleus' }],
-    [2.5, { text: 'Membrane fats end up in <b>micelles</b>, tiny balls of soap and lipid', mark: 'Micelles' }],
-    [2.85, { text: 'The <b>DNA</b> spills out into the salty buffer', mark: 'Released DNA' }],
-    [3.04, { text: 'The filter catches wall pieces and other large debris', mark: 'Debris caught by the filter' }],
-    [3.3, { text: 'DNA, micelles and pigment pass straight through', mark: 'Released DNA' }],
-    [4.0, { text: 'The DNA is still dissolved, so you cannot see it yet', mark: 'Released DNA' }],
-    [4.7, { text: 'In alcohol, DNA comes out of solution and <b>clumps</b>', mark: 'DNA strands clump together' }],
-    [5.0, { text: 'Millions of strands tangle into threads thick enough to see' }],
-    [5.65, { text: 'Twirling winds the fibres around each other, like spaghetti on a fork', mark: 'Fibres wind around each other' }],
-  ];
+  const CUES = [   // [t, caption key in text.js, label key it points at]
+    [0, 'cell', 'wall'], [0.45, 'nucleus', 'nucleus'], [0.9, 'vacuole', 'vacuole'],
+    [1.28, 'mash', 'wall'], [1.75, 'separate', 'brokenWall'],
+    [2.0, 'soap', 'membrane'], [2.15, 'burst', 'nucleus'], [2.5, 'micelles', 'micelles'], [2.85, 'spill', 'released'],
+    [3.04, 'filter', 'debris'], [3.3, 'through', 'released'],
+    [4.0, 'invisible', 'released'], [4.7, 'clump', 'clump'],
+    [5.0, 'threads', null], [5.65, 'twirl', 'fibres'],
+  ].map(([t, k, mark]) => [t, { text: TX.cues[k], mark }]);
   const cue = (t) => cueAt(CUES, t);
 
   return { scene, update, labels, interactives, views, legend, cue, minDist: 5, maxDist: 42, fov: 38, near: 0.1, far: 300 };
