@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-lab-theme="green">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Floating Leaf Disks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+  <link rel="stylesheet" href="../lab.css">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene"></canvas>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><i class="ph-fill ph-leaf"></i></div>
+        <div>
+          <h1>Floating Leaf Disks</h1>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="btnView" title="Reset view"><i class="ph ph-crosshair-simple"></i></button>
+        <button class="icon-btn" id="btnInfo" title="About this experiment"><i class="ph ph-info"></i></button>
+        <button class="icon-btn" id="btnRestart" title="Restart lab"><i class="ph ph-arrow-counter-clockwise"></i></button>
+      </div>
+    </header>
+
+    <aside class="panel steps-panel" id="stepsPanel"></aside>
+
+    <section class="panel data-panel" id="dataPanel" hidden>
+      <div class="panel-head">
+        <span class="panel-title"><i class="ph ph-chart-line-up"></i>Observations</span>
+        <span class="clock" id="clock">00:00</span>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span class="swatch sw-a"></span>
+          <div>
+            <div class="stat-label">Cup A · NaHCO<sub>3</sub></div>
+            <div class="stat-val"><b id="cntA">0</b><span>/10 floating</span></div>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="swatch sw-b"></span>
+          <div>
+            <div class="stat-label">Cup B · control</div>
+            <div class="stat-val"><b id="cntB">0</b><span>/10 floating</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart"></canvas></div>
+      <div class="speed" id="speed">
+        <span><i class="ph ph-fast-forward"></i>Time</span>
+        <button data-s="1" class="on">1×</button>
+        <button data-s="2">2×</button>
+        <button data-s="4">4×</button>
+      </div>
+      <div class="result" id="result" hidden></div>
+    </section>
+
+    <div class="modal" id="infoModal" hidden>
+      <div class="modal-card">
+        <button class="icon-btn modal-close" id="btnCloseInfo" title="Close"><i class="ph ph-x"></i></button>
+        <div class="modal-kicker"><i class="ph-fill ph-leaf"></i>About the experiment</div>
+        <h2>Why do leaf disks float?</h2>
+        <p>A spinach leaf is full of tiny air spaces in its <b>spongy mesophyll</b>. Air makes a fresh leaf disk float.</p>
+        <ol class="info-list">
+          <li><span>1</span><div><b>Sink the disks.</b> A syringe vacuum pulls the air out. Bicarbonate solution flows in, so the disks get denser than water and sink.</div></li>
+          <li><span>2</span><div><b>Add light.</b> Chloroplasts use light energy and CO<sub>2</sub> (from the bicarbonate) to photosynthesize.</div></li>
+          <li><span>3</span><div><b>Oxygen lifts them.</b> O<sub>2</sub> collects in the air spaces and the disks float back up. Faster floating means faster photosynthesis.</div></li>
+        </ol>
+        <div class="equation">6CO<sub>2</sub> + 6H<sub>2</sub>O <i class="ph ph-arrow-right"></i> C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + 6O<sub>2</sub></div>
+        <p class="muted">Measure the rate with <b>ET<sub>50</sub></b>: the time it takes half the disks to float. The control cup has no bicarbonate, so it has no CO<sub>2</sub> source.</p>
+        <p class="muted"><i class="ph ph-mouse-left-click"></i> Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan · use the timeline to go back or skip ahead</p>
+      </div>
+    </div>
+
+    <div class="intro" id="intro">
+      <div class="intro-card">
+        <div class="intro-art"></div>
+        <div>
+          <div class="modal-kicker"><i class="ph-fill ph-leaf"></i>Interactive 3D lab</div>
+          <h2>Make leaf disks <em>float</em></h2>
+          <p>Leaves use light to turn carbon dioxide and water into sugar, and give off <b>oxygen</b>. Sink small disks of spinach leaf, shine a lamp on them, and time how fast the oxygen floats them back up.</p>
+          <ul class="keys">
+            <li><i style="--c:#38bdf8"></i><span><b>Bicarbonate</b> gives the leaf the CO<sub>2</sub> it needs</span></li>
+            <li><i style="--c:#f59e0b"></i><span><b>Light</b> powers photosynthesis in the chloroplasts</span></li>
+            <li><i style="--c:#22c55e"></i><span><b>Oxygen</b> fills the air spaces and lifts the disks</span></li>
+          </ul>
+          <button class="btn intro-start" id="startBtn">Start the experiment <i class="ph-bold ph-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" async src="intro-art.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
