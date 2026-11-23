@@ -24,6 +24,13 @@ import { mesh, wrapLabel, lathe } from '../core/geometry.js';
 import { makeLiquid } from '../core/liquid.js';
 import { toLinear } from '../materials.js';
 
+/** A ring of mat.glassEdge: the denser lip or foot of a vessel, at radius r and height y. */
+function edgeRing(mat, r, y, tube) {
+  const m = mesh(new THREE.TorusGeometry(r, tube, 8, 64), mat.glassEdge, { cast: false });
+  m.rotation.x = Math.PI / 2; m.position.y = y; m.renderOrder = 4;
+  return m;
+}
+
 export function makeBeaker(mat, { r = 3.6, h = 9.6, level = 5.3, cap = 250, label, sub, color = '#0891b2', liquidColor = 0x5aa9e6 } = {}) {
   const g = new THREE.Group();
   const t = 0.14;
@@ -34,9 +41,7 @@ export function makeBeaker(mat, { r = 3.6, h = 9.6, level = 5.3, cap = 250, labe
   const shell = mesh(new THREE.LatheGeometry(pts, 64), mat.wideGlass, { cast: false });
   shell.renderOrder = 3;
   g.add(shell);
-  const rim = mesh(new THREE.TorusGeometry(r + 0.06, 0.07, 8, 64), mat.glassRim, { cast: false });
-  rim.rotation.x = Math.PI / 2; rim.position.y = h + 0.12; rim.renderOrder = 4;
-  g.add(rim);
+  g.add(edgeRing(mat, r + 0.06, h + 0.12, 0.08), edgeRing(mat, r - 0.04, 0.22, 0.09));
   const area = Math.PI * (r - t) * (r - t);
   // graduations
   g.add(wrapLabel({
@@ -80,9 +85,7 @@ export function makeCup(mat, { label, sub, color = '#94a3b8', liquidColor = 0x5a
   const shell = mesh(new THREE.LatheGeometry(pts, 64), mat.widePlastic, { cast: false });
   shell.renderOrder = 3;
   g.add(shell);
-  const rim = mesh(new THREE.TorusGeometry(rt, 0.1, 10, 64), mat.glassRim, { cast: false });
-  rim.rotation.x = Math.PI / 2; rim.position.y = h; rim.renderOrder = 4;
-  g.add(rim);
+  g.add(edgeRing(mat, rt, h, 0.1), edgeRing(mat, rb + 0.03, 0.5, 0.06));
   const rAt = (y) => rb + (rt - rb) * (y / h);
   if (label) {
     const ly0 = 6.3, ly1 = 8.0;
@@ -104,9 +107,7 @@ export function makeDish(mat, { r = 5 } = {}) {
   const g = new THREE.Group();
   const m = mesh(new THREE.LatheGeometry([V2(0.001, 0), V2(r - 0.1, 0), V2(r, 0.06), V2(r, 1.1), V2(r - 0.13, 1.1), V2(r - 0.13, 0.12), V2(0.001, 0.12)], 64), mat.wideGlass, { cast: false });
   m.renderOrder = 3;
-  const rim = mesh(new THREE.TorusGeometry(r - 0.06, 0.05, 6, 64), mat.glassRim, { cast: false });
-  rim.rotation.x = Math.PI / 2; rim.position.y = 1.1; rim.renderOrder = 4;
-  g.add(m, rim);
+  g.add(m, edgeRing(mat, r - 0.06, 1.1, 0.055), edgeRing(mat, r - 0.05, 0.05, 0.05));
   return { group: g, anchors: { floor: V3(0, 0.12, 0) }, radius: r - 0.1 };
 }
 
@@ -117,7 +118,7 @@ export function makeTestTube(mat, { r = 1.3, h = 13 } = {}) {
   outer.push([r, h], [r + 0.15, h + 0.06], [r + 0.1, h + 0.16], [r - 0.06, h]);
   const glass = mesh(lathe(outer, 48), mat.glass, { cast: false });
   glass.renderOrder = 3;
-  g.add(glass);
+  g.add(glass, edgeRing(mat, r + 0.04, h + 0.08, 0.08));
   const ri = r - 0.15, in0 = r - ri, inH = h - 0.2 - in0;
   const inner = [[0, in0]];
   for (let i = 1; i <= 10; i++) { const a = (i / 10) * Math.PI / 2; inner.push([ri * Math.sin(a), r - ri * Math.cos(a)]); }

@@ -27,21 +27,33 @@ export const toLinear = (hex) => new THREE.Color(hex).convertSRGBToLinear().getH
  * the transparency.
  *
  * Replaces the last fragment chunk (OUTPUT_CHUNK, renamed in r154). */
+
+/* How strongly every glass and clear plastic draws its silhouette, shared by all of them so
+ * one change (props.html's sliders) restyles every vessel live:
+ *   strength  multiplies each material's own `edge` alpha
+ *   width     widens (>1) or narrows (<1) the band the edge occupies toward the silhouette
+ *   dark      how much the edge darkens, like the refracted surroundings: 1 is the original */
+export const GLASS_LOOK = { uEdgeK: { value: 2.2 }, uEdgeW: { value: 1.3 }, uEdgeD: { value: 1.4 } };
+const LOOK_GLSL = 'uniform float uEdgeK, uEdgeW, uEdgeD;\n';
+const edgeFrom = (lo) => `smoothstep(1.0 - ${(1 - lo).toFixed(2)} * uEdgeW, 1.0, gFr)`;
+const darken = (k) => `(1.0 - ${(1 - k).toFixed(2)} * uEdgeD)`;
+
 export function glassMaterial({ opacity = 0.32, color = '#e3ecf6', roughness = 0.03, envMap = null, envMapIntensity = 1.5, edge = 0.85, side = THREE.DoubleSide } = {}) {
   const m = new THREE.MeshPhysicalMaterial({
     color, roughness, metalness: 0, transparent: true, opacity,
     clearcoat: 1, clearcoatRoughness: 0.02, side, depthWrite: false, envMap, envMapIntensity,
   });
   m.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace(OUTPUT_CHUNK, `
+    Object.assign(sh.uniforms, GLASS_LOOK);
+    sh.fragmentShader = LOOK_GLSL + sh.fragmentShader.replace(OUTPUT_CHUNK, `
       float gFr  = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
-      float gEdge = smoothstep(.3, 1.0, gFr);            // 0 face-on -> 1 at the silhouette
+      float gEdge = ${edgeFrom(0.3)};                    // 0 face-on -> 1 at the silhouette
       gEdge *= gEdge;
       vec3 gDiff = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
       vec3 gSpec = reflectedLight.directSpecular + reflectedLight.indirectSpecular;
       float gSpecL = dot(gSpec, vec3(.299,.587,.114));
-      vec3 gCol = mix(gDiff + gSpec, gDiff*.32 + gSpec, gEdge); // edges darken like refracted surroundings
-      float gA = diffuseColor.a*.22 + gEdge*${edge.toFixed(3)} + smoothstep(.04,.5,gSpecL)*.9;
+      vec3 gCol = mix(gDiff + gSpec, gDiff * max(0.0, ${darken(0.32)}) + gSpec, gEdge); // edges darken like refracted surroundings
+      float gA = diffuseColor.a*.22 + gEdge*${edge.toFixed(3)}*uEdgeK + smoothstep(.04,.5,gSpecL)*.9;
       gl_FragColor = vec4(gCol, clamp(gA, 0.0, 1.0));
     `);
   };
@@ -66,17 +78,18 @@ export function wideGlassMaterial({ opacity = 0.3, color = '#e6eef6', roughness 
     clearcoat: 0.6, clearcoatRoughness: 0.08, side, depthWrite: false, envMap, envMapIntensity,
   });
   m.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace(OUTPUT_CHUNK, `
+    Object.assign(sh.uniforms, GLASS_LOOK);
+    sh.fragmentShader = LOOK_GLSL + sh.fragmentShader.replace(OUTPUT_CHUNK, `
       float gFr  = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
-      float gEdge = smoothstep(.62, 1.0, gFr);           // thin line at the silhouette only
+      float gEdge = ${edgeFrom(0.62)};                   // thin line at the silhouette only
       gEdge *= gEdge;
       float gFront = gl_FrontFacing ? 1.0 : ${back.toFixed(3)};
       vec3 gDiff = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
       vec3 gSpec = reflectedLight.directSpecular + reflectedLight.indirectSpecular;
       gSpec *= gl_FrontFacing ? 1.0 : 0.12;
       float gSpecL = dot(gSpec, vec3(.299,.587,.114));
-      vec3 gCol = mix(gDiff + gSpec, gDiff*.45 + gSpec, gEdge);
-      float gA = (diffuseColor.a*.2 + gEdge*${edge.toFixed(3)}) * gFront + smoothstep(.08,.9,gSpecL)*.5;
+      vec3 gCol = mix(gDiff + gSpec, gDiff * max(0.0, ${darken(0.45)}) + gSpec, gEdge);
+      float gA = (diffuseColor.a*.2 + gEdge*${edge.toFixed(3)}*uEdgeK) * gFront + smoothstep(.08,.9,gSpecL)*.5;
       gl_FragColor = vec4(gCol, clamp(gA, 0.0, 1.0));
     `);
   };
@@ -117,6 +130,9 @@ export function createMaterials(stage) {
     make,
     glass: shared(make.glass()),
     glassRim: shared(make.glass({ opacity: 0.5, color: '#c3d1de', edge: 0.6 })),
+    /* The moulded lip and foot of lab glass: denser than the wall, so the opening and the base
+       read even face-on. Rings from glassware.js's edgeRing(). Not a shell: the outline inks it. */
+    glassEdge: shared(new THREE.MeshStandardMaterial({ color: toLinear('#9db0c2'), roughness: 0.2, transparent: true, opacity: 0.75, depthWrite: false, envMapIntensity: 1.3 })),
     plastic: shared(make.plastic()),
     wideGlass: shared(make.wideGlass()),
     widePlastic: shared(make.widePlastic()),

@@ -33,6 +33,7 @@ export function makeStream(mat, parent, { color = 0x5aa9e6 } = {}) {
 
 export function ripple(parent, pos, maxR = 2) {
   const m = new THREE.Mesh(GEO.ripple, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }));
+  m.userData.noSketch = true;
   m.rotation.x = -Math.PI / 2; m.position.copy(pos); m.renderOrder = 6;
   parent.add(m);
   return anim(0.8, (e) => { m.scale.setScalar(0.15 + maxR * e); m.material.opacity = 0.8 * (1 - e); }, Ease.out).then(() => {

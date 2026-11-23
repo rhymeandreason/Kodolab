@@ -236,6 +236,7 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
     let r = rings[k];
     if (!r) {
       r = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C3.accent.clone(), transparent: true, opacity: 0.4, depthWrite: false }));
+      r.userData.noSketch = true;
       r.rotation.x = -Math.PI / 2;
       r.renderOrder = 1;
       r.userData.noHL = true;

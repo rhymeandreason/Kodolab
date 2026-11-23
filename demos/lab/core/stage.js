@@ -5,6 +5,7 @@
  *   stage.onFrame((dt, now) => { ... });
  *   stage.start();
  *   stage.setRender(() => { ... });   // optional: draw something other than scene + camera
+ *   stage.sketch                      // the ink outline (core/sketch.js): off in labs, ?sketch=1 to see it
  *
  * Three reflection maps:
  *   stage.env           soft studio room, used by every material (scene.environment)
@@ -18,6 +19,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { V3, clamp } from './math.js';
 import { anim, tickTweens } from './tween.js';
 import { srgbOut, LIGHT } from './three-compat.js';
+import { createSketch } from './sketch.js';
 
 export function studioEnv(renderer) {
   const pm = new THREE.PMREMGenerator(renderer);
@@ -93,6 +95,7 @@ export function createStage({
   views = {},
   fitAspect = 1.85,          // views are framed for this aspect; narrower screens pull the camera back
   insets = () => ({ left: 0, right: 0, top: 0, bottom: 0 }), // px of screen covered by UI on each side
+  sketch: useSketch = false, // draw the sketch outline by default
 }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -135,6 +138,12 @@ export function createStage({
   const fill = new THREE.DirectionalLight(0xeaf2ff, 0.3 * LIGHT);
   fill.position.set(60, 40, 80);
   scene.add(fill);
+
+  // the sketch outline over the bench (core/sketch.js): off unless the page asks (`sketch: true`,
+  // the benches) or the URL does. ?sketch=1 / ?sketch=0 overrides either way
+  const sketch = createSketch({ renderer, scene, camera });
+  const flag = new URLSearchParams(location.search).get('sketch');
+  sketch.enabled = flag === null ? useSketch : flag !== '0';
 
   // camera views
   let lastView = Object.values(views)[0] || { t: V3(), p: V3(0, 60, 90) };
@@ -197,12 +206,12 @@ export function createStage({
     tickTweens(now);
     frameHooks.forEach((f) => f(dt, now));
     controls.update();
-    if (renderFn) renderFn(); else renderer.render(scene, camera);
+    if (renderFn) renderFn(); else sketch.render();
     if (first) { first = false; firstHooks.forEach((f) => f()); }
   }
 
   return {
-    renderer, scene, camera, controls, canvas,
+    renderer, scene, camera, controls, canvas, sketch,
     env, glassEnv: gEnv, wideGlassEnv: wgEnv,
     lights: { hemi, sun, fill },
     views, focus, glide,

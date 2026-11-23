@@ -409,7 +409,8 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
     });
     renderer.setRenderTarget(null);
     const aw = worlds[active];
-    renderer.render(aw.scene, aw.camera);
+    if (active === 'lab') stage.sketch.draw(aw.scene, aw.camera);   // the outline is for the bench's props
+    else renderer.render(aw.scene, aw.camera);
     renderer.autoClear = false;
     renderer.clearDepth();
     renderer.render(overlayScene, overlayCam);

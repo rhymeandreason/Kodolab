@@ -1,8 +1,8 @@
 /* Sketch outline: hand-drawn ink lines over the rendered scene, for legibility.
  *
- *   const sketch = createSketch(stage);
- *   stage.setRender(sketch.render);
- *   sketch.set({ width: 1.6, wobble: 1.2 });   sketch.enabled = false;
+ *   stage.sketch                       every stage has one (core/stage.js), off unless createStage({ sketch: true }) or ?sketch=1
+ *   stage.sketch.draw(scene, camera)   a custom render (zoom.js) draws a scene through it
+ *   stage.sketch.set({ width: 1.6, wobble: 1.2 });   stage.sketch.enabled = false;
  *
  * Screen-space, so every prop gets it with no per-prop work. The scene is drawn again into
  * normal + depth targets and lines go where either jumps: silhouettes (depth) and creases
@@ -100,7 +100,7 @@ function target() {
 }
 
 export function createSketch(stage, params = {}) {
-  const { renderer, scene, camera } = stage;
+  const { renderer } = stage;
   const P = Object.assign({ color: '#2b3540', width: 1.3, wobble: 0.8, opacity: 0.8, grain: 0.35, liquidColor: '#1f5f8f', liquidWidth: 1.8, ref: 45, minScale: 0.4, resolution: 2 }, params);
   const rtA = target(), rtB = target();
   const rtInk = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false });   // linear: upscaled onto the canvas
@@ -132,6 +132,17 @@ export function createSketch(stage, params = {}) {
       normals.set(m, n);
     }
     n.side = m.side; n.clippingPlanes = m.clippingPlanes; n.clipIntersection = m.clipIntersection;
+    // an alpha cutout (a leaf on a plane) outlines its shape, not the quad
+    if (m.alphaMap && m.alphaTest > 0 && !n.alphaMap) {
+      n.alphaMap = m.alphaMap; n.alphaTest = m.alphaTest;
+      // MeshNormalMaterial's shader has no alpha chunks: three still binds alphaMap and alphaTest, so discard by hand
+      n.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <clipping_planes_pars_fragment>', '#include <clipping_planes_pars_fragment>\nuniform sampler2D alphaMap;\nuniform float alphaTest;')
+          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (texture2D(alphaMap, vAlphaMapUv).g < alphaTest) discard;');
+      };
+      n.customProgramCacheKey = () => 'sketch-normal-cutout';
+    }
     return n;
   };
   const skip = (o, m) => o.userData.noSketch || m.userData.noSketch || m.depthTest === false || m.visible === false
@@ -139,7 +150,7 @@ export function createSketch(stage, params = {}) {
   const isShell = (m) => m.userData.shell;
 
   // swap every visible mesh to its normal material; returns the undo list
-  function swap(shells) {
+  function swap(scene, shells) {
     const undo = [];
     scene.traverseVisible((o) => {
       if (o.isLine || o.isPoints || o.isSprite) { undo.push([o, 'visible', true]); return; }
@@ -155,8 +166,8 @@ export function createSketch(stage, params = {}) {
   const restore = (undo) => undo.forEach(([o, k, v]) => { o[k] = v; });
 
   const size = new THREE.Vector2(), clear = new THREE.Color();
-  function pass(rt, shells) {
-    const undo = swap(shells);
+  function pass(scene, camera, rt, shells) {
+    const undo = swap(scene, shells);
     renderer.setRenderTarget(rt);
     renderer.setClearColor(0x000000, 0);
     renderer.clear(true, true, false);
@@ -168,7 +179,8 @@ export function createSketch(stage, params = {}) {
     enabled: true,
     params: P,
     set(o) { Object.assign(P, o); },
-    render() {
+    render() { sketch.draw(stage.scene, stage.camera); },
+    draw(scene, camera) {
       renderer.render(scene, camera);
       if (!sketch.enabled) return;
       // the passes and the ink run at `resolution` × CSS pixels, capped at the canvas's own.
@@ -180,8 +192,8 @@ export function createSketch(stage, params = {}) {
       const prevClear = renderer.getClearColor(clear).getHex(), prevAlpha = renderer.getClearAlpha();
       const autoShadow = renderer.shadowMap.autoUpdate, autoClear = renderer.autoClear;
       renderer.shadowMap.autoUpdate = false;
-      pass(rtA, true);
-      pass(rtB, false);
+      pass(scene, camera, rtA, true);
+      pass(scene, camera, rtB, false);
       renderer.shadowMap.autoUpdate = autoShadow;
 
       const u = mat.uniforms;

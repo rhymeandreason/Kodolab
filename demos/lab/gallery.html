@@ -25,26 +25,27 @@
         <div><h1>Lab props</h1><p>Everything in Lab/props, on one bench · 1 unit = 1 cm</p></div>
       </div>
       <div class="top-actions">
-        <button class="icon-btn on" id="btnSketch" title="Sketch outline (S)"><i class="ph ph-pencil-simple"></i></button>
+        <button class="icon-btn" id="btnSketch" title="Sketch outline (S)"><i class="ph ph-pencil-simple"></i></button>
         <button class="icon-btn" id="btnView" title="Show everything"><i class="ph ph-crosshair-simple"></i></button>
       </div>
     </header>
     <aside class="panel catalog" id="catalog"></aside>
   </div>
   <script type="module">
-    import { V3, createStage, createMaterials, createInteraction, createSketch, makeBench } from './lab.js';
+    import { V3, createStage, createMaterials, createInteraction, makeBench } from './lab.js';
     import { PROPS } from './props/catalog.js';
 
     const overview = { t: V3(4, 2, -2), p: V3(4, 62, 74) };
     const stage = createStage({
       canvas: document.getElementById('scene'),
       views: { overview },
+      sketch: true,
       insets: (w) => (w > 820 ? { left: 320 } : { bottom: window.innerHeight * 0.38 }),
     });
     const mat = createMaterials(stage);
-    const sketch = createSketch(stage);
-    stage.setRender(sketch.render);
+    const sketch = stage.sketch;
     const btnSketch = document.getElementById('btnSketch');
+    btnSketch.classList.toggle('on', sketch.enabled);
     const toggleSketch = () => { sketch.enabled = !sketch.enabled; btnSketch.classList.toggle('on', sketch.enabled); };
     btnSketch.addEventListener('click', toggleSketch);
     window.addEventListener('keydown', (e) => { if (e.key === 's' && !e.target.closest('input, select')) toggleSketch(); });

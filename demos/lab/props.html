@@ -70,20 +70,20 @@
   </div>
   <script type="module">
     import * as THREE from 'three';
-    import { V3, createStage, createMaterials, createSketch, disposeTree, REVISION } from './lab.js';
+    import { V3, createStage, createMaterials, disposeTree, REVISION, GLASS_LOOK } from './lab.js';
     import { PROPS } from './props/catalog.js';
 
     const wide = () => window.innerWidth > 820;
     const stage = createStage({
       canvas: document.getElementById('scene'),
+      sketch: true,
       fitAspect: 0.1,                       // we frame the camera ourselves
       controls: { minDistance: 3, maxDistance: 160 },
       shadow: { left: -40, right: 40, top: 40, bottom: -40 },
       insets: (w, h) => (w > 820 ? { left: 280, right: 320, top: 90 } : { top: 70, bottom: h * 0.4 }),
     });
     const mat = createMaterials(stage);
-    const sketch = createSketch(stage);
-    stage.setRender(sketch.render);
+    const sketch = stage.sketch;
 
     const ITEMS = PROPS.slice();
     // keep each group together in the list, in order of first appearance
@@ -114,7 +114,7 @@
     pivot.add(boundsHelper);
 
     /* ---------- state ---------- */
-    const opts = { spin: false, anchors: true, bounds: false, sketch: true };
+    const opts = { spin: false, anchors: true, bounds: false, sketch: sketch.enabled };
     let cur = null;   // { it, prop, center, radius, size, markers[] }
     const tagsEl = document.getElementById('tags');
     let tags = [];
@@ -232,6 +232,9 @@
         <label class="toggle"><input type="checkbox" data-o-key="spin"${opts.spin ? ' checked' : ''}>Turntable</label>
         <label class="toggle"><input type="checkbox" data-o-key="anchors"${opts.anchors ? ' checked' : ''}>Show anchors</label>
         <label class="toggle"><input type="checkbox" data-o-key="bounds"${opts.bounds ? ' checked' : ''}>Show bounding box</label>
+        <h3>Glass edges</h3>
+        ${GLASS.map(([k, label, min, max, st]) => `<div class="ctl"><label>${label}<output data-go="${k}">${glassVal(k)}</output></label>
+          <input type="range" data-g="${k}" min="${min}" max="${max}" step="${st}" value="${glassVal(k)}"></div>`).join('')}
         <h3>Sketch outline · three r${REVISION}</h3>
         <label class="toggle"><input type="checkbox" data-o-key="sketch"${opts.sketch ? ' checked' : ''}>Outline</label>
         ${SKETCH.map(([k, label, min, max, st]) => `<div class="ctl"><label>${label}<output data-so="${k}">${sketch.params[k]}</output></label>
@@ -239,6 +242,9 @@
       insEl.innerHTML = html;
       applyView();
     }
+    // glass silhouettes (materials.js GLASS_LOOK) and the lip/foot rings (mat.glassEdge), shared by every vessel
+    const GLASS = [['uEdgeK', 'Edge strength', 0, 3, 0.05], ['uEdgeW', 'Edge width', 0.4, 2, 0.05], ['uEdgeD', 'Edge darkness', 0, 1.47, 0.01], ['rim', 'Lip + foot rings', 0, 1, 0.05]];
+    const glassVal = (k) => (k === 'rim' ? mat.glassEdge.opacity : GLASS_LOOK[k].value);
     const SKETCH = [['width', 'Line weight', 0.5, 3, 0.1], ['wobble', 'Wobble', 0, 4, 0.1], ['ref', 'Full weight within (cm)', 10, 150, 5], ['minScale', 'Weight far away', 0.1, 1, 0.05], ['opacity', 'Ink', 0.2, 1, 0.05], ['grain', 'Pencil grain', 0, 1, 0.05], ['liquidWidth', 'Liquid line weight', 0.5, 4, 0.1], ['resolution', 'Resolution (× CSS px)', 1, 2, 0.25]];
     function showVal(ctl, v) {
       if (ctl.unit === 's') { const m = Math.floor(v / 60), s = Math.floor(v % 60); return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; }
@@ -253,6 +259,11 @@
     insEl.addEventListener('input', (e) => {
       const el = e.target;
       if (el.dataset.oKey) { opts[el.dataset.oKey] = el.checked; applyView(); return; }
+      if (el.dataset.g) {
+        const k = el.dataset.g, v = +el.value;
+        if (k === 'rim') { mat.glassEdge.opacity = v; mat.glassEdge.visible = v > 0; } else GLASS_LOOK[k].value = v;
+        insEl.querySelector(`output[data-go="${k}"]`).textContent = el.value; return;
+      }
       if (el.dataset.s) { sketch.set({ [el.dataset.s]: +el.value }); insEl.querySelector(`output[data-so="${el.dataset.s}"]`).textContent = el.value; return; }
       const ctl = cur.it.controls[+el.dataset.c];
       if (!ctl) return;
@@ -298,7 +309,7 @@
     // in three r128's very first render gets stuck throwing on every frame.
     stage.onFirstFrame(() => load(location.hash.slice(1) || ITEMS[0].key));
     stage.start();
-    window.VIEWER = { stage, sketch, load, get cur() { return cur; } };
+    window.VIEWER = { stage, sketch, mat, load, get cur() { return cur; } };
   </script>
 </body>
 </html>
