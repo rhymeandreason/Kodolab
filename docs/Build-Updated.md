@@ -134,6 +134,7 @@ r128 was never forced by the absence of a build: the library is plain scripts on
 - *Colour management* (r152): colours are converted by default, which would shift every authored colour. Two lines restore r128 exactly: `THREE.ColorManagement.enabled = false` and `renderer.outputColorSpace = THREE.LinearSRGBColorSpace`.
 - *Physical light units* (r155, legacy mode removed r165): intensities scale by about π. Only directional, hemisphere and ambient lights are used, in 10 files.
 - *Shaders*: 2 files use `onBeforeCompile` and 3 use `ShaderMaterial`. The only real work.
+- *Found when `demos/lab/` moved to r186* (`lab/core/three-compat.js` holds each fix): r163+ ignores a material's `envMapIntensity` when the reflection comes from `scene.environment`; a render target is no longer tone mapped or sRGB-encoded, so an inset drawn into one needs its own shader variant (and compiles on first use unless warmed with `compileAsync`); a renderer that never set an encoding output linear on r128 but outputs sRGB now; punctual lights default to decay 2; PMREM keeps low-roughness reflections much sharper, so strip lights in an env map read as stripes; `WebGLMultisampleRenderTarget` is gone (`samples` on a plain target).
 - Smaller: the `slerpQuaternions` return-value workaround in `lib/molview.js`, `Geo.capsule` (current Three has `CapsuleGeometry`), and WebGL2 becomes required.
 
 **Gained:** prototypes and generated code written against current Three run without being ported down, current add-ons, and the renderer's newer features.
