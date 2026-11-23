@@ -60,7 +60,7 @@ const zoom = createZoom(stage, {
   ],
   getT: () => S.t,
   getStep: origStep,
-  onChange: () => { lesson.render(); requestAnimationFrame(() => stage.resize()); },
+  onChange: (scale) => { lesson.holdWatch(scale !== 'lab'); lesson.render(); requestAnimationFrame(() => stage.resize()); },
 });
 
 // =========================================================================

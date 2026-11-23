@@ -292,6 +292,8 @@ html, body {
 }
 .lab-mode button i { font-size: 17px; }
 .lab-mode button:hover { color: var(--ink); }
+.lab-mode button:disabled { opacity: 0.4; cursor: not-allowed; }
+.lab-mode button:disabled:hover { color: inherit; }
 .lab-mode button[aria-checked="true"] { background: var(--ink); color: #fff; }
 .lab-mode button[aria-checked="true"] i { color: var(--accent-glow); }
 .lab-watch .lab-markers { display: none; }

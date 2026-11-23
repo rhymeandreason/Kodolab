@@ -40,6 +40,9 @@
  *     freezes mid-animation; the track scrubs and jumps between steps.
  *     Like a video: the card and procedure list hide, and the step's caption
  *     shows in large text above the timeline.
+ *   lesson.holdWatch(true) forces Watch and greys out Hands-on (a zoomed-in
+ *   level, where there is no bench to click); holdWatch(false) restores the
+ *   reader's mode. A lab with zoom levels calls it from createZoom's onChange.
  *
  * Going back or jumping ahead rebuilds the bench and replays, instantly, the
  * clicks the student made in earlier steps; steps they skipped are completed
@@ -389,6 +392,18 @@ export function createLesson({
   const actions = document.querySelector('.top-actions');
   if (actions) actions.prepend(modeEl); else { modeEl.classList.add('floating'); uiRoot().appendChild(modeEl); }
   modeEl.addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
+  /* Off the bench (a zoomed-in level) there is nothing to click, so the lab
+     holds Watch and greys out Hands-on; lifting the hold restores whichever
+     mode the reader had. */
+  let heldFrom = null;
+  const doBtn = modeEl.querySelector('[data-mode="do"]');
+  function holdWatch(on) {
+    on = !!on;
+    if (on && heldFrom === null) { heldFrom = S.mode; setMode('watch'); }
+    else if (!on && heldFrom !== null) { const m = heldFrom; heldFrom = null; setMode(m); }
+    doBtn.disabled = on;
+    doBtn.title = on ? 'Hands-on works in the Lab view' : 'Do the experiment yourself';
+  }
   function applyMode() {
     uiRoot().classList.toggle('lab-watch', watching());
     uiRoot().classList.toggle('lab-do', !watching());
@@ -564,7 +579,7 @@ export function createLesson({
     isReplaying: () => S.replaying,
     targets: () => (S.busy || S.replaying || watching() ? [] : active(S.step)),
     click: (key) => (watching() ? undefined : click(key)), // Watch mode drives the clicks itself
-    jumpTo, update, status, render, setMode,
+    jumpTo, update, status, render, setMode, holdWatch,
     acting,
     play: () => setAuto(true),
     pause: () => setAuto(false),

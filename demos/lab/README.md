@@ -19,7 +19,7 @@ Built here; the `Experiments/Lab` repo it came from is archived with the origina
 
 `createLesson` builds all of it; a lab supplies steps, phases and text.
 
-* **Two modes**, toggled in the top bar. **Hands-on** (default): the student clicks objects and the timeline is hidden. **Watch**: a **Play** button runs the experiment, clicking each step's targets itself. Pause freezes mid-animation (`setPaused` in `core/tween.js`); Space toggles play. Object clicks are ignored and markers hidden.
+* **Two modes**, toggled in the top bar. **Hands-on** (default): the student clicks objects and the timeline is hidden. **Watch**: a **Play** button runs the experiment, clicking each step's targets itself. Pause freezes mid-animation (`setPaused` in `core/tween.js`); Space toggles play. Object clicks are ignored and markers hidden. Off the Lab view, a lab's zoom `onChange` calls `lesson.holdWatch(true)`: Watch is forced and Hands-on greyed out until the reader returns, when their mode comes back.
 * **Watch is video-like**: the card and procedure list hide, and the step's caption shows large above the timeline. `introCaption` shows before Play, `completeCaption` at the end, a step's `clock` above the caption. Toasts are muted.
 * **Procedure list** (from OnionRoot): numbered *phases*, not steps. The current phase shows one pip per step; clicking a phase jumps to it.
 * **Instruction card**, bottom centre (from OnionRoot): a chip numbered like the list ("Step 3b of 6"), `title`, `detail`, then `why` once the object is clicked. When the lab ends it shows `completeHint` and `completeWhy`, gets `.complete`, rises in (`.arrive`) and folds to its title from a caret or a click on the title.

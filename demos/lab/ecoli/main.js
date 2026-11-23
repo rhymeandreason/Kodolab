@@ -74,7 +74,7 @@ const zoom = createZoom(stage, {
   levels: [{ key: 'cell', world: createCell(stage.env), name: 'Cell', meta: '≈ 5 µm', bg: '#eef1f8' }],
   getT: () => { cellState.stage = S ? S.micro : 0; cellState.ara = ara; cellState.uv = S ? S.uv : 0; return cellState; },
   getStep: () => 0,
-  onChange: () => { lesson.render(); requestAnimationFrame(() => stage.resize()); },
+  onChange: (scale) => { lesson.holdWatch(scale !== 'lab'); lesson.render(); requestAnimationFrame(() => stage.resize()); },
 });
 
 // =========================================================================
