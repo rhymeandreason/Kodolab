@@ -48,6 +48,7 @@ const VIEWS = {
   bath: { t: V3(-29, 3, 2), p: V3(-28, 28, 42) },       // the ice bath and the water bath
   plates: { t: V3(0, 2, 8), p: V3(0, 42, 58) },
   uv: { t: V3(0, 4, 12), p: V3(0, 34, 50) },
+  results: { t: V3(0, 1, 14), p: V3(0, 42, 50) },     // the four plates, above the wide complete card
 };
 
 // =========================================================================
@@ -585,20 +586,27 @@ const PHASES = [
 // =========================================================================
 // The results (the complete card)
 // =========================================================================
+// The complete card: the four plates in bench order (hint), then the efficiency (why)
+const RESULTS = [
+  { dish: '', title: 'LB / amp', sub: '− plasmid', out: 'No growth', text: 'Without the plasmid, ampicillin kills the cells.' },
+  { dish: 'lawn', title: 'LB', sub: '− plasmid', out: 'A lawn', text: 'No antibiotic, so every cell grows: they were alive.' },
+  { dish: 'col', title: 'LB / amp', sub: '+ plasmid', out: 'Colonies', text: '<b>bla</b> protects them. No arabinose, so no glow.' },
+  { dish: 'glow', title: 'LB / amp / ara', sub: '+ plasmid', out: 'Glowing colonies', text: 'Arabinose switches GFP on through <b>araC</b>.' },
+];
 function results() {
   if (zoom.scale !== 'lab') return `<b>Cell level:</b> ${captionFor(cellState)}`;
   const n = B ? B.plates[3].colonies : 46;
   const dna = 0.8 * 100 / 510, eff = Math.round(n / dna);
-  const rows = [
-    ['', 'LB/amp · − plasmid', 'No growth. Ordinary <i>E. coli</i> have no defence against ampicillin.'],
-    ['lawn', 'LB · − plasmid', 'A lawn. No antibiotic, so every cell grows: the cells were alive.'],
-    ['col', 'LB/amp · + plasmid', 'Colonies, no glow. They carry <b>bla</b>, but without arabinose GFP stays off.'],
-    ['glow', 'LB/amp/ara · + plasmid', 'Glowing colonies. Arabinose switches on GFP through <b>araC</b>.'],
-  ];
-  return `<ul class="results">${rows.map(([c, name, text]) => `<li><span class="dish ${c}"></span><span><b>${name}:</b> ${text}</span></li>`).join('')}</ul>`
-    + `<div class="eff"><b>Transformation efficiency:</b> ${n} glowing colonies ÷ ${dna.toFixed(2)} µg of plasmid ≈ <b>${eff.toLocaleString('en-US')} transformants per µg</b>.</div>`;
+  return `<b>Transformation efficiency:</b> ${n} glowing colonies ÷ ${dna.toFixed(2)} µg of plasmid ≈ <b>${eff.toLocaleString('en-US')} transformants per µg</b>.`;
 }
-const completeHint = () => `<b>Only the arabinose plate glows.</b><button class="uv-toggle" data-act="uv"><i class="ph ${S && S.uv > 0.5 ? 'ph-sun' : 'ph-lightbulb-filament'}"></i>${S && S.uv > 0.5 ? 'Lights on' : 'UV light'}</button>`;
+const completeHint = () => {
+  const uv = S && S.uv > 0.5;
+  const head = `<span class="res-head"><b>Only the arabinose plate glows.</b><button class="uv-toggle" data-act="uv"><i class="ph ${uv ? 'ph-sun' : 'ph-lightbulb-filament'}"></i>${uv ? 'Lights on' : 'UV light'}</button></span>`;
+  if (zoom.scale !== 'lab') return head;
+  return head + `<span class="results">${RESULTS.map((r) => `<span class="res${r.dish === 'glow' ? ' hit' : ''}">`
+    + `<span class="dish ${r.dish}"></span><span class="res-plate">${r.title}<em class="${r.sub[0] === '+' ? 'plus' : ''}">${r.sub}</em></span>`
+    + `<span class="res-out">${r.out}</span><span class="res-text">${r.text}</span></span>`).join('')}</span>`;
+};
 
 // =========================================================================
 // Wire it together
@@ -615,7 +623,7 @@ lesson = createLesson({
   onEnter: (step) => {
     requestAnimationFrame(() => stage.resize()); // the card's new height changes the free area
     zoom.onStep();
-    if (!step) { toast('Only the arabinose plate glows', { icon: 'ph-sparkle' }); return; }
+    if (!step) { stage.focus(VIEWS.results, 1.4); toast('Only the arabinose plate glows', { icon: 'ph-sparkle' }); return; }
     if (firstEnter) { firstEnter = false; intro.started.then(() => stage.focus(step.view, 2.2)); return; } // the opening move, after Start
     stage.focus(step.view);
   },

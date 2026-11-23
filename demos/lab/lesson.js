@@ -452,6 +452,7 @@ export function createLesson({
       card.classList.remove('swap'); void card.offsetWidth; card.classList.add('swap');
     }
     cardStep = S.step;
+    card.classList.toggle('complete', !s); // a sim can style its complete card (e.g. wider for results)
     if (!s) {
       C.chip.textContent = 'Complete';
       C.title.textContent = 'Lab complete';
