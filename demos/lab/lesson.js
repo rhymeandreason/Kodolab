@@ -53,7 +53,7 @@
  *   - keep all bench state inside what rebuild() recreates
  */
 import { clamp } from './core/math.js';
-import { clearTweens, setInstant, setPaused } from './core/tween.js';
+import { clearTweens, setInstant, setPaused, setMeasuring, measured } from './core/tween.js';
 import { reseed } from './core/random.js';
 import { toast, setToastMuted, ensureEl, stripTags, uiRoot } from './ui.js';
 
@@ -119,20 +119,56 @@ export function createLesson({
      the hint first, so a bar drawn from that sits still while Play is running.
      Instead the bar fills on the step's elapsed time against how long the
      step took the last time it auto-played (est), and when there is no last
-     time, against a guess. Past the estimate it keeps creeping, slower and
-     slower, so it never reads as stopped; the real 1 eases it the rest of
-     the way. Paused, the clock stops and so does the bar. */
+     time. start() dry-runs every step once on tween.js's virtual clock, so
+     plays (its tweens' seconds) + clicks x autoDwell is how long Watch
+     spends on it, right on the first play. Past an estimate it
+     keeps creeping, slower and slower, so it never reads as stopped; the
+     real 1 eases it the rest of the way. Paused, the clock stops and so does
+     the bar. */
   const est = steps.map(() => null);
+  const plays = steps.map(() => null), clicksOf = steps.map(() => 1);
+
+  /* Every step once, instantly, on the virtual clock: how many seconds of
+     tweens its clicks play, and how many clicks Watch makes. The bench is
+     rebuilt from scratch afterwards by jumpTo, as on any jump. */
+  async function measureAll() {
+    S.replaying = true;
+    setInstant(true); setToastMuted(true);
+    try {
+      reseed('build');
+      rebuild();
+      for (let i = 0; i < N; i++) {
+        S.step = i;
+        if (steps[i].watch) { await complete(i); continue; }
+        const n0 = S.log[i].length;
+        setMeasuring(true);
+        await complete(i);
+        plays[i] = measured();
+        setMeasuring(false);
+        clicksOf[i] = Math.max(1, S.log[i].length - n0);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setMeasuring(false);
+      S.log.forEach((l) => { l.length = 0; });
+      setInstant(false); setToastMuted(watching());
+      S.replaying = false;
+    }
+  }
   const guess = () => autoDwell + 3;
   let stepT = 0, stepClean = false;
   const shown = steps.map(() => 0);
   function targetOf(i) {
     const real = progressOf(i);
     const s = steps[i];
-    if (i !== S.step || !s || s.watch || !watching() || real >= 1) return real;
+    if (i !== S.step || !s || s.watch || !watching() || !stepClean) return real; // not played from its start: the log is all there is
+    /* Not max(real, …): a click is logged, so the step reads done, the moment
+       its animation STARTS. In Watch the clock alone says how far along it is,
+       and enter() moving on is what fills it. */
+    if (plays[i] != null) return Math.min(0.995, stepT / (plays[i] + clicksOf[i] * autoDwell));
     const f = stepT / (est[i] || guess());
-    const creep = f < 0.9 ? f : 0.9 + 0.09 * (1 - Math.exp(-(f - 0.9) * 3));
-    return Math.max(real, creep);
+    return f < 0.9 ? f : 0.9 + 0.09 * (1 - Math.exp(-(f - 0.9) * 3));
   }
 
   function progressOf(i) {
@@ -278,9 +314,16 @@ export function createLesson({
     else enter(S.step + 1);
   }
 
+  /* The stage caps a frame's dt at 0.05 s, but tweens run on performance.now(),
+     so on a slow frame rate a capped clock falls behind the animation it is
+     measuring. The bar and the hint pause take real time, as the tweens do. */
+  let lastNow = 0;
   function update(dt) {
-    if (S.auto && !S.replaying && steps[S.step] && !steps[S.step].watch) stepT += dt;
-    autoTick(dt);
+    const now = performance.now();
+    const rdt = lastNow ? Math.min(1, (now - lastNow) / 1000) : dt;
+    lastNow = now;
+    if (S.auto && !S.replaying && steps[S.step] && !steps[S.step].watch) stepT += rdt;
+    autoTick(rdt);
     const s = steps[S.step];
     if (s && s.watch && S.playing && !S.replaying && !S.scrubbing) {
       const t = Math.min(s.watch.duration, s.watch.get() + dt * (s.watch.rate ? s.watch.rate() : 1));
@@ -612,7 +655,8 @@ export function createLesson({
     acting,
     play: () => setAuto(true),
     pause: () => setAuto(false),
-    start() { return jumpTo(0); },
+    start() { return measureAll().then(() => jumpTo(0)); },
+    get plays() { return plays.slice(); },
     /** Forget the student's clicks and start over (call newSession() first for new randomness). */
     restart() { S.log.forEach((l) => { l.length = 0; }); return jumpTo(0); },
   };

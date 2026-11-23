@@ -217,8 +217,8 @@ const STEPS = [
       if (!isInstant()) {                     // then a close look at the tube while the DNA forms
         follow.hold();                        // Watch mode: keep this view, don't reframe the bottle
         stage.focus('dna', 1.6);
-        await clockTo(4.94, 1.6);
       }
+      await clockTo(4.94, 1.6);               // outside the if, so the lesson's dry run counts it
       await clockTo(5.0, 6);                  // real life: a few minutes; strands gather at the boundary
     },
     // time-lapse clock on the card: 0:00 → 5:00 of real time over the wait (t 4.92 → 5.0)
