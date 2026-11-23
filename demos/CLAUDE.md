@@ -44,6 +44,7 @@ Every doc lives in `demos/docs/` except the node graph's two and the clipper's, 
 | Set the scale of a component or module | `kit/scale.js` is the enum |
 | A new page that hand-draws molecules | `AddingAPage.md`, then the sibling page the human names |
 | A new page that mounts a component | `AddingAComponent.md`, then `Generator.md` |
+| A new bench-lab simulation (an experiment on a 3D bench, on `lab/`) | `AddingALab.md`. `lab/README.md` is what the library does, and its prop conventions |
 | A new step-through pathway lesson | `AddingAPage.md`, `Modules.md`'s load order, `SCIENCE.md` §5, `glycolysis-lab.html`'s `STEPS` table and what reads it |
 | The chemistry a molecule has to obey | `SCIENCE.md` §§2-3, plus the target `mol-*.js` |
 | Changing geometry, or what a motion implies happened at the molecule scale | `SCIENCE.md` §§2-5 |
