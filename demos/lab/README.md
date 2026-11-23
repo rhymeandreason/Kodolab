@@ -2,9 +2,11 @@
 
 Shared pieces for 3D bench-lab simulations: stage, materials, props, clickable objects, and a lesson with Hands-on and Watch modes and a timeline you can step back and forth on.
 
-* `sims/Photosynthesis/` is the first lab built on it.
-* `sims/Strawberry/` (DNA extraction) is the second. It adds zoom levels: two live circles show one cell and the molecules, and all three views show the same moment.
-* `sims/Ecoli/` (bacterial transformation, GFP) is the third. It has one zoom level (one E. coli cell), a UV step that darkens the room, an intro card with a 3D plasmid, and the results on the complete card.
+Ported into kodolab from `Experiments/Lab` with Strawberry only. Photosynthesis and Ecoli, named below as worked examples, and the planning docs (ROADMAP, MICRO, …) are still in that repo.
+
+* `sims/Photosynthesis/` is the first lab built on it (not ported).
+* `strawberry/strawberry-lab.html` (DNA extraction) is the second. It adds zoom levels: two live circles show one cell and the molecules, and all three views show the same moment.
+* `sims/Ecoli/` (bacterial transformation, GFP, not ported) is the third. It has one zoom level (one E. coli cell), a UV step that darkens the room, an intro card with a 3D plasmid, and the results on the complete card.
 * `gallery.html` shows every prop on one bench. Use it as a catalog, and to check that a change to Lab didn't break anything.
 * `themes.html` shows the colour themes side by side, with the UI pieces in each.
 * `props.html` shows one prop at a time on a turntable, with its size, anchors and sliders for its state (liquid level, plunger, lamp, …). Link to a prop with its key, e.g. `props.html#syringe`.
@@ -24,15 +26,9 @@ The original labs (`/Photosynthesis`, `/BloodType`, `/Ecoli`, …) don't use Lab
 
 ## Running
 
-ES modules need a server, so `file://` won't work. From the repo root:
+ES modules need a server, so `file://` won't work. kodolab's `node tools/dev-server.js` sends `no-store`, so a reload always picks up edited modules.
 
-```bash
-python3 serve.py
-```
-
-`serve.py` is a static server that sends no-cache headers, so a normal reload always picks up edited modules. Use it rather than `python3 -m http.server`: browsers cache ES modules from that one and keep showing old code until a hard reload. `.claude/launch.json` runs it too.
-
-Then open <http://localhost:8765/Lab/sims/Photosynthesis/>, <http://localhost:8765/Lab/sims/Strawberry/>, <http://localhost:8765/Lab/sims/Ecoli/>, <http://localhost:8765/Lab/gallery.html> or <http://localhost:8765/Lab/props.html>. URL options:
+Then open <http://localhost:8817/demos/lab/strawberry/strawberry-lab.html>, <http://localhost:8817/demos/lab/gallery.html> or <http://localhost:8817/demos/lab/props.html>. URL options:
 
 |  |  |
 | --- | --- |
@@ -45,7 +41,7 @@ Then open <http://localhost:8765/Lab/sims/Photosynthesis/>, <http://localhost:87
 
 Reuse props from the library first. Then add new ones specific for your lab. Read PROPS.md for overall structure.
 
-Copy `sims/Photosynthesis/` and keep its `index.html` skeleton. It loads `../../lab.css`, the Phosphor icon CSS, and this import map. Import maps can't be shared between pages, so every sim carries its own copy:
+Copy `strawberry/` to `lab/<name>/` and keep its page skeleton: `lib/site.js`, the wordmark in `.lab-brand`, `../lab.css`, the Phosphor icon CSS, and this import map. Import maps can't be shared between pages, so every sim carries its own copy:
 
 ```html
 <script type="importmap">
@@ -61,7 +57,7 @@ The minimum `main.js`:
 ```js
 import * as THREE from 'three';
 import { V3, createStage, createMaterials, createInteraction, createLesson,
-         createFollowCam, disposeTree, makeBench, makeBeaker, moveTo } from '../../lab.js';
+         createFollowCam, disposeTree, makeBench, makeBeaker, moveTo } from '../lab.js';
 
 const stage = createStage({ canvas: document.getElementById('scene'),
   views: { bench: { t: V3(0, 4, 0), p: V3(0, 40, 60) } } });

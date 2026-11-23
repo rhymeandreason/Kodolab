@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const FONT = 'Inter, system-ui, sans-serif';
+export const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 export function makeCanvas(w, h) {
   const c = document.createElement('canvas');

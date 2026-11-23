@@ -485,8 +485,8 @@
 
   /* THE LESSON MENU. A full-window lesson carries only the wordmark, so the
      wordmark opens a panel instead of leaving: this unit's lessons, then the
-     site's places. Same slot on both lesson chromes (`.sitenav.floating` and
-     `.lshell-brand`), so it adds nothing to the scene until it is opened. A
+     site's places. Same slot on all three lesson chromes (`.sitenav.floating`,
+     `.lshell-brand`, and lab/'s `.lab-brand`), so it adds nothing to the scene until it is opened. A
      modifier click still goes home, and in someone else's frame there is no
      menu, since the mark is not a link there either. */
   var LM_CSS =
@@ -517,7 +517,7 @@
 
   function lessonMenu() {
     if (window.top !== window) return;
-    var mark = document.querySelector('.lshell-brand > .mark, .sitenav.floating > .mark');
+    var mark = document.querySelector('.lshell-brand > .mark, .sitenav.floating > .mark, .lab-brand > .mark');
     if (!mark || mark.parentNode.querySelector('.sitelinks, .lmenu')) return;
     if (!document.getElementById('lmenu-css')) {
       var st = document.createElement('style');

@@ -1,14 +1,18 @@
 /* Lab: shared chrome for bench-lab sims. A sim's own stylesheet loads after
  * this one and can override any token. Icons: Phosphor (regular, fill, bold). */
 :root {
-  --bg-1: #f8fafb;
-  --bg-2: #e6ecf0;
-  --panel: rgba(255, 255, 255, 0.84);
-  --ink: #0f1d2b;
-  --ink-2: #334155;
-  --muted: #6b7a8c;
-  --line: rgba(15, 29, 43, 0.08);
-  --line-2: rgba(15, 29, 43, 0.14);
+  /* Neutrals and type follow css/lesson-shell.css, so a lab reads as kodolab.
+     The accent stays per lab (themes below). */
+  --bg-1: #f8f7f3;
+  --bg-2: #ebe8e0;
+  --panel: rgba(255, 255, 255, 0.86);
+  --ink: #17181a;
+  --ink-2: #55585e;
+  --muted: #66696f;
+  --line: rgba(23, 24, 26, 0.08);
+  --line-2: rgba(23, 24, 26, 0.14);
+  --display: "Futura", "Futura PT", "Jost", system-ui, sans-serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* accent tokens come from the theme below */
   --blue: #2563eb;
   --blue-soft: #e8efff;
@@ -18,8 +22,8 @@
   --gutter: 20px;
   --caption-h: 96px;               /* Watch mode: room kept above the timeline for captions */
   --timeline-h: 66px;
-  --shadow: 0 1px 2px rgba(15, 29, 43, 0.04), 0 12px 32px rgba(15, 29, 43, 0.08);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --shadow: 0 1px 2px rgba(23, 24, 26, 0.04), 0 12px 32px rgba(23, 24, 26, 0.08);
+  font-family: var(--sans);
   color: var(--ink);
 }
 
@@ -74,13 +78,15 @@ html, body {
   pointer-events: none; z-index: 5;
 }
 .topbar > * { pointer-events: auto; }
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand-mark {
-  width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
-  background: linear-gradient(145deg, var(--accent-2), var(--accent)); color: #fff; font-size: 22px;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 28%, transparent);
-}
-.brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.brand { display: flex; align-items: center; gap: 14px; }
+/* The wordmark, written as Design.md §1 has it. lib/site.js turns it into the
+   lesson menu (its `.lab-brand > .mark` hook). Sized as kodo.css's --mark-size,
+   which this page does not load. */
+.brand .mark, .brand .lmenu { line-height: 0; text-decoration: none; flex: none; }
+.brand .mark img { height: 1.35rem; width: auto; display: block; }
+.brand .lmenu { align-items: center; font-size: 15px; color: var(--ink); }
+.brand-title { padding-left: 14px; border-left: 1px solid var(--line-2); }
+.brand h1 { margin: 0; font-family: var(--display); font-size: 17px; font-weight: 500; letter-spacing: 0.01em; }
 .brand p { margin: 1px 0 0; font-size: 12.5px; color: var(--muted); }
 .top-actions { display: flex; align-items: center; gap: 8px; }
 .icon-btn {
@@ -106,9 +112,9 @@ html, body {
 .step-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .btn {
   display: inline-flex; align-items: center; gap: 7px; border: 0; cursor: pointer;
-  padding: 9px 14px; border-radius: 10px; background: var(--ink); color: #fff; font: 600 13px 'Inter', sans-serif;
+  padding: 9px 14px; border-radius: 10px; background: var(--ink); color: #fff; font: 600 13px var(--sans);
 }
-.btn:hover { background: #1e3347; }
+.btn:hover { background: #2c2e32; }
 
 /* ---------- procedure list (lesson, from OnionRoot) ---------- */
 .steps-panel { top: 76px; left: var(--gutter); width: 260px; padding: 16px 14px 14px; }
@@ -155,10 +161,10 @@ html, body {
 }
 .card-clock {
   display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 99px;
-  font-size: 13px; font-weight: 650; color: var(--ink-2); background: rgba(15, 23, 42, 0.06); font-variant-numeric: tabular-nums;
+  font-size: 13px; font-weight: 650; color: var(--ink-2); background: rgba(23, 24, 26, 0.06); font-variant-numeric: tabular-nums;
 }
 .card-clock i { font-size: 14px; color: var(--accent-ink); }
-.lab-card h2 { margin: 10px 0 5px; font-size: 19px; font-weight: 650; letter-spacing: -0.015em; }
+.lab-card h2 { margin: 10px 0 5px; font-family: var(--display); font-size: 19px; font-weight: 500; letter-spacing: 0; }
 .lab-card .card-text { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
 .lab-card [hidden] { display: none !important; }
 .why {
@@ -189,8 +195,8 @@ html, body {
 .lab-do .lab-captions { display: none; }
 .cap-box {
   max-width: min(820px, 100%); padding: 10px 20px 11px; border-radius: 14px; text-align: center;
-  background: rgba(15, 23, 42, 0.78); color: #fff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22); display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: rgba(23, 24, 26, 0.78); color: #fff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(23, 24, 26, 0.22); display: flex; flex-direction: column; align-items: center; gap: 3px;
 }
 .cap-box[hidden], .cap-box [hidden] { display: none !important; }
 .cap-box.swap { animation: lab-cap-in .35s ease; }
@@ -215,13 +221,13 @@ html, body {
   border: 0; background: transparent; color: var(--ink-2); font-size: 19px; cursor: pointer;
   transition: background .2s, transform .1s, opacity .2s;
 }
-.tl-btn:hover { background: rgba(15, 29, 43, 0.06); }
+.tl-btn:hover { background: rgba(23, 24, 26, 0.06); }
 .tl-btn:active { transform: scale(0.96); }
 .tl-btn:disabled { opacity: .3; pointer-events: none; }
 .tl-btn[hidden] { display: none; }
 .tl-play {
   width: auto; min-width: 104px; padding: 0 18px 0 14px; gap: 7px; display: flex; align-items: center; justify-content: center;
-  background: var(--accent); color: #fff; font: 600 14px 'Inter', sans-serif; margin-right: 4px;
+  background: var(--accent); color: #fff; font: 600 14px var(--sans); margin-right: 4px;
   box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .tl-play i { font-size: 18px; }
@@ -238,7 +244,7 @@ html, body {
 .lab-mode.floating { position: absolute; top: var(--gutter); left: 50%; transform: translateX(-50%); z-index: 8; }
 .lab-mode button {
   display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 0; border-radius: 9px;
-  background: transparent; color: var(--muted); font: 600 13px 'Inter', sans-serif; cursor: pointer;
+  background: transparent; color: var(--muted); font: 600 13px var(--sans); cursor: pointer;
   transition: background .2s, color .2s;
 }
 .lab-mode button i { font-size: 17px; }
@@ -249,7 +255,7 @@ html, body {
 .tl-track { flex: 1; display: flex; gap: 10px; padding: 2px 8px; cursor: pointer; touch-action: none; min-width: 0; align-self: stretch; align-items: center; }
 .tl-phase { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 .tl-segs { display: flex; gap: 3px; }
-.tl-seg { min-width: 0; height: 7px; border-radius: 99px; background: rgba(15, 29, 43, 0.09); overflow: hidden; transition: height .15s; }
+.tl-seg { min-width: 0; height: 7px; border-radius: 99px; background: rgba(23, 24, 26, 0.09); overflow: hidden; transition: height .15s; }
 .tl-seg:hover { height: 9px; margin: -1px 0; }
 .tl-fill { height: 100%; background: var(--ink-2); transform-origin: left; transform: scaleX(0); border-radius: 99px; }
 .tl-seg.done .tl-fill { background: var(--ink-2); }
@@ -281,7 +287,7 @@ html, body {
 .lab-marker .pill {
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 7px; background: #fff;
   border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--ink);
-  box-shadow: 0 4px 14px rgba(15, 29, 43, 0.16); white-space: nowrap; animation: lab-float 1.8s ease-in-out infinite;
+  box-shadow: 0 4px 14px rgba(23, 24, 26, 0.16); white-space: nowrap; animation: lab-float 1.8s ease-in-out infinite;
 }
 .lab-marker .pill i { font-size: 15px; color: var(--accent); }
 .lab-marker .stem { width: 2px; height: 16px; background: linear-gradient(#fff, rgba(255, 255, 255, 0)); }
@@ -293,12 +299,12 @@ html, body {
 /* 'circle' marker style (from OnionRoot): dark pill, pulsing dot, arrow down to the object */
 .lab-marker.circle .pill {
   position: relative; gap: 8px; padding: 7px 12px 7px 10px; margin-bottom: 8px; border-radius: 99px;
-  background: rgba(15, 29, 43, 0.88); color: #fff; font-size: 12.5px; font-weight: 600;
-  box-shadow: 0 8px 20px -8px rgba(15, 29, 43, 0.6); animation: none; transition: background .2s;
+  background: rgba(23, 24, 26, 0.88); color: #fff; font-size: 12.5px; font-weight: 600;
+  box-shadow: 0 8px 20px -8px rgba(23, 24, 26, 0.6); animation: none; transition: background .2s;
 }
 .lab-marker.circle .pill::after {
   content: ''; position: absolute; left: 50%; bottom: -5px; margin-left: -5px;
-  border: 5px solid transparent; border-bottom: 0; border-top-color: rgba(15, 29, 43, 0.88); transition: border-color .2s;
+  border: 5px solid transparent; border-bottom: 0; border-top-color: rgba(23, 24, 26, 0.88); transition: border-color .2s;
 }
 .lab-marker.circle .pulse {
   width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--accent-2);
@@ -320,7 +326,7 @@ html, body {
 .lab-tooltip {
   position: absolute; left: 0; top: 0; max-width: 260px; padding: 10px 12px;
   background: rgba(255, 255, 255, 0.97); border: 1px solid var(--line); border-radius: 12px;
-  box-shadow: 0 10px 28px rgba(15, 29, 43, 0.14); font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
+  box-shadow: 0 10px 28px rgba(23, 24, 26, 0.14); font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
   pointer-events: none; opacity: 0; transition: opacity .15s ease; z-index: 8;
 }
 .lab-tooltip.show { opacity: 1; }
@@ -341,7 +347,7 @@ html, body {
 }
 .lab-toast {
   display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; background: #fff;
-  border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 10px 26px rgba(15, 29, 43, 0.12);
+  border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 10px 26px rgba(23, 24, 26, 0.12);
   font-size: 13px; color: var(--ink-2); animation: lab-toast-in .3s ease; transition: opacity .3s ease, transform .3s ease;
 }
 .lab-toast i { font-size: 17px; color: var(--accent); }
@@ -351,19 +357,19 @@ html, body {
 
 /* ---------- modal ---------- */
 .modal {
-  position: absolute; inset: 0; background: rgba(15, 29, 43, 0.28);
+  position: absolute; inset: 0; background: rgba(23, 24, 26, 0.28);
   backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   display: grid; place-items: center; z-index: 20; padding: 16px;
 }
 .modal[hidden] { display: none; }
 .modal-card {
   position: relative; width: min(520px, 100%); max-height: calc(100% - 32px); overflow: auto;
-  background: #fff; border-radius: 20px; padding: 26px 26px 20px; box-shadow: 0 30px 80px rgba(15, 29, 43, 0.25);
+  background: #fff; border-radius: 20px; padding: 26px 26px 20px; box-shadow: 0 30px 80px rgba(23, 24, 26, 0.25);
   font-size: 14px; line-height: 1.55; color: var(--ink-2);
 }
 .modal-close { position: absolute; top: 14px; right: 14px; box-shadow: none; }
 .modal-kicker { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent-ink); text-transform: uppercase; letter-spacing: .04em; }
-.modal-card h2 { margin: 6px 0 8px; font-size: 22px; letter-spacing: -0.015em; color: var(--ink); }
+.modal-card h2 { margin: 6px 0 8px; font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: 0; color: var(--ink); }
 .muted { color: var(--muted); font-size: 13px; }
 
 /* ---------- intro card (intro.js): every lab opens with it while the bench loads ---------- */
@@ -376,9 +382,9 @@ html, body {
 .intro-card {
   display: grid; grid-template-columns: 280px 1fr; gap: 32px; align-items: center;
   width: min(860px, 100%); max-height: calc(100% - 32px); overflow: auto; padding: 36px;
-  background: rgba(255, 255, 255, 0.96); border-radius: 22px; box-shadow: 0 30px 80px rgba(15, 29, 43, 0.2);
+  background: rgba(255, 255, 255, 0.96); border-radius: 22px; box-shadow: 0 30px 80px rgba(23, 24, 26, 0.2);
 }
-.intro-card h2 { font-size: 34px; line-height: 1.05; margin: 10px 0 12px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); }
+.intro-card h2 { font-family: var(--display); font-size: 34px; line-height: 1.1; margin: 10px 0 12px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); }
 .intro-card h2 em { font-style: normal; background: var(--intro-em, linear-gradient(90deg, var(--accent), var(--accent-2))); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .intro-card p { color: var(--muted); font-size: 15px; line-height: 1.55; margin: 0 0 16px; }
 .intro-art { position: relative; width: 100%; aspect-ratio: 1 / 1; }
@@ -450,7 +456,7 @@ html, body {
 }
 .zi-ring {
   position: absolute; inset: 0; border-radius: 50%;
-  box-shadow: 0 0 0 4px #fff, 0 0 0 5px rgba(15, 29, 43, 0.08), var(--shadow);
+  box-shadow: 0 0 0 4px #fff, 0 0 0 5px rgba(23, 24, 26, 0.08), var(--shadow);
   transition: transform .25s, box-shadow .25s;
 }
 .zoom-inset:hover .zi-ring, .zoom-inset:focus-visible .zi-ring {
@@ -461,7 +467,7 @@ html, body {
   position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px; white-space: nowrap;
   padding: 5px 11px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 12px;
-  box-shadow: 0 6px 16px rgba(15, 29, 43, 0.25);
+  box-shadow: 0 6px 16px rgba(23, 24, 26, 0.25);
 }
 .zi-dir { color: var(--accent-glow); font-weight: 500; }
 .zi-name { font-weight: 650; }
@@ -477,10 +483,10 @@ body.zooming .zoom-insets { opacity: 0; pointer-events: none; }
   background: #fff; box-shadow: 0 0 0 2.5px var(--ink), 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 .zt-inner { position: absolute; left: 0; bottom: 0; transform: translate(-50%, 0); display: flex; flex-direction: column; align-items: center; }
-.zt-stem { width: 1.5px; height: 28px; background: linear-gradient(var(--ink), rgba(15, 29, 43, 0.3)); }
+.zt-stem { width: 1.5px; height: 28px; background: linear-gradient(var(--ink), rgba(23, 24, 26, 0.3)); }
 .zt-pill {
   display: flex; flex-direction: column; align-items: center; padding: 5px 11px; border-radius: 10px;
-  background: rgba(255, 255, 255, 0.95); box-shadow: 0 4px 14px rgba(15, 29, 43, 0.14); white-space: nowrap;
+  background: rgba(255, 255, 255, 0.95); box-shadow: 0 4px 14px rgba(23, 24, 26, 0.14); white-space: nowrap;
 }
 .zt-pill b { font-size: 13px; font-weight: 650; color: var(--ink); }
 .zt-pill small { font-size: 11.5px; color: var(--muted); margin-top: 1px; }

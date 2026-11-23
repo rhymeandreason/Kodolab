@@ -111,7 +111,7 @@
       el.dataset.labTheme = name;
       el.querySelector('.name').innerHTML = name + (name === 'green' ? ' <span style="text-transform:none;color:var(--muted);font-weight:500">(default)</span>' : '');
       el.querySelector('.attr').textContent = `data-lab-theme="${name}"`;
-      el.querySelector('.open').href = `sims/Photosynthesis/?theme=${name}`;
+      el.querySelector('.open').href = `strawberry/strawberry-lab.html?theme=${name}`;
       grid.appendChild(el);
       const cs = getComputedStyle(el);
       const accent = cs.getPropertyValue('--accent').trim(), ink = cs.getPropertyValue('--accent-ink').trim();
