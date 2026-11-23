@@ -268,8 +268,8 @@ export function createCell(env) {
   /* Watch's caption at this level: one or two beats per stage, the second when its change shows */
   function cue(t) {
     switch (st(t)) {
-      case 0: return { text: 'One <i>E. coli</i> cell. Its <b>chromosome</b> floats free in the cytoplasm', mark: 'Chromosome' };
-      case 1: return { text: '<b>Calcium ions</b> coat the membrane and cancel its negative charge', mark: 'Ca²⁺ ions' };
+      case 0: return { text: '<i>E. coli</i> is a one-celled bacterium from the gut. Its <b>chromosome</b> floats free, with no nucleus', mark: 'Chromosome' };
+      case 1: return { text: 'Calcium chloride is added. Its <b>calcium ions</b> coat the membrane and cancel its negative charge', mark: 'Ca²⁺ ions' };
       case 2: return { text: 'DNA, also negative, is no longer pushed away. The cell is <b>competent</b>', mark: 'Cell membrane' };
       case 3: return { text: '<b>Plasmids</b> arrive: small DNA rings carrying GFP, bla and araC', mark: 'Plasmid' };
       case 4: return { text: 'On ice the membrane stiffens, and plasmids settle against it', mark: 'Plasmid' };

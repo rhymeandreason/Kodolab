@@ -406,9 +406,10 @@ export function createMolecule(env) {
 
   /* Watch's caption at this level; times match the labels' windows above */
   const CUES = [
-    [0, { text: 'DNA is a double helix: two backbones joined by <b>base pairs</b>', mark: 'Base pairs' }],
-    [0.45, { text: 'It winds around <b>histone proteins</b>', mark: 'Histone proteins' }],
-    [0.9, { text: 'A phospholipid <b>membrane</b> walls it in', mark: 'Membrane' }],
+    [0, { text: 'Strawberries are <b>octoploid</b>: eight copies of every chromosome, so lots of DNA' }],
+    [0.3, { text: 'DNA is a double helix: two backbones joined by <b>base pairs</b>', mark: 'Base pairs' }],
+    [0.6, { text: 'It winds around <b>histone proteins</b>', mark: 'Histone proteins' }],
+    [0.95, { text: 'A phospholipid <b>membrane</b> walls it in', mark: 'Membrane' }],
     [1.28, { text: 'Mashing changes nothing at this scale. The membranes are still whole', mark: 'Membrane' }],
     [2.0, { text: '<b>Soap</b> arrives: a water-loving head, a fat-loving tail', mark: 'Detergent (soap)' }],
     [2.2, { text: 'Soap pries lipids out of the membrane', mark: 'Detergent (soap)' }],
