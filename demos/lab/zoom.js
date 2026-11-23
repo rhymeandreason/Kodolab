@@ -14,11 +14,15 @@
  *   zoom.scale            // 'lab' | a level key
  *   zoom.go('cell')       // zoom with the lens transition
  *   zoom.onStep()         // fly the level cameras to the current step's view
+ *   zoom.caption()        // the main view's level caption now, or null at the Lab (createLesson's levelCaption)
  *   stage.onFrame((dt) => zoom.update(dt));
  *
  * A world: { scene, views: [{ pos, target }], labels: [{ text, sub?, anchor(), show(t) }],
  *   interactives: [{ root, info(t) → { title, text }, priority? }], update(t, time),
- *   fov?, near?, far?, minDist?, maxDist?, insetBg?(bg) → THREE.Color }.
+ *   fov?, near?, far?, minDist?, maxDist?, insetBg?(bg) → THREE.Color,
+ *   cue?(t) → { text, note?, mark? } | null }.
+ * cue(t) is what is happening at this level now, shown as Watch's caption while it is the main
+ * view. mark names one of its labels: that tag is spotlit while the cue is up, the others dim.
  * insetBg tints the level's circle from its `bg` (Ecoli's cell goes dark with the room lights).
  *
  * It builds its own DOM: one `.zoom-inset` circle per level you're not looking at, in
@@ -263,12 +267,20 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
     });
   }
   const _v = new THREE.Vector3();
+  function caption() {
+    if (active === 'lab' || transition) return null;
+    const w = worlds[active];
+    return (w.cue && w.cue(getT())) || null;
+  }
   function updateLabels(t) {
     const W = window.innerWidth, H = window.innerHeight;
+    const cue = caption(), mark = cue && cue.mark;
+    labelLayer.classList.toggle('marking', !!mark);
     for (const k of DEEP) {
       const w = worlds[k];
       w.labels.forEach((L, i) => {
         const el = w.labelEls[i];
+        el.classList.toggle('hot', k === active && L.text === mark);
         if (k !== active || transition || !L.show(t)) { el.classList.remove('on'); return; }
         _v.copy(L.anchor()).project(w.camera);
         if (_v.z > 1 || Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) { el.classList.remove('on'); return; }
@@ -374,6 +386,6 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
   return {
     get scale() { return active; },
     get transitioning() { return !!transition; },
-    go, onStep, update, worlds, names: NAMES, order: ORDER,
+    go, onStep, update, caption, worlds, names: NAMES, order: ORDER,
   };
 }

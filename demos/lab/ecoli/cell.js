@@ -265,8 +265,31 @@ export function createCell(env) {
     { root: gfpM, priority: 2, info: () => ({ title: 'Green fluorescent protein', text: 'From a jellyfish. It absorbs UV light and gives off green light.' }) },
   ];
 
+  /* Watch's caption at this level: one or two beats per stage, the second when its change shows */
+  function cue(t) {
+    switch (st(t)) {
+      case 0: return { text: 'One <i>E. coli</i> cell. Its <b>chromosome</b> floats free in the cytoplasm', mark: 'Chromosome' };
+      case 1: return { text: '<b>Calcium ions</b> coat the membrane and cancel its negative charge', mark: 'Ca²⁺ ions' };
+      case 2: return { text: 'DNA, also negative, is no longer pushed away. The cell is <b>competent</b>', mark: 'Cell membrane' };
+      case 3: return { text: '<b>Plasmids</b> arrive: small DNA rings carrying GFP, bla and araC', mark: 'Plasmid' };
+      case 4: return { text: 'On ice the membrane stiffens, and plasmids settle against it', mark: 'Plasmid' };
+      case 5: return M.heat < 0.6
+        ? { text: '<b>Heat shock!</b> The sudden heat makes the membrane flex' }
+        : { text: 'Brief <b>pores</b> open, and a plasmid slips inside', mark: 'Pore' };
+      case 6: return M.enz < 0.6
+        ? { text: 'In fresh broth the cell repairs itself and copies the plasmid', mark: 'Plasmid copies' }
+        : { text: 'The <b>bla</b> gene makes <b>β-lactamase</b>', mark: 'β-lactamase' };
+      case 7: return { text: 'On the amp plate, β-lactamase breaks down <b>ampicillin</b> before it can kill the cell', mark: 'Ampicillin' };
+      default:
+        if (!t.ara) return { text: 'No arabinose: araC keeps the GFP gene off. The cell lives but does not glow' };
+        return M.gfp < 0.5
+          ? { text: '<b>Arabinose</b> binds araC, which switches on the GFP gene', mark: 'Arabinose' }
+          : { text: 'The cell makes <b>GFP</b>, which glows green under UV light', mark: 'GFP' };
+    }
+  }
+
   const api = {
-    scene, labels, interactives, update,
+    scene, labels, interactives, update, cue,
     insetBg: (bg) => IBG.copy(bg).lerp(MUV, M.uv), // the circle darkens with the room under UV
     fov: 32, near: 0.1, far: 100, minDist: 4, maxDist: 24,
     views: [{ pos: V3(1.2, 3.2, 12.5), target: V3(0, 0, 0) }],

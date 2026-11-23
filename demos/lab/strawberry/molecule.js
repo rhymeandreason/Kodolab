@@ -6,6 +6,7 @@
  * so this view and the protein benches agree. strawberry-lab.html loads all three
  * as classic scripts; Duplex and MolPalette are read by their global names. */
 import * as THREE from 'three';
+import { cueAt } from '../lesson.js';
 import { C, V, ph, win, clamp, lerp, rng, linear, easeOut, randDir, fibSphere, makeGlass, makeDissolve, makeTexture, dotTexture, mergeColored } from './util.js';
 const phys = (c, o) => new THREE.MeshPhysicalMaterial(Object.assign({ color: C(c), roughness: 0.4, metalness: 0 }, o || {}));
 const UP = V(0, 1, 0);
@@ -403,5 +404,24 @@ export function createMolecule(env) {
     { c: css(PAL.histones.H3), l: 'Histone' }, { c: css(PAL.organelles.plasma.head), l: 'Lipid' }, { c: css(PAL.atoms.S), l: 'Detergent' }, { c: css(PAL.atoms.C), l: 'Alcohol' },
   ];
 
-  return { scene, update, labels, interactives, views, legend, minDist: 6, maxDist: 70, fov: 38, near: 0.1, far: 400 };
+  /* Watch's caption at this level; times match the labels' windows above */
+  const CUES = [
+    [0, { text: 'DNA is a double helix: two backbones joined by <b>base pairs</b>', mark: 'Base pairs' }],
+    [0.45, { text: 'It winds around <b>histone proteins</b>', mark: 'Histone proteins' }],
+    [0.9, { text: 'A phospholipid <b>membrane</b> walls it in', mark: 'Membrane' }],
+    [1.28, { text: 'Mashing changes nothing at this scale. The membranes are still whole', mark: 'Membrane' }],
+    [2.0, { text: '<b>Soap</b> arrives: a water-loving head, a fat-loving tail', mark: 'Detergent (soap)' }],
+    [2.2, { text: 'Soap pries lipids out of the membrane', mark: 'Detergent (soap)' }],
+    [2.72, { text: 'It wraps them into <b>micelles</b>, and the membrane is gone', mark: 'Micelle' }],
+    [2.85, { text: '<b>Na⁺</b> from the salt shields DNA’s negative phosphates', mark: 'Na⁺ ions' }],
+    [2.95, { text: 'The histones let go and the <b>DNA unwinds</b>', mark: 'DNA unwinds' }],
+    [3.15, { text: 'All of this is far smaller than the filter’s pores', mark: 'Everything here passes the filter' }],
+    [3.6, { text: 'DNA from many cells floats free, still dissolved in water', mark: 'DNA from many cells' }],
+    [4.45, { text: '<b>Alcohol</b> pulls water away from the DNA', mark: 'Alcohol' }],
+    [4.85, { text: 'Its charge shielded, the helices <b>stick together</b> and precipitate', mark: 'Strands stick together' }],
+    [5.78, { text: 'Lifted out. Proteins, soap and lipids stay in the liquid', mark: 'Lifted out of the liquid' }],
+  ];
+  const cue = (t) => cueAt(CUES, t);
+
+  return { scene, update, labels, interactives, views, legend, cue, minDist: 6, maxDist: 70, fov: 38, near: 0.1, far: 400 };
 }

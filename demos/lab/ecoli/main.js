@@ -606,6 +606,7 @@ const completeHint = () => {
 // =========================================================================
 let firstEnter = true;
 lesson = createLesson({
+  levelCaption: () => zoom.caption(),
   steps: STEPS,
   phases: PHASES,
   rebuild,

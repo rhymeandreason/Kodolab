@@ -538,6 +538,12 @@ body.zooming .zoom-insets { opacity: 0; pointer-events: none; }
 #zoomLabels { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
 .zoom-tag { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity .35s; will-change: transform; }
 .zoom-tag.on { opacity: 1; }
+/* Watch: the tag the level caption names is spotlit, the rest step back */
+.lab-watch #zoomLabels.marking .zoom-tag.on { opacity: 0.35; }
+.lab-watch #zoomLabels.marking .zoom-tag.on.hot { opacity: 1; z-index: 1; }
+.lab-watch .zoom-tag.hot .zt-pill { box-shadow: 0 0 0 2px var(--accent), 0 4px 14px rgba(23, 24, 26, 0.14); }
+.lab-watch .zoom-tag.hot .zt-dot { animation: zt-pulse 1.4s ease-out infinite; }
+@keyframes zt-pulse { 0% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 0 var(--accent); } 100% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 12px transparent; } }
 .zt-dot {
   position: absolute; width: 9px; height: 9px; left: -4.5px; top: -4.5px; border-radius: 50%;
   background: #fff; box-shadow: 0 0 0 2.5px var(--ink), 0 2px 6px rgba(0, 0, 0, 0.2);

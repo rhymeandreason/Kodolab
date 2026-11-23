@@ -3,6 +3,7 @@
  * experiment clock t (0..6, one unit per original step), so the lesson can
  * replay and scrub it. */
 import * as THREE from 'three';
+import { cueAt } from '../lesson.js';
 import { C, V, ph, win, clamp, lerp, rng, linear, easeOut, randDir, fibSphere, makeGlass, makeDissolve, makeTexture, dotTexture, mergeColored } from './util.js';
 
 const phys = (c, o) => new THREE.MeshPhysicalMaterial(Object.assign({ color: C(c), roughness: 0.4, metalness: 0 }, o || {}));
@@ -389,5 +390,25 @@ export function createCell(env) {
     { c: '#6a4cf0', l: 'DNA' }, { c: '#e2445f', l: 'Vacuole / pigment' }, { c: '#ff8c42', l: 'Plastids' },
   ];
 
-  return { scene, update, labels, interactives, views, legend, minDist: 5, maxDist: 42, fov: 38, near: 0.1, far: 300 };
+  /* Watch's caption at this level; times match the labels' windows above */
+  const CUES = [
+    [0, { text: 'One cell of the fruit, boxed in by a rigid <b>cellulose wall</b>', mark: 'Cell wall' }],
+    [0.45, { text: 'Its DNA is packed inside the <b>nucleus</b>', mark: 'Nucleus' }],
+    [0.9, { text: 'The big <b>vacuole</b> stores the red pigment', mark: 'Vacuole' }],
+    [1.28, { text: 'Mashing tears the cell walls apart', mark: 'Cell wall' }],
+    [1.75, { text: 'Cells separate. Only a thin <b>membrane</b> holds each one together', mark: 'Broken cell wall' }],
+    [2.0, { text: 'Soap dissolves the <b>cell membrane</b>', mark: 'Cell membrane' }],
+    [2.15, { text: 'The vacuole and the nucleus break open too', mark: 'Nucleus' }],
+    [2.5, { text: 'Membrane fats end up in <b>micelles</b>, tiny balls of soap and lipid', mark: 'Micelles' }],
+    [2.85, { text: 'The <b>DNA</b> spills out into the salty buffer', mark: 'Released DNA' }],
+    [3.04, { text: 'The filter catches wall pieces and other large debris', mark: 'Debris caught by the filter' }],
+    [3.3, { text: 'DNA, micelles and pigment pass straight through', mark: 'Released DNA' }],
+    [4.0, { text: 'The DNA is still dissolved, so you cannot see it yet', mark: 'Released DNA' }],
+    [4.7, { text: 'In alcohol, DNA comes out of solution and <b>clumps</b>', mark: 'DNA strands clump together' }],
+    [5.0, { text: 'Millions of strands tangle into threads thick enough to see' }],
+    [5.65, { text: 'Twirling winds the fibres around each other, like spaghetti on a fork', mark: 'Fibres wind around each other' }],
+  ];
+  const cue = (t) => cueAt(CUES, t);
+
+  return { scene, update, labels, interactives, views, legend, cue, minDist: 5, maxDist: 42, fov: 38, near: 0.1, far: 300 };
 }

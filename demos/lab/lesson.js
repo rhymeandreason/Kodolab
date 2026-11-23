@@ -40,6 +40,10 @@
  *     freezes mid-animation; the track scrubs and jumps between steps.
  *     Like a video: the card and procedure list hide, and the step's caption
  *     shows in large text above the timeline.
+ *   levelCaption: () => zoom.caption() replaces the step's caption while a
+ *   zoomed-in level has one, and Play holds (tweens frozen, no next click)
+ *   until each has been up long enough to read, so a level's beats can be
+ *   closer together than the bench's.
  *   lesson.holdWatch(true) forces Watch and greys out Hands-on (a zoomed-in
  *   level, where there is no bench to click); holdWatch(false) restores the
  *   reader's mode. A lab with zoom levels calls it from createZoom's onChange.
@@ -61,13 +65,18 @@ import { toast, setToastMuted, ensureEl, stripTags, uiRoot } from './ui.js';
  * shows the last cue whose time has been reached (the first one before that). A cue's
  * text may be a string or { text, note }. */
 export function cues(getT, list) {
-  return () => {
-    const t = getT();
-    let v = list[0][1];
-    for (const [at, c] of list) if (t >= at - 1e-6) v = c;
-    return v;
-  };
+  return () => cueAt(list, getT());
 }
+/** The cue of [[t, cue], …] in effect at t (the first one before the first time). */
+export function cueAt(list, t) {
+  let v = list[0][1];
+  for (const [at, c] of list) if (t >= at - 1e-6) v = c;
+  return v;
+}
+
+/* Seconds a level caption stays up before Watch may replace it: playback holds
+   until then. Roughly reading speed, with a floor for a glance at the scene. */
+const readTime = (html) => clamp(1.4 + stripTags(html).split(/\s+/).length * 0.3, 2.6, 7);
 
 export function createLesson({
   steps,
@@ -80,6 +89,7 @@ export function createLesson({
   completeWhy = null,              // optional blue note on the complete card (string or function)
   completeCaption = 'Lab complete', // Watch mode's last caption (string, { text, note } or function)
   introCaption = 'Press <b>Play</b> to watch the experiment',
+  levelCaption = null,             // Watch mode, zoomed in: () => the level's caption, or null (zoom.caption)
   mode = new URLSearchParams(location.search).get('mode') === 'watch' ? 'watch' : 'do',
   autoDwell = 1.1,                 // Watch mode: seconds to read the hint before each auto-click
 }) {
@@ -158,6 +168,12 @@ export function createLesson({
   }
   const guess = () => autoDwell + 3;
   let stepT = 0, stepClean = false;
+  let holding = false; // Play waits for a level caption to be read (see renderCaption)
+  function setHolding(on) {
+    if (on === holding) return;
+    holding = on;
+    setPaused(on || (S.busy && !S.auto));
+  }
   const shown = steps.map(() => 0);
   function targetOf(i) {
     const real = progressOf(i);
@@ -224,6 +240,7 @@ export function createLesson({
     const my = ++token;
     clearTweens();
     S.busy = false; S.playing = false;
+    holding = false;
     setPaused(false);
     S.replaying = true;
     setInstant(true); setToastMuted(true);
@@ -271,6 +288,7 @@ export function createLesson({
     S.auto = !!on && watching();
     if (S.auto && !S.busy && !S.log[S.step].length) { stepT = 0; stepClean = true; } // played from this step's start
     dwell = 0;
+    holding = false;
     setPaused(S.busy && !S.auto); // freeze (or unfreeze) a click animation mid-way
     const s = steps[S.step];
     if (s && s.watch) S.playing = S.auto;
@@ -282,6 +300,7 @@ export function createLesson({
     if (m === S.mode) return;
     S.mode = m;
     S.auto = false;
+    holding = false;
     setPaused(false);
     const s = steps[S.step];
     if (s && s.watch) S.playing = m === 'do';
@@ -322,10 +341,14 @@ export function createLesson({
     const now = performance.now();
     const rdt = lastNow ? Math.min(1, (now - lastNow) / 1000) : dt;
     lastNow = now;
-    if (S.auto && !S.replaying && steps[S.step] && !steps[S.step].watch) stepT += rdt;
-    autoTick(rdt);
+    if (S.auto) capAge += rdt;
+    if (holding && !(S.auto && watching())) setHolding(false);
+    if (!holding) {
+      if (S.auto && !S.replaying && steps[S.step] && !steps[S.step].watch) stepT += rdt;
+      autoTick(rdt);
+    }
     const s = steps[S.step];
-    if (s && s.watch && S.playing && !S.replaying && !S.scrubbing) {
+    if (s && s.watch && S.playing && !holding && !S.replaying && !S.scrubbing) {
       const t = Math.min(s.watch.duration, s.watch.get() + dt * (s.watch.rate ? s.watch.rate() : 1));
       s.watch.set(t);
       if (t >= s.watch.duration) { S.playing = false; enter(S.step + 1); return; }
@@ -349,16 +372,23 @@ export function createLesson({
   }
 
   /* Watch mode's caption: re-read every frame, written only when it changes */
-  let capShown = null;
+  let capShown = null, capAge = 0, capNeed = 0; // capNeed: read time owed by the level caption shown (0 for others)
   function renderCaption() {
-    if (!watching()) { capShown = null; return; }
+    if (!watching()) { capShown = null; setHolding(false); return; }
     const s = steps[S.step];
     const fresh = S.step === 0 && !S.auto && !S.busy && !S.log[0].length && !(s && s.watch && s.watch.get() > 1e-6);
-    let v = fresh ? introCaption : s ? (s.caption !== undefined ? text(s.caption) : s.title) : text(completeCaption);
+    const lv = !fresh && levelCaption ? levelCaption() : null;
+    let v = fresh ? introCaption : lv || (s ? (s.caption !== undefined ? text(s.caption) : s.title) : text(completeCaption));
     if (!v) v = { text: '' };
     if (typeof v === 'string') v = { text: v };
     const key = `${v.text}|${v.note || ''}`;
-    if (key === capShown) return;
+    if (key === capShown) { setHolding(false); return; }
+    // a level caption replacing one not yet read: hold Play on the old one
+    const playing = S.auto && !S.replaying && !S.scrubbing;
+    if (lv && playing && capAge < capNeed) { setHolding(true); return; }
+    setHolding(false);
+    capAge = 0;
+    capNeed = lv ? readTime(v.text) : 0;
     const swap = capShown !== null && !S.replaying;
     capShown = key;
     capText.innerHTML = v.text || '';
