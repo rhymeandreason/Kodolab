@@ -1,13 +1,17 @@
-/* Molecule scale: DNA double helices, histones, a lipid bilayer, detergent micelles, Na+ ions, alcohol. 1 unit = 1 nm. Ported from the original Strawberry lab
- * (/Strawberry/js/molecule.js); sim-local. Everything is a pure function of the
- * experiment clock t (0..6, one unit per original step), so the lesson can
- * replay and scrub it. */
+/* Molecule scale: chromatin and free DNA, histones, a lipid bilayer, detergent micelles, Na+ ions, alcohol. 1 unit = 1 nm.
+ * Sim-local. Poses are a function of the experiment clock t (0..6, one unit per
+ * original step), so the lesson can replay and scrub it.
+ *
+ * DNA is kit/duplex.js drawn by kit/nucleic.js, and every colour is palette.js's,
+ * so this view and the protein benches agree. strawberry-lab.html loads all three
+ * as classic scripts; Duplex and MolPalette are read by their global names. */
 import * as THREE from 'three';
 import { C, V, ph, win, clamp, lerp, rng, linear, easeOut, randDir, fibSphere, makeGlass, makeDissolve, makeTexture, dotTexture, mergeColored } from './util.js';
 const phys = (c, o) => new THREE.MeshPhysicalMaterial(Object.assign({ color: C(c), roughness: 0.4, metalness: 0 }, o || {}));
 const UP = V(0, 1, 0);
 
-const COL = { A: '#ef476f', T: '#ffb703', G: '#06d6a0', C: '#3a86ff' };
+const PAL = globalThis.MolPalette;
+const css = (n) => '#' + n.toString(16).padStart(6, '0');
 
 export function createMolecule(env) {
   const scene = new THREE.Scene();
@@ -26,63 +30,59 @@ export function createMolecule(env) {
   const sphereLo = new THREE.SphereGeometry(1, 12, 9);
   const cyl = new THREE.CylinderGeometry(1, 1, 1, 10, 1);
 
-  const bbMat = phys('#2b3a55', { roughness: 0.32, clearcoat: 0.6 });
-  const phMat = phys('#fb8500', { roughness: 0.3, clearcoat: 0.5 });
-  const rungMat = phys('#ffffff', { roughness: 0.35, clearcoat: 0.3 });
-
-  /* ---------- DNA double helix (B-form: 2 nm wide, 0.34 nm rise, 10.5 bp/turn) ---------- */
-  function makeHelix(nbp, seed) {
-    const r = rng(seed);
-    const group = new THREE.Group();
-    const rise = 0.34, Rr = 1.0, tw = (Math.PI * 2) / 10.5, off = 2.4;
-    const len = (nbp - 1) * rise;
-    const s1 = [], s2 = [];
-    for (let i = 0; i < nbp; i++) {
-      const x = -len / 2 + i * rise, a = i * tw;
-      s1.push(V(x, Rr * Math.cos(a), Rr * Math.sin(a)));
-      s2.push(V(x, Rr * Math.cos(a + off), Rr * Math.sin(a + off)));
-    }
-    [s1, s2].forEach((s) => {
-      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(s), nbp * 6, 0.19, 8), bbMat);
-      group.add(tube);
-    });
-    const phos = new THREE.InstancedMesh(sphere, phMat, nbp * 2);
-    const rungs = new THREE.InstancedMesh(cyl, rungMat, nbp * 2);
-    const q = new THREE.Quaternion();
-    const phosLocal = [];
-    for (let i = 0; i < nbp; i++) {
-      [s1[i], s2[i]].forEach((p, j) => {
-        tmpM.compose(p, q.identity(), tmpS.setScalar(0.27));
-        phos.setMatrixAt(i * 2 + j, tmpM);
-        phosLocal.push(p.clone());
-      });
-      const pair = r() < 0.5 ? ['A', 'T'] : ['G', 'C'];
-      if (r() < 0.5) pair.reverse();
-      const mid = tmp.copy(s1[i]).add(s2[i]).multiplyScalar(0.5);
-      [[s1[i], pair[0]], [s2[i], pair[1]]].forEach(([p, b], j) => {
-        const dir = tmp2.copy(mid).sub(p);
-        const L = dir.length() - 0.18;
-        dir.normalize();
-        const c = tmp3.copy(p).addScaledVector(dir, 0.18 + L / 2);
-        q.setFromUnitVectors(UP, dir);
-        tmpM.compose(c, q, tmpS.set(0.14, L, 0.14));
-        rungs.setMatrixAt(i * 2 + j, tmpM);
-        rungs.setColorAt(i * 2 + j, C(COL[b]));
-      });
-    }
-    rungs.instanceColor.needsUpdate = true;
-    group.add(phos, rungs);
-    return { group, phosLocal, s1, len };
+  /* ---------- DNA: kit/duplex.js's ideal B-DNA, drawn by kit/nucleic.js ----------
+     Chromatin first: two nucleosomes on linker DNA, each 146 bp wound 1.9 times
+     left-handed round a histone octamer, the wrap calibrated to 1AOI. Salt strips
+     the octamers and the same molecule relaxes to a straight duplex far longer
+     than the frame. Duplex works in A; S takes it to this scene's nm. */
+  const S = 0.1;
+  const NUC = Duplex.NUCLEOSOME;
+  const dnaMat = (hex) => phys(hex, { roughness: 0.4, clearcoat: 0.4 });
+  const tilt = new THREE.Vector3(0, 0.45, 1).normalize();          // the octamers' axis: face-on, a little from above
+  const D3 = [tilt.x, tilt.y, tilt.z], DYAD = [0, -1, 0];
+  const wraps = [-78, 78].map((x) => Duplex.superhelix({ centre: [x, -6, 0], axis: D3, dyad: DYAD }));
+  const end = (pts, last) => {
+    const i = last ? pts.length - 1 : 0, j = last ? i - 1 : 1;
+    const p = pts[i], q = pts[j], d = last ? [p[0] - q[0], p[1] - q[1], p[2] - q[2]] : [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
+    return { p, t: d };
+  };
+  const in1 = end(wraps[0], false), out1 = end(wraps[0], true), in2 = end(wraps[1], false), out2 = end(wraps[1], true);
+  const wrappedPath = Duplex.join(
+    Duplex.hermite([-330, -60, -40], [1, 0, 0], in1.p, in1.t, 30),
+    wraps[0],
+    Duplex.hermite(out1.p, out1.t, in2.p, in2.t, 40),
+    wraps[1],
+    Duplex.hermite(out2.p, out2.t, [330, -60, 40], [1, 0, 0], 30));
+  const wArc = Duplex.arc(wrappedPath);
+  const NBP = Math.round(wArc.total / Duplex.B.rise) + 1;
+  const M = 900;
+  const wrappedR = [], straightR = [];
+  for (let i = 0; i <= M; i++) {
+    wrappedR.push(wArc.at(wArc.total * i / M).p);
+    straightR.push([wArc.total * (i / M - 0.5), 0, 0]);
   }
+  const seq = Duplex.trace({ n: NBP, seed: 5 }).chains.A.seq;
+  function chromatin(k) {
+    const axis = wrappedR.map((a, i) => [a[0] + (straightR[i][0] - a[0]) * k, a[1] + (straightR[i][1] - a[1]) * k, a[2] + (straightR[i][2] - a[2]) * k]);
+    return Duplex.trace({ axis, seq, fit: true, bpPerTurn: lerp(NUC.bpPerTurn, Duplex.B.bpPerTurn, k) });
+  }
+  let mainK = 0, mainTrace = chromatin(0);
+  const main = { group: Duplex.group(THREE, mainTrace, { scale: S, sub: 4, material: dnaMat }) };
+  const straight = chromatin(1);
+  // where Na+ lands: phosphates of the relaxed duplex, in the frame
+  main.phosLocal = [];
+  straight.order.forEach((id) => straight.chains[id].P.forEach((p) => { if (Math.abs(p[0]) < 90) main.phosLocal.push(V(p[0] * S, p[1] * S, p[2] * S)); }));
+  main.phosLocal.sort((a, b) => a.x - b.x);
+  const pairMid = (tr, i) => { const m = tr.pairs[i].mid; return V(m[0] * S, m[1] * S, m[2] * S); };
+  const linkerPair = Math.round(NBP / 2);
 
   const dnaRoot = new THREE.Group();
   scene.add(dnaRoot);
-  const main = makeHelix(38, 5);
   dnaRoot.add(main.group);
   const others = [];
   const HEX = 2.35;
   for (let k = 0; k < 6; k++) {
-    const h = makeHelix(30, 40 + k);
+    const h = { group: Duplex.group(THREE, Duplex.trace({ n: 120, seed: 40 + k, phase: k }), { scale: S, sub: 4, material: dnaMat }) };
     h.group.visible = false;
     dnaRoot.add(h.group);
     const a = (k / 6) * Math.PI * 2;
@@ -100,30 +100,38 @@ export function createMolecule(env) {
     });
   }
 
-  /* ---------- histones ---------- */
-  const histMat = phys('#cdb4e8', { roughness: 0.5, clearcoat: 0.3, transparent: true, opacity: 1 });
+  /* ---------- histone octamers: (H3-H4)2 and two H2A-H2B, in palette.js's four ----------
+     Eight lobes in two layers, one per chain; the layers are dyad mates, so each
+     histone's two copies sit mirror to each other. Sized to fill the wrap. */
+  const HIS = PAL.histones;
+  const histMats = {};
+  ['H3', 'H4', 'H2A', 'H2B'].forEach((k) => { histMats[k] = phys(HIS[k], { roughness: 0.5, clearcoat: 0.3, transparent: true, opacity: 1 }); });
+  const LOBES = [['H3', 0.35], ['H4', 1.9], ['H2B', 3.5], ['H2A', 5.0]];
   const histones = [];
-  [-4.2, 0.2, 4.4].forEach((x, k) => {
+  const Dv = tilt.clone(), Uv = V(...DYAD).addScaledVector(Dv, -V(...DYAD).dot(Dv)).normalize(), Wv = V().crossVectors(Dv, Uv);
+  const histQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(Uv, Wv, Dv));
+  wraps.forEach((_, k) => {
     const g = new THREE.Group();
-    for (let i = 0; i < 8; i++) {
-      const a = (i % 4) * (Math.PI / 2) + (i < 4 ? 0 : Math.PI / 4);
-      const m = new THREE.Mesh(sphere, histMat);
-      m.position.set(Math.cos(a) * 0.62, i < 4 ? 0.38 : -0.38, Math.sin(a) * 0.62);
-      m.scale.setScalar(0.62);
+    [1, -1].forEach((layer) => LOBES.forEach(([name, phi]) => {
+      const m = new THREE.Mesh(sphere, histMats[name]);
+      const a = layer * phi;                              // the dyad (local x) maps phi to -phi
+      m.position.set(Math.cos(a) * 1.55, Math.sin(a) * 1.55, layer * 0.95);
+      m.scale.setScalar(1.45);
+      m.userData.histone = name;
       g.add(m);
-    }
-    const home = V(x, -2.25, 0.4);
+    }));
+    const home = V([-78, 78][k] * S, -6 * S, 0);
     g.position.copy(home);
-    g.rotation.set(0.3, k, 0.2);
+    g.quaternion.copy(histQ);
     scene.add(g);
-    histones.push({ g, home, away: V(x * 1.5 + (R() - 0.5) * 4, -9 - R() * 3, (R() - 0.5) * 10), rot: g.rotation.clone(), p: R() * 6 });
+    histones.push({ g, home, away: V(home.x * 1.6 + (R() - 0.5) * 4, -10 - R() * 3, (R() - 0.5) * 8), q: histQ.clone(), axis: randDir(R), p: R() * 6 });
   });
 
   /* ---------- phospholipid bilayer → micelles ---------- */
-  const lipidHeadMat = phys('#f28482', { roughness: 0.35, clearcoat: 0.5 });
-  const lipidTailMat = phys('#f6bd60', { roughness: 0.5 });
-  const detHeadMat = phys('#00b4d8', { roughness: 0.3, clearcoat: 0.6 });
-  const detTailMat = phys('#90e0ef', { roughness: 0.5 });
+  const lipidHeadMat = phys(PAL.organelles.plasma.head, { roughness: 0.35, clearcoat: 0.5 });
+  const lipidTailMat = phys(PAL.organelles.plasma.tail, { roughness: 0.5 });
+  const detHeadMat = phys(PAL.atoms.S, { roughness: 0.3, clearcoat: 0.6 });   // a sulfate head: dish soap is mostly sodium laureth sulfate
+  const detTailMat = phys(PAL.atoms.C, { roughness: 0.5 });
   const BY = 6.8;
   const lipids = [];
   for (let leaf = 0; leaf < 2; leaf++) {
@@ -180,7 +188,7 @@ export function createMolecule(env) {
   }
 
   /* ---------- Na+ ions ---------- */
-  const ionMat = phys('#8338ec', { roughness: 0.25, clearcoat: 0.8, emissive: C('#4b1ca8'), emissiveIntensity: 0.35 });
+  const ionMat = phys(PAL.atoms.Na, { roughness: 0.25, clearcoat: 0.8, emissive: C(PAL.atoms.Na), emissiveIntensity: 0.25 });
   const NION = 70;
   const ions = new THREE.InstancedMesh(sphere, ionMat, NION);
   ions.frustumCulled = false;
@@ -208,11 +216,11 @@ export function createMolecule(env) {
   scene.add(water);
 
   const alcGeo = mergeColored([
-    { geo: sphereLo.clone().scale(0.38, 0.38, 0.38), color: '#9aa3b2' },
-    { geo: sphereLo.clone().scale(0.36, 0.36, 0.36).translate(0.62, 0.32, 0), color: '#b5bcc8' },
-    { geo: sphereLo.clone().scale(0.36, 0.36, 0.36).translate(-0.62, 0.32, 0), color: '#b5bcc8' },
-    { geo: sphereLo.clone().scale(0.34, 0.34, 0.34).translate(0, -0.6, 0.15), color: '#ff5a5f' },
-    { geo: sphereLo.clone().scale(0.18, 0.18, 0.18).translate(0.1, -0.95, 0.45), color: '#ffffff' },
+    { geo: sphereLo.clone().scale(0.38, 0.38, 0.38), color: css(PAL.atoms.C) },
+    { geo: sphereLo.clone().scale(0.36, 0.36, 0.36).translate(0.62, 0.32, 0), color: css(PAL.atoms.C) },
+    { geo: sphereLo.clone().scale(0.36, 0.36, 0.36).translate(-0.62, 0.32, 0), color: css(PAL.atoms.C) },
+    { geo: sphereLo.clone().scale(0.34, 0.34, 0.34).translate(0, -0.6, 0.15), color: css(PAL.atoms.O) },
+    { geo: sphereLo.clone().scale(0.18, 0.18, 0.18).translate(0.1, -0.95, 0.45), color: css(PAL.atoms.H) },
   ]);
   const NALC = 95;
   const alc = new THREE.InstancedMesh(alcGeo, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.35, clearcoat: 0.5 }), NALC);
@@ -227,10 +235,22 @@ export function createMolecule(env) {
 
   /* ---------- update ---------- */
   const qI = new THREE.Quaternion();
+  let spin = 0, lastTime = 0;
   function update(t, time) {
     // DNA spin + bundle
     const ionBind = ph(t, 2.6, 2.95);
-    main.group.rotation.x = time * 0.12 * (0.3 + 0.7 * ionBind);
+    // unwrap as the octamers leave; the geometry is rebuilt only while it moves
+    const uk = ph(t, 2.55, 3.1);
+    if (Math.abs(uk - mainK) > 0.02 || ((uk === 0 || uk === 1) && uk !== mainK)) {
+      mainK = uk;
+      mainTrace = chromatin(uk);
+      main.group.userData.rebuild(mainTrace);
+    }
+    // spin about its own axis only once it is a straight duplex
+    const dt = clamp(time - lastTime, 0, 0.1);
+    lastTime = time;
+    spin += dt * 0.12 * ionBind;
+    main.group.rotation.x = spin;
     const enter = ph(t, 3.15, 3.75);
     const spool = ph(t, 5.15, 5.9);
     others.forEach((o, i) => {
@@ -252,9 +272,9 @@ export function createMolecule(env) {
     histones.forEach((h) => {
       h.g.position.lerpVectors(h.home, h.away, hr);
       h.g.position.y += Math.sin(time * 0.6 + h.p) * 0.3 * hr;
-      h.g.rotation.set(h.rot.x + time * 0.2 * hr, h.rot.y + time * 0.15 * hr, h.rot.z);
+      h.g.quaternion.setFromAxisAngle(h.axis, (time * 0.2 + h.p) * hr).multiply(h.q);
     });
-    histMat.opacity = 1 - 0.45 * hr;
+    Object.values(histMats).forEach((m) => { m.opacity = 1 - 0.45 * hr; });
 
     // bilayer → micelles
     const micOut = ph(t, 2.8, 4.6);
@@ -335,28 +355,29 @@ export function createMolecule(env) {
   const _m4 = new THREE.Matrix4();
   const instPos = (mesh, i) => { mesh.getMatrixAt(i, _m4); return V().setFromMatrixPosition(_m4); };
   const labels = [
-    { text: 'Sugar–phosphate backbone', anchor: () => wpos(main.group, main.s1[6]), show: (t) => t < 2.35 },
-    { text: 'Base pairs', sub: 'A–T · G–C', anchor: () => wpos(main.group, V(2.6, 0, 0)), show: (t) => t < 2.35 },
-    { text: 'Histone proteins', anchor: () => histones[2].g.position.clone().add(V(0, -1, 0)), show: (t) => t < 2.55 },
+    { text: 'Sugar–phosphate backbone', anchor: () => { const p = mainTrace.chains.A.P[linkerPair - 4]; return wpos(main.group, V(p[0] * S, p[1] * S, p[2] * S)); }, show: (t) => t < 2.35 },
+    { text: 'Base pairs', sub: 'A–T · G–C', anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair + 6)), show: (t) => t < 2.35 },
+    { text: 'Histone proteins', sub: 'DNA wraps around them', anchor: () => histones[1].g.position.clone().add(V(0, -3.4, 0)), show: (t) => t < 2.55 },
     { text: 'Membrane', sub: 'phospholipid bilayer', anchor: () => V(-6, BY + 2, 3.2), show: (t) => t < 2.3 },
     { text: 'Detergent (soap)', anchor: () => instPos(dHeads, 5), show: (t) => t >= 2.08 && t < 2.4 },
     { text: 'Micelle', sub: 'soap + lipids', anchor: () => micelles[1].c.clone().add(V(0, MR + 0.6, 0)), show: (t) => t >= 2.72 && t < 3.6 },
     { text: 'Na⁺ ions', sub: 'shield negative phosphates', anchor: () => instPos(ions, 20), show: (t) => t >= 2.85 && t < 3.9 },
     { text: 'Proteins drift away', anchor: () => histones[0].g.position.clone(), show: (t) => t >= 2.9 && t < 3.4 },
+    { text: 'DNA unwinds', sub: 'free of its proteins', anchor: () => wpos(main.group, pairMid(mainTrace, linkerPair)), show: (t) => t >= 2.95 && t < 3.6 },
     { text: 'DNA from many cells', anchor: () => others[1].h.group.position.clone(), show: (t) => t >= 3.6 && t < 4.3 },
     { text: 'Alcohol', anchor: () => instPos(alc, 7), show: (t) => t >= 4.45 && t < 4.9 },
     { text: 'Strands stick together', sub: 'and precipitate', anchor: () => dnaRoot.localToWorld(V(-3, 3.6, 0)), show: (t) => t >= 4.85 },
   ];
 
   const interactives = [
-    { root: main.group, priority: 2, info: () => ({ title: 'DNA double helix', text: 'About 2 nm wide. Two backbones twisted around base pairs A–T and G–C.' }) },
+    { root: main.group, priority: 2, info: (t) => ({ title: t < 2.6 ? 'Chromatin' : 'DNA double helix', text: t < 2.6 ? 'DNA wound around histone proteins, about twice round each one. Two backbones, base pairs A–T and G–C between them.' : 'About 2 nm wide. Two backbones twisted around base pairs A–T and G–C.' }) },
     { root: lHeads, priority: 1, info: () => ({ title: 'Phospholipids', text: 'Water-loving heads, fat-loving tails. Two layers make a membrane.' }) },
     { root: lTails, priority: 1, info: () => ({ title: 'Phospholipids', text: 'Water-loving heads, fat-loving tails. Two layers make a membrane.' }) },
     { root: dHeads, priority: 1, info: () => ({ title: 'Detergent molecule', text: 'Pries lipids out of the membrane and wraps them into micelles.' }) },
     { root: ions, priority: 2, info: () => ({ title: 'Na⁺ ion', text: 'From the salt. Neutralizes the negative phosphate groups on DNA.' }) },
     { root: alc, priority: 1, info: () => ({ title: 'Isopropyl alcohol', text: 'DNA can’t dissolve in it, so the strands come out of solution.' }) },
   ];
-  histones.forEach((h) => interactives.push({ root: h.g, priority: 1, info: () => ({ title: 'Histone proteins', text: 'Spools that DNA wraps around. Salt helps pull them off.' }) }));
+  histones.forEach((h) => interactives.push({ root: h.g, priority: 3, info: () => ({ title: 'Histone proteins', text: 'Eight proteins, two each of four kinds, that DNA winds around. Salt helps pull them off.' }) }));
   others.forEach((o) => interactives.push({ root: o.h.group, priority: 1, info: () => ({ title: 'DNA molecule', text: 'Freed DNA from other cells, floating in the buffer.' }) }));
 
   const views = [
@@ -368,9 +389,10 @@ export function createMolecule(env) {
     { pos: V(16, 9, 33), target: V(0, 0, 0) },
   ];
   const legend = [
-    { c: COL.A, l: 'Adenine' }, { c: COL.T, l: 'Thymine' }, { c: COL.G, l: 'Guanine' }, { c: COL.C, l: 'Cytosine' },
-    { c: '#2b3a55', l: 'Backbone' }, { c: '#fb8500', l: 'Phosphate (−)' }, { c: '#8338ec', l: 'Na⁺ ion' },
-    { c: '#cdb4e8', l: 'Histone' }, { c: '#f28482', l: 'Lipid' }, { c: '#00b4d8', l: 'Detergent' }, { c: '#9aa3b2', l: 'Alcohol' },
+    { c: css(PAL.bases.A), l: 'Adenine' }, { c: css(PAL.bases.T), l: 'Thymine' }, { c: css(PAL.bases.G), l: 'Guanine' }, { c: css(PAL.bases.C), l: 'Cytosine' },
+    { c: css(PAL.strands.a), l: 'Backbone' }, { c: css(PAL.strands.b), l: 'Backbone (partner strand)' }, { c: css(PAL.atoms.Na), l: 'Na⁺ ion' },
+    { c: css(PAL.histones.H3), l: 'Histone' }, { c: css(PAL.organelles.plasma.head), l: 'Lipid' }, { c: css(PAL.atoms.S), l: 'Detergent' }, { c: css(PAL.atoms.C), l: 'Alcohol' },
   ];
+
   return { scene, update, labels, interactives, views, legend, minDist: 6, maxDist: 70, fov: 38, near: 0.1, far: 400 };
 }
