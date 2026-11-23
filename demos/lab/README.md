@@ -2,7 +2,7 @@
 
 Shared pieces for 3D bench-lab simulations: stage, materials, props, clickable objects, and a lesson with Hands-on and Watch modes and a timeline you can step back and forth on. **Building a lab is `docs/AddingALab.md`**; this file is what the library does.
 
-Ported from the separate `Experiments/Lab` repo, which keeps the planning docs (ROADMAP, MICRO, …) and the original prototypes the props came from.
+Built here; the `Experiments/Lab` repo it came from is archived with the original prototypes the props were taken from.
 
 | | |
 | --- | --- |
@@ -13,6 +13,7 @@ Ported from the separate `Experiments/Lab` repo, which keeps the planning docs (
 | `props.html` | one prop on a turntable with its size, anchors and state sliders. `props.html#syringe` |
 | `themes.html` | the colour themes side by side, with the UI in each |
 | [PROPS.md](PROPS.md), [CATALOG.md](CATALOG.md) | the prop spec, and the build status of every prop and effect |
+| `plans/` | which labs to build and why: [ROADMAP.md](plans/ROADMAP.md) picks; MICRO, HISTORIC, HOW-DO-WE-KNOW, QUESTIONS, DESIGN-MODE, PROPS-COVERAGE are the pools it picks from |
 
 ## The lesson UI
 

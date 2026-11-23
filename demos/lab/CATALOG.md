@@ -3,12 +3,12 @@
 Every prop, engine and tool named across the Lab planning docs, merged into one list with duplicates
 combined. Each row gives where the details live.
 
-Which labs to build first, and in what order, is in [ROADMAP.md](ROADMAP.md).
+Which labs to build first, and in what order, is in [ROADMAP.md](plans/ROADMAP.md).
 
-**Sources:** P = [PROPS.md](PROPS.md) · C = [PROPS-COVERAGE.md](PROPS-COVERAGE.md) ·
-M = [MICRO.md](MICRO.md) · H = [HISTORIC.md](HISTORIC.md) · Q = [QUESTIONS.md](QUESTIONS.md) ·
-D = [DESIGN-MODE.md](DESIGN-MODE.md) · R = [RESPIRATION-HISTORY.md](RESPIRATION-HISTORY.md) ·
-K = [HOW-DO-WE-KNOW.md](HOW-DO-WE-KNOW.md)
+**Sources:** P = [PROPS.md](PROPS.md) · C = [PROPS-COVERAGE.md](plans/PROPS-COVERAGE.md) ·
+M = [MICRO.md](plans/MICRO.md) · H = [HISTORIC.md](plans/HISTORIC.md) · Q = [QUESTIONS.md](plans/QUESTIONS.md) ·
+D = [DESIGN-MODE.md](plans/DESIGN-MODE.md) · R = [RESPIRATION-HISTORY.md](plans/RESPIRATION-HISTORY.md) ·
+K = [HOW-DO-WE-KNOW.md](plans/HOW-DO-WE-KNOW.md)
 
 **Status:** ✅ in `Lab/` · ◐ partly in `Lab/` (some variants still to add) · 🧪 exists in a prototype,
 not yet in `Lab/` · blank = new
