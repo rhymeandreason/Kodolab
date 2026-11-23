@@ -114,6 +114,27 @@ export function createLesson({
     if (s.isDone) return s.isDone();
     return S.log[i].length > 0;
   }
+  /* WATCH MODE'S FILL MOVES LIKE A VIDEO'S. A click step's real progress is
+     0 until its click lands and then 1, and the run spends autoDwell reading
+     the hint first, so a bar drawn from that sits still while Play is running.
+     Instead the bar fills on the step's elapsed time against how long the
+     step took the last time it auto-played (est), and when there is no last
+     time, against a guess. Past the estimate it keeps creeping, slower and
+     slower, so it never reads as stopped; the real 1 eases it the rest of
+     the way. Paused, the clock stops and so does the bar. */
+  const est = steps.map(() => null);
+  const guess = () => autoDwell + 3;
+  let stepT = 0, stepClean = false;
+  const shown = steps.map(() => 0);
+  function targetOf(i) {
+    const real = progressOf(i);
+    const s = steps[i];
+    if (i !== S.step || !s || s.watch || !watching() || real >= 1) return real;
+    const f = stepT / (est[i] || guess());
+    const creep = f < 0.9 ? f : 0.9 + 0.09 * (1 - Math.exp(-(f - 0.9) * 3));
+    return Math.max(real, creep);
+  }
+
   function progressOf(i) {
     if (i < S.step) return 1;
     if (i > S.step) return 0;
@@ -190,6 +211,9 @@ export function createLesson({
   }
 
   function enter(i, frac = 0) {
+    if (stepClean && S.auto && i === S.step + 1 && stepT > 0) est[S.step] = stepT;
+    stepT = 0;
+    stepClean = S.auto && !frac;
     S.step = i;
     S.busy = false;
     dwell = 0;
@@ -209,6 +233,7 @@ export function createLesson({
   function setAuto(on) {
     if (on && S.step >= N) { S.auto = true; jumpTo(0); return; } // play again from the top
     S.auto = !!on && watching();
+    if (S.auto && !S.busy && !S.log[S.step].length) { stepT = 0; stepClean = true; } // played from this step's start
     dwell = 0;
     setPaused(S.busy && !S.auto); // freeze (or unfreeze) a click animation mid-way
     const s = steps[S.step];
@@ -254,6 +279,7 @@ export function createLesson({
   }
 
   function update(dt) {
+    if (S.auto && !S.replaying && steps[S.step] && !steps[S.step].watch) stepT += dt;
     autoTick(dt);
     const s = steps[S.step];
     if (s && s.watch && S.playing && !S.replaying && !S.scrubbing) {
@@ -261,7 +287,7 @@ export function createLesson({
       s.watch.set(t);
       if (t >= s.watch.duration) { S.playing = false; enter(S.step + 1); return; }
     }
-    renderTimeline();
+    renderTimeline(dt);
     renderClock();
     renderCaption();
   }
@@ -461,9 +487,12 @@ export function createLesson({
     render();
   });
 
-  function renderTimeline() {
+  function renderTimeline(dt = 0) {
     segs.forEach((s, i) => {
-      s.fill.style.transform = `scaleX(${progressOf(i)})`;
+      const t = targetOf(i);
+      // ease up to a jump (a click landing, a step finishing); drop straight back on a jump back
+      shown[i] = t < shown[i] || S.scrubbing || S.replaying ? t : shown[i] + (t - shown[i]) * Math.min(1, dt * 10);
+      s.fill.style.transform = `scaleX(${shown[i]})`;
       s.el.classList.toggle('active', i === S.step);
       s.el.classList.toggle('done', i < S.step);
     });
