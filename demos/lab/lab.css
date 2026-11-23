@@ -154,6 +154,34 @@ html, body {
 .lab-do .lab-card { bottom: var(--gutter); }
 .lab-card.swap { animation: lab-card-in .35s ease; }
 @keyframes lab-card-in { from { opacity: 0; transform: translateX(-50%) translateY(8px); } }
+/* The complete card rises in with a small overshoot, then its body follows. A sim staggers
+   its own results inside (ecoli/styles.css). */
+.lab-card.arrive { animation: lab-card-arrive .6s cubic-bezier(.2, .9, .3, 1.12); }
+.lab-card.arrive .card-body { animation: lab-card-body .45s .18s ease backwards; }
+@keyframes lab-card-arrive {
+  0% { opacity: 0; transform: translateX(-50%) translateY(32px) scale(.96); }
+  45% { opacity: 1; }
+  100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes lab-card-body { from { opacity: 0; transform: translateY(6px); } }
+/* folding: the body's row animates to 0, so the card shrinks to its title */
+.card-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .32s ease, opacity .22s ease; }
+.card-body > div { min-height: 0; overflow: hidden; }
+.lab-card.folded .card-body { grid-template-rows: 0fr; opacity: 0; }
+.card-fold {
+  position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 9px;
+  border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer;
+  display: grid; place-items: center; transition: background .15s, color .15s;
+}
+.card-fold:hover { background: rgba(23, 24, 26, 0.06); color: var(--ink); }
+.card-fold i { transition: transform .32s ease; }
+.lab-card.folded .card-fold i { transform: rotate(180deg); }
+.lab-card.complete h2 { padding-right: 36px; cursor: pointer; }
+.lab-card.folded h2 { margin-bottom: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .lab-card.arrive, .lab-card.arrive .card-body { animation: none; }
+  .card-body, .card-fold i { transition: none; }
+}
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .chip {
   display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 99px;

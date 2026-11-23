@@ -81,6 +81,14 @@ body[data-scale='cell'] .bg-cell { opacity: 1; }
   .lab-card.complete { width: min(760px, calc(100% - 300px - 200px - var(--gutter) * 2)); }
 }
 @media (max-width: 1100px) { .results { grid-template-columns: repeat(2, 1fr); } }
+/* the four plates deal in after the card arrives (lab.css's .arrive) */
+.lab-card.arrive .res { animation: res-in .42s ease backwards; }
+.lab-card.arrive .res:nth-child(1) { animation-delay: .28s; }
+.lab-card.arrive .res:nth-child(2) { animation-delay: .36s; }
+.lab-card.arrive .res:nth-child(3) { animation-delay: .44s; }
+.lab-card.arrive .res:nth-child(4) { animation-delay: .52s; }
+@keyframes res-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .lab-card.arrive .res { animation: none; } }
 @media (max-width: 820px) {
   .ara-seg { top: 60px; }
 }

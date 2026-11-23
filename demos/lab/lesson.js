@@ -302,17 +302,42 @@ export function createLesson({
   const card = ensureEl('lab-card', 'panel lab-card', 'section');
   card.innerHTML = `
     <div class="card-head"><span class="chip"></span><span class="card-clock" hidden title="Time-lapse"><i class="ph-bold ph-timer"></i><span></span></span></div>
+    <button class="card-fold" type="button" aria-expanded="true" aria-label="Collapse" hidden><i class="ph-bold ph-caret-down"></i></button>
     <h2></h2>
-    <p class="card-text"></p>
-    <p class="why"><i class="ph-fill ph-lightbulb"></i><span></span></p>
-    <div class="card-action"><i></i><span></span></div>`;
+    <div class="card-body"><div>
+      <p class="card-text"></p>
+      <p class="why"><i class="ph-fill ph-lightbulb"></i><span></span></p>
+      <div class="card-action"><i></i><span></span></div>
+    </div></div>`;
   const C = {
     chip: card.querySelector('.chip'), title: card.querySelector('h2'), text: card.querySelector('.card-text'),
     why: card.querySelector('.why'), whyText: card.querySelector('.why span'),
     clock: card.querySelector('.card-clock'), clockText: card.querySelector('.card-clock span'),
     action: card.querySelector('.card-action'), actionIcon: card.querySelector('.card-action i'), actionText: card.querySelector('.card-action span'),
+    fold: card.querySelector('.card-fold'),
   };
   let cardStep = -1;
+  /* The complete card folds to its title, so the student can see the bench behind a tall
+   * results card. The card's height is in the sim's insets(), so re-centre once it settles. */
+  function setFolded(on) {
+    card.classList.toggle('folded', on);
+    C.fold.setAttribute('aria-expanded', String(!on));
+    C.fold.setAttribute('aria-label', on ? 'Expand' : 'Collapse');
+  }
+  function toggleFold() {
+    if (!card.classList.contains('complete')) return;
+    setFolded(!card.classList.contains('folded'));
+    const body = card.querySelector('.card-body');
+    const done = (e) => {
+      if (e && e.target !== body) return;
+      body.removeEventListener('transitionend', done);
+      window.dispatchEvent(new Event('resize'));
+    };
+    body.addEventListener('transitionend', done);
+    setTimeout(done, 450); // reduced motion has no transition to end
+  }
+  C.fold.addEventListener('click', toggleFold);
+  C.title.addEventListener('click', toggleFold);
   /* Watch mode's captions, above the timeline (the card and list hide, like a video) */
   const caps = ensureEl('lab-captions', 'lab-captions');
   caps.setAttribute('aria-live', 'polite');
@@ -448,11 +473,16 @@ export function createLesson({
   function renderCard() {
     const s = steps[S.step];
     // fade the card when the step changes (not on every progress update)
-    if (cardStep !== S.step && cardStep !== -1 && !S.replaying) {
-      card.classList.remove('swap'); void card.offsetWidth; card.classList.add('swap');
+    const entering = cardStep !== S.step;
+    if (entering && cardStep !== -1 && !S.replaying) {
+      // the complete card arrives with its own entrance; a step just cross-fades
+      const cls = s ? 'swap' : 'arrive';
+      card.classList.remove('swap', 'arrive'); void card.offsetWidth; card.classList.add(cls);
     }
     cardStep = S.step;
     card.classList.toggle('complete', !s); // a sim can style its complete card (e.g. wider for results)
+    C.fold.hidden = !!s;
+    if (entering) setFolded(false);
     if (!s) {
       C.chip.textContent = 'Complete';
       C.title.textContent = 'Lab complete';
