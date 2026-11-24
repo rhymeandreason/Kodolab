@@ -104,6 +104,8 @@ const PAGES = {
     description: 'Bacterial transformation in a 3D virtual lab: heat-shock E. coli with a GFP plasmid, plate on ampicillin and arabinose, and see which colonies glow under UV.' },
   '/labs/leaf-disks': {
     description: 'The floating leaf disk lab in 3D: vacuum spinach disks in bicarbonate, shine a lamp, and time how fast photosynthesis floats them back up with oxygen.' },
+  '/labs/onion-root-tip': {
+    description: 'Find every stage of mitosis in a 3D virtual lab: cut an onion root tip, soften and stain it, squash it on a slide, and identify each phase under the microscope.' },
   '/nodes': {
     description: 'All of Bio 101 as one interactive map: how the concepts connect, from molecules to cells to organisms and ecosystems.' },
   '/library': { image: 'library',
