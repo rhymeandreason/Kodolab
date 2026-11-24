@@ -309,7 +309,7 @@ export function makeMicroscope(mat) {
   return {
     group: g, nose, K,
     anchors: {
-      stage: V3(0, STAGE_Y, AXIS_Z).multiplyScalar(K),
+      stage: V3(0, STAGE_Y + 0.0015, AXIS_Z).multiplyScalar(K),   // a hair above the plate: a slide resting exactly on it z-fights
       eye: eyeTop.clone().multiplyScalar(K),
       eyeAxis,
       top: V3(0, eyeTop.y * K, 0),
