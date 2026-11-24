@@ -23,13 +23,13 @@ const $ = (s) => document.querySelector(s);
 // Layout (cm, bench top at y = 0)
 // =========================================================================
 const POS = {
-  beaker: V3(-40, 0, -2), scalpel: V3(-32, 0, 9),
+  beaker: V3(-40, 0, -2), scalpel: V3(-28, 0, 16),
   rack: V3(-25, 0, -8), bath: V3(-10, 0, -8),
   orcein: V3(1, 0, -11), toluidine: V3(7, 0, -11), pipHolder: V3(12.5, 0, -5),
-  slide: V3(3, 0, 7), coverslip: V3(9.5, 0, 9.5), paper: V3(13, 0, 5.5), pencil: V3(18, 0.34, 11),
+  slide: V3(3, 0, 7), coverslip: V3(9.5, 0, 9.5), paper: V3(13, 0, 5.5), pencil: V3(27, 0.34, 17),
   scope: V3(32, 0, -6),
 };
-const SLIDE_ROT = -0.08, SCOPE_ROT = -0.45, PENCIL_YAW = 0.35;
+const SLIDE_ROT = -0.08, SCOPE_ROT = -0.45, PENCIL_YAW = 1.45;
 const ONION_Y = 6.65;      // the bulb rests on the beaker's rim
 const LIFT = 7;            // high enough to clear the rim with the roots
 const PIP_SCALE = 0.6;
@@ -92,7 +92,7 @@ function rebuild() {
   const beaker = place(makeBeaker(mat, { r: 3, h: 8, cap: 200, label: P.beaker.label, sub: P.beaker.sub, color: '#0891b2', liquidColor: 0x9fd0ee }), POS.beaker);
   beaker.liquid.setLevel(5.5);
   const onion = place(makeOnion(mat), POS.beaker.clone().setY(ONION_Y));
-  const scalpel = place(makeScalpel(mat), POS.scalpel, 0.5);
+  const scalpel = place(makeScalpel(mat), POS.scalpel, 1.3);
 
   const rack = place(makeTubeRack(mat, { holes: 2, spacing: 3.2, holeR: 1.05, color: toLinear('#c3cdf4') }), POS.rack);
   const tube = place(makeTestTube(mat, { r: 0.9, h: 10 }), POS.rack.clone().add(rack.holes[0]));
