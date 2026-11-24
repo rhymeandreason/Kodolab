@@ -126,8 +126,8 @@
 .nb-out small { font-weight: 500; color: var(--muted); }
 .nb-out.match { background: #16a34a; color: #fff; }
 .nb-out.match small { color: rgba(255,255,255,.85); }
-.nb-explain { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
-.nb-explain p { margin: 0 0 6px; }
+.res-explain { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.res-explain p { margin: 6px 0 0; }
 .nb-muted { color: var(--muted); }
 
 /* ---------- the case's answer, on the step card ---------- */
@@ -163,7 +163,6 @@
 }
 .res-ok i { font-size: 28px; color: #16a34a; }
 @keyframes res-pop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
-.res-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .reopen {
   display: inline-flex; align-items: center; gap: 6px; flex: none;
   border: 0; border-radius: var(--pill); padding: 7px 12px;

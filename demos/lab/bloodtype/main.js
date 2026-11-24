@@ -246,9 +246,7 @@ const PHASES = [
 ];
 
 const fatherName = () => T.props.people[CASE.father];
-const otherName = () => T.props.people[CASE.father === 'man1' ? 'man2' : 'man1'];
-const completeHint = () => `<span class="res-ok"><i class="ph-fill ph-check-circle"></i>${T.complete.correct}</span><span class="res-head"><b>${fmt(T.complete.head, { father: fatherName(), other: otherName() })}</b>`
-  + '</span>';
+const completeHint = () => `<span class="res-ok"><i class="ph-fill ph-check-circle"></i>${T.complete.correct}</span><div class="res-explain">${notebook.explain()}</div>`;
 
 // =========================================================================
 // Wire it together

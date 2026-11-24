@@ -134,7 +134,7 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
         <div class="nb-outs">${outs}</div>
         <p>${verdict}</p>
       </div>
-      ${api.solved() ? `<div class="nb-explain">${explanation()}</div>` : ''}`;
+`;
   }
   /** Why each man is in or out, from canParent over every genotype. */
   function explanation() {
@@ -156,7 +156,6 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
         out.push(fmt(N.excluded, { man: name(m), type: L, why: why.join('; ') }));
       }
     });
-    out.push(`<span class="nb-muted">${N.dnaNote}</span>`);
     return out.map((s) => `<p>${s}</p>`).join('');
   }
 
@@ -213,6 +212,8 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
     /** The student's answer to the case (asked on the step card, not here). */
     get guess() { return st.guess; },
     answer(m) { st.guess = m; changed(); },
+    /** Why each man is in or out, for the end card. */
+    explain: explanation,
     progress: () => recorded() / TOTAL,
   };
   reset();

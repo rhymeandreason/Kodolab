@@ -81,7 +81,6 @@ LabText.add('en', {
 
   complete: {
     correct: 'Correct!',
-    head: '{father} could be the father. {other} is ruled out.',
     why: 'Blood types exclude; they never prove. Plenty of other men share {father}\'s type.',
     toast: 'Case solved',
     newToast: 'Case #{no}: new blood, same question',
@@ -126,7 +125,6 @@ LabText.add('en', {
     excluded: '<b>{man}</b> ({type}) is <b>ruled out</b>: {why}.',
     whyAbo: 'no mix of a type {mom} mother\'s and a type {man} man\'s alleles gives a type {baby} child',
     whyRh: 'the baby is Rh+, but Mother and {man} are both <i>dd</i>',
-    dnaNote: 'Blood typing can rule a man out. Proving fatherhood takes DNA.',
   },
 
   objects: {
