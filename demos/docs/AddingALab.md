@@ -1,4 +1,4 @@
-<!-- KIND: recipe. Load whole when building a new bench-lab simulation on `lab/` (an experiment on a 3D bench: Strawberry DNA, Glowing E. coli, Floating Leaf Disks). Not for a lesson on the kit/ stack, which is AddingAPage.md or AddingAComponent.md. What each piece of the library does, and what the props are, is `lab/README.md` and `lab/PROPS.md`. -->
+<!-- KIND: recipe. Load whole when building a new bench-lab simulation on `lab/` (an experiment on a 3D bench: Strawberry DNA, Glowing E. coli, Floating Leaf Disks). Not for a lesson on the kit/ stack, which is AddingAPage.md or AddingAComponent.md. What each piece of the library does, and what the props are, is `lab/README.md` and `lab/PROPS.md`; the list of existing labs and their quirks is `lab/LABS.md`. -->
 
 # Adding a lab
 

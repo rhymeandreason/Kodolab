@@ -1,6 +1,6 @@
 # Lab
 
-Shared pieces for 3D bench-lab simulations: stage, materials, props, clickable objects, and a lesson with Hands-on and Watch modes and a timeline you can step back and forth on. **Building a lab is `docs/AddingALab.md`**; this file is what the library does.
+Shared pieces for 3D bench-lab simulations: stage, materials, props, clickable objects, and a lesson with Hands-on and Watch modes and a timeline you can step back and forth on. **Building a lab is `docs/AddingALab.md`**; this file is what the library does. **Which labs exist and their testing shortcuts: `LABS.md`.**
 
 Built here; the `Experiments/Lab` repo it came from is archived with the original prototypes the props were taken from.
 
