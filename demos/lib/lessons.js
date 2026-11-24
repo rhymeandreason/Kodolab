@@ -32,7 +32,7 @@ window.Lessons = [
   { key: 'division',     unit: 'gene',   url: '/cell-division',      file: '/demos/cell-division/cell-division-lab.html', title: 'Mitosis & Meiosis',             blurb: 'One cell becomes two identical copies, or four that each carry half. Follow the chromosomes through both.', still: '/demos/media/components/cell-division.webp', status: 'new' },
   { key: 'strawberry',   unit: 'gene',   url: '/labs/strawberry-dna', file: '/demos/lab/strawberry/strawberry-lab.html', title: 'Strawberry DNA', blurb: 'A strawberry holds so much DNA that you can free it from the cells and lift it out on a stick.', still: '/demos/media/components/lab-strawberry-dna.webp', status: 'new' },
   { key: 'ecoli',        unit: 'gene',   url: '/labs/glowing-ecoli',  file: '/demos/lab/ecoli/ecoli-lab.html', title: 'Glowing E. coli', blurb: 'Add a plasmid carrying a jellyfish gene to E. coli. If the bacteria take it up, they glow green under UV light.', still: '/demos/media/components/lab-glowing-ecoli.webp', status: 'new' },
-  { key: 'onion',        unit: 'gene',   url: '/labs/onion-root-tip', file: '/demos/lab/onion/onion-lab.html', title: 'Onion Root Tip', blurb: 'Squash and stain an onion root tip, then find each stage of mitosis under the microscope.', status: 'new' },
+  { key: 'onion',        unit: 'gene',   url: '/labs/onion-root-tip', file: '/demos/lab/onion/onion-lab.html', title: 'Onion Root Tip', blurb: 'Squash and stain an onion root tip, then find each stage of mitosis under the microscope.', still: '/demos/media/components/lab-onion-root-tip.webp', status: 'new' },
 ];
 
 window.LessonUnits = [
