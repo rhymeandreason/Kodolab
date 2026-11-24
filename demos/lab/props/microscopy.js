@@ -199,9 +199,9 @@ export function makeMicroscope(mat) {
   put(new THREE.TorusGeometry(0.084, 0.005, 8, 40), mat.chrome, u, [0, BASE_Y + 0.047, AXIS_Z]).rotation.x = Math.PI / 2;
 
   // C-arm: a column at the back that turns forward at the top to carry the nosepiece
-  // A slim column and a long, thin arm, so the stage sits well forward of the column.
-  side([[-0.47, BASE_Y - 0.02], [COL_F, BASE_Y - 0.02], [COL_F, 1.06], [-0.07, 1.21], [0.34, 1.21], [0.34, 1.33], [0.3, 1.36], [-0.42, 1.36], [-0.47, 1.31]],
-    0.3, SM.body, 0.025, { 3: [COL_F, 1.21], 8: [-0.47, 1.36] });
+  // A slim column and a long arm that tapers toward its front end, so the stage sits well forward of the column.
+  side([[-0.47, BASE_Y - 0.02], [COL_F, BASE_Y - 0.02], [COL_F, 0.98], [-0.08, 1.17], [0.34, 1.27], [0.34, 1.33], [0.31, 1.36], [-0.44, 1.36], [-0.47, 1.33]],
+    0.3, SM.body, 0.025, { 3: [COL_F, 1.15] });
   put(new THREE.BoxGeometry(0.13, 0.4, 0.02), SM.slateDark, u, [0, 0.62, COL_F + 0.032]);   // rack the stage rides on
   // coaxial focus knobs either side: coarse (big) and fine (outboard)
   for (const sx of [1, -1]) {
@@ -251,7 +251,7 @@ export function makeMicroscope(mat) {
   const TILT = 0.3, OB_R = 0.088, OB_DROP = 0.025;   // objective seat: radius on the turret, depth below it
   const noseTilt = new THREE.Group();
   noseTilt.position.set(0, 1.12, AXIS_Z + OB_R * Math.cos(TILT) - OB_DROP * Math.sin(TILT)); noseTilt.rotation.x = -TILT; u.add(noseTilt);
-  put(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 24), SM.slateDark, noseTilt, [0, 0.08, 0]);   // neck into the arm
+  put(new THREE.CylinderGeometry(0.06, 0.07, 0.14, 24), SM.slateDark, noseTilt, [0, 0.085, 0]);   // neck into the arm
   const nose = new THREE.Group();
   noseTilt.add(nose);
   turn([[0, 0.06], [0.07, 0.057], [0.12, 0.04], [0.148, 0.014], [0.148, 0.008], [0, 0.008]], SM.slate, nose, 48);
@@ -282,13 +282,14 @@ export function makeMicroscope(mat) {
     put(new THREE.SphereGeometry(o.lensR, 20, 8, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38), SM.lensGlass, ob, [0, -L + o.lensR * 0.78, 0], { cast: false });
   });
 
-  // head: a faceted block on the arm, then the binocular body tilted toward the user, two eyepieces
-  side([[-0.08, 1.385], [0.34, 1.385], [0.34, 1.45], [0.25, 1.54], [0.0, 1.54], [-0.08, 1.48]], 0.28, SM.head, 0.02);
-  const EYE_TILT = 0.9, EYE_PIVOT = V3(0, 1.5, 0.31), EYE_LEN = 0.42;
+  // head: one chamfered wedge sitting flat on the arm, its top rising toward the user at the
+  // eyepieces' angle, and its front end square to them, where they come out. Locking screw on the side.
+  const EYE_TILT = 1.065, EYE_PIVOT = V3(0, 1.592, 0.38), EYE_LEN = 0.3;
+  side([[-0.08, 1.37], [0.31, 1.37], [0.31, 1.44], [0.43, 1.505], [0.33, 1.68], [-0.04, 1.48]], 0.28, SM.head, 0.02);
+  knob(0.024, 0.022, 10, SM.slateFacet, sideAxis([0.14, 1.42, 0.2], 1));
   const eyeG = new THREE.Group();
   eyeG.position.copy(EYE_PIVOT); eyeG.rotation.x = EYE_TILT; u.add(eyeG);
-  put(cbox(0.3, 0.16, 0.17, 0.025), SM.headFacet, eyeG, [0, 0.07, 0]);
-    // The tube's surface is about 2:1 (round × along), so the canvas is too, or the text stretches.
+  // The tube's surface is about 2:1 (round × along), so the canvas is too, or the text stretches.
   const tc = makeCanvas(512, 256), tx = tc.getContext('2d');
   tx.fillStyle = '#4f7b9e'; tx.fillRect(0, 0, 512, 256);
   tx.fillStyle = '#eef2f6'; tx.font = `600 64px ${FONT}`; tx.textAlign = 'center'; tx.textBaseline = 'middle';
@@ -297,8 +298,8 @@ export function makeMicroscope(mat) {
   for (const sx of [1, -1]) {
     const ep = new THREE.Group();
     ep.position.set(sx * 0.07, 0, 0); eyeG.add(ep);
-    put(new THREE.CylinderGeometry(0.048, 0.052, 0.12, 8), SM.headFacet, ep, [0, 0.2, 0]);
-    put(new THREE.CylinderGeometry(0.051, 0.051, 0.155, 8, 1, true), mat.make.standard({ map: tubeTex, roughness: 0.5, flatShading: true }), ep, [0, EYE_LEN - 0.0825, 0]);
+    put(new THREE.CylinderGeometry(0.048, 0.054, 0.12, 8), SM.headFacet, ep, [0, 0.05, 0]);
+    put(new THREE.CylinderGeometry(0.051, 0.051, 0.18, 8, 1, true), mat.make.standard({ map: tubeTex, roughness: 0.5, flatShading: true }), ep, [0, EYE_LEN - 0.09, 0]);
     put(new THREE.CylinderGeometry(0.045, 0.051, 0.01, 8), SM.slateFacet, ep, [0, EYE_LEN - 0.005, 0]);
     put(new THREE.SphereGeometry(0.034, 24, 6, 0, Math.PI * 2, 0, Math.PI * 0.2), SM.lensGlass, ep, [0, EYE_LEN - 0.034 * 0.95, 0], { cast: false });
     put(new THREE.CircleGeometry(0.03, 24), SM.black, ep, [0, EYE_LEN - 0.012, 0], { cast: false }).rotation.x = -Math.PI / 2;
