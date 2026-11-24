@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import {
   V3, Q, lerp, clamp, Ease, worldOf,
   newSession, anim, wait, moveTo, isInstant,
-  pourPose, takeTip, pipetteDraw, pipetteDispense, ejectTip,
+  takeTip, pipetteDraw, pipetteDispense, ejectTip,
   disposeTree, toast, mesh, makeCanvas, canvasTex, FONT,
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createZoom, createIntro, chromeInsets, bindChrome, PHONE,
   makeBench, makeMicroTube, makeTubeRack, makeReagentBottle, makeWasteBin, makeStream,
@@ -52,7 +52,7 @@ const Z = V3(0, 0, 1);
 
 const VIEWS = {
   overview: { t: V3(10, 0, -2), p: V3(10, 76, 80) },
-  box: { t: V3(-12, 3, 0), p: V3(-12, 42, 48) },
+  box: { t: V3(-14, 6, -4), p: V3(-14, 46, 54) },
   load: { t: V3(14, 4, 0), p: V3(14, 44, 46) },
   connect: { t: V3(2, 4, -8), p: V3(2, 44, 44) },
   run: { t: V3(0, 2.5, 1), p: V3(0, 28, 22) },
@@ -123,7 +123,7 @@ function rebuild() {
   const lid = box.lid;
   root.attach(lid);
   lid.position.copy(POS.lidRest);
-  const tae = place(makeReagentBottle(mat, { ...T.props.tae, color: '#0284c7', liquidColor: hex(COL.tae) }), POS.tae, 0.3);
+  const tae = place(makeReagentBottle(mat, { ...T.props.tae, color: '#0284c7', liquidColor: hex(COL.tae), scale: 2 }), POS.tae, 0.3);
   const rack = place(makeTubeRack(mat, { block: true, holes: SAMPLES.length, spacing: 2.7, holeR: 1.05, color: hex('#cbd5e1') }), POS.rack);
   const tubes = SAMPLES.map((s, i) => {
     const t = place(makeMicroTube(mat, { color: hex(s.cap), label: label(s.key).label, liquidColor: hex(COL.dye) }), POS.rack.clone().add(rack.holes[i]));
@@ -159,7 +159,7 @@ function rebuild() {
   };
   poseLeads();
 
-  ix.register('tae', tae.group, { ...T.objects.tae, anchor: V3(0, 11, 0) });
+  ix.register('tae', tae.group, { ...T.objects.tae, anchor: V3(0, 21, 0) });
   ix.register('comb', comb.group, { ...T.objects.comb, anchor: V3(0, 2.2, 0) });
   ix.register('lid', lid, { ...T.objects.lid, anchor: V3(0, 1.5, 0) });
   SAMPLES.forEach((s, i) => ix.register(s.key, tubes[i].group, { name: label(s.key).short, short: label(s.key).label, desc: label(s.key).desc, anchor: V3(0, 6.2, 0) }));
@@ -235,9 +235,19 @@ async function actBuffer() {
   const b = B.tae, g = b.group, home = g.position.clone(), q0 = g.quaternion.clone();
   const target = POS.box.clone().add(B.box.anchors.fill).add(V3(0, 2, 0));
   const full = B.box.anchors.bed.y + B.gel.thick + BUFFER_TOP;
+  // Upright with the spout over the fill point, the bottle would stand inside the box. So it
+  // waits beside the box, its base above the wall, and tips from there.
+  const r = 1.8 * 2 + 0.6, wallX = POS.box.x - B.box.size.W / 2;
+  const beside = V3(wallX - r, POS.box.y + B.box.size.H + 0.8, target.z);
+  // Tipping moves the spout in a straight line onto the fill point, so the neck stays high.
+  const sp0 = beside.clone().add(b.anchors.spout.clone().applyQuaternion(q0));
+  const pose = (k) => {   // 0 beside the box, upright … 1 pouring
+    g.quaternion.setFromAxisAngle(Z, -1.9 * k).multiply(q0);
+    g.position.lerpVectors(sp0, target, k).sub(b.anchors.spout.clone().applyQuaternion(g.quaternion));
+  };
   b.cap.visible = false;
-  await anim(1.0, (e) => pourPose(g, home, q0, b.anchors.spout, target, Z, -1.9, e, 0, 4));
-  await anim(0.5, (e) => pourPose(g, home, q0, b.anchors.spout, target, Z, -1.9, 1, e, 0));
+  await moveTo(g, { pos: beside, dur: 1.1, arc: 4 });
+  await anim(0.8, (e) => pose(e));
   const f0 = b.liquid.fraction;
   await anim(2.4, (e) => {
     B.box.setBuffer(lerp(0, full, e));
@@ -245,8 +255,8 @@ async function actBuffer() {
     B.stream.set(worldOf(g, b.anchors.spout), POS.box.y + Math.max(B.box.level, 0.4), e > 0.94 ? (1 - e) / 0.06 : 1);
   }, Ease.linear);
   B.stream.hide();
-  await anim(0.5, (e) => { pourPose(g, home, q0, b.anchors.spout, target, Z, -1.9, 1, 1 - e, 0); b.liquid.setPour(1 - e); });
-  await anim(1.0, (e) => pourPose(g, home, q0, b.anchors.spout, target, Z, -1.9, 1 - e, 0, 4));
+  await anim(0.8, (e) => { pose(1 - e); b.liquid.setPour(1 - e); });
+  await moveTo(g, { pos: home, dur: 1.1, arc: 4 });
   b.cap.visible = true;
 }
 

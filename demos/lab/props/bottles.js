@@ -65,9 +65,12 @@ export function makeSqueezeBottle(mat, { color = 0x3fbf7f, title = ['DISH', 'SOA
 
 /** Reagent bottle with a printed label, a cap and a liquid (isopropyl alcohol by default).
  *  Origin at the centre of the base; anchors.spout is the open neck. liquid.setFraction(f)
- *  fills 0..1 of the body (below the shoulder); liquid.setPour(k) while you tilt it. */
-export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91%', note = 'keep ice-cold', color = '#2f6fed', liquidColor = 0xdff0ff } = {}) {
-  const g = new THREE.Group();
+ *  fills 0..1 of the body (below the shoulder); liquid.setPour(k) while you tilt it.
+ *  scale: 1 is about 100 mL, 3.6 × 10 cm; 2 is about 500 mL. Anchors are scaled with it. */
+export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91%', note = 'keep ice-cold', color = '#2f6fed', liquidColor = 0xdff0ff, scale = 1 } = {}) {
+  const outer = new THREE.Group(), g = new THREE.Group();
+  g.scale.setScalar(scale);
+  outer.add(g);
   const shell = mesh(new THREE.LatheGeometry([V2(0.001, 0.015), V2(1.7, 0.015), V2(1.8, 0.2), V2(1.8, 6.8), V2(1.6, 7.4), V2(0.75, 8.3), V2(0.6, 8.5), V2(0.6, 9.6), V2(0.55, 9.7)], 56),
     mat.make.glass({ color: '#eef6ff', opacity: 0.3 }), { cast: false });
   shell.renderOrder = 3;
@@ -85,8 +88,8 @@ export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91
   cap.position.y = 9.9;
   g.add(cap);
   return {
-    group: g, cap, liquid,
-    anchors: { spout: V3(0, 9.7, 0), floor: V3(0, 0.15, 0) },
+    group: outer, cap, liquid,
+    anchors: { spout: V3(0, 9.7 * scale, 0), floor: V3(0, 0.15 * scale, 0) },
   };
 }
 
