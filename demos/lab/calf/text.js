@@ -96,6 +96,13 @@ LabText.add('en', {
       detail: 'Look at each slide. At 4× the cells are specks: switch to 40× or 100×.',
       caption: 'Your four slides under the microscope',
     },
+    conclude: {
+      title: 'What do the cells show?', short: 'Conclude',
+      action: 'look at the slides again',
+      hint: 'Answer in the <b>panel</b>. Click the <b>microscope</b> to look again',
+      detail: 'Four solutions, the same red cells. Work out what moved, and what that means for Juniper.',
+      caption: 'Dilute plasma swells a cell: water moves in',
+    },
     brain: {
       title: 'Last night, in her brain', short: 'Brain',
       action: '',
@@ -208,7 +215,7 @@ LabText.add('en', {
   },
 
   /* what /teach shows for the chain and the prescription */
-  report: { chain: 'Explained it to Dana', checks: '{n} checks to get the order', rx: 'Prescriptions run' },
+  report: { conclude: 'Read the red cells', picks: '{n} picks for two questions', chain: 'Explained it to Dana', checks: '{n} checks to get the order', rx: 'Prescriptions run' },
 
   /* the patient panel */
   patient: {
@@ -242,6 +249,30 @@ LabText.add('en', {
       { key: 'pcv', text: 'Packed cell volume', feedback: 'Her red cell count is in range, so she is not anemic.' },
     ],
     close: 'Close',
+  },
+
+  /* after the microscope */
+  conclude: {
+    title: 'What the cells show',
+    cols: ['Solution', 'Her red cells'],
+    seen: { normal: 'Normal discs', swollen: 'Swollen, {pct}% bigger', shrunken: 'Shrunken, {pct}% smaller', burst: 'Burst' },
+    questions: [
+      { text: 'In saline as dilute as her plasma, the cells swelled. What moved?',
+        options: [
+          { text: 'Water, into the cells', right: true, feedback: 'Yes. With fewer dissolved particles outside, more water moved in than out.' },
+          { text: 'Sodium, into the cells', feedback: 'Sodium can’t cross the membrane quickly. Something smaller moved.' },
+          { text: 'Water, out of the cells', feedback: 'That would shrink them, as in the 3% tube.' },
+          { text: 'Hemoglobin, out of the cells', feedback: 'That only happens once a cell bursts, as in pure water.' },
+        ] },
+      { text: 'Her brain cells sit beside the same dilute blood. What do you expect there?',
+        options: [
+          { text: 'They swell, inside a skull that can’t stretch', right: true, feedback: 'That is the prediction. A red cell floats free with room to round up. A brain cell is packed in bone. Go and check.' },
+          { text: 'They burst, like the cells in pure water', feedback: 'Her plasma is dilute, but it is not water. Look at the row for her plasma: swollen, still whole.' },
+          { text: 'They shrink', feedback: 'That is the 3% tube, where there were more particles outside the cell.' },
+          { text: 'Nothing: the brain is sealed off from the blood', feedback: 'The brain’s vessels do hold sodium back. Does that stop water?' },
+        ] },
+    ],
+    next: 'See it in her brain',
   },
 
   /* the four tubes */

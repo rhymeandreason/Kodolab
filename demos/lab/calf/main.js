@@ -1,7 +1,7 @@
 /* Juniper's Seizures: a vet's bench for a calf with water intoxication (hyponatremia).
  *   1 Blood work: a drop into the analyzer, the results panel (results.js)
  *   2 Red cells: a drop of blood into four solutions, the tubes clear or stay cloudy, the
- *     slides under the microscope (eyepiece.js)
+ *     slides under the microscope (slides.js), then what they show (conclude.js)
  *   3 The brain: replay last night at a brain capillary and the astrocyte wrapping it
  *     (capillary.js), and one level in, at a patch of its endfoot membrane (bubble.js)
  *   4 Explain it to Dana: the cause-and-effect chain from cards (chain.js)
@@ -23,6 +23,7 @@ import {
   CELL_OSM, ADAPTED_NA, ADAPTED_OSM, DAY3_NA, plasmaOsm, rxNa,
 } from './model.js';
 import { createChain } from './chain.js';
+import { createConclude } from './conclude.js';
 import { createRx, fluidName, volText } from './rx.js';
 import { createPatient } from './patient.js';
 import { createResults, ROWS, flagOf } from './results.js';
@@ -73,8 +74,13 @@ const results = createResults({
 const slides = createSlides({
   onChange: () => {
     lesson.render();
-    if (lesson.step === SCOPE && slides.seen() >= TUBES.length && !slides.isOpen) lesson.jumpTo(SCOPE + 1);
+    if (lesson.step === SCOPE && slides.seen() >= TUBES.length && !slides.isOpen) lesson.jumpTo(CONCLUDE);
+    if (lesson.step === CONCLUDE && lesson.mode === 'do' && !slides.isOpen) conclude.open();   // back at the bench, the questions return
   },
+});
+const conclude = createConclude({
+  onChange: () => { lesson.render(); requestAnimationFrame(() => stage.resize()); },
+  onNext: () => lesson.jumpTo(BRAIN),
 });
 const chain = createChain({
   onChange: () => {
@@ -88,7 +94,7 @@ const rx = createRx({
 });
 const patient = createPatient();
 patient.el.hidden = true;
-const sidePanel = () => [results, chain, rx].find((p) => p.isOpen);
+const sidePanel = () => [results, conclude, chain, rx].find((p) => p.isOpen);
 const stage = createStage({
   canvas: $('#scene'), views: VIEWS,
   controls: { minDistance: 8, maxDistance: 170 },
@@ -343,9 +349,13 @@ const STEPS = [
     run: actSlide },
   { id: 'scope', ...card('scope'), targets: ['scope'], view: 'scope', caption: T.steps.scope.caption,
     hint: () => (slides.seen() ? fmt(T.steps.scope.hintMore, { n: slides.seen() }) : T.steps.scope.hint),
-    isDone: () => lesson.mode === 'watch' || slides.seen() >= TUBES.length,
+    isDone: () => lesson.mode === 'watch' || (slides.seen() >= TUBES.length && !slides.isOpen),
     progress: () => slides.seen() / TUBES.length,
     run: async () => { if (!isInstant()) slides.open(); } },
+  /* the microscope stays open for a second look; only the panel's button moves on */
+  { id: 'conclude', ...card('conclude'), targets: ['scope'], view: 'tubes', caption: T.steps.conclude.caption,
+    isDone: () => lesson.mode === 'watch' || lesson.isReplaying(),
+    run: async () => { if (!isInstant()) { conclude.close(); slides.open(); } } },
   { id: 'brain', ...card('brain', { from: HEALTHY_NA, to: JUNIPER.na }), targets: [], view: 'overview', caption: T.steps.brain.caption,
     clock: () => fmt(T.steps.brain.clock, { na: Math.round(brainState.na) }),
     watch: { duration: BRAIN_REAL, get: () => S.brainT, set: setBrain } },
@@ -364,11 +374,11 @@ const STEPS = [
     clock: () => fmt(T.steps.slow.clock, { h: Math.floor(brainState.h), na: Math.round(brainState.na) }),
     watch: { duration: SLOW_REAL, get: () => S.slowT, set: (t) => { S.slowT = t; } } },
 ];
-const READ = 1, SCOPE = 5, BRAIN = 6, DANA = 7, RX = 8, DRIP = 9, SLOW = 10;
+const READ = 1, SCOPE = 5, CONCLUDE = 6, BRAIN = 7, DANA = 8, RX = 9, DRIP = 10, SLOW = 11;
 const AT_BRAIN = [BRAIN, SLOW];            // timed steps that zoom in on their own
 const PHASES = [
   { ...T.phases.blood, steps: ['analyze', 'read'] },
-  { ...T.phases.cells, steps: ['cells', 'wait', 'slides', 'scope'] },
+  { ...T.phases.cells, steps: ['cells', 'wait', 'slides', 'scope', 'conclude'] },
   { ...T.phases.brain, steps: ['brain'] },
   { ...T.phases.explain, steps: ['dana'] },
   { ...T.phases.treat, steps: ['rx', 'drip', 'slow'] },
@@ -395,6 +405,7 @@ lesson = createLesson({
     if (window.Track) Track.step(i, STEPS.length, step ? stripTags(step.title) : T.complete.prompt);
     const id = step ? step.id : 'done', live = !isInstant() && lesson.mode === 'do';
     if (id !== 'read') results.close();
+    if (id === 'conclude' && live) conclude.open(); else conclude.close();
     if (id === 'dana' && live) chain.open(); else chain.close();
     if (id === 'rx' && live) rx.open(); else rx.close();
     /* the bench has its own clock until the brain replay: no brain circles before it */
@@ -432,15 +443,16 @@ function playBrain() {
   if (s && s.watch && [BRAIN, DRIP, SLOW].includes(lesson.step) && s.watch.get() < s.watch.duration && !lesson.autoplaying && !isInstant()) lesson.play();
 }
 
-/** What /teach sees: the chain and the prescriptions, once the drip has been solved. */
+/** What /teach sees: the red-cell conclusions, the chain and the prescriptions, once the drip has been solved. */
 let reported = false, completed = false;
 function report() {
   if (reported || !window.Track || !rx.solved()) return;
   reported = true;
   const runs = rx.runs(), R = T.report;
   Track.event('quiz', {
-    score: (chain.tries() === 1) + (runs[0].out === 'safe'), total: 2,
+    score: (conclude.tries() === 2) + (chain.tries() === 1) + (runs[0].out === 'safe'), total: 3,
     answers: [
+      { q: R.conclude, answer: fmt(R.picks, { n: conclude.tries() }), correct: conclude.tries() === 2 },
       { q: R.chain, answer: fmt(R.checks, { n: chain.tries() }), correct: chain.tries() === 1 },
       { q: R.rx, answer: runs.map((r) => `${fluidName(r.fluid)} ${volText(r.vol)} (${T.rx.predict[r.out]})`).join(' → '), correct: runs[0].out === 'safe' },
     ],
@@ -489,7 +501,7 @@ const answer = (() => {
 function restart() {
   newSession();
   firstEnter = false;
-  results.reset(); slides.reset(); chain.reset(); rx.reset(); answer.reset();
+  results.reset(); slides.reset(); conclude.reset(); chain.reset(); rx.reset(); answer.reset();
   reported = false; completed = false;
   lesson.restart();
 }
@@ -504,7 +516,7 @@ stage.onFrame((dt) => {
 });
 
 const intro = createIntro(stage);
-bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, slides, chain, rx, brain, bubble, patient, STEPS, pose, closeIntro: intro.close } });
+bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, slides, conclude, chain, rx, brain, bubble, patient, STEPS, pose, closeIntro: intro.close } });
 
 stage.focus(VIEWS.overview, 0);
 lesson.start();

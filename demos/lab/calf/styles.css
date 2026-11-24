@@ -27,6 +27,10 @@
 .cp-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cp-pick button { border: 1px solid var(--line-2); background: #fff; cursor: pointer; padding: 9px 10px; border-radius: var(--pill); font: var(--font-btn); color: var(--ink); }
 .cp-pick button:hover { border-color: var(--accent); }
+.cp-pick.long { grid-template-columns: 1fr; }
+.cp-pick.long button { text-align: left; border-radius: var(--radius-pop); }
+.cp-ask { display: flex; flex-direction: column; gap: 10px; }
+.cp-ask[hidden], .cp-next[hidden] { display: none; }
 .cp-pick button.right { background: var(--accent); border-color: var(--accent); color: #fff; }
 .cp-pick button.wrong { background: #fdeaee; border-color: #f4b4c2; color: #9f1239; }
 .cp-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
