@@ -16,6 +16,8 @@
  *   // in every direction (default 2.4; 0 = off), so they are easy to click
  *   // ringAround: size the 'circle' ring from another group, e.g. the ice bath a bottle stands in
  *   ix.register('bottle', bottle.group, { name, ringAround: iceBath.group });
+ *   // ringRadius: a fixed ring (cm) round the group's origin, for a long object a footprint
+ *   // ring would overshoot (a typing tray)
  *
  * The label (from Photosynthesis + BloodType): name, description, then a
  * status line that says what a click will do right now — ok (green),
@@ -261,7 +263,8 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
     });
     if (box.isEmpty()) { r.visible = false; return; }
     box.getSize(size); box.getCenter(centre);
-    const rad = Math.max(size.x, size.z) / 2 * 1.2 + 2;
+    if (o.ringRadius) o.group.getWorldPosition(centre);
+    const rad = o.ringRadius || Math.max(size.x, size.z) / 2 * 1.2 + 2;
     const pulse = 1 + 0.06 * Math.sin(t * 3.2);
     r.visible = true;
     r.position.set(centre.x, box.min.y - (o.ringAround ? 0 : lifts[k] || 0) + 0.05, centre.z); // the ring stays on the bench

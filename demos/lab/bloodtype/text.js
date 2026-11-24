@@ -1,34 +1,143 @@
 /* Every word Blood Typing shows, in English. Edit freely: the code only names these keys.
- * Markup allowed: <b>, <i>, <em>, <sup>. */
+ * Markup allowed: <b>, <i>, <em>, <sup>. {name} slots are filled in by the code. */
 LabText.add('en', {
   title: 'Blood Typing',
   icon: 'ph-drop',
 
   intro: {
     kicker: 'Interactive 3D lab',
-    title: 'Whose <em>blood</em> is it?',
-    body: 'Antibodies make red cells clump when they find their antigen. Test four people\'s blood with anti-A, anti-B and anti-Rh, then use the types to settle who the baby\'s father could be.',
+    title: 'Who is the father?',
+    body: 'A mother wants to know which of two men is her baby\'s father. Type all four people\'s blood with anti-A, anti-B and anti-Rh, then use inheritance to rule one out.',
     keys: [
       { color: '#2f6fe4', text: '<b>Antigens</b> on red cells set the blood type' },
       { color: '#e0334b', text: '<b>Agglutination</b>: clumping means the antigen is there' },
-      { color: '#16b3a3', text: '<b>Inheritance</b>: a child\'s alleles come from both parents' },
+      { color: '#16b3a3', text: '<b>Inheritance</b>: a child gets one allele from each parent' },
     ],
   },
 
   info: {
     kicker: 'About the experiment',
     title: 'How does blood typing work?',
-    body: ['Each antiserum holds antibodies against one antigen. Mixed with blood that carries that antigen, the antibodies cross-link the red cells into visible clumps.'],
-    tips: [{ icon: 'ph-mouse-left-click', text: 'Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan' }],
+    body: ['Each antiserum holds antibodies against one antigen. An antibody has two arms, so it can grab two red cells that carry its antigen at once. Millions of those bridges pull the cells into clumps you can see.'],
+    steps: [
+      { head: 'ABO.', text: 'Anti-A clumps cells with the A antigen, anti-B cells with B. Both: type AB. Neither: type O.' },
+      { head: 'Rh.', text: 'Anti-Rh (anti-D) clumps cells with the D antigen. Clumping means Rh+, written after the letter: B+.' },
+      { head: 'Inheritance.', text: 'I<sup>A</sup> and I<sup>B</sup> are codominant, <i>i</i> is recessive; <i>D</i> is dominant over <i>d</i>. A type A person may be I<sup>A</sup>I<sup>A</sup> or I<sup>A</sup><i>i</i>.' },
+    ],
+    notes: ['The blood here is simulated. Typing can rule a man out, but never prove he is the father: many men share any blood type. That takes DNA.'],
+    tips: [
+      { icon: 'ph-magnifying-glass', text: 'From step 3 the magnifier shows one well up close. Point at a well, or a cell in the data table, to look at it.' },
+      { icon: 'ph-mouse-left-click', text: 'Click objects to use them · drag to orbit · scroll to zoom · right-drag to pan' },
+    ],
   },
 
-  phases: { setup: { title: 'Set up', desc: 'The bench' } },
+  phases: {
+    prep: { title: 'Prepare the trays', desc: 'Blood, antisera, stir' },
+    read: { title: 'Read the wells', desc: 'Clumping or not' },
+    solve: { title: 'Solve the case', desc: 'Punnett squares' },
+  },
+
   steps: {
-    look: { title: 'Find the trays', detail: 'One typing tray per person, wells A, B and Rh.', hint: 'Click <b>a tray</b>', action: 'look' },
+    blood: {
+      title: 'Add the blood', short: 'Blood',
+      action: 'add a drop to each well',
+      hint: 'Click each <b>blood sample</b>',
+      detail: 'One drop of each person\'s blood in all three wells of their tray.',
+      why: 'Three wells, three tests on the same blood: one for each antigen.',
+      caption: 'A drop of blood in each well',
+    },
+    sera: {
+      title: 'Add the antisera', short: 'Antisera',
+      action: 'add a drop to every matching well',
+      hint: 'Click each <b>antiserum</b>',
+      detail: 'Anti-A in every A well, anti-B in every B well, anti-Rh in every Rh well.',
+      why: 'Each antiserum carries antibodies against one antigen. The dyes only tell the bottles apart.',
+      caption: 'Each antiserum into its own well, on every tray',
+    },
+    stir: {
+      title: 'Stir each well', short: 'Stir',
+      action: 'stir its three wells',
+      hint: 'Click each <b>tray</b>',
+      detail: 'A clean stick for every well, then into the biohazard bin.',
+      why: 'One stick per well, or a trace of one antiserum lands in the next well and gives a false clump.',
+      caption: 'Stir, and watch the magnifier',
+    },
+    record: {
+      title: 'Record the results', short: 'Record',
+      action: 'look at it in the magnifier',
+      hint: 'Fill in the <b>data table</b>',
+      detail: 'Mark each well + (clumped) or − (smooth), then pick each person\'s type.',
+      why: 'Smooth red means no antigen for that antibody. Gritty clumps in clear fluid mean it found its antigen.',
+      caption: 'Read every well: clumped or smooth?',
+    },
+    solve: {
+      title: 'Who is the father?', short: 'Solve',
+      hint: 'Use the <b>Genetics</b> tab',
+      detail: 'Try each man\'s possible genotypes against the mother\'s in the Punnett squares.',
+      why: 'One impossible combination is enough to rule a man out. A possible one only means he could be.',
+      caption: 'Which man could pass on what the baby needs?',
+    },
   },
-  completeHint: 'The procedure comes next.',
 
-  objects: { tray: { name: 'Typing tray', short: 'Tray' } },
+  complete: {
+    correct: 'Correct!',
+    head: '{father} could be the father. {other} is ruled out.',
+    why: 'Blood types exclude; they never prove. Plenty of other men share {father}\'s type.',
+    reopen: 'Notebook',
+    newCase: 'New case',
+    toast: 'Case solved',
+    newToast: 'Case #{no}: new blood, same question',
+  },
+
+  magnifier: { title: 'Magnifier', label: '{name} · {serum}' },
+
+  notebook: {
+    tabData: 'Data table', tabGenetics: 'Genetics',
+    lead: 'Point at a cell to see that well in the magnifier. Click it to cycle +, −.',
+    doneLead: 'Every result checks out.',
+    sample: 'Sample', type: 'Type', typeOf: '{name}\'s blood type',
+    pos: 'clumping', neg: 'no clumping',
+    keyTitle: 'How to read the results',
+    keyRh: 'The Anti-Rh well gives the + or − after the letter. Anti-A −, anti-B +, anti-Rh + is <b>B+</b>.',
+    check: 'Check my results',
+    notStirred: 'Stir every well first.',
+    fillAll: 'Record all twelve wells and pick a type for each person.',
+    wrongObs1: '{n} well doesn\'t match. Look again in the magnifier.',
+    wrongObsN: '{n} wells don\'t match. Look again in the magnifier.',
+    wrongType1: '{n} type is wrong. Clumping means that antigen is present.',
+    wrongTypeN: '{n} types are wrong. Clumping means that antigen is present.',
+    allRight: '<b>All correct.</b> Genetics is open.',
+    locked: 'Check your data table to open this.',
+    rule: 'I<sup>A</sup> and I<sup>B</sup> are codominant; <i>i</i> is recessive. <i>D</i> (Rh+) is dominant over <i>d</i>.',
+    cross: 'Mother × {man}',
+    genoOf: '{name} ({type})',
+    aboGene: 'ABO gene', rhGene: 'Rh gene',
+    can: 'With these genotypes, Mother × {man} <b>can</b> have a {baby} baby ({pct}%).',
+    cannot: 'With these genotypes, Mother × {man} <b>cannot</b> have a {baby} baby.',
+    tryOther: 'Try the other genotypes too.',
+    question: 'The baby is <b>{baby}</b>. Which man could be the father?',
+    notQuite: '<b>Not quite.</b> Can {man} pass on the alleles the baby needs? Try every genotype he could have.',
+    needO: 'A type O baby is <i>ii</i>, so each parent passed on an <i>i</i>.',
+    needAllele: 'Mother (type {mom}) has no {alleles}, so the baby got it from the father.',
+    needD: 'Mother is Rh− (<i>dd</i>), so the baby\'s <i>D</i> came from the father.',
+    could: '<b>{man}</b> ({type}) carries alleles that can give a {baby} baby: he <b>could be</b> the father.',
+    excluded: '<b>{man}</b> ({type}) is <b>ruled out</b>: {why}.',
+    whyAbo: 'no mix of a type {mom} mother\'s and a type {man} man\'s alleles gives a type {baby} child',
+    whyRh: 'the baby is Rh+, but Mother and {man} are both <i>dd</i>',
+    dnaNote: 'Blood typing can rule a man out. Proving fatherhood takes DNA.',
+  },
+
+  objects: {
+    blood: { name: '{name}\'s blood', desc: 'Simulated blood sample' },
+    serum: {
+      A: 'Antibodies against the A antigen',
+      B: 'Antibodies against the B antigen',
+      Rh: 'Antibodies against the D (Rh) antigen',
+    },
+    tray: { name: '{name}\'s tray', desc: 'Three wells: A, B, Rh' },
+    cup: { name: 'Stir sticks', short: 'Sticks', desc: 'One clean stick per well' },
+    bin: { name: 'Biohazard bin', short: 'Bin', desc: 'Used sticks go here' },
+  },
 
   props: {
     people: { mother: 'Mother', baby: 'Baby', man1: 'Man #1', man2: 'Man #2' },

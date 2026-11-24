@@ -21,7 +21,7 @@ export const SERA = [
 ];
 export const BLOOD = '#6a0711';
 
-const COLS_X = [-26.25, -8.75, 8.75, 26.25];
+export const COLS_X = [-26.25, -8.75, 8.75, 26.25];
 export const POS = {
   bottleZ: -8.5, trayZ: 4,
   serum: { A: V3(-6.5, 0, -21), B: V3(0, 0, -21), Rh: V3(6.5, 0, -21) },
@@ -67,7 +67,7 @@ export function buildBench(mat, root) {
     root.add(t.group);
     return t;
   });
-  const cup = makeStickCup(mat);
+  const cup = makeStickCup(mat, { count: 14 });   // a fresh stick for each of the 12 wells, and spares
   cup.group.position.copy(POS.cup);
   const bin = makeWasteBin(mat, { label: T.props.bin });
   bin.group.position.copy(POS.bin);
