@@ -13,7 +13,7 @@ The four with a short URL are rows in `lib/lessons.js`; the rest are not wired t
 | Glowing E. coli | `ecoli/ecoli-lab.html` | /labs/glowing-ecoli | Transformation with GFP. UV step darkens the room |
 | Onion Root Tip | `onion/onion-lab.html` | /labs/onion-root-tip | Squash and stain, then label mitosis stages under a microscope |
 | Gel Electrophoresis | `gel/gel-lab.html` | none | Crime-scene DNA vs three suspects. Micropipette, gel run, ladder measuring |
-| Blood Typing | `bloodtype/blood-lab.html` | none | Type four people's blood, then Punnett squares to rule out a father |
+| Blood Typing | `bloodtype/blood-lab.html` | /labs/blood-typing | Type four people's blood, then Punnett squares to rule out a father |
 | Juniper's Seizures | `calf/calf-lab.html` | none | Calf seizure case, drawn from frame art in `calf/art/`. Not in `README.md` |
 
 Benches: `gallery.html` (every prop), `props.html#<prop>` (one prop on a turntable), `themes.html` (colour themes).
