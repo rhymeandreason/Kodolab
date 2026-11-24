@@ -9,7 +9,7 @@
  */
 import {
   Q, SYRINGE_ML, SYRINGE_BOT,
-  makeBeaker, makeCup, makeSyringe, makePipette, makeDish, makeRod, makeTray, makeLamp, makeTimer, makePunch,
+  makeBeaker, makeCup, makeSyringe, makePipette, makeDish, makeRod, makeTray, makeLamp, makeTimer, makeAnalyzer, makePunch,
   makeJar, makeJarLid, makeScoop, makeSqueezeBottle, makeWorkMat, makePaperTowel,
   makeTestTube, makeTubeRack, makeFunnel, makeZipBag, makeReagentBottle, makeIceBath, makeSkewer,
   makeStrawberry, makeCalyx, makePlate, makeBowl, makeDnaPrecipitate, makeWasteBin, makeLeaf, makeLeafDisk,
@@ -73,6 +73,10 @@ export const PROPS = [
     desc: 'Teal desk lamp with a working spotlight and a yellow glow. The head reaches 24 cm forward of the base.',
     make: (mat) => makeLamp(mat),
     controls: [slider('Light', 0, 1, 0.01, 1, '', (p, v) => p.setOn(v)), slider('Switch', 0, 1, 0.01, 1, '', (p, v) => p.setLever(v))] },
+  { key: 'analyzer', group: 'Equipment', name: 'Blood analyzer', file: 'equipment.js', call: 'makeAnalyzer(mat)',
+    desc: 'Benchtop blood analyzer (from Calf). anchors.port is the sample port on top. setScreen({ title, progress, rows }) shows a run bar, then rows of { name, value, unit, flag }.',
+    make: (mat) => { const a = makeAnalyzer(mat); a.setScreen({ title: 'RESULTS', rows: [{ name: 'Na⁺', value: 110, unit: 'mEq/L', flag: 'L' }, { name: 'K⁺', value: 5.1, unit: 'mEq/L' }] }); return a; },
+    controls: [slider('Run', 0, 1, 0.01, 1, '', (p, v) => p.setScreen(v < 1 ? { title: 'ANALYZING', progress: v } : { title: 'RESULTS', rows: [{ name: 'Na⁺', value: 110, unit: 'mEq/L', flag: 'L' }] }))] },
   { key: 'timer', group: 'Equipment', name: 'Lab timer', file: 'equipment.js', call: 'makeTimer(mat)',
     desc: 'Digital timer. draw(seconds, running) repaints the screen.',
     make: (mat) => makeTimer(mat),

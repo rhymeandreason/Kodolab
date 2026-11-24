@@ -129,8 +129,8 @@ export function makeTestTube(mat, { r = 1.3, h = 13 } = {}) {
     /** World y of a fraction (0..1) of the inner height. */
     levelY(f) { return worldOf(g, V3(0, in0 + f * inH, 0)).y; },
     /** A liquid layer; set it with setRange(f0, f1). Layers stack: give each its own range. */
-    addLayer(color, opacity = 0.8) {
-      return makeLiquid(mat, g, { wall: inner, inset: 0, segments: 40, color, opacity, matOpts: { roughness: 0.1, clearcoat: 0.7 } });
+    addLayer(color, opacity = 0.8, { cloudColor } = {}) {
+      return makeLiquid(mat, g, { wall: inner, inset: 0, segments: 40, color, opacity, cloudColor, matOpts: { roughness: 0.1, clearcoat: 0.7 } });
     },
   };
   return api;

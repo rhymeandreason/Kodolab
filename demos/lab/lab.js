@@ -28,7 +28,7 @@ export { makeZipBag, pillowH } from './props/bag.js';
 export { makePlate, makeBowl, makeIceBath } from './props/kitchen.js';
 export { makeTubeRack, makeToolHolder } from './props/racks.js';
 export { makePipette, makeSyringe, SYRINGE_ML, SYRINGE_BOT, makeScoop, makeRod, makeSkewer, makePunch, makeLoop, makeScalpel, makePencil } from './props/tools.js';
-export { makeLamp, makeTimer, makeWaterBath, makeUvLamp, makeHotPlate } from './props/equipment.js';
+export { makeLamp, makeTimer, makeWaterBath, makeUvLamp, makeHotPlate, makeAnalyzer } from './props/equipment.js';
 export { makeAgarPlate } from './props/culture.js';
 export { makeStrawberry, makeCalyx, STRAWBERRY_H, strawberrySeed, makeDnaPrecipitate, makeLeaf, makeLeafDisk } from './props/specimens.js';
 export { makeOnion } from './props/onion.js';

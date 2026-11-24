@@ -1,4 +1,4 @@
-/* Powered bench equipment: desk lamp, lab timer, and from Ecoli a water bath and a handheld UV lamp. */
+/* Powered bench equipment: desk lamp, lab timer, from Ecoli a water bath and a handheld UV lamp, and from Calf a blood analyzer. */
 import * as THREE from 'three';
 import { LIGHT, DECAY } from '../core/three-compat.js';
 import { V3, lerp } from '../core/math.js';
@@ -246,4 +246,58 @@ export function makeHotPlate(mat, { color = toLinear('#14a38f') } = {}) {
       ledMat.emissive.setRGB(2.5 * Math.min(1, k * 4), 0.2 * Math.min(1, k * 4), 0.1 * Math.min(1, k * 4));
     },
   };
+}
+
+/** Benchtop blood analyzer, 14 × 12 cm, 7.5 cm tall: a sample port on top (anchors.port, where a
+ *  pipette tip dispenses) and a sloped screen. setScreen({ title, progress, rows }) repaints it:
+ *  progress 0..1 shows a bar while it runs, rows [{ name, value, unit, flag }] the results once
+ *  progress is 1 or omitted. flag 'L' / 'H' marks a value out of range. The prop shows what it's
+ *  given and knows no chemistry. */
+export function makeAnalyzer(mat, { color = toLinear('#e9edf2') } = {}) {
+  const g = new THREE.Group();
+  const W = 14, D = 12, H = 7.5;
+  g.add(mesh(rbox(W, H, D, 0.9), mat.make.solid(color, 0.45)));
+  const bezel = mesh(rbox(W - 2, 5.2, 0.4, 0.3), mat.make.solid(toLinear('#26303b'), 0.4));
+  bezel.position.set(0, 3.9, D / 2 - 0.05);
+  g.add(bezel);
+  const c = makeCanvas(640, 400), tex = canvasTex(c);
+  const screen = mesh(new THREE.PlaneGeometry(W - 3, 4.4), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), { cast: false });
+  screen.position.set(0, 3.9, D / 2 + 0.17); screen.userData.noSketch = true;
+  g.add(screen);
+  const port = mesh(new THREE.CylinderGeometry(0.9, 0.7, 0.4, 24), mat.make.solid(toLinear('#3b82f6'), 0.35));
+  port.position.set(3.6, H + 0.1, -2.6);
+  const hole = mesh(new THREE.CircleGeometry(0.42, 20), mat.make.solid(toLinear('#0f172a'), 0.6), { cast: false });
+  hole.rotation.x = -Math.PI / 2; hole.position.set(3.6, H + 0.31, -2.6);
+  g.add(port, hole);
+  let last = '';
+  const api = {
+    group: g,
+    anchors: { port: V3(3.6, H + 0.3, -2.6), top: V3(0, H, 0), screen: V3(0, 6, D / 2) },
+    setScreen({ title = 'READY', progress, rows = [] } = {}) {
+      const key = JSON.stringify([title, progress == null ? null : Math.round(progress * 40), rows]);
+      if (key === last) return;
+      last = key;
+      const x = c.getContext('2d');
+      x.fillStyle = '#0b1220'; x.fillRect(0, 0, 640, 400);
+      x.textBaseline = 'middle'; x.textAlign = 'left';
+      x.fillStyle = '#94a3b8'; x.font = `700 30px ${FONT}`; x.fillText(title, 30, 40);
+      if (progress != null && progress < 1) {
+        x.fillStyle = '#1e293b'; x.fillRect(30, 190, 580, 26);
+        x.fillStyle = '#7ef0b5'; x.fillRect(30, 190, 580 * progress, 26);
+        tex.needsUpdate = true;
+        return;
+      }
+      rows.forEach((r, i) => {
+        const y = 100 + i * 50;
+        x.fillStyle = '#cbd5e1'; x.font = `600 30px ${FONT}`; x.fillText(r.name, 30, y);
+        x.fillStyle = r.flag ? '#fb923c' : '#7ef0b5'; x.font = `700 36px 'JetBrains Mono', ui-monospace, monospace`;
+        x.textAlign = 'right'; x.fillText(String(r.value), 430, y);
+        x.textAlign = 'left'; x.fillStyle = '#64748b'; x.font = `600 22px ${FONT}`; x.fillText(r.unit || '', 445, y);
+        if (r.flag) { x.fillStyle = '#fb923c'; x.font = `800 30px ${FONT}`; x.fillText(r.flag, 580, y); }
+      });
+      tex.needsUpdate = true;
+    },
+  };
+  api.setScreen();
+  return api;
 }
