@@ -8,7 +8,7 @@ import {
   V3, Q, lerp, clamp, Ease, worldOf,
   newSession, anim, wait, moveTo, isInstant,
   pourPose, takeTip, pipetteDraw, pipetteDispense, ejectTip,
-  disposeTree, toast,
+  disposeTree, toast, mesh, makeCanvas, canvasTex, FONT,
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createZoom, createIntro, chromeInsets, bindChrome, PHONE,
   makeBench, makeMicroTube, makeTubeRack, makeReagentBottle, makeWasteBin, makeStream,
   makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeLead, makeTransilluminator,
@@ -26,11 +26,24 @@ const hex = (c) => new THREE.Color(c).getHex();
 // Layout (cm, bench top at y = 0)
 // =========================================================================
 const POS = {
-  tae: V3(-13, 0, -9), lidRest: V3(-18, 0.8, 4), combRest: V3(-8, 0.18, 14),
+  tae: V3(-34, 0, -16), lidRest: V3(-34, 0.8, 8), combRest: V3(-18, 0.18, 17),
   box: V3(0, 0, 0),
-  rack: V3(11.5, 0, -2.5), tips: V3(12.5, 0, 7.5), stand: V3(21, 0, -2), waste: V3(21.5, 0, 8.5),
-  power: V3(14, 0, -15), light: V3(37, 0, 1),
+  rack: V3(24, 0, -8), tips: V3(24, 0, 12), stand: V3(38, 0, -8), waste: V3(38, 0, 12),
+  power: V3(4, 0, -24), light: V3(58, 0, 2),
 };
+const MAT = { w: 150, d: 72, x0: -75, z0: -36 };
+
+/** Zone names printed on the bench, as in blood-lab. */
+function printedMat() {
+  const S = 16, c = makeCanvas(MAT.w * S, MAT.d * S), x = c.getContext('2d');
+  x.font = `700 21px ${FONT}`; x.fillStyle = 'rgba(30,45,75,0.55)'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const Zn = T.props.zones;
+  [[Zn.buffer, POS.tae.x, POS.tae.z + 7], [Zn.power, POS.power.x, POS.power.z - 7.5], [Zn.box, POS.box.x, 14],
+    [Zn.lid, POS.lidRest.x, POS.lidRest.z + 8], [Zn.samples, POS.rack.x, POS.rack.z + 6], [Zn.pipette, POS.stand.x, POS.stand.z + 6],
+    [Zn.tips, POS.tips.x, POS.tips.z + 7], [Zn.waste, POS.waste.x, POS.waste.z + 7], [Zn.light, POS.light.x, POS.light.z + 13]]
+    .forEach(([t, wx, wz]) => x.fillText(t.split('').join(' '), (wx - MAT.x0) * S, (wz - MAT.z0) * S));
+  return canvasTex(c);
+}
 const BUFFER_TOP = 0.4;              // cm of buffer over the gel
 const MA = 64;                       // a mini gel in 1× TAE draws ~50–80 mA at 100 V
 const RUN_REAL = 14;                 // seconds the run takes to play
@@ -38,12 +51,12 @@ const COL = { tae: '#d8ebfa', dye: '#3b5bdb' };
 const Z = V3(0, 0, 1);
 
 const VIEWS = {
-  overview: { t: V3(9, 3, 0), p: V3(9, 52, 66) },
-  box: { t: V3(-3, 3, 0), p: V3(-3, 34, 38) },
-  load: { t: V3(8, 4, -0.5), p: V3(8, 36, 38) },
-  connect: { t: V3(4, 4, -4), p: V3(4, 38, 40) },
+  overview: { t: V3(10, 0, -2), p: V3(10, 76, 80) },
+  box: { t: V3(-12, 3, 0), p: V3(-12, 42, 48) },
+  load: { t: V3(14, 4, 0), p: V3(14, 44, 46) },
+  connect: { t: V3(2, 4, -8), p: V3(2, 44, 44) },
   run: { t: V3(0, 2.5, 1), p: V3(0, 28, 22) },
-  image: { t: V3(37, 3, 1.5), p: V3(37, 30, 24) },
+  image: { t: V3(58, 3, 1.5), p: V3(58, 30, 24) },
 };
 
 // =========================================================================
@@ -123,12 +136,17 @@ function rebuild() {
   pip.setTip(false);
   const waste = makeWasteBin(mat, { label: T.props.waste, symbol: null });
   waste.group.scale.setScalar(0.7);
-  place(waste, POS.waste, -0.3);
+  place(waste, POS.waste);
   const power = place(makePowerSupply(mat), POS.power, -0.15);
   const light = place(makeTransilluminator(mat), POS.light);
   const leads = { black: makeLead(mat, { color: hex('#23272e') }), red: makeLead(mat, { color: hex('#d92b2b') }) };
   root.add(leads.black.group, leads.red.group);
   const stream = makeStream(mat, root, { color: hex(COL.tae) });
+  const printed = mesh(new THREE.PlaneGeometry(MAT.w, MAT.d), mat.make.standard({ map: printedMat(), roughness: 0.95, transparent: true, depthWrite: false }), { cast: false });
+  printed.rotation.x = -Math.PI / 2;
+  printed.position.set(MAT.x0 + MAT.w / 2, 0.02, MAT.z0 + MAT.d / 2);
+  printed.userData.noSketch = true;
+  root.add(printed);
 
   B = { box, gel, comb, lid, tae, rack, tubes, tipBox, stand, pip, waste, power, light, leads, stream };
   S = {

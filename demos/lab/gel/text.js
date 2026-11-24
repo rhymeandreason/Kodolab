@@ -151,6 +151,7 @@ LabText.add('en', {
   props: {
     tae: { title: 'TAE', line: 'RUNNING BUFFER', note: '1× · pH 8.3' },
     waste: 'TIPS',
+    zones: { buffer: 'BUFFER', power: 'POWER SUPPLY', box: 'GEL BOX', lid: 'LID', samples: 'SAMPLES', pipette: 'PIPETTE', tips: 'TIPS', waste: 'TIP WASTE', light: 'UV LIGHT' },
   },
 
   /* the gel image panel */
