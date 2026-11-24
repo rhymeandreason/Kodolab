@@ -19,23 +19,35 @@ const BLACK = toLinear('#23272e'), RED = toLinear('#d92b2b');
  *  bubbles the electrodes, twice as many at the cathode (H₂) as at the anode (O₂), and
  *  update(time) moves them. The lid sits closed on top as `lid` (a group: attach it elsewhere
  *  to move it), with its plugs at lidAnchors.black / red. */
-export function makeGelBox(mat, { color = '#cfe2f3' } = {}) {
+export function makeGelBox(mat, { color = '#a9cbe8', base = '#3a4350' } = {}) {
   const W = 10.2, L = 21, H = 5.5, t = 0.4, BED = 2.0;
   const g = new THREE.Group();
-  const wall = mat.make.plastic({ color, opacity: 0.32 });
-  const solid = mat.make.solid(toLinear('#e9eef3'), 0.5);
+  // clear blue-tinted acrylic; its cut edges read darker and denser than its faces, as on a real tank
+  const wall = mat.make.widePlastic({ color, opacity: 0.22, edge: 0.7, back: 0.25 });
+  const rim = mat.make.standard({ color: toLinear('#6f9cc2'), roughness: 0.2, transparent: true, opacity: 0.55, depthWrite: false, envMapIntensity: 1.3 });
+  const solid = mat.make.solid(toLinear(base), 0.55);
+  const bedMat = mat.make.solid(toLinear('#4b5664'), 0.4);
   const add = (geo, m, x, y, z, o) => { const b = mesh(geo, m, o); b.position.set(x, y, z); g.add(b); return b; };
   // The floor is lifted a hair and the walls start on top of it, so no wall face shares a plane with the floor's.
   const E = 0.015, WH = H - t - E;
-  add(new THREE.BoxGeometry(W, t, L), solid, 0, E + t / 2, 0);
+  // moulded base: a plinth a little wider than the tank, then the tank floor
+  add(rbox(W + 0.7, 0.3, L + 0.7, 0.4), solid, 0, 0, 0);
+  add(rbox(W, t, L, 0.2), solid, 0, E, 0);
   [-1, 1].forEach((s) => {
     const side = add(new THREE.BoxGeometry(t, WH, L), wall, s * (W / 2 - t / 2), t + E + WH / 2, 0, { cast: false });
     side.renderOrder = 3;
     const end = add(new THREE.BoxGeometry(W - 2 * t, WH, t), wall, 0, t + E + WH / 2, s * (L / 2 - t / 2), { cast: false });
     end.renderOrder = 3;
+    // cut edges: the top of each wall, and the four vertical corners
+    const R = 0.02, top = t + E + WH - R;
+    add(new THREE.BoxGeometry(t + 2 * R, 2 * R, L + 2 * R), rim, s * (W / 2 - t / 2), top, 0, { cast: false }).renderOrder = 4;
+    add(new THREE.BoxGeometry(W - 2 * t, 2 * R, t + 2 * R), rim, 0, top, s * (L / 2 - t / 2), { cast: false }).renderOrder = 4;
+    [-1, 1].forEach((u) => {
+      add(new THREE.BoxGeometry(t + 2 * R, WH, t + 2 * R), rim, s * (W / 2 - t / 2), t + E + WH / 2, u * (L / 2 - t / 2), { cast: false }).renderOrder = 4;
+    });
   });
   // the gel bed, with the dams that keep it off the electrodes
-  add(new THREE.BoxGeometry(W - 2 * t - 0.04, BED - t, 12), solid, 0, t + (BED - t) / 2, 0);
+  add(new THREE.BoxGeometry(W - 2 * t - 0.04, BED - t, 12), bedMat, 0, t + (BED - t) / 2, 0);
   // electrodes: platinum wire across each chamber's floor, up the end wall to a pin
   const wire = mat.steel;
   const ELZ = L / 2 - 1.1;
@@ -55,11 +67,17 @@ export function makeGelBox(mat, { color = '#cfe2f3' } = {}) {
   // lid: a clear cover with the two plug housings over the pins
   const lid = new THREE.Group();
   lid.position.y = H;
-  const top = mesh(rbox(W + 0.8, 0.35, L + 0.6, 0.25), mat.make.plastic({ color, opacity: 0.5, edge: 1 }), { cast: false });
+  const lidMat = mat.make.plastic({ color: '#8dbbe3', opacity: 0.5, edge: 0.7 });
+  const top = mesh(rbox(W + 0.8, 0.35, L + 0.6, 0.25), lidMat, { cast: false });
   top.renderOrder = 3;
   lid.add(top);
+  // the lid's cut edge, a band round its rim
   [-1, 1].forEach((s) => {
-    const skirt = mesh(new THREE.BoxGeometry(W + 0.8, 0.9, 0.2), mat.make.plastic({ color, opacity: 0.3 }), { cast: false });
+    const a = mesh(new THREE.BoxGeometry(0.08, 0.36, L + 0.2), rim, { cast: false }); a.position.set(s * (W / 2 + 0.36), 0.175, 0); a.renderOrder = 4; lid.add(a);
+    const b = mesh(new THREE.BoxGeometry(W + 0.5, 0.36, 0.08), rim, { cast: false }); b.position.set(0, 0.175, s * (L / 2 + 0.26)); b.renderOrder = 4; lid.add(b);
+  });
+  [-1, 1].forEach((s) => {
+    const skirt = mesh(new THREE.BoxGeometry(W + 0.8, 0.9, 0.2), lidMat, { cast: false });
     skirt.position.set(0, -0.35, s * (L / 2 + 0.2)); skirt.renderOrder = 3;
     lid.add(skirt);
     const house = mesh(rbox(1.5, 1.3, 1.5, 0.3), mat.make.solid(s < 0 ? BLACK : RED, 0.4));
