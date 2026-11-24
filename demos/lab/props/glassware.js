@@ -198,3 +198,20 @@ export function makeMicroTube(mat, { color = toLinear('#6366f1'), label, liquidC
     setCap(k) { this.capOpen = k; pivot.rotation.x = -1.95 * k; },
   };
 }
+
+/** Watch glass (from OnionRoot): a shallow spherical cap, r = rim radius (4.5: a 9 cm glass),
+ *  sag = depth at the centre. Origin at the lowest point. liquid.setLevel(cm) fills it from
+ *  the centre out, and liquid.setColor() changes what is in it. */
+export function makeWatchGlass(mat, { r = 4.5, sag = 1.1, liquidColor = 0xdcecff } = {}) {
+  const R = (r * r + sag * sag) / (2 * sag), th = Math.asin(r / R), t = 0.1;
+  const cap = (rad, n = 24) => Array.from({ length: n + 1 }, (_, i) => { const a = (i / n) * th; return [rad * Math.sin(a), R - rad * Math.cos(a)]; });
+  const g = new THREE.Group();
+  const outer = cap(R), inner = cap(R - t).reverse();
+  const shell = mesh(lathe([...outer, ...inner], 64), mat.wideGlass, { cast: false });
+  shell.renderOrder = 3;
+  const rimY = R - R * Math.cos(th);
+  g.add(shell, edgeRing(mat, r - 0.03, rimY, 0.05));
+  const liquid = makeLiquid(mat, g, { wall: cap(R - t - 0.02), inset: 0, color: liquidColor, opacity: 0.42, matOpts: { roughness: 0.05 } });
+  liquid.setLevel(0);
+  return { group: g, liquid, r, anchors: { floor: V3(0, t, 0), top: V3(0, rimY, 0) } };
+}
