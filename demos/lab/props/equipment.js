@@ -215,3 +215,35 @@ export function makeUvLamp(mat, { glow = 0x8b5cf6, range = 70 } = {}) {
     setOn(e) { winMat.emissiveIntensity = 0.35 + 2.6 * e; spot.intensity = 1.0 * LIGHT * e; },
   };
 }
+
+/** Small hot plate (from OnionRoot): a low rounded body with a dark round plate, a knob and an
+ *  LED on the front. 20 × 22 cm, 3.6 cm tall. anchors.plate is the centre of the plate's top.
+ *  setHeat(0..1) warms the plate to a dull red and lights the LED. color = the body. */
+export function makeHotPlate(mat, { color = toLinear('#14a38f') } = {}) {
+  const W = 20, D = 22, H = 3.4, PR = 8, PT = 0.28, PZ = -1;
+  const g = new THREE.Group();
+  g.add(mesh(rbox(W, H, D, 1.2), mat.make.solid(color, 0.45)));
+  const plateMat = mat.make.standard({ color: toLinear('#34373e'), roughness: 0.35, metalness: 0.2, emissive: 0x000000 });
+  const plate = mesh(new THREE.CylinderGeometry(PR, PR, PT, 64), plateMat);
+  plate.position.set(0, H + PT / 2, PZ);
+  const ring = mesh(new THREE.TorusGeometry(PR + 0.05, 0.12, 8, 64), mat.steel, { cast: false });
+  ring.rotation.x = Math.PI / 2; ring.position.set(0, H + 0.04, PZ);
+  const knob = mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.9, 32), mat.charcoal);
+  knob.rotation.x = Math.PI / 2; knob.position.set(6, H * 0.5, D / 2 + 0.35);
+  const tick = mesh(new THREE.BoxGeometry(0.18, 0.7, 0.1), mat.white, { cast: false });
+  tick.position.set(6, H * 0.5 + 0.45, D / 2 + 0.82);
+  const ledMat = mat.make.standard({ color: toLinear('#5a2a2a'), emissive: 0x000000 });
+  const led = mesh(new THREE.SphereGeometry(0.32, 16, 10), ledMat, { cast: false });
+  led.position.set(2.6, H * 0.5, D / 2 - 0.05);
+  led.userData.noHL = plate.userData.noHL = true;
+  g.add(plate, ring, knob, tick, led);
+  return {
+    group: g, plate, heat: 0,
+    anchors: { plate: V3(0, H + PT, PZ) },
+    setHeat(k) {
+      this.heat = k;
+      plateMat.emissive.setRGB(0.22 * k, 0.03 * k, 0.01 * k);
+      ledMat.emissive.setRGB(2.5 * Math.min(1, k * 4), 0.2 * Math.min(1, k * 4), 0.1 * Math.min(1, k * 4));
+    },
+  };
+}

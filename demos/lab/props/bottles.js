@@ -89,3 +89,46 @@ export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91
     anchors: { spout: V3(0, 9.7, 0), floor: V3(0, 0.15, 0) },
   };
 }
+
+/** 30 mL dropper bottle (from OnionRoot): a squat glass bottle with a band label and a dropper
+ *  standing in it, a rubber bulb on a glass pipe. Origin at the centre of the base.
+ *  dropper is a group of its own at the neck (lift it out with root.attach(b.dropper));
+ *  anchors.tip is the pipe's tip in dropper space. setSqueeze(0..1) squeezes the bulb,
+ *  setFill(0..1) fills the pipe. color = the label bands; tint = the glass. */
+export function makeDropperBottle(mat, { title = '1 M HCl', line = 'HYDROCHLORIC ACID', note, color = '#e8a23a', liquidColor = 0xe6f2ff, liquidOpacity = 0.4, tint = '#eef6ff', bulb: bulbColor = '#24272e' } = {}) {
+  const NECK = 5.88, PIPE = 4.5;
+  const g = new THREE.Group();
+  const shell = mesh(new THREE.LatheGeometry([V2(0.001, 0), V2(1.54, 0), V2(1.67, 0.2), V2(1.67, 4.2), V2(1.43, 4.97), V2(0.7, 5.39), V2(0.66, NECK)], 48),
+    mat.make.glass({ color: tint, opacity: 0.28 }), { cast: false });
+  shell.renderOrder = 3;
+  g.add(shell);
+  const liquid = makeLiquid(mat, g, {
+    wall: [[1.58, 0.18], [1.58, 4.15], [1.36, 4.9], [0.62, 5.3], [0.58, 5.8]], inset: 0, max: 4,
+    color: liquidColor, opacity: liquidOpacity, matOpts: { roughness: 0.1, clearcoat: 0.7 },
+  });
+  liquid.setFraction(0.75);
+  g.add(wrapLabel({
+    rTop: 1.69, rBot: 1.69, y0: 1.0, y1: 3.6, arc: 2.5, center: 0, w: 512, h: 256, order: 5,
+    draw: (c, w, h) => bandLabel(c, w, h, { title, line, note, color, ink: '#151a22', lineColor: '#5b6575' }),
+  }));
+  const dropper = new THREE.Group();
+  dropper.position.y = NECK;
+  const collar = mesh(new THREE.CylinderGeometry(0.74, 0.74, 0.84, 32), mat.charcoal);
+  collar.position.y = 0.42;
+  const bulb = mesh(new THREE.SphereGeometry(0.53, 24, 16), mat.make.physical({ color: toLinear(bulbColor), roughness: 0.45, clearcoat: 0.6 }));
+  bulb.position.y = 1.47; bulb.scale.y = 1.6;
+  const pipe = mesh(new THREE.CylinderGeometry(0.12, 0.07, PIPE, 12), mat.glass, { cast: false });
+  pipe.position.y = -PIPE / 2; pipe.renderOrder = 3;
+  const fluidGeo = new THREE.CylinderGeometry(0.075, 0.045, 1, 10);
+  fluidGeo.translate(0, 0.5, 0);
+  const fluid = mesh(fluidGeo, mat.make.liquid(liquidColor, Math.max(0.6, liquidOpacity)), { cast: false });
+  fluid.position.y = -PIPE + 0.05; fluid.renderOrder = 2; fluid.visible = false;
+  dropper.add(collar, bulb, pipe, fluid);
+  g.add(dropper);
+  return {
+    group: g, dropper, bulb, liquid,
+    anchors: { tip: V3(0, -PIPE, 0), neck: V3(0, NECK, 0) },
+    setSqueeze(a) { bulb.scale.set(1 + 0.15 * a, 1.6 - 0.45 * a, 1 + 0.15 * a); },
+    setFill(f) { fluid.visible = f > 0.01; fluid.scale.y = Math.max(0.001, f * (PIPE - 0.6)); },
+  };
+}

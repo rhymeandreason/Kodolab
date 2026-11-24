@@ -10,8 +10,8 @@ import {
   anim, moveTo, isInstant, newSession,
   disposeTree, toLinear,
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createIntro, chromeInsets, bindChrome,
-  makeBench, makeBeaker, makeTestTube, makeTubeRack, makeWaterBath, makeReagentBottle, makePipette, makeToolHolder,
-  makeBenchCard, makeOnion, makeScalpel, makePencil, makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope,
+  makeBench, makeBeaker, makeHotPlate, makeWatchGlass, makeDropperBottle, makeSteam, drop,
+  makeOnion, makeScalpel, makePencil, makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope,
   T, fmt,
 } from '../lab.js';
 import { STAINS, STAIN_KEYS } from './stains.js';
@@ -24,24 +24,24 @@ const $ = (s) => document.querySelector(s);
 // =========================================================================
 const POS = {
   beaker: V3(-40, 0, -2), scalpel: V3(-28, 0, 16),
-  rack: V3(-25, 0, -8), bath: V3(-10, 0, -8),
-  orcein: V3(1, 0, -11), toluidine: V3(7, 0, -11), pipHolder: V3(12.5, 0, -5),
+  acid: V3(-25, 0, -9), hot: V3(-11, 0, -5),
+  orcein: V3(2, 0, -10), toluidine: V3(7.5, 0, -10),
   slide: V3(3, 0, 7), coverslip: V3(9.5, 0, 9.5), paper: V3(13, 0, 5.5), pencil: V3(27, 0.34, 17),
   scope: V3(32, 0, -6),
 };
 const SLIDE_ROT = -0.08, SCOPE_ROT = -0.45, PENCIL_YAW = 1.45;
 const ONION_Y = 6.65;      // the bulb rests on the beaker's rim
 const LIFT = 7;            // high enough to clear the rim with the roots
-const PIP_SCALE = 0.6;
 const PRESSES = 3;         // presses to spread the cells into one layer
-const ACID = { color: 0xdcecff, cleared: '#f7f1df' };
+const ACID = { color: 0xdcecff, cleared: '#f7f1df', level: 0.45 };
+const RINSE = 0xe6f4ff;
 const hex = (c) => new THREE.Color(c).getHex();
 const pencilRest = () => new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, PENCIL_YAW, 0, 'YXZ'));
 
 const VIEWS = {
   overview: { t: V3(-4, 6, -1), p: V3(-4, 52, 78) },
   onion: { t: V3(-33, 7, -3), p: V3(-29, 25, 36) },
-  acid: { t: V3(-17, 5, -7), p: V3(-17, 25, 30) },
+  acid: { t: V3(-17, 4, -6), p: V3(-17, 24, 28) },
   stain: { t: V3(5, 4, -1), p: V3(5, 26, 34) },
   slide: { t: V3(8, 1, 7), p: V3(8, 17, 24) },
   scope: { t: V3(27, 15, -5), p: V3(13, 38, 58) },
@@ -94,22 +94,17 @@ function rebuild() {
   const onion = place(makeOnion(mat), POS.beaker.clone().setY(ONION_Y));
   const scalpel = place(makeScalpel(mat), POS.scalpel, 1.3);
 
-  const rack = place(makeTubeRack(mat, { holes: 2, spacing: 3.2, holeR: 1.05, color: toLinear('#c3cdf4') }), POS.rack);
-  const tube = place(makeTestTube(mat, { r: 0.9, h: 10 }), POS.rack.clone().add(rack.holes[0]));
-  tube.addLayer(ACID.color, 0.42).setRange(0, 0.35);
-  place(makeBenchCard(mat, { title: P.acid.title, sub: P.acid.sub, subColor: '#4f46e5' }), POS.rack.clone().add(V3(0, 0, 4.6)));
-  const bath = place(makeWaterBath(mat, { setpoint: '60.0', label: P.bath.label }), POS.bath);
+  const acid = place(makeDropperBottle(mat, { ...P.acid, color: '#e8a23a', liquidColor: ACID.color, liquidOpacity: 0.35, bulb: '#e9e4da' }), POS.acid, 0.2);
+  const hot = place(makeHotPlate(mat), POS.hot);
+  const glass = makeWatchGlass(mat, { liquidColor: ACID.color });
+  glass.group.position.copy(hot.anchors.plate);
+  hot.group.add(glass.group);   // rides the plate's hover lift, and so does the tip lying in it
+  const steam = makeSteam(mat, root);
 
   const stains = {};
   STAIN_KEYS.forEach((k) => {
-    const b = place(makeReagentBottle(mat, { ...P[k], color: STAINS[k].liquid, liquidColor: hex(STAINS[k].liquid) }), POS[k], k === 'orcein' ? 0.15 : -0.15);
-    b.liquid.setFraction(0.6);
-    stains[k] = b;
+    stains[k] = place(makeDropperBottle(mat, { ...P[k], color: STAINS[k].liquid, liquidColor: hex(STAINS[k].liquid), liquidOpacity: 0.85, tint: STAINS[k].glass }), POS[k], k === 'orcein' ? 0.15 : -0.15);
   });
-  place(makeToolHolder(mat), POS.pipHolder);
-  const pip = makePipette(mat, { fluid: mat.make.liquid(hex(STAINS.orcein.liquid), 0.85) });
-  pip.group.scale.setScalar(PIP_SCALE);
-  place(pip, POS.pipHolder.clone().add(V3(0, 0.3, 0)));
 
   const slide = place(makeSlide(mat, { label: P.slide }), POS.slide, SLIDE_ROT);
   const coverslip = place(makeCoverslip(mat), POS.coverslip, 0.25);
@@ -118,7 +113,7 @@ function rebuild() {
   pencil.group.quaternion.copy(pencilRest());
   const micro = place(makeMicroscope(mat), POS.scope, SCOPE_ROT);
 
-  B = { beaker, onion, scalpel, rack, tube, bath, stains, pip, slide, coverslip, paper, pencil, micro };
+  B = { beaker, onion, scalpel, acid, hot, glass, steam, stains, slide, coverslip, paper, pencil, micro };
   S = {
     stain: null,       // the stain the student picked
     presses: 0,        // squash presses so far
@@ -130,14 +125,14 @@ function rebuild() {
 
   const O = T.objects;
   ix.register('onion', onion.group, { ...O.onion, anchor: V3(0, 9.4, 0) });
-  ix.register('bath', bath.group, { ...O.bath, anchor: V3(0, 7.5, 0) });
-  STAIN_KEYS.forEach((k) => ix.register(k, stains[k].group, { ...O[k], anchor: V3(0, 11.6, 0) }));
+  ix.register('acid', acid.group, { ...O.acid, anchor: V3(0, 9.6, 0) });
+  ix.register('hot', hot.group, { ...O.hot, anchor: V3(0, 7, 0) });
+  STAIN_KEYS.forEach((k) => ix.register(k, stains[k].group, { ...O[k], anchor: V3(0, 9.6, 0) }));
   ix.register('coverslip', coverslip.group, { ...O.coverslip, anchor: V3(0, 1, 0) });
   ix.register('pencil', pencil.group, { ...O.pencil, anchor: V3(0, 8.5, 0) });
   ix.register('scope', micro.group, { ...O.scope, anchor: V3(0, 38.5, 0) });
   ix.register('scalpel', scalpel.group, { ...O.scalpel });
-  ix.register('acid', tube.group, { ...O.acid });
-  ix.register('pipette', pip.group, { ...O.pipette });
+  ix.register('glass', glass.group, { ...O.glass });
   ix.register('slide', slide.group, { ...O.slide });
   ix.register('paper', paper.group, { ...O.paper });
 }
@@ -156,14 +151,38 @@ async function countdown(secs, dur, onTick = () => {}) {
 const slideSpot = () => world(B.slide, V3(0, B.slide.thickness + 0.1, 0));
 const lyingOnSlide = () => Q(0, SLIDE_ROT, Math.PI / 2);
 
-function squeeze(k, dur = 0.3) { return anim(dur, (e, t) => B.pip.setSqueeze(Math.sin(Math.PI * t) * k), Ease.linear); }
-const PIP_FLUID = 3.2;
+/** Where the tip lies in the watch glass, and how. */
+const glassSpot = () => world(B.glass, B.glass.anchors.floor).add(V3(0.3, 0.12, 0.2));
+const lyingInGlass = () => Q(0, 0.6, Math.PI / 2);
+
+/** Lift a bottle's dropper out, squeeze `n` drops onto world point `at` (its surface at world y
+ *  `surfY()`), calling onDrop(i) as each lands, and stand the dropper back in its bottle. */
+async function drops(bottle, n, at, surfY, color, onDrop = () => {}) {
+  const d = bottle.dropper, tip = bottle.anchors.tip;
+  root.attach(d);
+  const home = d.position.clone(), up = home.clone().add(V3(0, 6, 0));
+  const over = at.clone().add(V3(0, 2.2 - tip.y, 0));
+  const dropMat = mat.make.liquid(hex(color), 0.85);
+  await moveTo(d, { pos: up, dur: 0.5 });
+  bottle.setFill(0.8);
+  await moveTo(d, { pos: over, dur: 0.9, arc: 3 });
+  for (let i = 0; i < n; i++) {
+    await anim(0.14, (e, t) => bottle.setSqueeze(Math.sin(Math.PI * t)), Ease.linear);
+    bottle.setFill(0.8 * (1 - (i + 1) / n));
+    drop(root, dropMat, d.localToWorld(tip.clone()), surfY()).then(() => onDrop(i));
+    await anim(0.2, () => {}, Ease.linear);
+  }
+  await anim(0.4, () => {}, Ease.linear);
+  await moveTo(d, { pos: up, dur: 0.9, arc: 3 });
+  await moveTo(d, { pos: home, dur: 0.5 });
+  bottle.group.attach(d);
+}
 
 // =========================================================================
 // Steps
 // =========================================================================
 async function cut() {
-  const { onion, scalpel, tube } = B;
+  const { onion, scalpel } = B;
   S.cap = T.steps.cut.captions.lift;
   await anim(1.2, (e) => { onion.group.position.y = ONION_Y + LIFT * e; });
   S.cap = T.steps.cut.captions.cut;
@@ -176,54 +195,49 @@ async function cut() {
   root.attach(onion.tip);
   moveTo(scalpel.group, { pos: rest.p, quat: rest.q, dur: 1.1, arc: 5 });
   anim(1.3, (e) => { onion.group.position.y = ONION_Y + LIFT * (1 - e); });
-  const top = world(tube, tube.anchors.top);
-  await moveTo(onion.tip, { pos: top.clone().add(V3(0, 2, 0)), quat: new THREE.Quaternion(), dur: 1.2, arc: 4 });
-  await moveTo(onion.tip, { pos: world(tube, tube.anchors.floor).add(V3(0, 0.6, 0)), dur: 0.7, ease: Ease.in });
-  tube.group.attach(onion.tip);
+  const spot = glassSpot();
+  await moveTo(onion.tip, { pos: spot.clone().add(V3(0, 3, 0)), quat: lyingInGlass(), dur: 1.4, arc: 6 });
+  await moveTo(onion.tip, { pos: spot, dur: 0.5, ease: Ease.in });
+  B.glass.group.attach(onion.tip);
   S.cap = null;
 }
 
 async function acid() {
-  const { tube, bath, onion } = B;
-  const home = tube.group.position.clone(), slot = world(bath, bath.slots[0]);
-  await moveTo(tube.group, { pos: home.clone().add(V3(0, 11, 0)), dur: 0.6 });
-  await moveTo(tube.group, { pos: slot.clone().add(V3(0, 11, 0)), dur: 0.9 });
-  await moveTo(tube.group, { pos: slot, dur: 0.6, ease: Ease.out });
-  bath.setActive(true);
+  const { glass } = B, L = glass.liquid;
+  L.setColor(ACID.color);
+  await drops(B.acid, 6, world(glass, glass.anchors.floor), () => L.surfaceY(), ACID.color,
+    (i) => anim(0.3, (e) => L.setLevel(ACID.level * (i + e) / 6)));
+  L.setLevel(ACID.level);
+}
+
+async function heat() {
+  const { hot, glass, onion } = B, L = glass.liquid;
+  await anim(0.6, (e) => hot.setHeat(e));
   await countdown(300, 3.6, (k) => onion.setTip(ACID.cleared, k, 0.82));
-  bath.setActive(false);
   onion.holdTip();
-  await moveTo(tube.group, { pos: slot.clone().add(V3(0, 11, 0)), dur: 0.6 });
-  await moveTo(tube.group, { pos: home.clone().add(V3(0, 11, 0)), dur: 0.9 });
-  await moveTo(tube.group, { pos: home, dur: 0.6, ease: Ease.out });
+  await anim(0.6, (e) => hot.setHeat(1 - e));
+  // pour off the acid, rinse in water, pour that off too
+  S.cap = T.steps.heat.captions.rinse;
+  await anim(0.6, (e) => L.setLevel(ACID.level * (1 - e)));
+  L.setColor(RINSE);
+  await anim(0.45, (e) => L.setLevel(0.35 * e));
+  await anim(0.3, () => {}, Ease.linear);
+  await anim(0.5, (e) => L.setLevel(0.35 * (1 - e)));
+  S.cap = null;
 }
 
 async function stain(key) {
   S.stain = key;
-  const C = STAINS[key], bottle = B.stains[key], { onion, slide, pip, tube } = B;
+  const C = STAINS[key], bottle = B.stains[key], { onion, slide } = B;
   // the tip onto the slide
   root.attach(onion.tip);
-  const top = world(tube, tube.anchors.top);
-  await moveTo(onion.tip, { pos: top.clone().add(V3(0, 2, 0)), dur: 0.7 });
-  await moveTo(onion.tip, { pos: slideSpot(), quat: lyingOnSlide(), dur: 1.2, arc: 4 });
+  await moveTo(onion.tip, { pos: onion.tip.position.clone().add(V3(0, 2.5, 0)), dur: 0.6 });
+  await moveTo(onion.tip, { pos: slideSpot(), quat: lyingOnSlide(), dur: 1.3, arc: 4 });
   slide.group.attach(onion.tip);
-  // a drop of stain on it
-  const g = pip.group, rest = g.position.clone();
-  pip.fluid.material.color.set(hex(C.liquid));
-  const neck = world(bottle, bottle.anchors.spout), surf = bottle.liquid.surfaceY();
-  const cap0 = bottle.cap.position.clone();
-  await moveTo(bottle.cap, { pos: cap0.clone().add(V3(0, 2.5, 0)), dur: 0.4 });
-  await moveTo(g, { pos: V3(neck.x, neck.y + 2, neck.z), dur: 0.7, arc: 3 });
-  await moveTo(g, { pos: V3(neck.x, surf - 0.5, neck.z), dur: 0.4 });
-  await Promise.all([squeeze(1, 0.4), anim(0.4, (e) => pip.setFluid(PIP_FLUID * e))]);
-  await moveTo(g, { pos: V3(neck.x, neck.y + 2, neck.z), dur: 0.4 });
-  moveTo(bottle.cap, { pos: cap0, dur: 0.4 });
-  const spot = slideSpot();
-  await moveTo(g, { pos: spot.clone().add(V3(0, 2.4, 0)), dur: 0.8, arc: 3 });
-  squeeze(1, 0.3);
-  anim(0.3, (e) => pip.setFluid(PIP_FLUID * (1 - e)));
-  await anim(0.45, (e) => slide.setDrop(e, hex(C.liquid)), Ease.out);
-  await moveTo(g, { pos: rest, dur: 0.9, arc: 3 });
+  // a few drops of stain on it
+  const top = () => world(slide, V3(0, slide.thickness, 0)).y;
+  await drops(bottle, 3, slideSpot(), top, C.liquid, (i) => anim(0.35, (e) => slide.setDrop((i + e) / 3, hex(C.liquid)), Ease.out));
+  slide.setDrop(1, hex(C.liquid));
   // two minutes: the meristem darkens most
   await countdown(120, 3, (k) => onion.setTip(hex(C.tip), k));
   onion.holdTip();
@@ -284,7 +298,8 @@ async function observe() {
 const clock = () => (S ? S.clock : null);
 const STEPS = [
   { id: 'cut', ...T.steps.cut, targets: ['onion'], view: 'onion', caption: () => (S && S.cap) || T.steps.cut.title, run: cut },
-  { id: 'acid', ...T.steps.acid, targets: ['bath'], view: 'acid', clock, run: acid },
+  { id: 'acid', ...T.steps.acid, targets: ['acid'], view: 'acid', run: acid },
+  { id: 'heat', ...T.steps.heat, targets: ['hot'], view: 'acid', clock, caption: () => (S && S.cap) || T.steps.heat.caption, run: heat },
   { id: 'stain', ...T.steps.stain, targets: STAIN_KEYS, view: 'stain', clock, run: stain },
   { id: 'cover', ...T.steps.cover, targets: ['coverslip'], view: 'slide', run: cover },
   { id: 'squash', ...T.steps.squash, targets: ['pencil'], view: 'slide',
@@ -302,7 +317,7 @@ const STEPS = [
 const COUNT = STEPS.length - 1;
 const PHASES = [
   { ...T.phases.cut, steps: ['cut'] },
-  { ...T.phases.acid, steps: ['acid'] },
+  { ...T.phases.acid, steps: ['acid', 'heat'] },
   { ...T.phases.stain, steps: ['stain'] },
   { ...T.phases.squash, steps: ['cover', 'squash'] },
   { ...T.phases.observe, steps: ['observe', 'count'] },
@@ -390,7 +405,11 @@ function restart() {
 stage.onFrame((dt, now) => {
   lesson.update(dt);
   follow.update(dt);
-  if (B) B.bath.update(now / 1000);
+  if (B) {
+    const { hot, glass, steam } = B, L = glass.liquid;
+    const c = world(glass, glass.anchors.floor);
+    steam.set(hot.heat * Math.min(1, L.level / 0.2), now / 1000, c.x, L.surfaceY(), c.z);
+  }
   ix.update();
 });
 

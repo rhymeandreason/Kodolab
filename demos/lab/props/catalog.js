@@ -16,6 +16,7 @@ import {
   makeMicroTube, makeAgarPlate, makeLoop, makeToolHolder, makeWaterBath, makeUvLamp, makeBenchCard,
   makeOnion, makeScalpel, makePencil, makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope,
   makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeTransilluminator, makeMicropipette, makeTipBox, makePipetteStand,
+  makeHotPlate, makeWatchGlass, makeDropperBottle,
 } from '../lab.js';
 
 const slider = (label, min, max, step, value, unit, set) => ({ label, min, max, step, value, unit, set });
@@ -103,6 +104,12 @@ export const PROPS = [
   { key: 'reagentbottle', group: 'Reagents', name: 'Reagent bottle', file: 'bottles.js', call: 'makeReagentBottle(mat)',
     desc: 'Narrow-neck bottle with a printed label and a cap (isopropyl alcohol by default). anchors.spout is the neck; liquid.setFraction() fills the body.',
     make: (mat) => makeReagentBottle(mat), controls: [slider('Level', 0, 1, 0.01, 0.8, '', (p, v) => p.liquid.setFraction(v)), slider('Tilt', 0, 1.6, 0.01, 0, 'rad', (p, v) => { p.group.rotation.z = v; p.liquid.setPour(v / 1.6); }), toggle('Cap', true, (p, on) => { p.cap.visible = on; })] },
+  { key: 'dropperbottle', group: 'Reagents', name: 'Dropper bottle', file: 'bottles.js', call: "makeDropperBottle(mat, { title: '1 M HCl' })",
+    desc: '30 mL glass dropper bottle, from OnionRoot. dropper lifts out as its own group; setSqueeze() squeezes the bulb, setFill() fills the pipe.',
+    make: (mat) => makeDropperBottle(mat), controls: [slider('Level', 0, 1, 0.01, 0.75, '', (p, v) => p.liquid.setFraction(v)), slider('Squeeze', 0, 1, 0.01, 0, '', (p, v) => p.setSqueeze(v)), slider('Lift', 0, 8, 0.1, 0, 'cm', (p, v) => { p.dropper.position.y = 5.88 + v; p.setFill(v > 0 ? 0.8 : 0); })] },
+  { key: 'watchglass', group: 'Glassware', name: 'Watch glass', file: 'glassware.js', call: 'makeWatchGlass(mat)',
+    desc: 'Shallow 9 cm watch glass, from OnionRoot. liquid.setLevel(cm) fills it from the centre out.',
+    make: (mat) => makeWatchGlass(mat), controls: [slider('Level', 0, 1, 0.01, 0.45, 'cm', (p, v) => p.liquid.setLevel(v))] },
   { key: 'icebath', group: 'Equipment', name: 'Ice bath', file: 'kitchen.js', call: 'makeIceBath(mat)',
     desc: 'Glass bowl of ice water with cubes, for keeping a reagent cold.', make: (mat) => makeIceBath(mat), controls: [] },
   { key: 'skewer', group: 'Hand tools', name: 'Wooden skewer', file: 'tools.js', call: 'makeSkewer(mat)',
@@ -156,6 +163,9 @@ export const PROPS = [
   { key: 'waterbath', group: 'Equipment', name: 'Water bath', file: 'equipment.js', call: "makeWaterBath(mat, { setpoint: '42.0' })",
     desc: 'Open tank with a float rack and a control panel, from Ecoli. slots[] are where tubes go; setActive() lights the panel; update(time) ripples the water.',
     make: (mat) => makeWaterBath(mat), controls: [toggle('Heating', false, (p, on) => p.setActive(on))] },
+  { key: 'hotplate', group: 'Equipment', name: 'Hot plate', file: 'equipment.js', call: 'makeHotPlate(mat)',
+    desc: 'Small hot plate, from OnionRoot. anchors.plate is the top of the plate; setHeat(0..1) glows it and lights the LED.',
+    make: (mat) => makeHotPlate(mat), controls: [slider('Heat', 0, 1, 0.01, 0, '', (p, v) => p.setHeat(v))] },
   { key: 'uvlamp', group: 'Equipment', name: 'UV lamp', file: 'equipment.js', call: 'makeUvLamp(mat)',
     desc: 'Handheld UV lamp, from Ecoli, with a spotlight pointing down. Origin at the centre of its top face; setOn(0..1).',
     make: (mat) => { const l = makeUvLamp(mat); l.group.position.y = 6; return l; }, controls: [slider('On', 0, 1, 0.01, 0, '', (p, v) => p.setOn(v))] },

@@ -107,3 +107,34 @@ export function makeBubbles(mat, parent, { count = 16, seed = 7, radius = 0.85, 
     },
   };
 }
+
+/** Steam rising off a warm surface, as one instanced mesh of soft puffs. Posed from time alone,
+ *  so the timeline can scrub:
+ *    const steam = makeSteam(mat, root);
+ *    steam.set(amount, time, x, y, z);   // amount 0..1; 0 hides it. (x, y, z): the surface's centre
+ *  radius: how wide a patch it rises from; rise: how high a puff climbs before it fades. */
+export function makeSteam(mat, parent, { count = 18, seed = 5, radius = 2.5, rise = 7, color = 0xffffff } = {}) {
+  const R = seeded(seed);
+  const m = mat.make.standard({ color, roughness: 1, transparent: true, opacity: 0.2, depthWrite: false });
+  const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), m, count);
+  im.frustumCulled = false; im.renderOrder = 6; im.castShadow = im.receiveShadow = false;
+  im.userData.noHL = true; im.raycast = () => {};
+  parent.add(im);
+  const data = Array.from({ length: count }, () => ({ a: R() * Math.PI * 2, r: Math.sqrt(R()) * radius, o: R(), sp: lerp(0.25, 0.45, R()), drift: lerp(-0.8, 0.8, R()) }));
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = V3(), sc = V3();
+  return {
+    mesh: im,
+    set(amount, time, x, y, z) {
+      im.visible = amount >= 0.01;
+      if (!im.visible) return;
+      m.opacity = 0.2 * amount;
+      data.forEach((b, i) => {
+        const u = (time * b.sp + b.o) % 1;
+        const s = (0.2 + 0.6 * u) * Math.sin(Math.PI * u) * amount;
+        m4.compose(p.set(x + Math.cos(b.a) * b.r + b.drift * u, y + u * rise, z + Math.sin(b.a) * b.r), q, sc.setScalar(s));
+        im.setMatrixAt(i, m4);
+      });
+      im.instanceMatrix.needsUpdate = true;
+    },
+  };
+}
