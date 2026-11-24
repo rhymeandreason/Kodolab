@@ -198,7 +198,7 @@ export function makeMicroscope(mat) {
   put(new THREE.TorusGeometry(0.084, 0.005, 8, 40), mat.chrome, u, [0, 0.267, AXIS_Z]).rotation.x = Math.PI / 2;
 
   // C-arm: a column at the back that turns forward at the top to carry the nosepiece
-  side([[-0.47, 0.2], [-0.15, 0.2], [-0.15, 1.02], [0.02, 1.2], [0.2, 1.2], [0.2, 1.4], [0.16, 1.44], [-0.4, 1.44], [-0.47, 1.37]],
+  side([[-0.47, 0.2], [-0.15, 0.2], [-0.15, 1.02], [0.02, 1.2], [0.32, 1.2], [0.32, 1.4], [0.28, 1.44], [-0.4, 1.44], [-0.47, 1.37]],
     0.3, SM.body, 0.025, { 3: [-0.15, 1.2], 8: [-0.47, 1.44] });
   put(new THREE.BoxGeometry(0.13, 0.4, 0.02), SM.slateDark, u, [0, 0.62, -0.122]);   // rack the stage rides on
   // coaxial focus knobs either side: coarse (big) and fine (outboard)
@@ -246,46 +246,52 @@ export function makeMicroscope(mat) {
 
   // The nosepiece is tilted: its axis leans back and the objectives sit on a matching cone,
   // so the one in use points straight down at the slide and the others fan out forward.
-  // (0.064 is how far that cone offsets the working objective forward of the turret's centre.)
-  const TILT = 0.3;
+  const TILT = 0.3, OB_R = 0.088, OB_DROP = 0.025;   // objective seat: radius on the turret, depth below it
   const noseTilt = new THREE.Group();
-  noseTilt.position.set(0, 1.13, AXIS_Z + 0.064); noseTilt.rotation.x = -TILT; u.add(noseTilt);
+  noseTilt.position.set(0, 1.12, AXIS_Z + OB_R * Math.cos(TILT) - OB_DROP * Math.sin(TILT)); noseTilt.rotation.x = -TILT; u.add(noseTilt);
   put(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 24), SM.slateDark, noseTilt, [0, 0.08, 0]);   // neck into the arm
   const nose = new THREE.Group();
   noseTilt.add(nose);
-  turn([[0, 0.055], [0.06, 0.052], [0.1, 0.036], [0.122, 0.014], [0.122, 0.008], [0, 0.008]], SM.slate, nose, 48);
-  turn([[0, 0.008], [0.13, 0.008], [0.136, 0.0], [0.136, -0.022], [0.128, -0.026], [0, -0.026]], SM.barrel, nose, 48);
-  knurl(0.137, 0.012, 60, 0.04, SM.knurlSteel, nose, -0.01);
-  put(new THREE.SphereGeometry(0.009, 12, 8), mat.chrome, nose, [0, 0.036, -0.1]);
+  turn([[0, 0.06], [0.07, 0.057], [0.12, 0.04], [0.148, 0.014], [0.148, 0.008], [0, 0.008]], SM.slate, nose, 48);
+  turn([[0, 0.008], [0.156, 0.008], [0.162, 0.0], [0.162, -0.022], [0.154, -0.026], [0, -0.026]], SM.barrel, nose, 48);
+  knurl(0.163, 0.012, 70, 0.04, SM.knurlSteel, nose, -0.01);
+  put(new THREE.SphereGeometry(0.009, 12, 8), mat.chrome, nose, [0, 0.04, -0.12]);
+  // Chunky barrels: a wide body, a shoulder, then a narrower nose that is longer at higher power.
   const OBJ = [
-    { len: 0.12, ring: '#d94040', label: '4× / 0.10', tipR: 0.017, lensR: 0.012 },
-    { len: 0.15, ring: '#f2c230', label: '10× / 0.25', tipR: 0.015, lensR: 0.009 },
-    { len: 0.19, ring: '#3b78d8', label: '40× / 0.65', tipR: 0.012, lensR: 0.0055 },
-    { len: 0.21, ring: '#f4f4f4', label: '100× / 1.25 OIL', tipR: 0.011, lensR: 0.0035, oil: true },
+    { len: 0.12, ring: '#d94040', label: '4× / 0.10', lensR: 0.016 },
+    { len: 0.15, ring: '#f2c230', label: '10× / 0.25', lensR: 0.012 },
+    { len: 0.19, ring: '#3b78d8', label: '40× / 0.65', lensR: 0.008 },
+    { len: 0.21, ring: '#f4f4f4', label: '100× / 1.25 OIL', lensR: 0.005, oil: true },
   ];
+  const BR = 0.042, TR = 0.03;   // body and nose radius
   OBJ.forEach((o, i) => {
     const L = o.len, arm = new THREE.Group();
     arm.rotation.y = Math.PI + (i * Math.PI) / 2; nose.add(arm);
     const ob = new THREE.Group();
-    ob.position.set(0, -0.025, 0.075); ob.rotation.x = -TILT; arm.add(ob);
-    const step = -L * 0.62;
-    turn([[0, 0], [0.023, 0], [0.023, -0.008], [0.032, -0.01], [0.034, -0.014], [0.034, step + 0.006], [0.031, step], [0.026, step - 0.004],
-      [o.tipR + 0.005, step - 0.01], [o.tipR + 0.005, -L + 0.022], [o.tipR, -L + 0.018], [o.tipR, -L + 0.006], [o.lensR + 0.003, -L], [0, -L]], SM.barrel, ob, 36);
-    knurl(0.035, 0.014, 28, 0.06, SM.knurlSteel, ob, -0.02);
-    put(new THREE.CylinderGeometry(0.0348, 0.0348, 0.009, 32), mat.make.solid(toLinear(o.ring), 0.35, { metalness: 0.1 }), ob, [0, -0.034, 0]);
-    put(new THREE.CylinderGeometry(0.0346, 0.0346, 0.018, 40, 1, true), mat.make.standard({ map: bandTex(o.label), roughness: 0.4, metalness: 0.3 }), ob, [0, -0.05, 0]);
-    if (o.oil) put(new THREE.CylinderGeometry(o.tipR + 0.0055, o.tipR + 0.0055, 0.005, 24), SM.black, ob, [0, step - 0.016, 0]);
-    put(new THREE.TorusGeometry(o.lensR + 0.0012, 0.0012, 6, 24), SM.black, ob, [0, -L - 0.0002, 0]).rotation.x = Math.PI / 2;
+    ob.position.set(0, -OB_DROP, OB_R); ob.rotation.x = -TILT; arm.add(ob);
+    const step = -0.105;
+    turn([[0, 0], [BR - 0.012, 0], [BR - 0.012, -0.006], [BR - 0.002, -0.008], [BR, -0.012], [BR, step + 0.006], [BR - 0.004, step],
+      [TR, step - 0.006], [TR, -L + 0.01], [TR - 0.006, -L + 0.002], [o.lensR + 0.004, -L], [0, -L]], SM.barrel, ob, 40);
+    knurl(BR + 0.001, 0.016, 32, 0.05, SM.knurlSteel, ob, -0.022);
+    put(new THREE.CylinderGeometry(BR + 0.0008, BR + 0.0008, 0.01, 40), mat.make.solid(toLinear(o.ring), 0.35, { metalness: 0.1 }), ob, [0, -0.04, 0]);
+    put(new THREE.CylinderGeometry(BR + 0.0006, BR + 0.0006, 0.022, 48, 1, true), mat.make.standard({ map: bandTex(o.label), roughness: 0.4, metalness: 0.3 }), ob, [0, -0.06, 0]);
+    if (o.oil) put(new THREE.CylinderGeometry(TR + 0.001, TR + 0.001, 0.006, 32), SM.black, ob, [0, -L + 0.03, 0]);
+    put(new THREE.TorusGeometry(o.lensR + 0.0015, 0.0015, 6, 24), SM.black, ob, [0, -L - 0.0002, 0]).rotation.x = Math.PI / 2;
     put(new THREE.SphereGeometry(o.lensR, 20, 8, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38), SM.lensGlass, ob, [0, -L + o.lensR * 0.78, 0], { cast: false });
   });
 
   // head: a faceted block on the arm, then the binocular body tilted toward the user, two eyepieces
-  side([[-0.24, 1.465], [0.2, 1.465], [0.2, 1.54], [0.1, 1.64], [-0.16, 1.64], [-0.24, 1.57]], 0.28, SM.head, 0.02);
-  const EYE_TILT = 0.9, EYE_PIVOT = V3(0, 1.63, 0.06), EYE_LEN = 0.42;
+  side([[-0.24, 1.465], [0.32, 1.465], [0.32, 1.54], [0.22, 1.64], [-0.16, 1.64], [-0.24, 1.57]], 0.28, SM.head, 0.02);
+  const EYE_TILT = 0.9, EYE_PIVOT = V3(0, 1.63, 0.19), EYE_LEN = 0.42;
   const eyeG = new THREE.Group();
   eyeG.position.copy(EYE_PIVOT); eyeG.rotation.x = EYE_TILT; u.add(eyeG);
   put(cbox(0.3, 0.16, 0.17, 0.025), SM.headFacet, eyeG, [0, 0.07, 0]);
-    const tubeTex = bandTex('10×', '#4f7b9e', '#eef2f6', 2);
+    // The tube's surface is about 2:1 (round × along), so the canvas is too, or the text stretches.
+  const tc = makeCanvas(512, 256), tx = tc.getContext('2d');
+  tx.fillStyle = '#4f7b9e'; tx.fillRect(0, 0, 512, 256);
+  tx.fillStyle = '#eef2f6'; tx.font = `600 64px ${FONT}`; tx.textAlign = 'center'; tx.textBaseline = 'middle';
+  for (const cx of [128, 384]) tx.fillText('10×', cx, 128);
+  const tubeTex = canvasTex(tc);
   for (const sx of [1, -1]) {
     const ep = new THREE.Group();
     ep.position.set(sx * 0.07, 0, 0); eyeG.add(ep);
