@@ -98,7 +98,7 @@ export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91
 export function makeDropperBottle(mat, { title = '1 M HCl', line = 'HYDROCHLORIC ACID', note, color = '#e8a23a', liquidColor = 0xe6f2ff, liquidOpacity = 0.4, tint = '#eef6ff', bulb: bulbColor = '#24272e' } = {}) {
   const NECK = 5.88, PIPE = 4.5;
   const g = new THREE.Group();
-  const shell = mesh(new THREE.LatheGeometry([V2(0.001, 0), V2(1.54, 0), V2(1.67, 0.2), V2(1.67, 4.2), V2(1.43, 4.97), V2(0.7, 5.39), V2(0.66, NECK)], 48),
+  const shell = mesh(new THREE.LatheGeometry([V2(0.001, 0.015), V2(1.54, 0.015), V2(1.67, 0.2), V2(1.67, 4.2), V2(1.43, 4.97), V2(0.7, 5.39), V2(0.66, NECK)], 48),
     mat.make.glass({ color: tint, opacity: 0.28 }), { cast: false });
   shell.renderOrder = 3;
   g.add(shell);

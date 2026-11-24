@@ -186,7 +186,7 @@ export function makeMicroscope(mat) {
   const BASE_Y = 0.27, COL_F = -0.22;   // top of the base; front face of the column
 
   // base: slate plinth, chamfered teal housing, a pale panel down the front, switch and dimmer
-  put(cbox(0.86, 0.035, 1.0, 0.012), SM.slateDark, u, [0, 0.0175, 0]);
+  put(cbox(0.88, 0.035, 1.02, 0.012), SM.slateDark, u, [0, 0.0175, 0]);
   side([[-0.48, 0.035], [0.48, 0.035], [0.48, 0.17], [0.31, BASE_Y - 0.02], [-0.48, BASE_Y - 0.02]], 0.82, SM.body, 0.02);
   side([[0.2, 0.035], [0.488, 0.035], [0.488, 0.174], [0.314, BASE_Y - 0.012], [0.2, BASE_Y - 0.012]], 0.24, SM.panel, 0.02);
   put(new THREE.BoxGeometry(0.05, 0.05, 0.014), SM.slateDark, u, [0, 0.1, 0.512]);
