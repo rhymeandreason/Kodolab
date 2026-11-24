@@ -99,7 +99,7 @@ export function makeGelBox(mat, { color = '#a9cbe8', base = '#3a4350' } = {}) {
   const api = {
     group: g, lid, buffer, level: 0, current: 0,
     lidAnchors: { black: V3(3.1, 0.85, -ELZ), red: V3(3.1, 0.85, ELZ) },   // the plug tops, in lid space
-    anchors: { bed: V3(0, BED, 0), top: V3(0, H, 0), black: V3(3.1, H + 0.55, -ELZ), red: V3(3.1, H + 0.55, ELZ), fill: V3(-3, H, -ELZ) },
+    anchors: { bed: V3(0, BED, 0), top: V3(0, H, 0), lidTop: V3(0, H + 0.35, 0), black: V3(3.1, H + 0.55, -ELZ), red: V3(3.1, H + 0.55, ELZ), fill: V3(-3, H, -ELZ) },
     size: { W, L, H },
     setBuffer(cm) {
       this.level = cm;
@@ -282,16 +282,26 @@ export function makeLead(mat, { color = RED, r = 0.13, floor = 0.15 } = {}) {
   const up = V3(0, 1, 0);
   return {
     group: g,
-    set(a, aDir, b, bDir, sag = 6) {
+    /** via: points the cable passes through in place of its free sag. over: Box3s it drapes
+     *  over, never through: inside a box's footprint the cable rides on its top, and it hangs
+     *  straight down the sides. */
+    set(a, aDir, b, bDir, sag = 6, { via = [], over = [] } = {}) {
       const a1 = a.clone().addScaledVector(aDir, 1.1), b1 = b.clone().addScaledVector(bDir, 1.1);
       const span = a1.distanceTo(b1);
       const low = Math.max(floor + r, Math.min(a1.y, b1.y) - sag - span * 0.05);
       const mid = a1.clone().lerp(b1, 0.5); mid.y = low;
-      const pts = [a1, a1.clone().addScaledVector(aDir, 1.5), a1.clone().lerp(mid, 0.6).setY(lerp(a1.y, low, 0.85)), mid,
-        b1.clone().lerp(mid, 0.6).setY(lerp(b1.y, low, 0.85)), b1.clone().addScaledVector(bDir, 1.5), b1];
-      pts[2].y = Math.max(pts[2].y, floor + r); pts[4].y = Math.max(pts[4].y, floor + r);
+      const free = [a1.clone().lerp(mid, 0.6).setY(lerp(a1.y, low, 0.85)), mid, b1.clone().lerp(mid, 0.6).setY(lerp(b1.y, low, 0.85))];
+      free.forEach((p) => { p.y = Math.max(p.y, floor + r); });
+      let pts = [a1, a1.clone().addScaledVector(aDir, 1.5), ...(via.length ? via : free), b1.clone().addScaledVector(bDir, 1.5), b1];
+      if (over.length) {
+        const pad = r + 0.05;
+        pts = new THREE.CatmullRomCurve3(pts).getPoints(96);
+        pts.forEach((p) => over.forEach((o) => {
+          if (p.x > o.min.x - pad && p.x < o.max.x + pad && p.z > o.min.z - pad && p.z < o.max.z + pad) p.y = Math.max(p.y, o.max.y + r);
+        }));
+      }
       if (cable) { g.remove(cable); cable.geometry.dispose(); }
-      cable = mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, r, 8), m);
+      cable = mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), over.length ? 160 : 64, r, 8), m);
       g.add(cable);
       plugA.position.copy(a); plugA.quaternion.setFromUnitVectors(up, aDir.clone().normalize());
       plugB.position.copy(b); plugB.quaternion.setFromUnitVectors(up, bDir.clone().normalize());

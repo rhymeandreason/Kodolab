@@ -167,6 +167,7 @@ function rebuild() {
   ix.register('light', light.group, { ...T.objects.light, anchor: V3(0, 5, 0) });
   ix.register('gel', gel.group, { ...T.objects.gel, anchor: V3(0, 1.4, 0) });
   ix.register('box', box.group, { ...T.objects.box });
+  ix.addGroup('box', gel.group);   // the gel lies in the box until step 4 lifts it out
   ix.register('pipette', pip.group, { ...T.objects.pipette });
   ix.register('tips', tipBox.group, { ...T.objects.tips });
   ix.register('rack', rack.group, { ...T.objects.rack });
@@ -181,7 +182,7 @@ function pipRest(stand) {
 
 /** Lay both leads from the supply's jacks to wherever their plugs are (S.plug). */
 function poseLeads() {
-  const ps = B.power.group;
+  const ps = B.power.group, over = leadObstacle();
   ['black', 'red'].forEach((k, i) => {
     const a = worldOf(ps, B.power.anchors[k]);
     const aDir = Z.clone().applyQuaternion(ps.quaternion);
@@ -191,8 +192,22 @@ function poseLeads() {
     const b = rest.clone().lerp(inLid, Ease.inOut(e));
     b.y += Math.sin(Math.PI * e) * 4;
     const bDir = V3(0, 0, -1).lerp(V3(0, 1, 0), clamp(e * 1.4)).normalize();
-    B.leads[k].set(a, aDir, b, bDir, 3);
+    // the red plug is at the far end: its lead runs along the lid, inboard of the black plug
+    let via = [];
+    if (k === 'red' && e > 0.8) {
+      const x = lerp(lerp(a.x, b.x, 0.5), POS.box.x + 1.2, Ease.inOut(clamp((e - 0.8) / 0.2)));
+      via = [V3(x, over.max.y + 0.6, over.min.z - 0.4), V3(x, over.max.y + 0.15, POS.box.z)];
+    }
+    B.leads[k].set(a, aDir, b, bDir, 3, { via, over: [over] });
   });
+}
+
+/** The box's footprint, up to the lid when it's on: what the leads drape over. */
+function leadObstacle() {
+  const { W, L, H } = B.box.size, c = POS.box, lid = B.lid.position;
+  const lidOn = Math.hypot(lid.x - c.x, lid.z - c.z) < 1;
+  const top = lidOn ? lid.y + B.box.anchors.lidTop.y - B.box.anchors.top.y : c.y + H;
+  return new THREE.Box3(V3(c.x - W / 2 - 0.4, c.y, c.z - L / 2 - 0.3), V3(c.x + W / 2 + 0.4, top, c.z + L / 2 + 0.3));
 }
 
 /** Repaint the gel when anything it shows has changed. */
@@ -287,6 +302,7 @@ async function actConnect() {
   for (const k of ['black', 'red']) {
     await anim(0.8, (e) => { S.plug[k] = e; poseLeads(); });
   }
+  ix.addGroup('box', lid);   // closed on the box, the lid is part of it: a click on it is a click on the box
 }
 
 async function actPower() {
@@ -310,10 +326,13 @@ async function actImage() {
   B.power.setDisplay({ on: false, volts: VOLTS });
   await anim(0.6, (e) => { S.current = 1 - e; });
   for (const k of ['red', 'black']) await anim(0.6, (e) => { S.plug[k] = 1 - e; poseLeads(); });
+  ix.addGroup('lid', B.lid);
   await moveTo(B.lid, { pos: POS.lidRest, dur: 1.2, arc: 6 });
   const g = B.gel.group, p = g.position.clone();
   await moveTo(g, { pos: p.clone().add(V3(0, 5, 0)), dur: 0.8 });
-  await moveTo(g, { pos: POS.light.clone().add(B.light.anchors.bed), dur: 1.6, arc: 6 });
+  if (!isInstant()) { follow.hold(); stage.focus('image', 2.6); }   // the camera travels with the gel
+  await moveTo(g, { pos: POS.light.clone().add(B.light.anchors.bed), dur: 2.6, arc: 6 });
+  ix.addGroup('light', g);   // the gel now lies on the light: hovering one lifts both
   await anim(0.9, (e) => B.light.setCover(e));
   await anim(1.4, (e) => { B.light.setOn(e); S.dark = e; S.stain = e; });
 }
@@ -348,10 +367,10 @@ const STEPS = [
     clock: () => (S && S.current > 0.5 ? fmt(T.clock.line, { v: VOLTS, time: clockText(S.run) }) : null),
     caption: () => { const r = S ? S.run : 0, C = T.steps.run.captions; return r < 0.12 ? C.leave : r < 0.85 ? C.split : C.stop; },
     watch: { duration: RUN_REAL, get: () => S.runT, set: setRun } },
-  { id: 'image', ...card('image'), targets: ['light'], view: 'image', caption: T.steps.image.caption, run: actImage },
+  { id: 'image', ...card('image'), targets: ['box'], view: 'run', caption: T.steps.image.caption, run: actImage },
   /* Measuring happens in the gel image panel, outside the bench: the step reads the panel, so a
      rebuild leaves it alone. Watch mode stops at the bench; measuring is the student's. */
-  { id: 'measure', ...card('measure'), targets: ['gel'], view: 'image', caption: T.steps.measure.caption,
+  { id: 'measure', ...card('measure'), targets: ['light'], view: 'image', caption: T.steps.measure.caption,
     isDone: () => lesson.mode === 'watch' || measure.solved(),
     progress: () => measure.progress(),
     run: async () => { if (!isInstant()) measure.open(); } },
@@ -417,7 +436,10 @@ function restart() {
 stage.onFrame((dt, now) => {
   lesson.update(dt);
   follow.update(dt);
-  if (B) { paintGel(); B.box.setCurrent(S.current); B.box.update(now / 1000); }
+  if (B) {
+    paintGel(); B.box.setCurrent(S.current); B.box.update(now / 1000);
+    if (B.lid.position.y !== B.lidY) { B.lidY = B.lid.position.y; poseLeads(); }   // the plugs follow the lid, hover lift included
+  }
   applyLights();
   zoom.update(dt);
   ix.update();

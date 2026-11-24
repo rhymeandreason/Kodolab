@@ -108,8 +108,8 @@ LabText.add('en', {
     },
     image: {
       title: 'Look under blue light', short: 'Image',
-      action: 'image the gel',
-      hint: 'Click the <b>blue-light box</b>',
+      action: 'take the gel out',
+      hint: 'Click the <b>gel box</b> to take the gel out',
       detail: 'Switch off the power, take the gel out and lay it on the blue-light box. Lower the amber filter.',
       why: 'A stain in the gel binds DNA and glows under blue light. Each band is millions of pieces, all the same length.',
       caption: { text: 'Lay the gel on the blue light', note: 'The amber filter blocks the blue, so only the glow shows' },
@@ -117,7 +117,7 @@ LabText.add('en', {
     measure: {
       title: 'Read the gel', short: 'Read',
       action: 'open the gel image',
-      hint: 'Click the <b>gel</b> to open its image',
+      hint: 'Click the <b>blue-light box</b> to open the gel image',
       detail: 'Measure the ladder, then the crime scene’s bands. Then decide which suspect matches.',
       why: 'Distance run is roughly a straight line against the log of size, so the ladder turns millimetres into base pairs.',
       caption: 'Measure the bands and compare the lanes',
@@ -151,7 +151,7 @@ LabText.add('en', {
   props: {
     tae: { title: 'TAE', line: 'RUNNING BUFFER', note: '1× · pH 8.3' },
     waste: 'TIPS',
-    zones: { buffer: 'BUFFER', power: 'POWER SUPPLY', box: 'GEL BOX', lid: 'LID', samples: 'SAMPLES', pipette: 'PIPETTE', tips: 'TIPS', waste: 'TIP WASTE', light: 'UV LIGHT' },
+    zones: { buffer: 'BUFFER', power: 'POWER SUPPLY', box: 'GEL BOX', lid: 'LID', samples: 'SAMPLES', pipette: 'PIPETTE', tips: 'TIPS', waste: 'TIP WASTE', light: 'BLUE LIGHT' },
   },
 
   /* the gel image panel */
