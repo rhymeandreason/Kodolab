@@ -323,7 +323,21 @@
   }
 
   // ================================================================ MITOSIS
-  CD.buildMitosis = function () {
+  /* The plant track is the same chromosomes on the same clock: what differs is
+     the cell around them. Its words replace the animal cell's phase by phase. */
+  const PLANT = { hx: 3.9, hy: 2.7, hz: 2.7 };
+  const PLANT_DESC = [
+    'A root-tip cell in G2: its DNA is copied, so each chromosome is two sister chromatids, still unwound. A rigid wall boxes the cell in, and there are no centrosomes. Instead, microtubules gather into a band under the membrane around the middle: the preprophase band, marking where the new wall will go.',
+    'Chromosomes coil up and the nucleolus fades. With no centrosomes, microtubules grow from the surface of the nucleus itself and gather at two broad poles. The preprophase band tightens.',
+    'The nuclear envelope breaks into fragments and the preprophase band disappears, but the cell keeps the place it marked. Microtubules catch chromosomes by their kinetochores.',
+    'Chromosomes line up on the metaphase plate, each attached to both poles. The plant spindle is barrel shaped, with flat, wide poles rather than an animal cell\'s tight asters.',
+    'Cohesin is cut and the sister chromatids are pulled to opposite poles, the same as in an animal cell. Watch the chromosome count.',
+    'A nuclear envelope forms around each set. Between them, microtubules build the phragmoplast, a scaffold that carries vesicles from the Golgi to the middle of the cell. They fuse there into a cell plate.',
+    'A wall cannot pinch, so the cell divides from the inside out. The cell plate grows outward until it meets the old wall where the preprophase band was, and matures into a new wall between two identical daughters.',
+  ];
+
+  CD.buildMitosis = function (opts = {}) {
+    const plant = opts.plant ? PLANT : null;
     const rnd = CD.rng(20240917);
     const phases = [
       {
@@ -369,13 +383,16 @@
         desc: 'The ring tightens like a drawstring and pinches the cell in two. Each daughter has exactly the parent\'s chromosomes, so the two cells are genetically identical.',
       },
     ];
+    if (plant) phases.forEach((p, i) => { p.desc = PLANT_DESC[i]; });
     const { total, T } = timeline(phases);
     const def = {
-      id: 'mitosis',
-      label: 'Mitosis',
+      id: plant ? 'plant' : 'mitosis',
+      label: plant ? 'Plant mitosis' : 'Mitosis',
+      plant: !!plant,
+      broad: plant ? 0.5 : 0,
       phases,
       total,
-      extent: { w: 5.9, h: 3.8 },
+      extent: plant ? { w: 4.9, h: 3.6 } : { w: 5.9, h: 3.8 },
       chromatids: [],
       cells: [],
       nuclei: [],
@@ -386,7 +403,8 @@
 
     const GAP = 0.3;
     const DN0 = 2.25; // daughter nucleus as it forms
-    const DN1 = R1 + GAP; // daughter cell centre after separation
+    // daughter cell centre after separation; a plant's daughters are the two halves of its box
+    const DN1 = plant ? plant.hx / 2 : R1 + GAP;
     const POLE_RING = 0.85; // how much of the metaphase-plate radius the pole cluster keeps
     const chrs = baseChromosomes(rnd);
     const ringOrder = [0, 3, 4, 1, 5, 2];
@@ -469,7 +487,7 @@
     // Prophase layout: chromosomes placed one at a time, each leaning toward its plate slot
     // so congression paths stay roughly parallel; the whole prophase→metaphase motion is then
     // screened for chromatids passing through each other.
-    const layout = screened('mitosis', 200, (r, limit) => {
+    const layout = screened(def.id, 200, (r, limit) => {
       const placed = [];
       const poses = [];
       for (const inf of info) {
@@ -494,12 +512,34 @@
     def.chromatids.push(...layout.chromatids);
 
     // cell
-    const cell = { R: CELL_R, axis: X.clone(), tracks: [] };
-    track(cell).key(0, { center: O, vis: 1 });
-    track(cell).key(0, { e: 0 }).key(T(4, 0.1), {}).key(T(5, 0.3), { e: 0.3 });
-    track(cell).key(0, { s: 0 }).key(T(5, 0.35), {}).key(T(6, 0.7), { s: 1 }, 'inOut');
-    track(cell).key(0, { gap: 0 }).key(T(6, 0.7), {}).key(T(6, 1), { gap: GAP });
-    def.cells.push(cell);
+    if (plant) {
+      const cell = { plant: true, R: plant.hx, axis: X.clone(), ...plant, tracks: [] };
+      track(cell).key(0, { center: O, vis: 1, gap: 0 });
+      track(cell)
+        .key(0, { ppb: 0, ppbW: 1 })
+        .key(T(0, 0.35), {})
+        .key(T(0, 0.95), { ppb: 1 })
+        .key(T(1, 0.2), {})
+        .key(T(1, 0.9), { ppbW: 0.45 })
+        .key(T(2, 0.05), {})
+        .key(T(2, 0.4), { ppb: 0 });
+      track(cell)
+        .key(0, { phrag: 0 })
+        .key(T(5, 0.15), {})
+        .key(T(5, 0.6), { phrag: 1 })
+        .key(T(6, 0.65), {})
+        .key(T(6, 0.85), { phrag: 0 });
+      track(cell).key(0, { s: 0 }).key(T(5, 0.55), {}).key(T(6, 0.7), { s: 1 }, 'inOut');
+      track(cell).key(0, { m: 0 }).key(T(6, 0.6), {}).key(T(6, 1), { m: 1 });
+      def.cells.push(cell);
+    } else {
+      const cell = { R: CELL_R, axis: X.clone(), tracks: [] };
+      track(cell).key(0, { center: O, vis: 1 });
+      track(cell).key(0, { e: 0 }).key(T(4, 0.1), {}).key(T(5, 0.3), { e: 0.3 });
+      track(cell).key(0, { s: 0 }).key(T(5, 0.35), {}).key(T(6, 0.7), { s: 1 }, 'inOut');
+      track(cell).key(0, { gap: 0 }).key(T(6, 0.7), {}).key(T(6, 1), { gap: GAP });
+      def.cells.push(cell);
+    }
 
     // nuclei
     const n0 = { tracks: [] };
@@ -526,8 +566,24 @@
       def.nuclei.push(n);
     });
 
-    // centrosomes: 0 → +x pole, 1 → −x pole
-    [0, 1].forEach((i) => {
+    // centrosomes: 0 → +x pole, 1 → −x pole. A plant's poles have no organelle: they
+    // start as caps on the nuclear envelope, widen into the spindle's flat ends,
+    // and are gone once the kinetochore fibres let go.
+    if (plant) [0, 1].forEach((i) => {
+      const sg = i === 0 ? 1 : -1;
+      const c = { tracks: [], seed: i * 1.7, acentric: true };
+      track(c)
+        .key(0, { p: v(sg * (NUC_R + 0.15), 0, 0), show: 1 })
+        .key(T(1, 0.3), {})
+        .key(T(2, 0.4), { p: v(sg * 2.7, 0, 0) })
+        .key(T(4, 0.02), {})
+        .key(T(4, 0.95), { p: v(sg * 3.3, 0, 0) })
+        .key(T(5, 0.6), {})
+        .key(T(5, 0.75), { show: 0 });
+      track(c).key(0, { aster: 0 });
+      def.centrosomes.push(c);
+    });
+    else [0, 1].forEach((i) => {
       const sg = i === 0 ? 1 : -1;
       const c = { tracks: [], seed: i * 1.7 };
       const a0 = Math.PI / 2 - sg * 0.09;
@@ -551,7 +607,7 @@
       def.centrosomes.push(c);
     });
 
-    const sp = { a: 0, b: 1, tracks: [] };
+    const sp = { a: 0, b: 1, broad: def.broad, tracks: [] };
     track(sp)
       .key(0, { grow: 0 })
       .key(T(1, 0.5), {})

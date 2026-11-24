@@ -39,19 +39,21 @@
 /* The lesson is the timeline shell, the cell-division scene in its stage, and
    the phase tables in scenarios.js as the steps. The scene builds both
    tables; the shell only needs their names, lengths and words. */
-const defs = { mitosis: CD.buildMitosis(), meiosis: CD.buildMeiosis() };
+const defs = { mitosis: CD.buildMitosis(), plant: CD.buildMitosis({ plant: true }), meiosis: CD.buildMeiosis() };
 const stepsOf = def => def.phases.map(p => ({
   eyebrow: def.label, title: p.name, short: p.short, dur: p.dur, body: `<p>${p.desc}</p>`,
 }));
 
-const KEY = `
+const KEY = plant => `
   <div class="cd-key">
     <span><i class="bar" style="--c:var(--division-maternal)"></i>From the mother</span>
     <span><i class="bar" style="--c:var(--division-paternal)"></i>From the father</span>
     <span><i class="dot" style="--c:var(--division-kinetochore)"></i>Kinetochore</span>
     <span><i class="line" style="--c:var(--division-microtubule)"></i>Microtubules</span>
     <span><i class="ring" style="--c:var(--division-envelope)"></i>Nuclear envelope</span>
-    <span><i class="ring" style="--c:var(--division-membrane)"></i>Cell membrane</span>
+    <span><i class="ring" style="--c:var(--division-membrane)"></i>Cell membrane</span>${plant ? `
+    <span><i class="ring" style="--c:var(--plant-root-wall)"></i>Cell wall</span>
+    <span><i class="bar" style="--c:var(--organelle-golgi-vesicle)"></i>Cell plate</span>` : ''}
   </div>`;
 const STATS = `
   <div class="stats cd-stats">
@@ -75,11 +77,12 @@ const shell = TimelineShell.create({
   brand: 'Cell Division',
   tracks: [
     { id: 'mitosis', label: defs.mitosis.label, steps: stepsOf(defs.mitosis) },
+    { id: 'plant', label: defs.plant.label, steps: stepsOf(defs.plant) },
     { id: 'meiosis', label: defs.meiosis.label, steps: stepsOf(defs.meiosis) },
   ],
   onTrack(track) { cd.set({ mode: track.id }); },
   onTime(t) { if (cd) { cd.set({ t }); paintCounts(); } },
-  onStep(step, i, ctx) { ctx.controls(STATS + KEY); paintCounts(); },
+  onStep(step, i, ctx) { ctx.controls(STATS + KEY(shell.time.track.id === 'plant')); paintCounts(); },
   onLayout() { if (cd) cd.reframe(); },
 });
 

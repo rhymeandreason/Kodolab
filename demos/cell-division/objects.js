@@ -372,6 +372,199 @@
     }
   }
 
+
+  // ================================================================ PlantCell
+  // A meristem cell in a wall: the wall cannot pinch, so the cell never rounds
+  // up or furrows. A preprophase band of cortical microtubules marks the
+  // division plane before prophase; in telophase the phragmoplast steers Golgi
+  // vesicles to that plane, where they fuse into a cell plate that grows
+  // outward until it meets the parent wall where the band was.
+  //
+  // The cell is a superellipsoid, |x/hx|^n + |y/hy|^n + |z/hz|^n = 1: flat faces
+  // with round edges, and an analytic normal. Tracks: ppb (0..1), ppbW (band
+  // width), phrag (phragmoplast 0..1), s (plate radius as a fraction of the
+  // cell's cross-section, which bodies() reads as the cells' separation), m
+  // (plate maturing into wall).
+  const SE_N = 6;
+  const MEM_IN = 0.14; // the membrane, just inside the wall
+  const PPB_IN = 0.24; // the band, just inside the membrane
+
+  function seScale(dx, dy, dz, hx, hy, hz) {
+    const q = Math.pow(Math.abs(dx / hx), SE_N) + Math.pow(Math.abs(dy / hy), SE_N) + Math.pow(Math.abs(dz / hz), SE_N);
+    return Math.pow(q, -1 / SE_N);
+  }
+  // the cross-section at x = 0: radius of the contour in direction θ
+  const seContour = (th, hy, hz) => seScale(0, Math.cos(th), Math.sin(th), 1, hy, hz);
+
+  function seGeometry(hx, hy, hz) {
+    const g = new THREE.SphereGeometry(1, 128, 96);
+    const pos = g.attributes.position.array;
+    const nor = g.attributes.normal.array;
+    for (let i = 0; i < pos.length; i += 3) {
+      const k = seScale(pos[i], pos[i + 1], pos[i + 2], hx, hy, hz);
+      const x = pos[i] * k, y = pos[i + 1] * k, z = pos[i + 2] * k;
+      pos[i] = x; pos[i + 1] = y; pos[i + 2] = z;
+      const gx = Math.sign(x) * Math.pow(Math.abs(x / hx), SE_N - 1) / hx;
+      const gy = Math.sign(y) * Math.pow(Math.abs(y / hy), SE_N - 1) / hy;
+      const gz = Math.sign(z) * Math.pow(Math.abs(z / hz), SE_N - 1) / hz;
+      const l = Math.sqrt(gx * gx + gy * gy + gz * gz) || 1;
+      nor[i] = gx / l; nor[i + 1] = gy / l; nor[i + 2] = gz / l;
+    }
+    return g;
+  }
+
+  class PlantCell {
+    constructor(def, parent) {
+      this.def = def;
+      this.st = {};
+      const { hx, hy, hz } = def;
+      this.r = hx / 2; // each daughter's centre sits half the mother's length out
+      this.hy = hy - MEM_IN;
+      this.hz = hz - MEM_IN;
+
+      this.group = new THREE.Group();
+      parent.add(this.group);
+      this.shell = new THREE.Group();
+      this.group.add(this.shell);
+
+      this.wallMat = CD.makeMembraneMaterial({
+        tint: CD.COLORS.wallRim, rim: CD.COLORS.wall, deep: CD.COLORS.lamella, opacity: 0.9,
+      });
+      const wall = new THREE.Mesh(seGeometry(hx, hy, hz), this.wallMat);
+      wall.renderOrder = 5;
+      const mem = new THREE.Mesh(seGeometry(hx - MEM_IN, this.hy, this.hz), CD.mat.membrane);
+      mem.renderOrder = 4;
+      this.shell.add(wall, mem);
+
+      // ---- cell plate: a disc on the division plane, the cross-section's shape
+      const SEG = 160;
+      const pp = [0, 0, 0];
+      for (let j = 0; j <= SEG; j++) {
+        const th = (j / SEG) * TAU;
+        const r = seContour(th, this.hy, this.hz);
+        pp.push(0, Math.cos(th) * r, Math.sin(th) * r);
+      }
+      const pi = [];
+      for (let j = 1; j <= SEG; j++) pi.push(0, j, j + 1);
+      const pg = new THREE.BufferGeometry();
+      pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
+      pg.setIndex(pi);
+      pg.computeVertexNormals();
+      this.plateMat = new THREE.MeshStandardMaterial({
+        color: CD.lin(CD.COLORS.vesicle), roughness: 0.6, transparent: true, opacity: 0.85,
+        side: THREE.DoubleSide, depthWrite: false,
+      });
+      this.plate = new THREE.Mesh(pg, this.plateMat);
+      this.plate.renderOrder = 3;
+      this.group.add(this.plate);
+      this.cVes = CD.lin(CD.COLORS.vesicle);
+      this.cWall = CD.lin(CD.COLORS.lamella);
+
+      // ---- preprophase band: loops of cortical microtubules round the equator
+      const LOOPS = 14, LSEG = 120, bp = [];
+      const rnd = CD.rng(31);
+      for (let l = 0; l < LOOPS; l++) {
+        const x = l / (LOOPS - 1) - 0.5;
+        const ph = rnd() * TAU;
+        const inset = PPB_IN + rnd() * 0.06;
+        for (let j = 0; j < LSEG; j++) {
+          for (const jj of [j, j + 1]) {
+            const th = (jj / LSEG) * TAU + ph;
+            const r = seContour(th, hy - inset, hz - inset);
+            bp.push(x + 0.04 * Math.sin(th * 5 + ph), Math.cos(th) * r, Math.sin(th) * r);
+          }
+        }
+      }
+      const bg = new THREE.BufferGeometry();
+      bg.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
+      this.ppbMat = new THREE.LineBasicMaterial({
+        color: CD.lin(CD.COLORS.microtubule), transparent: true, opacity: 0, depthWrite: false,
+      });
+      this.ppb = new THREE.LineSegments(bg, this.ppbMat);
+      this.ppb.renderOrder = 1;
+      this.group.add(this.ppb);
+
+      // ---- phragmoplast: two opposed sets of short microtubules, plus ends at the plane
+      this.fib = Array.from({ length: 300 }, () => ({
+        th: rnd() * TAU, u: rnd(), len: 0.35 + rnd() * 0.5, side: rnd() < 0.5 ? 1 : -1,
+      }));
+      this.phArr = new Float32Array(this.fib.length * 6);
+      const fg = new THREE.BufferGeometry();
+      this.phAttr = new THREE.BufferAttribute(this.phArr, 3).setUsage(THREE.DynamicDrawUsage);
+      fg.setAttribute('position', this.phAttr);
+      this.phrag = new THREE.LineSegments(fg, CD.mat.fiberLine);
+      this.phrag.frustumCulled = false;
+      this.phrag.renderOrder = 1;
+      this.group.add(this.phrag);
+
+      // ---- Golgi vesicles carried along the phragmoplast to the plate's edge
+      this.ves = Array.from({ length: 140 }, () => ({
+        th: rnd() * TAU, ph: rnd(), side: rnd() < 0.5 ? 1 : -1, j: rnd(), rate: 0.3 + rnd() * 0.15,
+      }));
+      this.vesMat = new THREE.MeshStandardMaterial({ color: CD.lin(CD.COLORS.vesicle), roughness: 0.4 });
+      this.vesMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), this.vesMat, this.ves.length);
+      this.vesMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.vesMesh.frustumCulled = false;
+      this.group.add(this.vesMesh);
+      this.dummy = new THREE.Object3D();
+    }
+
+    // radius of the plate's growing edge in direction θ
+    edge(th, s) {
+      return s * seContour(th, this.hy, this.hz);
+    }
+
+    update(t, time, shown, spindle) {
+      const st = sampleAll(this.def.tracks, t, this.st);
+      this.group.position.copy(st.center);
+      this.shell.visible = shown;
+      const s = CD.clamp(st.s, 0, 1);
+
+      this.plate.visible = s > 0.002;
+      this.plate.scale.set(1, s, s);
+      this.plateMat.color.copy(this.cVes).lerp(this.cWall, st.m);
+
+      this.ppb.visible = spindle && st.ppb > 0.01;
+      this.ppb.scale.x = st.ppbW;
+      this.ppbMat.opacity = st.ppb * 0.85;
+
+      // the array starts as a solid drum between the nuclei and becomes a ring
+      // that rides the plate's edge outward, ahead of it
+      const ph = st.phrag;
+      const live = spindle && ph > 0.01;
+      this.phrag.visible = live;
+      if (live) {
+        const a = this.phArr;
+        this.fib.forEach((f, i) => {
+          const rc = seContour(f.th, this.hy, this.hz);
+          const r0 = Math.max(0, s * rc - 0.2);
+          const r = Math.min(rc - 0.08, CD.lerp(r0, Math.max(0.9, s * rc + 0.5), f.u));
+          const y = Math.cos(f.th) * r, z = Math.sin(f.th) * r;
+          const o = i * 6;
+          a[o] = f.side * 0.03; a[o + 1] = y; a[o + 2] = z;
+          a[o + 3] = f.side * f.len * ph; a[o + 4] = y; a[o + 5] = z;
+        });
+        this.phAttr.needsUpdate = true;
+      }
+
+      // timeline time, not wall time, so a scrubbed frame is the same frame
+      const vOn = live ? ph * (1 - CD.smoothstep(0.85, 1, s)) : 0;
+      this.vesMesh.visible = vOn > 0.01;
+      if (this.vesMesh.visible) {
+        const d = this.dummy;
+        this.ves.forEach((v, i) => {
+          const u = (t * v.rate + v.ph) % 1;
+          const r = Math.min(seContour(v.th, this.hy, this.hz) - 0.1, this.edge(v.th, s) + 0.08 + v.j * 0.45);
+          d.position.set(v.side * 0.85 * (1 - CD.ease.out(u)), Math.cos(v.th) * r, Math.sin(v.th) * r);
+          d.scale.setScalar(0.055 * vOn * (1 - CD.smoothstep(0.82, 1, u)) + 1e-4);
+          d.updateMatrix();
+          this.vesMesh.setMatrixAt(i, d.matrix);
+        });
+        this.vesMesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+  }
+
   // ================================================================ Nucleus
   class Nucleus {
     constructor(def, parent) {
@@ -435,6 +628,8 @@
       this.pos = new V3();
       this.group = new THREE.Group();
       parent.add(this.group);
+      // A plant spindle pole is a place the microtubules converge, not an organelle.
+      if (def.acentric) return;
 
       const pair = new THREE.Group();
       const a = new THREE.Mesh(CD.geo.centriole, CD.mat.centriole);
@@ -458,7 +653,7 @@
       this.group.visible = this.shown;
       this.group.position.copy(st.p);
       this.group.scale.setScalar(Math.max(st.show, 0.001));
-      this.pair.rotation.set(0.5, time * 0.35 + this.def.seed, 0.2);
+      if (this.pair) this.pair.rotation.set(0.5, time * 0.35 + this.def.seed, 0.2);
     }
   }
 
@@ -533,6 +728,8 @@
         const e1 = this.e1.crossVectors(dir, Math.abs(dir.z) < 0.9 ? tmp.set(0, 0, 1) : tmp.set(1, 0, 0)).normalize();
         const e2 = this.e2.crossVectors(dir, e1);
         const width = Math.min(1.05, D * 0.2);
+        // 0 converges every fibre on the pole (an aster); more spreads them into a flat, wide pole
+        const broad = sp.def.broad || 0;
         const fibres = this.polar[si];
         const steps = 10;
         for (let f = 0; f < fibres.length; f++) {
@@ -542,13 +739,13 @@
           const cx = Math.cos(fb.psi) * fb.rho * width;
           const cy = Math.sin(fb.psi) * fb.rho * width;
           const umax = fb.umax * grow;
-          let px = from.x;
-          let py = from.y;
-          let pz = from.z;
+          let px = from.x + (e1.x * cx + e2.x * cy) * broad;
+          let py = from.y + (e1.y * cx + e2.y * cy) * broad;
+          let pz = from.z + (e1.z * cx + e2.z * cy) * broad;
           for (let k = 1; k <= steps; k++) {
             const u = (k / steps) * umax;
             const along = u * D * sd;
-            const bulge = Math.sin(Math.PI * u);
+            const bulge = broad + (1 - broad) * Math.sin(Math.PI * u);
             const qx = from.x + dir.x * along + (e1.x * cx + e2.x * cy) * bulge;
             const qy = from.y + dir.y * along + (e1.y * cx + e2.y * cy) * bulge;
             const qz = from.z + dir.z * along + (e1.z * cx + e2.z * cy) * bulge;
@@ -577,6 +774,7 @@
       this.end = new V3();
       this.off = new V3();
       this.dir = new V3();
+      this.pole = new V3();
     }
 
     place(i, a, b, r) {
@@ -607,7 +805,15 @@
           this.mesh.setMatrixAt(i * 2 + 1, zero.matrix);
           return;
         }
-        const pole = cen.pos;
+        let pole = cen.pos;
+        const broad = world.def.broad || 0;
+        if (broad && world.centrosomes.length === 2) {
+          // a fibre leaves the wide pole level with its kinetochore, not from one point
+          const ax = this.dir.subVectors(pole, world.centrosomes[1 - st.ci].pos).normalize();
+          tmp.subVectors(c.kinPos, pole);
+          tmp.addScaledVector(ax, -tmp.dot(ax));
+          pole = this.pole.copy(cen.pos).addScaledVector(tmp, broad);
+        }
         this.end.lerpVectors(pole, c.kinPos, st.att);
         CD.anyPerp(tmp.subVectors(c.kinPos, pole).normalize(), this.off).multiplyScalar(0.024 * st.att);
         tmp.copy(this.end).add(this.off);
@@ -664,7 +870,7 @@
       scene.add(this.group);
 
       this.chromatids = def.chromatids.map((d) => new Chromatid(d, this.group));
-      this.cells = def.cells.map((d) => new Cell(d, this.group));
+      this.cells = def.cells.map((d) => (d.plant ? new PlantCell(d, this.group) : new Cell(d, this.group)));
       this.nuclei = def.nuclei.map((d) => new Nucleus(d, this.group));
       this.centrosomes = def.centrosomes.map((d) => new Centrosome(d, this.group));
       this.spindles = def.spindles.map((d) => ({ def: d, st: {} }));
@@ -682,7 +888,7 @@
         c.update(t, xo ? this.chiasmata[xo.chiasma].st.x : 0);
       }
       for (const x of this.chiasmata) x.place(this);
-      for (const c of this.cells) c.update(t, time, opts.membrane);
+      for (const c of this.cells) c.update(t, time, opts.membrane, opts.spindle);
       for (const n of this.nuclei) n.update(t, time);
 
       this.fibers.lines.visible = opts.spindle;

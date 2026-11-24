@@ -2,7 +2,8 @@
 (function (CD) {
   'use strict';
 
-  /* Every colour is lib/palette.js's `division`, except the nucleolus. */
+  /* Every colour is lib/palette.js's `division`, except the nucleolus and the
+     plant's wall, plate and vesicles, which are the organelles' own. */
   const P = window.MolPalette;
   const O = P.organelles;
   const D = P.division;
@@ -24,6 +25,11 @@
     nucRim: D.envelope,
     nucPore: D.envelopePore,
     nucEdge: D.envelopeEdge,
+    // the plant track: a root-tip meristem cell, so the root's wall
+    wall: P.plantTissue.root.wall,
+    wallRim: P.plantTissue.root.wallRim,
+    lamella: O.wall.lamella,
+    vesicle: O.golgi.vesicle,
   };
 
   const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
@@ -123,13 +129,14 @@
     }
   `;
 
-  CD.makeMembraneMaterial = () =>
+  // The same fresnel shell paints the plant's wall, in the wall's colours.
+  CD.makeMembraneMaterial = (o = {}) =>
     new THREE.ShaderMaterial({
       uniforms: {
-        uTint: { value: raw(CD.COLORS.membraneTint) },
-        uRim: { value: raw(CD.COLORS.membraneRim) },
-        uDeep: { value: raw(CD.COLORS.membraneDeep) },
-        uOpacity: { value: 0.62 },
+        uTint: { value: raw(o.tint != null ? o.tint : CD.COLORS.membraneTint) },
+        uRim: { value: raw(o.rim != null ? o.rim : CD.COLORS.membraneRim) },
+        uDeep: { value: raw(o.deep != null ? o.deep : CD.COLORS.membraneDeep) },
+        uOpacity: { value: o.opacity != null ? o.opacity : 0.62 },
       },
       vertexShader: VERT,
       fragmentShader: MEMBRANE_FRAG,

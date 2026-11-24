@@ -2,14 +2,14 @@
  *  cell-division/cell-division.js — mitosis and meiosis as one scrubbable scene
  * =============================================================================
  *      const cd = CellDivision.mount(el, { mode: 'mitosis', room: () => rect, defs });
- *      cd.set({ mode: 'meiosis' });   // rebuilds the world and reframes
+ *      cd.set({ mode: 'meiosis' });   // or 'plant'; rebuilds the world and reframes
  *      cd.set({ t: 12.5 });           // seconds into that mode's timeline
  *      cd.state()                     // { mode, t, total, phases, counts }
  *
  *  The scene is a pure function of `t` (scenarios.js), so the page owns the
  *  clock and this only draws whatever time it is handed. `room()` is the free
  *  rectangle in viewport px ({ l, r, t, b }) the cell is framed into; without
- *  it the whole window is. `defs` is scenarios.js's two builds, for a page
+ *  it the whole window is. `defs` is scenarios.js's builds, for a page
  *  that has already made them for its own step list.
  *
  *  ONE LESSON'S SCENE, not a component: it is mount-shaped so it can become
@@ -69,7 +69,7 @@
     controls.rotateSpeed = 0.7;
     controls.zoomSpeed = 0.8;
 
-    const defs = params.defs || { mitosis: CD.buildMitosis(), meiosis: CD.buildMeiosis() };
+    const defs = params.defs || { mitosis: CD.buildMitosis(), plant: CD.buildMitosis({ plant: true }), meiosis: CD.buildMeiosis() };
     const opts = { membrane: true, spindle: true };
     let mode = null, def = null, world = null, t = 0;
     let camAnim = null, fitDist = 16, raf = 0, running = true;
