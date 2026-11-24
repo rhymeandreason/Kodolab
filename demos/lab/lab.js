@@ -21,7 +21,8 @@ export { toast, ensureEl, uiRoot, stripTags, THEMES, setTheme, getTheme, themeCo
 
 export { makeBench, makeWorkMat, makePaperTowel, makeTray, makeWasteBin, makeBenchCard } from './props/surfaces.js';
 export { makeBeaker, makeCup, makeDish, makeTestTube, makeFunnel, makeMicroTube, makeWatchGlass } from './props/glassware.js';
-export { makeJar, makeJarLid, makeSqueezeBottle, makeReagentBottle, makeDropperBottle } from './props/bottles.js';
+export { makeJar, makeJarLid, makeSqueezeBottle, makeReagentBottle, makeDropperBottle, makeNozzleBottle } from './props/bottles.js';
+export { makeTypingTray, makeStirStick, makeStickCup, STICK_COLORS } from './props/serology.js';
 export { INGREDIENTS, ingredient } from './props/ingredients.js';
 export { makeZipBag, pillowH } from './props/bag.js';
 export { makePlate, makeBowl, makeIceBath } from './props/kitchen.js';

@@ -98,7 +98,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | `props/*` | bench glassware, syringe, pipette, lamp, timer, punch, jars | Photosynthesis |
 | `props/*` | strawberry, zip-top bag, test tubes, funnel and filter, reagent bottle, ice bath, skewer, DNA precipitate | Strawberry |
 | `props/*` | microcentrifuge tube, agar plate (colonies, lawn, UV glow), loop, block rack, water bath, UV lamp, bench card | Ecoli |
-| `props/surfaces.js` | waste bin | BloodType |
+| `props/surfaces.js`, `props/serology.js`, `makeNozzleBottle` | waste bin, typing tray and its agglutination shader, stir sticks and their cup, nozzle dropper bottle | BloodType |
 | `props/*` | onion, scalpel, pencil, slide, coverslip, filter paper, compound microscope | OnionRoot |
 
 ## Upgrading three.js
