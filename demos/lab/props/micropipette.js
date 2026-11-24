@@ -84,7 +84,7 @@ export function makeTipBox(mat, { rows = 8, cols = 12, color = toLinear('#3b82f6
   const g = new THREE.Group();
   const W = 12.5, D = 8.6, H = 5.2, P = 0.9;
   const shell = mesh(rbox(W, H - 0.3, D, 0.35), mat.make.plastic({ color: '#cfdcf0', opacity: 0.45 }), { cast: false });
-  shell.renderOrder = 3;
+  shell.renderOrder = 3; shell.position.y = 0.015;
   g.add(shell);
   const plate = mesh(new THREE.BoxGeometry(W - 0.3, 0.25, D - 0.3), mat.make.solid(color, 0.45));
   plate.position.y = H - 0.15;

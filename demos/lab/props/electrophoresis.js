@@ -25,15 +25,17 @@ export function makeGelBox(mat, { color = '#cfe2f3' } = {}) {
   const wall = mat.make.plastic({ color, opacity: 0.32 });
   const solid = mat.make.solid(toLinear('#e9eef3'), 0.5);
   const add = (geo, m, x, y, z, o) => { const b = mesh(geo, m, o); b.position.set(x, y, z); g.add(b); return b; };
-  add(new THREE.BoxGeometry(W, t, L), solid, 0, t / 2, 0);
+  // The floor is lifted a hair and the walls start on top of it, so no wall face shares a plane with the floor's.
+  const E = 0.015, WH = H - t - E;
+  add(new THREE.BoxGeometry(W, t, L), solid, 0, E + t / 2, 0);
   [-1, 1].forEach((s) => {
-    const side = add(new THREE.BoxGeometry(t, H, L), wall, s * (W / 2 - t / 2), H / 2, 0, { cast: false });
+    const side = add(new THREE.BoxGeometry(t, WH, L), wall, s * (W / 2 - t / 2), t + E + WH / 2, 0, { cast: false });
     side.renderOrder = 3;
-    const end = add(new THREE.BoxGeometry(W - 2 * t, H, t), wall, 0, H / 2, s * (L / 2 - t / 2), { cast: false });
+    const end = add(new THREE.BoxGeometry(W - 2 * t, WH, t), wall, 0, t + E + WH / 2, s * (L / 2 - t / 2), { cast: false });
     end.renderOrder = 3;
   });
   // the gel bed, with the dams that keep it off the electrodes
-  add(new THREE.BoxGeometry(W - 2 * t, BED - t, 12), solid, 0, t + (BED - t) / 2, 0);
+  add(new THREE.BoxGeometry(W - 2 * t - 0.04, BED - t, 12), solid, 0, t + (BED - t) / 2, 0);
   // electrodes: platinum wire across each chamber's floor, up the end wall to a pin
   const wire = mat.steel;
   const ELZ = L / 2 - 1.1;
