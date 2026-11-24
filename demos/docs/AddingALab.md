@@ -145,10 +145,12 @@ Reuse first: `lab/gallery.html` shows every prop, and `lab/props.html#<key>` one
 
 A common ingredient gets one entry in `props/ingredients.js` in a colour no other uses, never a colour in the lab. Bigger machinery (a cell scene) stays in the lab's folder until a second lab needs it.
 
+Rule: Lowest face at y ≥ 0.015 cm (0.03 for scaled-up props). Walls start on top of the floor, and inner parts are 0.04 cm narrower than the walls around them. This solves flickering when object is placed on a table.
+
 ## 9. Check it
 
 * `?intro=0` skips the intro, `?speed=8` speeds up every animation, `?mode=watch` opens in Watch
-* at ~1440×900 and at phone width, in both modes, on every step with a side panel
+* at \~1440×900 and at phone width, in both modes, on every step with a side panel
 * back, jump ahead and scrub from every step: the bench must come back the same
 * `lab/gallery.html` after any prop change, since every lab shares the props
 * the browser pane's tab is hidden and rAF does not run there: drive frames with `stage.frame(performance.now())`, and have the human play it through in Safari

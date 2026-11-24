@@ -18,6 +18,15 @@
  *   ix.register('bottle', bottle.group, { name, ringAround: iceBath.group });
  *   // ringRadius: a fixed ring (cm) round the group's origin, for a long object a footprint
  *   // ring would overshoot (a typing tray)
+ *   ix.addGroup('box', gel.group);   // gel.group now hovers, lifts and clicks as 'box'
+ *
+ * What rests on an object hovers and clicks with it. When a step sets a prop on, in or over
+ * another clickable prop (a gel in its box, a lid on the box, a tube in a rack), the action
+ * that puts it there calls ix.addGroup(hostKey, prop.group), and the action that takes it off
+ * calls ix.addGroup(ownKey, prop.group). Skip it and two bugs ship: the host lifts on hover
+ * and leaves the prop behind, sunk into it, and the prop on top swallows clicks meant for the
+ * host. A group answers to one key, so each hand-off is one call. Anything joined to the prop
+ * (leads plugged into a lid) re-poses whenever the prop moves, hover lift included.
  *
  * The label (from Photosynthesis + BloodType): name, description, then a
  * status line that says what a click will do right now — ok (green),
@@ -111,7 +120,12 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
     padHits(group, info.minHit);
     return objects[key];
   }
-  function addGroup(key, group) { group.userData.key = key; objects[key].groups.push(group); padHits(group, objects[key].minHit); }
+  /** Adds a group to `key`'s hover and pick, taking it from any key it had: a group answers to one key. */
+  function addGroup(key, group) {
+    const was = objects[group.userData.key];
+    if (was) was.groups = was.groups.filter((g) => g !== group);
+    group.userData.key = key; objects[key].groups.push(group); padHits(group, objects[key].minHit);
+  }
 
   /* Hit box: an invisible box (never drawn, still raycast) in the group's own space,
    * widened to min cm along any thin axis. It moves and rotates with the group. */
