@@ -103,31 +103,37 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
   function geneticsTab() {
     if (!st.checked) return `<p class="nb-locked"><i class="ph ph-lock-simple"></i>${N.locked}</p>`;
     const ty = types(), baby = typeLabel(ty.baby), manT = ty[st.man];
-    const chips = PATIENTS.map((p) => `<span class="nb-chip">${dot(p.color)}${name(p.id)} <b>${typeLabel(ty[p.id])}</b></span>`).join('');
-    const opt = (list, v) => list.map((g) => `<option value="${g}" ${g === v ? 'selected' : ''}>${genoTxt(g)}</option>`).join('');
     const pq = punnett(st.mom, st.manG);
+    const pills = (who, list, v) => list.length < 2
+      ? `<span class="nb-geno only">${genoTxt(list[0])}</span>`
+      : list.map((g) => `<button class="nb-geno ${g === v ? 'on' : ''}" data-gp="${who}" data-v="${g}">${genoTxt(g)}</button>`).join('');
+    const person = (pid, who, sel) => `<div class="nb-person">
+      <div class="nb-pname">${dot(color[pid])}${name(pid)} <b>${typeLabel(ty[pid])}</b></div>
+      <div class="nb-genos">${pills(who, genotypes(ty[pid]), sel)}</div></div>`;
+    const hdr = (pid, a) => `<span style="color:${color[pid]}">${a}</span>`;
     const square = (cap, top, side, cells, label, match) => `<div><div class="nb-pq-cap">${cap}</div><table class="nb-pq">
-      <tr><th></th>${[...top].map((a) => `<th>${label(a)}</th>`).join('')}</tr>
-      ${[...side].map((m, i) => `<tr><th>${label(m)}</th>${cells[i].map((g) => `<td class="${match(g) ? 'match' : ''}"><b>${[...g].map(label).join('')}</b></td>`).join('')}</tr>`).join('')}
+      <tr><th></th>${[...top].map((a) => `<th>${hdr(st.man, label(a))}</th>`).join('')}</tr>
+      ${[...side].map((m, i) => `<tr><th>${hdr('mother', label(m))}</th>${cells[i].map((g) => `<td class="${match(g) ? 'match' : ''}">${[...g].map(label).join('')}</td>`).join('')}</tr>`).join('')}
     </table></div>`;
     const outs = TYPES.filter((o) => pq.tally[o]).map((o) => `<span class="nb-out ${o === baby ? 'match' : ''}">${o}<small>${Math.round(pq.tally[o] * 100)}%</small></span>`).join('');
     const p = pq.tally[baby] || 0;
     const verdict = p > 0 ? fmt(N.can, { man: name(st.man), baby, pct: Math.round(p * 100) })
       : fmt(N.cannot, { man: name(st.man), baby }) + (genotypes(ty.mother).length * genotypes(manT).length > 1 ? ` ${N.tryOther}` : '');
     return `
-      <div class="nb-chips">${chips}</div>
-      <p class="nb-rule">${N.rule}</p>
-      <div class="nb-seg">${['man1', 'man2'].map((m) => `<button data-man="${m}" class="${st.man === m ? 'on' : ''}">${fmt(N.cross, { man: name(m) })}</button>`).join('')}</div>
-      <div class="nb-pick">
-        <label>${fmt(N.genoOf, { name: name('mother'), type: typeLabel(ty.mother) })}<select data-g="mom">${opt(genotypes(ty.mother), st.mom)}</select></label>
-        <label>${fmt(N.genoOf, { name: name(st.man), type: typeLabel(manT) })}<select data-g="man">${opt(genotypes(manT), st.manG)}</select></label>
-      </div>
+      <p class="nb-goal">${dot(color.baby)}${fmt(N.goal, { baby })}</p>
+      <div class="nb-seg">${['man1', 'man2'].map((m) => `<button data-man="${m}" class="${st.man === m ? 'on' : ''}">${dot(color[m])}${name(m)} <b>${typeLabel(ty[m])}</b></button>`).join('')}</div>
+      <h4 class="nb-step"><span>1</span>${N.stepGeno}</h4>
+      <div class="nb-people">${person('mother', 'mom', st.mom)}${person(st.man, 'man', st.manG)}</div>
+      <h4 class="nb-step"><span>2</span>${fmt(N.stepCross, { baby })}</h4>
       <div class="nb-pqs">
         ${square(N.aboGene, pq.da, pq.ma, pq.abo, allele, (g) => aboOf(g) === ty.baby.abo)}
         ${square(N.rhGene, pq.dr, pq.mr, pq.rh, (a) => `<i>${a}</i>`, (g) => rhOf(g) === ty.baby.rh)}
       </div>
-      <div class="nb-outs">${outs}</div>
-      <p class="nb-verdict ${p > 0 ? 'yes' : 'no'}">${verdict}</p>
+      <p class="nb-rule">${N.rule}</p>
+      <div class="nb-result ${p > 0 ? 'yes' : 'no'}">
+        <div class="nb-outs">${outs}</div>
+        <p>${verdict}</p>
+      </div>
       ${api.solved() ? `<div class="nb-explain">${explanation()}</div>` : ''}`;
   }
   /** Why each man is in or out, from canParent over every genotype. */
@@ -177,6 +183,8 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
       return changed();
     }
     if (e.target.closest('.nb-check')) { check(); if (st.checked) tab = 'genetics'; return changed(); }
+    const gp = e.target.closest('button[data-gp]');
+    if (gp) { st[gp.dataset.gp === 'mom' ? 'mom' : 'manG'] = gp.dataset.v; return changed(); }
     const man = e.target.closest('button[data-man]');
     if (man) { st.man = man.dataset.man; st.manG = genotypes(types()[st.man])[0]; return changed(); }
   });
