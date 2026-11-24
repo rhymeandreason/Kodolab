@@ -130,7 +130,7 @@ function rebuild() {
     t.liquid.setLevel(0.9);
     return t;
   });
-  const tipBox = place(makeTipBox(mat), POS.tips);
+  const tipBox = place(makeTipBox(mat, { lid: false }), POS.tips);
   const stand = place(makePipetteStand(mat), POS.stand);
   const pip = place(makeMicropipette(mat, { volume: LOAD_UL }), pipRest(stand));
   pip.setTip(false);

@@ -80,7 +80,7 @@ export function makeMicropipette(mat, { button = toLinear('#facc15'), volume = 1
 
 /** Box of 96 tips, 12.5 × 8.6 cm, lid hinged open at the back. tips[i] is tip i's point in
  *  box space (row-major from the front left); setTaken(n) empties the first n holes. */
-export function makeTipBox(mat, { rows = 8, cols = 12, color = toLinear('#3b82f6') } = {}) {
+export function makeTipBox(mat, { rows = 8, cols = 12, color = toLinear('#3b82f6'), lid: showLid = true } = {}) {
   const g = new THREE.Group();
   const W = 12.5, D = 8.6, H = 5.2, P = 0.9;
   const shell = mesh(rbox(W, H - 0.3, D, 0.35), mat.make.plastic({ color: '#cfdcf0', opacity: 0.45 }), { cast: false });
@@ -95,7 +95,7 @@ export function makeTipBox(mat, { rows = 8, cols = 12, color = toLinear('#3b82f6
   lidTop.position.set(0, 0, D / 2); lidTop.renderOrder = 3;
   lid.add(lidTop);
   lid.rotation.x = -1.9;
-  g.add(lid);
+  if (showLid) g.add(lid);
   const N = rows * cols;
   const tipGeo = (() => { const m = tipMesh(mat); return m.geometry; })();
   const tips = new THREE.InstancedMesh(tipGeo, mat.make.plastic({ color: '#f6efc8', opacity: 0.6 }), N);
