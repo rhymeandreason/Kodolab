@@ -234,8 +234,7 @@ const PHASES = [
 const fatherName = () => T.props.people[CASE.father];
 const otherName = () => T.props.people[CASE.father === 'man1' ? 'man2' : 'man1'];
 const completeHint = () => `<span class="res-ok"><i class="ph-fill ph-check-circle"></i>${T.complete.correct}</span><span class="res-head"><b>${fmt(T.complete.head, { father: fatherName(), other: otherName() })}</b>`
-  + `<span class="res-btns"><button class="reopen" data-act="notebook"><i class="ph ph-notebook"></i>${T.complete.reopen}</button>`
-  + `<button class="reopen" data-act="newcase"><i class="ph ph-shuffle"></i>${T.complete.newCase}</button></span></span>`;
+  + '</span>';
 
 // =========================================================================
 // Wire it together
@@ -279,6 +278,23 @@ function hoverWell() {
   focusWell(i, j);
 }
 
+/* The case card, hung under the procedure panel: which case this is, and a new one. */
+const caseCard = document.createElement('div');
+caseCard.className = 'panel case-card';
+($('#app') || document.body).appendChild(caseCard);
+function renderCase() {
+  caseCard.innerHTML = `<span class="case-no">${fmt(T.case.label, { no: CASE.no })}</span>`
+    + `<button class="reopen" data-act="newcase"><i class="ph ph-shuffle"></i>${T.case.new}</button>`;
+}
+function placeCase() {
+  const r = $('#stepsPanel').getBoundingClientRect();
+  caseCard.hidden = !r.height;
+  caseCard.style.top = `${r.bottom + 10}px`;
+}
+new ResizeObserver(placeCase).observe($('#stepsPanel'));
+window.addEventListener('resize', placeCase);
+renderCase();
+
 function restart() {
   newSession();
   firstEnter = false;
@@ -289,6 +305,7 @@ function newCase() {
   let no;
   do { no = 100 + Math.floor(Math.random() * 900); } while (no === CASE.no);
   CASE = makeCase(no);
+  renderCase();
   restart();
   toast(fmt(T.complete.newToast, { no }), { icon: 'ph-shuffle' });
 }
@@ -308,7 +325,6 @@ document.addEventListener('click', (e) => {
   if (ans && lesson.step === SOLVE) { notebook.answer(ans.dataset.ans); return; }
   const a = e.target.closest('[data-act]');
   if (!a) return;
-  if (a.dataset.act === 'notebook') notebook.open('genetics');
   if (a.dataset.act === 'newcase') newCase();
 });
 

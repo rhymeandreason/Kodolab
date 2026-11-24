@@ -64,18 +64,18 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
     const head = WELLS.map((k) => `<th>${dot(serumColor[k])}${T.props.sera[k]}</th>`).join('');
     return `
       <p class="nb-lead">${st.checked ? N.doneLead : N.lead}</p>
-      <table class="nb-data"><thead><tr><th>${N.sample}</th>${head}<th>${N.type}</th></tr></thead><tbody>${rows}</tbody></table>
       <div class="nb-legend"><span><b class="nb-mini pos">+</b>${N.pos}</span><span><b class="nb-mini neg">−</b>${N.neg}</span></div>
-      <div class="nb-key"><div class="nb-key-title"><i class="ph ph-info"></i>${N.keyTitle}</div>${keyBody()}</div>
+      <table class="nb-data"><thead><tr><th>${N.sample}</th>${head}<th>${N.type}</th></tr></thead><tbody>${rows}</tbody></table>
       ${st.checked ? '' : `<button class="btn nb-check">${N.check}</button>`}
-      <p class="nb-msg ${st.checked ? 'ok' : st.msg ? 'no' : ''}">${st.checked ? N.allRight : st.msg}</p>`;
+      <p class="nb-msg ${st.checked ? 'ok' : st.msg ? 'no' : ''}">${st.checked ? N.allRight : st.msg}</p>
+      <section class="nb-key"><h3><i class="ph ph-info"></i>${N.keyTitle}</h3>${keyBody()}</section>`;
   }
   function keyBody() {
     const row = (a, b, t) => `<tr><td><b class="nb-mini ${a ? 'pos' : 'neg'}">${a ? '+' : '−'}</b></td><td><b class="nb-mini ${b ? 'pos' : 'neg'}">${b ? '+' : '−'}</b></td><td>→</td><td><b>${t}</b></td></tr>`;
     return `<div class="nb-keys">
-      <table><thead><tr><th>${T.props.sera.A}</th><th>${T.props.sera.B}</th><th></th><th>ABO</th></tr></thead>
-        <tbody>${row(1, 0, 'A')}${row(0, 1, 'B')}${row(1, 1, 'AB')}${row(0, 0, 'O')}</tbody></table>
-      <p>${N.keyRh}</p></div>`;
+      <div><h4>${N.keyAbo}</h4><table><thead><tr><th>${T.props.sera.A}</th><th>${T.props.sera.B}</th><th></th><th>${N.type}</th></tr></thead>
+        <tbody>${row(1, 0, 'A')}${row(0, 1, 'B')}${row(1, 1, 'AB')}${row(0, 0, 'O')}</tbody></table></div>
+      <div><h4>${N.keyRhHead}</h4><p>${N.keyRh}</p></div></div>`;
   }
   function check() {
     const missing = PATIENTS.some((p) => WELLS.some((k) => !ready(p.id, k)));

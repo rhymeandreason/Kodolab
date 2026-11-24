@@ -83,11 +83,11 @@ LabText.add('en', {
     correct: 'Correct!',
     head: '{father} could be the father. {other} is ruled out.',
     why: 'Blood types exclude; they never prove. Plenty of other men share {father}\'s type.',
-    reopen: 'Notebook',
-    newCase: 'New case',
     toast: 'Case solved',
     newToast: 'Case #{no}: new blood, same question',
   },
+
+  case: { label: 'Case #{no}', new: 'New case' },
 
   magnifier: { title: 'Magnifier', label: '{name} · {serum}' },
 
@@ -98,6 +98,7 @@ LabText.add('en', {
     sample: 'Sample', type: 'Type', typeOf: '{name}\'s blood type',
     pos: 'clumping', neg: 'no clumping',
     keyTitle: 'How to read the results',
+    keyAbo: '1 · ABO letter', keyRhHead: '2 · Rh sign',
     keyRh: 'The Anti-Rh well gives the + or − after the letter. Anti-A −, anti-B +, anti-Rh + is <b>B+</b>.',
     check: 'Check my results',
     notStirred: 'Stir every well first.',
