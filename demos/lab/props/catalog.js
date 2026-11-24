@@ -17,6 +17,7 @@ import {
   makeOnion, makeScalpel, makePencil, makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope,
   makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeTransilluminator, makeMicropipette, makeTipBox, makePipetteStand,
   makeHotPlate, makeWatchGlass, makeDropperBottle,
+  makeNozzleBottle, makeTypingTray, makeStirStick, makeStickCup,
 } from '../lab.js';
 
 const slider = (label, min, max, step, value, unit, set) => ({ label, min, max, step, value, unit, set });
@@ -225,4 +226,16 @@ export const PROPS = [
     controls: [slider('Taken', 0, 96, 1, 0, '', (p, v) => p.setTaken(v))] },
   { key: 'pipettestand', group: 'Plastic', name: 'Pipette stand', file: 'micropipette.js', call: 'makePipetteStand(mat)',
     desc: 'A micropipette hangs on it by its finger hook (anchors.hang).', make: (mat) => makePipetteStand(mat), controls: [] },
+  { key: 'nozzlebottle', group: 'Reagents', name: 'Nozzle dropper bottle', file: 'bottles.js', call: "makeNozzleBottle(mat, { title: 'Anti-A' })",
+    desc: 'Squeeze bottle with a pointed nozzle, from BloodType: antisera and blood samples. anchors.tip is where a drop forms.',
+    make: (mat) => makeNozzleBottle(mat), controls: [slider('Level', 0, 1, 0.01, 0.7, '', (p, v) => p.liquid.setFraction(v))] },
+  { key: 'typingtray', group: 'Plastic', name: 'Blood typing tray', file: 'serology.js', call: "makeTypingTray(mat, { name: 'Mother' })",
+    desc: 'Three-well tray (A, B, Rh), from BloodType. wells[i].set({ blood, serum, mixed, clump, swirl, amount }) draws a drop, stirring, and agglutination.',
+    make: (mat) => { const t = makeTypingTray(mat, { name: 'Mother' }); t.wells.forEach((w) => w.set({ blood: true, serum: true })); return t; },
+    controls: [slider('Mixed', 0, 1, 0.01, 0, '', (p, v) => p.wells.forEach((w) => w.set({ mixed: v, swirl: v * 6 }))), slider('Clump A', 0, 1, 0.01, 0, '', (p, v) => p.wells[0].set({ clump: v })), slider('Clump Rh', 0, 1, 0.01, 0, '', (p, v) => p.wells[2].set({ clump: v })), slider('Ring', 0, 1, 0.01, 0, '', (p, v) => p.wells[1].setRing(v))] },
+  { key: 'stirstick', group: 'Plastic', name: 'Stir stick', file: 'serology.js', call: 'makeStirStick(mat)',
+    desc: 'Flat plastic stir stick, 9 cm. setTip(hex) stains its end.', make: (mat) => makeStirStick(mat),
+    controls: [toggle('Blood on tip', false, (p, on) => p.setTip(on ? '#6a0711' : null))] },
+  { key: 'stickcup', group: 'Plastic', name: 'Cup of stir sticks', file: 'serology.js', call: 'makeStickCup(mat)',
+    desc: 'White cup with a red band holding a bunch of stir sticks (sticks[]).', make: (mat) => makeStickCup(mat), controls: [] },
 ];

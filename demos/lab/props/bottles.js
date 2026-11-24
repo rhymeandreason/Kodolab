@@ -132,3 +132,30 @@ export function makeDropperBottle(mat, { title = '1 M HCl', line = 'HYDROCHLORIC
     setFill(f) { fluid.visible = f > 0.01; fluid.scale.y = Math.max(0.001, f * (PIPE - 0.6)); },
   };
 }
+
+/** Squeeze dropper bottle with a pointed nozzle, from BloodType: the antisera and the
+ *  blood samples. 9.6 cm tall. color = cap and label band; title, sub, footer = the label;
+ *  liquid.setFraction() sets the level. anchors.tip = the nozzle's point, where a drop forms. */
+export function makeNozzleBottle(mat, { title = 'Anti-A', sub = 'Antiserum', footer = 'Typing reagent', color = '#2f6fe4', liquidColor = 0x2a66e0, liquidOpacity = 0.9 } = {}) {
+  const TIP = 8.6;
+  const g = new THREE.Group();
+  const body = mesh(new THREE.LatheGeometry([[0, 0], [1.35, 0], [1.55, 0.08], [1.62, 0.3], [1.62, 4.5], [1.56, 5.0], [1.3, 5.4], [0.92, 5.66], [0.8, 5.78], [0.8, 6.0], [0, 6.0]].map((p) => V2(p[0], p[1])), 56),
+    mat.make.plastic({ opacity: 0.2, color: '#f4f7fb' }), { cast: false });
+  body.renderOrder = 3;
+  g.add(body);
+  const liquid = makeLiquid(mat, g, {
+    wall: [[1.52, 0.1], [1.52, 4.4], [1.46, 4.9], [1.2, 5.3]], inset: 0,
+    color: liquidColor, opacity: liquidOpacity, matOpts: { roughness: 0.3, clearcoat: 0.3 },
+  });
+  liquid.setLevel(3.8);
+  const collar = mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.72, 40), mat.make.solid(toLinear(color), 0.35));
+  collar.position.y = 6.22;
+  const nozzle = mesh(new THREE.LatheGeometry([[0.74, 6.55], [0.72, 6.75], [0.46, 7.2], [0.24, 8.05], [0.13, 8.5], [0, TIP]].map((p) => V2(p[0], p[1])), 40),
+    mat.make.physical({ color: 0xf8f9fb, roughness: 0.3, clearcoat: 0.5 }));
+  g.add(collar, nozzle);
+  g.add(wrapLabel({
+    rTop: 1.645, rBot: 1.645, y0: 2.2, y1: 4.5, arc: Math.PI, center: 0, w: 576, h: 256, order: 5,
+    draw: (c, w, h) => bandLabel(c, w, h, { header: sub.toUpperCase(), title, line: footer, color, ink: '#141b2d', lineColor: '#8a93a6' }),
+  }));
+  return { group: g, liquid, collar, anchors: { tip: V3(0, TIP, 0), top: V3(0, TIP, 0) }, radius: 1.7, h: TIP };
+}
