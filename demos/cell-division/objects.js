@@ -385,7 +385,8 @@
   // width), phrag (phragmoplast 0..1), s (plate radius as a fraction of the
   // cell's cross-section, which bodies() reads as the cells' separation), m
   // (plate maturing into wall), split (one shell fading into two daughters),
-  // gap (how far each daughter has slid out; see scenarios.js's PLANT.part).
+  // gap (how far each daughter's wall sits from the plane: half the lamella's
+  // drawn thickness; see scenarios.js's PLANT.part).
   const SE_N = 6;
   const MEM_IN = 0.14; // the membrane, just inside the wall
   const PPB_IN = 0.24; // the band, just inside the membrane
@@ -449,19 +450,24 @@
       this.mother = shellOf(hx, 0);
       this.daughters = [shellOf(hx / 2, hx / 2), shellOf(hx / 2, -hx / 2)];
 
-      // ---- cell plate: a disc on the division plane, the cross-section's shape
+      // ---- cell plate, then middle lamella: a slab on the division plane in the
+      // cross-section's shape, unit thick in x so scale.x is its thickness
       const SEG = 160;
-      const pp = [0, 0, 0];
+      const ring = [];
       for (let j = 0; j <= SEG; j++) {
         const th = (j / SEG) * TAU;
         const r = seContour(th, this.hy, this.hz);
-        pp.push(0, Math.cos(th) * r, Math.sin(th) * r);
+        ring.push([Math.cos(th) * r, Math.sin(th) * r]);
       }
-      const pi = [];
-      for (let j = 1; j <= SEG; j++) pi.push(0, j, j + 1);
+      const pp = [];
+      for (let j = 0; j < SEG; j++) {
+        const [y0, z0] = ring[j], [y1, z1] = ring[j + 1];
+        pp.push(0.5, 0, 0, 0.5, y0, z0, 0.5, y1, z1);
+        pp.push(-0.5, 0, 0, -0.5, y1, z1, -0.5, y0, z0);
+        pp.push(0.5, y0, z0, -0.5, y0, z0, -0.5, y1, z1, 0.5, y0, z0, -0.5, y1, z1, 0.5, y1, z1);
+      }
       const pg = new THREE.BufferGeometry();
       pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
-      pg.setIndex(pi);
       pg.computeVertexNormals();
       this.plateMat = new THREE.MeshStandardMaterial({
         color: CD.lin(CD.COLORS.vesicle), roughness: 0.6, transparent: true, opacity: 0.85,
@@ -543,11 +549,15 @@
         d.g.position.x = (i ? -1 : 1) * (this.r + st.gap);
       });
 
-      // the daughters' own walls take over the seam, so the plate fades as they appear
-      this.plate.visible = s > 0.002 && k < 0.995;
-      this.plate.scale.set(1, s, s);
+      // The plate's pectin stays as the middle lamella, the layer that glues the
+      // two daughters' new walls together for good. As the daughters' walls appear
+      // it reaches out to the wall's outer face (the parent's lamella runs there),
+      // and it thickens to fill the gap so it always touches both walls.
+      this.plate.visible = s > 0.002;
+      const yz = s * CD.lerp(1, this.def.hy / this.hy, k);
+      this.plate.scale.set(Math.max(0.04, 2 * st.gap), yz, yz);
       this.plateMat.color.copy(this.cVes).lerp(this.cWall, st.m);
-      this.plateMat.opacity = 0.85 * (1 - k);
+      this.plateMat.opacity = CD.lerp(0.85, 0.95, k);
 
       this.ppb.visible = spindle && st.ppb > 0.01;
       this.ppb.scale.x = st.ppbW;

@@ -325,9 +325,11 @@
   // ================================================================ MITOSIS
   /* The plant track is the same chromosomes on the same clock: what differs is
      the cell around them. Its words replace the animal cell's phase by phase. */
-  /* `part` is how far each daughter slides out at the very end. PEDAGOGICAL
-     EXAGGERATION: real daughters never part, they stay joined by the middle
-     lamella the plate became. The gap is there so two cells read as two. */
+  /* `part` is half the middle lamella's drawn thickness: each daughter slides
+     out this far at the very end and the lamella fills the space, touching both
+     walls. PEDAGOGICAL EXAGGERATION of its thickness (a real one is a fraction
+     of a micrometre, thinner than either wall). The daughters never part: the
+     lamella holds them together, which is what the slab is there to show. */
   const PLANT = { hx: 3.9, hy: 2.7, hz: 2.7, part: 0.15 };
   const PLANT_DESC = [
     'A root-tip cell in G2: its DNA is copied, so each chromosome is two sister chromatids, still unwound. A rigid wall boxes the cell in, and there are no centrosomes. Instead, microtubules gather into a band under the membrane around the middle: the preprophase band, marking where the new wall will go.',
@@ -336,7 +338,7 @@
     'Chromosomes line up on the metaphase plate, each attached to both poles. The plant spindle is barrel shaped, with flat, wide poles rather than an animal cell\'s tight asters.',
     'Cohesin is cut and the sister chromatids are pulled to opposite poles, the same as in an animal cell. Watch the chromosome count.',
     'A nuclear envelope forms around each set. Between them, microtubules build the phragmoplast, a scaffold that carries vesicles from the Golgi to the middle of the cell. They fuse there into a cell plate.',
-    'A wall cannot pinch, so the cell divides from the inside out. The cell plate grows outward until it meets the old wall where the preprophase band was, and matures into a new wall between two identical daughters.',
+    'A wall cannot pinch, so the cell divides from the inside out. The cell plate grows outward until it meets the old wall where the preprophase band was. Its pectin becomes the middle lamella, the glue between the two daughters, and each daughter builds a new wall against it. The two cells never come apart: every plant cell is stuck to its neighbours this way.',
   ];
 
   CD.buildMitosis = function (opts = {}) {
