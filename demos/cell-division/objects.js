@@ -384,7 +384,8 @@
   // with round edges, and an analytic normal. Tracks: ppb (0..1), ppbW (band
   // width), phrag (phragmoplast 0..1), s (plate radius as a fraction of the
   // cell's cross-section, which bodies() reads as the cells' separation), m
-  // (plate maturing into wall), split (one shell fading into two daughters),
+  // (plate maturing into wall), zone (the division zone the band leaves behind),
+  // split (one shell fading into two daughters),
   // gap (how far each daughter's wall sits from the plane: half the lamella's
   // drawn thickness; see scenarios.js's PLANT.part).
   const SE_N = 6;
@@ -469,12 +470,21 @@
       const pg = new THREE.BufferGeometry();
       pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
       pg.computeVertexNormals();
+      // Translucent and convex, so every back face is drawn before every front
+      // face: one double-sided mesh blends its caps and rim in buffer order and
+      // saws the rim into triangles when the slab turns edge-on.
       this.plateMat = new THREE.MeshStandardMaterial({
         color: CD.lin(CD.COLORS.vesicle), roughness: 0.6, transparent: true, opacity: 0.85,
-        side: THREE.DoubleSide, depthWrite: false,
+        side: THREE.FrontSide, depthWrite: false,
       });
-      this.plate = new THREE.Mesh(pg, this.plateMat);
-      this.plate.renderOrder = 3;
+      this.plateBackMat = this.plateMat.clone();
+      this.plateBackMat.side = THREE.BackSide;
+      this.plate = new THREE.Group();
+      const back = new THREE.Mesh(pg, this.plateBackMat);
+      back.renderOrder = 3;
+      const front = new THREE.Mesh(pg, this.plateMat);
+      front.renderOrder = 3.5;
+      this.plate.add(back, front);
       this.group.add(this.plate);
       this.cVes = CD.lin(CD.COLORS.vesicle);
       this.cWall = CD.lin(CD.COLORS.lamella);
@@ -502,6 +512,25 @@
       this.ppb = new THREE.LineSegments(bg, this.ppbMat);
       this.ppb.renderOrder = 1;
       this.group.add(this.ppb);
+
+      // ---- cortical division zone: the band's memory, a ring of proteins in the
+      // membrane that outlives its microtubules and is where the plate's edge fuses
+      const zp = [];
+      for (let j = 0; j < 96; j++) {
+        const th = (j / 96) * TAU;
+        const r = seContour(th, this.hy - 0.03, this.hz - 0.03);
+        zp.push(new V3(0, Math.cos(th) * r, Math.sin(th) * r));
+      }
+      this.zoneMat = new THREE.MeshStandardMaterial({
+        color: CD.lin(CD.COLORS.zone), emissive: CD.lin(CD.COLORS.zone), emissiveIntensity: 0.3,
+        roughness: 0.5, transparent: true, opacity: 0, depthWrite: false,
+      });
+      this.zone = new THREE.Mesh(
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(zp, true), 240, 0.045, 8, true),
+        this.zoneMat
+      );
+      this.zone.renderOrder = 2;
+      this.group.add(this.zone);
 
       // ---- phragmoplast: two opposed sets of short microtubules, plus ends at the plane
       this.fib = Array.from({ length: 300 }, () => ({
@@ -558,6 +587,15 @@
       this.plate.scale.set(Math.max(0.04, 2 * st.gap), yz, yz);
       this.plateMat.color.copy(this.cVes).lerp(this.cWall, st.m);
       this.plateMat.opacity = CD.lerp(0.85, 0.95, k);
+      this.plateBackMat.color.copy(this.plateMat.color);
+      this.plateBackMat.opacity = this.plateMat.opacity;
+
+      // dims once the band is gone, brightens as the plate's edge arrives, then is spent
+      const z = st.zone;
+      this.zone.visible = z > 0.01;
+      this.zoneMat.opacity = Math.min(1, z);
+      this.zoneMat.emissiveIntensity = 0.2 + 0.6 * CD.smoothstep(0.6, 1, z);
+      this.zone.scale.x = 1 + 3 * CD.smoothstep(0.6, 1, z);
 
       this.ppb.visible = spindle && st.ppb > 0.01;
       this.ppb.scale.x = st.ppbW;

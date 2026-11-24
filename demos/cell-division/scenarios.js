@@ -334,11 +334,11 @@
   const PLANT_DESC = [
     'A root-tip cell in G2: its DNA is copied, so each chromosome is two sister chromatids, still unwound. A rigid wall boxes the cell in, and there are no centrosomes. Instead, microtubules gather into a band under the membrane around the middle: the preprophase band, marking where the new wall will go.',
     'Chromosomes coil up and the nucleolus fades. With no centrosomes, microtubules grow from the surface of the nucleus itself and gather at two broad poles. The preprophase band tightens.',
-    'The nuclear envelope breaks into fragments and the preprophase band disappears, but the cell keeps the place it marked. Microtubules catch chromosomes by their kinetochores.',
+    'The nuclear envelope breaks into fragments and the preprophase band comes apart. It leaves a mark: a ring of proteins in the membrane where it was, the division zone. Microtubules catch chromosomes by their kinetochores.',
     'Chromosomes line up on the metaphase plate, each attached to both poles. The plant spindle is barrel shaped, with flat, wide poles rather than an animal cell\'s tight asters.',
     'Cohesin is cut and the sister chromatids are pulled to opposite poles, the same as in an animal cell. Watch the chromosome count.',
     'A nuclear envelope forms around each set. Between them, microtubules build the phragmoplast, a scaffold that carries vesicles from the Golgi to the middle of the cell. They fuse there into a cell plate.',
-    'A wall cannot pinch, so the cell divides from the inside out. The cell plate grows outward until it meets the old wall where the preprophase band was. Its pectin becomes the middle lamella, the glue between the two daughters, and each daughter builds a new wall against it. The two cells never come apart: every plant cell is stuck to its neighbours this way.',
+    'A wall cannot pinch, so the cell divides from the inside out. The cell plate grows outward, and the division zone guides its edge to the old wall right where the preprophase band was. Its pectin becomes the middle lamella, the glue between the two daughters, and each daughter builds a new wall against it. The two cells never come apart: every plant cell is stuck to its neighbours this way.',
   ];
 
   CD.buildMitosis = function (opts = {}) {
@@ -535,6 +535,15 @@
         .key(T(6, 0.65), {})
         .key(T(6, 0.85), { phrag: 0 });
       track(cell).key(0, { s: 0 }).key(T(5, 0.55), {}).key(T(6, 0.7), { s: 1 }, 'inOut');
+      // laid down under the band, left when it goes, spent when the plate fuses there
+      track(cell)
+        .key(0, { zone: 0 })
+        .key(T(1, 0.5), {})
+        .key(T(2, 0.1), { zone: 0.3 })
+        .key(T(2, 0.4), { zone: 0.6 })
+        .key(T(6, 0.5), {})
+        .key(T(6, 0.7), { zone: 1 })
+        .key(T(6, 0.88), { zone: 0 });
       track(cell).key(0, { m: 0 }).key(T(6, 0.6), {}).key(T(6, 0.95), { m: 1 });
       track(cell).key(0, { split: 0 }).key(T(6, 0.7), {}).key(T(6, 0.9), { split: 1 });
       track(cell).key(0, { gap: 0 }).key(T(6, 0.85), {}).key(T(6, 1), { gap: plant.part });

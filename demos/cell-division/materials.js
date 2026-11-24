@@ -30,6 +30,7 @@
     wallRim: P.plantTissue.root.wallRim,
     lamella: O.wall.lamella,
     vesicle: O.golgi.vesicle,
+    zone: D.zone,
   };
 
   const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
