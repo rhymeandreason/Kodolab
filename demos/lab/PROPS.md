@@ -128,3 +128,13 @@ Already in `Lab/materials.js`, or to merge in: **glass** (Ecoli, the user's favo
 (EggLab), clear plastic, **liquid** (EggLab's shader version or the standard one), agar, steel, chrome,
 rubber, white clearcoat plastic, dark plastic, powder. Props take materials from `mat` rather than making
 their own, so one material change restyles every prop.
+
+## Avoiding flicker
+
+Flicker is two surfaces on one plane. Offset them by about 0.01 to 0.03 cm.
+
+- **Contact:** lift the prop's underside a hair in its own geometry or anchor. Don't rely on the placer.
+- **Stacked parts:** make the lower part slightly larger, or overlap them.
+- **Bevels:** check bevelled and extruded faces, since they grow outward.
+- **Glass:** it writes no depth, so it only fights with opaque surfaces beneath it.
+- **Check:** orbit slowly. A still frame hides it.
