@@ -169,17 +169,12 @@ LabText.add('en', {
   ],
 
   scope: {
-    back: 'Bench',
     title: 'Light microscope',
     sub: 'Onion root tip squash · {stain}',
     model: 'Mitosis in 3D',
     drag: 'drag to rotate',
     play: 'Play or pause',
     timeline: 'Mitosis timeline',
-    focus: 'Focus',
-    light: 'Light',
-    scroll: 'scroll',
-    total: '{n}× total',
     countTitle: 'Identify and count',
     empty: 'Find the meristem near the root tip, switch to <b>40×</b> or <b>100×</b>, then click a cell.',
     cellId: 'Cell {n}',
@@ -199,9 +194,6 @@ LabText.add('en', {
     hints: {
       start: 'Drag to move the slide · scroll to focus',
       pickMag: 'Switch to 40× or 100× to name single cells',
-      blurry: 'Blurry: scroll or use the focus slider',
-      dark: 'Too dark: turn up the light',
-      bright: 'Washed out: turn the light down',
     },
   },
 });

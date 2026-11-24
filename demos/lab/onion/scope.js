@@ -1,6 +1,7 @@
-/* The microscope view (from OnionRoot): the root-tip squash seen through the eyepiece, with
- * objectives, focus and light, a counter that tallies the stage of each cell the student
- * names (for the mitotic index), and the plant mitosis model beside it (mitosis.js).
+/* The root-tip squash under the microscope: the specimen and both side panels in lab's
+ * microscope view (../microscope.js owns the optics). A counter tallies the stage of each cell
+ * the student names (for the mitotic index), and the plant mitosis model sits beside it
+ * (mitosis.js).
  *
  *   const scope = createScope({ onClose });
  *   scope.open({ stain: 'orcein', squash: 0.6 });   // builds the field once per stain and squash
@@ -12,7 +13,7 @@
  * Colours are hex as given: the renderer outputs linear, as the 2D original did.
  */
 import * as THREE from 'three';
-import { clamp, seeded, linearOut, themeColor, T, fmt } from '../lab.js';
+import { clamp, seeded, themeColor, T, fmt, createMicroscopeView } from '../lab.js';
 import { STAINS, STAGE_COLORS } from './stains.js';
 import { createMitosis } from './mitosis.js';
 
@@ -21,28 +22,20 @@ const STAGES = T.stages.map((s, i) => ({ ...s, color: STAGE_COLORS[i] }));
 export const ENOUGH = 50;   // cells to count for a fair estimate of the mitotic index
 
 export function createScope({ onClose = () => {} } = {}) {
-  const OBJECTIVES = [
-    { mag: 4, field: 4500, ring: '#d94040', focus: 0.46, dof: 0.7 },
-    { mag: 10, field: 1800, ring: '#f2c230', focus: 0.5, dof: 1.1 },
-    { mag: 40, field: 450, ring: '#3b78d8', focus: 0.545, dof: 2.0 },
-    { mag: 100, field: 180, ring: '#e6e8ec', focus: 0.565, dof: 3.0 },
-  ];
   const PICK_FROM = 2;   // objectives from 40× up show single cells well enough to name
   const HW = 560, CAP = 230, MER = 1150, TOP = 2900, FW = 21;
 
-  let renderer, scene, camera, canvas, eyeEl, root, mitosis, inited = false, isOpen = false;
+  let view, left, right, mitosis, scene, inited = false;
   let cells = [], grid = new Map(), spread = 1;
-  let field = 4500, fieldT = 4500, obj = 0, camX = 0, camY = 1150;
-  let focus = 0.25, light = 0.62;
   let selected = -1, hovered = -1, showAnswers = false;
   const labels = new Map();
   let stainKey = 'orcein', squashQ = 0.6, builtKey = '';
-  let last = 0;
+  const at = { x: 0, y: 1150, field: 4500 };   // where the view is looking, from its last frame
   const M = {};
   const TX = {};
   let rrGeo, discGeo, ringGeo;
-  let selFrame, hovFrame, lastBadgeField = 0, lastFilter = '';
-  const $ = (q) => root.querySelector(q);
+  let selFrame, hovFrame, lastBadgeField = 0;
+  const $ = (q) => view.root.querySelector(q);
 
   /* ---------- Textures ---------- */
   function cnv(size) {
@@ -456,7 +449,7 @@ export function createScope({ onClose = () => {} } = {}) {
 
   /* ---------- Badges & frames that keep constant screen size ---------- */
   function updateBadges() {
-    const s = field * 0.022;
+    const s = at.field * 0.022;
     const d = new THREE.Object3D();
     const put = (meshes, stage, x, y, k) => {
       const m = meshes[stage];
@@ -478,7 +471,7 @@ export function createScope({ onClose = () => {} } = {}) {
       put(M.labels, stage, c.x + lx * cs - ly * sn, c.y + lx * sn + ly * cs, 1.3);
     });
     M.labels.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
-    lastBadgeField = field;
+    lastBadgeField = at.field;
     setFrame(selFrame, selected);
     setFrame(hovFrame, hovered === selected ? -1 : hovered);
   }
@@ -486,7 +479,7 @@ export function createScope({ onClose = () => {} } = {}) {
     if (!m) return;
     if (idx < 0) { m.visible = false; return; }
     const c = cells[idx];
-    const t = field * (m === selFrame ? 0.0045 : 0.0028);
+    const t = at.field * (m === selFrame ? 0.0045 : 0.0028);
     m.geometry.dispose();
     m.geometry = frameGeo(c.w, c.h, t);
     m.position.set(c.x, c.y, 0);
@@ -494,192 +487,86 @@ export function createScope({ onClose = () => {} } = {}) {
     m.visible = true;
   }
 
-  /* ---------- UI ---------- */
-  /* ---------- DOM ---------- */
-  function buildDom() {
+  /* ---------- Side panels ---------- */
+  function buildPanels() {
     const W = T.scope;
-    root = document.createElement('section');
-    root.className = 'scope';
-    root.hidden = true;
-    root.innerHTML = `
-      <header class="scope-top">
-        <button class="btn scope-back" data-act="back"><i class="ph-bold ph-arrow-left"></i>${W.back}</button>
-        <div class="scope-title"><b>${W.title}</b><span class="scope-sub"></span></div>
-      </header>
-      <div class="scope-grid">
-        <aside class="panel scope-model">
-          <div class="scope-row"><div class="panel-label">${W.model}</div><span class="scope-note">${W.drag}</span></div>
-          <div class="model-view"></div>
-          <div class="model-controls">
-            <button class="icon-btn model-play" aria-label="${W.play}"><i class="ph-fill ph-pause"></i></button>
-            <input type="range" class="model-scrub" min="0" max="1000" value="0" aria-label="${W.timeline}">
-          </div>
-          <div class="stage-chips"></div>
-          <h3 class="model-stage"></h3>
-          <p class="model-desc"></p>
-        </aside>
-        <main class="eye-col">
-          <div class="eyepiece">
-            <canvas></canvas>
-            <div class="vignette"></div>
-            <div class="eye-hint"></div>
-            <div class="scalebar"><i></i><b></b></div>
-          </div>
-          <div class="panel scope-controls">
-            <div class="objectives"></div>
-            <div class="sliders">
-              <label class="slider-row"><span>${W.focus}</span><input type="range" class="scope-focus" min="0" max="1000" value="250"><span class="kbd">${W.scroll}</span></label>
-              <label class="slider-row"><span>${W.light}</span><input type="range" class="scope-light" min="0" max="1000" value="620"><span class="kbd scope-light-val"></span></label>
-            </div>
-          </div>
-          <div class="scope-zone"></div>
-        </main>
-        <aside class="panel scope-count">
-          <div class="panel-label">${W.countTitle}</div>
-          <div class="sel-box empty">
-            <div class="sel-empty">${W.empty}</div>
-            <div class="sel-main">
-              <div class="sel-meta"><span class="sel-zone"></span><span class="sel-id"></span></div>
-              <div class="sel-q">${W.question}</div>
-              <div class="stage-btns"></div>
-              <div class="feedback"></div>
-            </div>
-          </div>
-          <div class="tally">
-            <div class="tally-rows"></div>
-            <div class="mi">
-              <div><small>${W.mi}</small><b class="mi-val">–</b></div>
-              <div class="mi-side"><small class="mi-sub"></small><div class="progress"><i></i></div></div>
-            </div>
-            <div class="mi-formula">${W.miFormula}</div>
-            <div class="acc"></div>
-          </div>
-          <div class="row-btns">
-            <label class="switch"><input type="checkbox" class="answers"><span class="track"></span>${W.answers}</label>
-            <button class="btn ghost sm" data-act="reset">${W.reset}</button>
-          </div>
-        </aside>
+    left = document.createElement('aside');
+    left.className = 'scope-model';
+    left.innerHTML = `
+      <div class="scope-row"><div class="panel-label">${W.model}</div><span class="scope-note">${W.drag}</span></div>
+      <div class="model-view"></div>
+      <div class="model-controls">
+        <button class="icon-btn model-play" aria-label="${W.play}"><i class="ph-fill ph-pause"></i></button>
+        <input type="range" class="model-scrub" min="0" max="1000" value="0" aria-label="${W.timeline}">
+      </div>
+      <div class="stage-chips"></div>
+      <h3 class="model-stage"></h3>
+      <p class="model-desc"></p>`;
+    right = document.createElement('aside');
+    right.className = 'scope-count';
+    right.innerHTML = `
+      <div class="panel-label">${W.countTitle}</div>
+      <div class="sel-box empty">
+        <div class="sel-empty">${W.empty}</div>
+        <div class="sel-main">
+          <div class="sel-meta"><span class="sel-zone"></span><span class="sel-id"></span></div>
+          <div class="sel-q">${W.question}</div>
+          <div class="stage-btns"></div>
+          <div class="feedback"></div>
+        </div>
+      </div>
+      <div class="tally">
+        <div class="tally-rows"></div>
+        <div class="mi">
+          <div><small>${W.mi}</small><b class="mi-val">–</b></div>
+          <div class="mi-side"><small class="mi-sub"></small><div class="progress"><i></i></div></div>
+        </div>
+        <div class="mi-formula">${W.miFormula}</div>
+        <div class="acc"></div>
+      </div>
+      <div class="row-btns">
+        <label class="switch"><input type="checkbox" class="answers"><span class="track"></span>${W.answers}</label>
+        <button class="btn ghost sm" data-act="reset">${W.reset}</button>
       </div>`;
-    (document.getElementById('app') || document.body).appendChild(root);
   }
 
-  /* ---------- UI ---------- */
   function buildUI() {
-    const W = T.scope;
-    const objEl = $('.objectives');
-    objEl.innerHTML = OBJECTIVES.map((o, i) => `<button data-i="${i}" style="--ring:${o.ring}"><b>${o.mag}×</b><small>${fmt(W.total, { n: o.mag * 10 })}</small></button>`).join('');
-    objEl.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setObjective(+b.dataset.i); });
     const sb = $('.stage-btns');
     sb.innerHTML = STAGES.map((s, i) => `<button data-i="${i}" style="--c:${s.color}"><i></i>${s.name}<kbd>${s.key}</kbd></button>`).join('');
     sb.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) labelSelected(+b.dataset.i); });
     $('.tally-rows').innerHTML = STAGES.map((s, i) => `<div class="trow" style="--c:${s.color}"><span><i></i>${s.name}</span><div class="bar"><i data-bar="${i}"></i></div><b data-cnt="${i}">0</b></div>`).join('');
-
-    const focusEl = $('.scope-focus'), lightEl = $('.scope-light');
-    const setP = (el) => el.style.setProperty('--p', el.value / 10 + '%');
-    focusEl.addEventListener('input', () => { focus = focusEl.value / 1000; setP(focusEl); });
-    lightEl.addEventListener('input', () => { light = lightEl.value / 1000; setP(lightEl); $('.scope-light-val').textContent = Math.round(light * 100) + '%'; });
-    setP(focusEl); setP(lightEl);
-    $('.scope-light-val').textContent = Math.round(light * 100) + '%';
-
     $('.answers').addEventListener('change', (e) => {
       showAnswers = e.target.checked;
       if (M.answers) M.answers.forEach((m) => { m.visible = showAnswers; });
       updateTally();
     });
-    root.addEventListener('click', (e) => {
-      const act = e.target.closest('[data-act]');
-      if (!act) return;
-      if (act.dataset.act === 'back') close();
-      if (act.dataset.act === 'reset') { labels.clear(); updateBadges(); updateTally(); renderSel(); }
+    right.addEventListener('click', (e) => {
+      const act = e.target.closest('[data-act="reset"]');
+      if (act) { labels.clear(); updateBadges(); updateTally(); renderSel(); }
     });
+  }
 
-    let drag = null;
-    eyeEl.addEventListener('pointerdown', (e) => {
-      eyeEl.setPointerCapture(e.pointerId);
-      drag = { x: e.clientX, y: e.clientY, cx: camX, cy: camY, moved: 0 };
-    });
-    eyeEl.addEventListener('pointermove', (e) => {
-      const rect = eyeEl.getBoundingClientRect();
-      if (drag) {
-        const k = field / rect.width;
-        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-        drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-        if (drag.moved > 3) {
-          eyeEl.classList.add('dragging');
-          camX = drag.cx - dx * k;
-          camY = drag.cy + dy * k;
-          clampCam();
-        }
-      }
-      const [wx, wy, inside] = toWorld(e, rect);
-      const canPick = obj >= PICK_FROM && inside;
-      eyeEl.classList.toggle('can-pick', canPick && !drag);
-      const h = canPick && !(drag && drag.moved > 3) ? pickCell(wx, wy) : -1;
+  /* ---------- Pointer and keys, from the view ---------- */
+  function point(e) {
+    if (e.kind === 'leave') { if (hovered >= 0) { hovered = -1; setFrame(hovFrame, -1); } return; }
+    const canPick = e.objective >= PICK_FROM && e.inside;
+    if (e.kind === 'move') {
+      view.setCursor(canPick && !e.dragging ? 'pick' : null);
+      const h = canPick ? pickCell(e.x, e.y) : -1;
       if (h !== hovered) { hovered = h; setFrame(hovFrame, hovered === selected ? -1 : hovered); }
-    });
-    const endDrag = (e) => {
-      if (!drag) return;
-      const wasClick = drag.moved <= 3;
-      drag = null;
-      eyeEl.classList.remove('dragging');
-      if (!wasClick) return;
-      const [wx, wy, inside] = toWorld(e, eyeEl.getBoundingClientRect());
-      if (!inside) return;
-      if (obj < PICK_FROM) { flashHint(T.scope.hints.pickMag); return; }
-      select(pickCell(wx, wy));
-    };
-    eyeEl.addEventListener('pointerup', endDrag);
-    eyeEl.addEventListener('pointercancel', () => { drag = null; eyeEl.classList.remove('dragging'); });
-    eyeEl.addEventListener('pointerleave', () => { if (!drag && hovered >= 0) { hovered = -1; setFrame(hovFrame, -1); } });
-    eyeEl.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      focus = clamp(focus - e.deltaY * 0.00025, 0, 1);
-      focusEl.value = focus * 1000;
-      setP(focusEl);
-    }, { passive: false });
-
-    window.addEventListener('keydown', (e) => {
-      if (!isOpen || e.target.tagName === 'INPUT') return;
-      const k = e.key.toLowerCase();
-      if (k >= '1' && k <= '4') setObjective(+k - 1);
-      const si = STAGES.findIndex((s) => s.key.toLowerCase() === k);
-      if (si >= 0 && selected >= 0) labelSelected(si);
-      if (k === 'escape') { if (selected >= 0) select(-1); else close(); }
-      const step = field * 0.08;
-      if (k === 'arrowleft') camX -= step;
-      if (k === 'arrowright') camX += step;
-      if (k === 'arrowup') camY += step;
-      if (k === 'arrowdown') camY -= step;
-      if (k.startsWith('arrow')) { e.preventDefault(); clampCam(); }
-      if (k === ' ') e.stopPropagation();
-    }, true);
-
-    new ResizeObserver(resize).observe(eyeEl);
+      return;
+    }
+    if (!e.inside) return;
+    if (e.objective < PICK_FROM) { view.flashHint(T.scope.hints.pickMag); return; }
+    select(pickCell(e.x, e.y));
   }
-
-  let flashUntil = 0;
-  function flashHint(msg) {
-    $('.eye-hint').textContent = msg;
-    flashUntil = performance.now() + 2800;
+  function key(k) {
+    const si = STAGES.findIndex((s) => s.key.toLowerCase() === k);
+    if (si >= 0 && selected >= 0) { labelSelected(si); return true; }
+    if (k === 'escape' && selected >= 0) { select(-1); return true; }
+    return false;
   }
-
-  function toWorld(e, rect) {
-    const px = (e.clientX - rect.left) / rect.width, py = (e.clientY - rect.top) / rect.height;
-    const inside = Math.hypot(px - 0.5, py - 0.5) < 0.5;
-    return [camX + (px - 0.5) * field, camY - (py - 0.5) * field, inside];
-  }
-  function clampCam() {
-    camX = clamp(camX, -HW * 1.4 * spread, HW * 1.4 * spread);
-    camY = clamp(camY, -400, TOP * spread + 200);
-  }
-
-  function setObjective(i) {
-    obj = i;
-    fieldT = OBJECTIVES[i].field;
-    root.querySelectorAll('.objectives button').forEach((b, j) => b.classList.toggle('active', j === i));
-    if (i < PICK_FROM && selected >= 0) select(-1);
-    eyeEl.classList.toggle('can-pick', false);
-  }
+  function objective(i) { if (i < PICK_FROM && selected >= 0) select(-1); }
 
   function select(i) {
     selected = i;
@@ -695,7 +582,7 @@ export function createScope({ onClose = () => {} } = {}) {
     $('.sel-zone').textContent = T.scope.zones[c.zone];
     $('.sel-id').textContent = fmt(T.scope.cellId, { n: selected + 1 });
     const lab = labels.has(selected) ? labels.get(selected) : -1;
-    root.querySelectorAll('.stage-btns button').forEach((b, j) => b.classList.toggle('picked', j === lab));
+    view.root.querySelectorAll('.stage-btns button').forEach((b, j) => b.classList.toggle('picked', j === lab));
     const fb = $('.feedback');
     if (lab < 0) { fb.className = 'feedback'; fb.innerHTML = ''; return; }
     const ok = lab === c.stage, s = STAGES[c.stage];
@@ -718,8 +605,8 @@ export function createScope({ onClose = () => {} } = {}) {
     const total = labels.size;
     const max = Math.max(1, ...counts);
     counts.forEach((n, i) => {
-      root.querySelector(`[data-cnt="${i}"]`).textContent = n;
-      root.querySelector(`[data-bar="${i}"]`).style.width = (n / max) * 100 + '%';
+      view.root.querySelector(`[data-cnt="${i}"]`).textContent = n;
+      view.root.querySelector(`[data-bar="${i}"]`).style.width = (n / max) * 100 + '%';
     });
     const div = total - counts[0];
     $('.mi-val').textContent = total ? ((div / total) * 100).toFixed(1) + '%' : '–';
@@ -735,9 +622,9 @@ export function createScope({ onClose = () => {} } = {}) {
   }
   function visibleStats() {
     let total = 0, div = 0;
-    const r = field / 2;
+    const r = at.field / 2;
     for (const c of cells) {
-      if (Math.hypot(c.x - camX, c.y - camY) < r) { total++; if (c.stage > 0) div++; }
+      if (Math.hypot(c.x - at.x, c.y - at.y) < r) { total++; if (c.stage > 0) div++; }
     }
     return { total, div };
   }
@@ -750,117 +637,55 @@ export function createScope({ onClose = () => {} } = {}) {
     return { name: Z.elongation, c: '#10b981' };
   }
 
-  /* ---------- Loop ---------- */
-  let lastZone = '', statTimer = 0, raf = 0;
-  function frame(now) {
-    if (!isOpen) return;
-    raf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    field += (fieldT - field) * Math.min(1, dt * 7);
-    if (Math.abs(field - fieldT) < 0.5) field = fieldT;
-    if (Math.abs(field - lastBadgeField) / field > 0.01) updateBadges();
-    camera.left = -field / 2; camera.right = field / 2; camera.top = field / 2; camera.bottom = -field / 2;
-    camera.updateProjectionMatrix();
-    camera.position.set(camX, camY, 100);
+  /* ---------- Every frame while open ---------- */
+  let lastZone = '', statTimer = 0;
+  function frame(dt, now, v) {
+    at.x = v.x; at.y = v.y; at.field = v.field;
+    if (Math.abs(v.field - lastBadgeField) / v.field > 0.01) updateBadges();
     if (selFrame && selFrame.visible) selFrame.material.opacity = 0.75 + 0.25 * Math.sin(now * 0.006);
-    // optics: an objective has a focal point and a depth of field; the lamp sets brightness and contrast
-    const o = OBJECTIVES[obj];
-    const blur = Math.min(16, Math.abs(focus - o.focus) * 70 * o.dof);
-    const bright = 0.5 + light * 0.8;
-    const contrast = 1.28 - light * 0.38;
-    const filter = `blur(${blur.toFixed(1)}px) brightness(${bright.toFixed(2)}) contrast(${contrast.toFixed(2)}) saturate(${(0.85 + (1 - light) * 0.4).toFixed(2)})`;
-    if (filter !== lastFilter) { canvas.style.filter = filter; lastFilter = filter; }
-    if (now > flashUntil) {
-      const H = T.scope.hints;
-      const msg = blur > 2.5 ? H.blurry : light < 0.18 ? H.dark : light > 0.94 ? H.bright : '';
-      const eh = $('.eye-hint');
-      if (msg !== eh.textContent) eh.textContent = msg;
-    }
-    const z = zoneAt(camX, camY);
-    if (z.name !== lastZone) {
-      const zc = $('.scope-zone');
-      zc.textContent = z.name;
-      lastZone = z.name;
-    }
-    const rect = eyeEl.getBoundingClientRect();
-    const target = field * 0.22;
-    const nice = [5, 10, 20, 50, 100, 200, 500, 1000].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a));
-    $('.scalebar i').style.width = ((nice / field) * rect.width).toFixed(1) + 'px';
-    $('.scalebar b').textContent = nice >= 1000 ? nice / 1000 + ' mm' : nice + ' µm';
+    const z = zoneAt(v.x, v.y);
+    if (z.name !== lastZone) { view.setZone(z.name); lastZone = z.name; }
     if (showAnswers) { statTimer += dt; if (statTimer > 0.5) { statTimer = 0; updateTally(); } }
-    renderer.render(scene, camera);
     if (mitosis) mitosis.frame(dt, now);
   }
 
-  function resize() {
-    if (!renderer) return;
-    const r = eyeEl.getBoundingClientRect();
-    if (r.width < 10) return;
-    renderer.setSize(r.width, r.height, false);
-    lastBadgeField = 0;
-  }
-
   function init() {
-    buildDom();
-    eyeEl = $('.eyepiece');
-    canvas = eyeEl.querySelector('canvas');
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    linearOut(renderer);
-    renderer.setClearColor('#f6f3ec');
-    scene = new THREE.Scene();
-    camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+    buildPanels();
+    view = createMicroscopeView({
+      title: T.scope.title, left, right,
+      bounds: () => ({ x0: -HW * 1.4 * spread, x1: HW * 1.4 * spread, y0: -400, y1: TOP * spread + 200 }),
+      hints: { start: T.scope.hints.start },
+      onPoint: point, onKey: key, onObjective: objective, onFrame: frame,
+      onClose: () => { if (mitosis) mitosis.stop(); onClose(); },
+    });
+    scene = view.scene;
     rrGeo = new THREE.ShapeGeometry(rrShape(1, 1, 0.22), 5);
     discGeo = new THREE.CircleGeometry(0.5, 32);
     ringGeo = new THREE.RingGeometry(0.34, 0.5, 32);
     makeTextures();
     buildUI();
-    mitosis = createMitosis(root.querySelector('.scope-model'), STAGES);
+    mitosis = createMitosis(left, STAGES);
     inited = true;
   }
 
   function open({ stain = 'orcein', squash = 0.6 } = {}) {
     if (!inited) init();
-    root.hidden = false;
-    document.body.classList.add('scope-open');
     const key = stain + ':' + squash.toFixed(2);
     stainKey = stain;
     squashQ = squash;
+    view.setSub(fmt(T.scope.sub, { stain: T.stains[stainKey].name }));
     if (key !== builtKey) {
       build();
       builtKey = key;
-      camX = 0;
-      camY = 1000 * spread;
-      focus = 0.28;
-      const f = $('.scope-focus');
-      f.value = focus * 1000;
-      f.style.setProperty('--p', focus * 100 + '%');
-      setObjective(0);
-      field = fieldT;
-      flashHint(T.scope.hints.start);
-    }
-    $('.scope-sub').textContent = fmt(T.scope.sub, { stain: T.stains[stainKey].name });
-    isOpen = true;
-    resize();
+      view.open({ x: 0, y: 1000 * spread, focus: 0.28, objective: 0 });
+    } else view.open({ hint: '' });
     if (mitosis) mitosis.start();
-    last = performance.now();
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(frame);
-  }
-  function close() {
-    if (!isOpen) return;
-    isOpen = false;
-    cancelAnimationFrame(raf);
-    if (mitosis) mitosis.stop();
-    root.hidden = true;
-    document.body.classList.remove('scope-open');
-    onClose();
   }
 
   return {
-    open, close,
-    get isOpen() { return isOpen; },
+    open,
+    close: () => view && view.close(),
+    get isOpen() { return !!view && view.isOpen; },
     /** The student's count so far: cells named, how many of them as dividing, and the mitotic index (%). */
     tally() {
       let dividing = 0;
@@ -868,6 +693,6 @@ export function createScope({ onClose = () => {} } = {}) {
       return { total: labels.size, dividing, mi: labels.size ? (dividing / labels.size) * 100 : 0 };
     },
     /** For tests: the field's cells, the labels so far, and one frame drawn by hand. */
-    debug: { get cells() { return cells; }, labels, frame: (now = performance.now()) => { if (isOpen) { cancelAnimationFrame(raf); frame(now); } }, select, labelSelected, setObjective, look(x, y) { camX = x; camY = y; } },
+    debug: { get cells() { return cells; }, labels, frame: (now) => view.debug.frame(now), select, labelSelected, setObjective: (i) => view.setObjective(i), look: (x, y) => view.look(x, y) },
   };
 }

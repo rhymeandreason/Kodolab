@@ -12,11 +12,11 @@ import {
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createZoom, createIntro,
   chromeInsets, bindChrome, PHONE,
   makeBench, makeMicroscope, makeTubeRack, makeTestTube, makeBenchCard, makeAnalyzer,
-  makeMicropipette, makeTipBox, makePipetteStand, makeWasteBin,
+  makeMicropipette, makeTipBox, makePipetteStand, makeWasteBin, makeSlide, makeCoverslip,
 } from '../lab.js';
 import { JUNIPER, HEALTHY_NA, TUBES, CLEAR_MIN } from './model.js';
 import { createResults, ROWS, flagOf } from './results.js';
-import { createEyepiece } from './eyepiece.js';
+import { createSlides } from './slides.js';
 import { createBrainLevel } from './brain.js';
 
 const $ = (s) => document.querySelector(s);
@@ -29,6 +29,7 @@ const POS = {
   blood: V3(-36, 0, 4), analyzer: V3(-24, 0, -8),
   rack: V3(-2, 0, -4), tips: V3(18, 0, 12), stand: V3(18, 0, -8), waste: V3(30, 0, 12),
   scope: V3(40, 0, -6),
+  slides: V3(-2, 0, 10),      // the four slides, one in front of each tube
 };
 /* intact cells scatter light: an opaque, milky red. Burst cells leave hemoglobin dissolved: clear red */
 const COL = { saline: '#e4f0fb', cells: '#9b3a33', milky: '#a3463e', lysed: '#c8102e' };
@@ -51,10 +52,10 @@ const results = createResults({
     if (lesson.step === READ && results.solved()) lesson.jumpTo(READ + 1);
   },
 });
-const eye = createEyepiece({
+const slides = createSlides({
   onChange: () => {
     lesson.render();
-    if (lesson.step === SCOPE && eye.seen() >= TUBES.length && !eye.isOpen) lesson.jumpTo(SCOPE + 1);
+    if (lesson.step === SCOPE && slides.seen() >= TUBES.length && !slides.isOpen) lesson.jumpTo(SCOPE + 1);
   },
 });
 const stage = createStage({
@@ -110,6 +111,14 @@ function rebuild() {
     place(makeBenchCard(mat, { title: tubeText(t.key).card, w: 3.6, d: 1.3 }), POS.rack.clone().add(V3(rack.holes[i].x, 0, 5)));
     return tube;
   });
+  // a slide in front of each tube, long axis toward the student, with its coverslip waiting above
+  const mounts = TUBES.map((t, i) => {
+    const at = POS.slides.clone().add(V3(rack.holes[i].x, 0, 0));
+    const slide = place(makeSlide(mat, { label: [tubeText(t.key).card, T.props.mount] }), at, -Math.PI / 2);
+    const cover = place(makeCoverslip(mat), at.clone().add(V3(0, 4, 0)));
+    cover.group.visible = false;
+    return { slide, cover };
+  });
   const tipBox = place(makeTipBox(mat, { lid: false }), POS.tips);
   const stand = place(makePipetteStand(mat), POS.stand);
   const pip = place(makeMicropipette(mat, { volume: 10 }), pipRest(stand));
@@ -119,10 +128,11 @@ function rebuild() {
   place(waste, POS.waste);
   const scope = place(makeMicroscope(mat), POS.scope, -0.3);
 
-  B = { blood, analyzer, rack, tubes, tipBox, stand, pip, waste, scope };
+  B = { blood, analyzer, rack, tubes, mounts, tipBox, stand, pip, waste, scope };
   S = {
     tipsUsed: 0, run: -1,           // analyzer: -1 idle, 0..1 running, 1 results
     mix: TUBES.map(() => 0), next: 0,
+    drop: TUBES.map(() => 0), cover: TUBES.map(() => 0), nextSlide: 0,
     waitT: 0, brainT: 0, brainOn: false,
     cap: null, painted: '',
   };
@@ -146,7 +156,7 @@ function pipRest(stand) {
 const tmpC = new THREE.Color();
 function paint() {
   const lysedT = clamp(S.waitT / WAIT_REAL);
-  const key = `${S.run.toFixed(3)}|${S.mix.map((m) => m.toFixed(3)).join()}|${lysedT.toFixed(3)}`;
+  const key = `${S.run.toFixed(3)}|${S.mix.map((m) => m.toFixed(3)).join()}|${lysedT.toFixed(3)}|${S.drop.join()}|${S.cover.join()}`;
   if (key === S.painted) return;
   S.painted = key;
   if (S.run < 0) B.analyzer.setScreen({ title: T.analyzer.ready });
@@ -156,6 +166,10 @@ function paint() {
     const m = S.mix[i], burst = t.lysed * lysedT;
     tmpC.set(COL.saline).lerp(new THREE.Color(COL.lysed), m);
     B.tubes[i].liquid.setColor(tmpC).setCloud(m * (1 - burst));
+    B.mounts[i].slide.setDrop(S.drop[i], hex(burst > 0.5 ? COL.lysed : COL.milky), S.cover[i]);
+    const c = B.mounts[i].cover.group, top = B.mounts[i].slide.anchors.top.y + 0.06;
+    c.visible = S.cover[i] > 0;
+    c.position.y = top + (1 - S.cover[i]) * 3;
   });
 }
 
@@ -164,9 +178,10 @@ function paint() {
 // =========================================================================
 const say = (c) => { S.cap = c; };
 
-/** Fresh tip, a drop from Juniper's tube, dispense at `into`, eject, hang the pipette back up. */
-async function transfer(above, into, onDispense, C = null) {
-  const pip = B.pip, tube = B.blood;
+/** Fresh tip, a drop from `tube` (Juniper's blood unless given), dispense at `into`, eject, hang
+ *  the pipette back up. */
+async function transfer(above, into, onDispense, C = null, tube = B.blood) {
+  const pip = B.pip;
   if (C) say(C.tip);
   await takeTip(pip, POS.tips.clone().add(B.tipBox.tips[S.tipsUsed]), { onSeat: () => B.tipBox.setTaken(++S.tipsUsed) });
   const tp = tube.group.position;
@@ -199,6 +214,15 @@ async function actCell(key) {
   await transfer(top.clone().add(V3(0, 1.6, 0)), V3(top.x, tube.liquid.surfaceY() - 0.6, top.z), (e) => { S.mix[i] = e; });
 }
 
+async function actSlide(key) {
+  const i = TUBES.findIndex((t) => t.key === key);
+  if (i !== S.nextSlide) return;
+  S.nextSlide++;
+  const { slide } = B.mounts[i], spot = worldOf(slide.group, slide.anchors.top);
+  await transfer(spot.clone().add(V3(0, 2.2, 0)), spot.clone().add(V3(0, 0.3, 0)), (e) => { S.drop[i] = e; }, null, B.tubes[i]);
+  await anim(0.8, (e) => { S.cover[i] = e; });
+}
+
 function setWait(t) { S.waitT = t; }
 function setBrain(t) { S.brainT = t; S.brainOn = true; }
 
@@ -210,6 +234,7 @@ const card = (id, slots = {}) => {
   return { title: s.title, short: s.short, action: s.action, hint: f(s.hint), detail: f(s.detail), why: s.why };
 };
 const nextTube = () => (S && S.next < TUBES.length ? TUBES[S.next] : null);
+const nextSlide = () => (S && S.nextSlide < TUBES.length ? TUBES[S.nextSlide] : null);
 const WC = T.steps.wait.captions;
 const STEPS = [
   { id: 'analyze', ...card('analyze'), targets: ['blood'], view: 'analyze',
@@ -228,19 +253,26 @@ const STEPS = [
     clock: () => (S ? fmt(T.steps.wait.clock, { m: Math.round(CLEAR_MIN * S.waitT / WAIT_REAL) }) : null),
     caption: () => { const r = S ? S.waitT / WAIT_REAL : 0; return r < 0.2 ? WC.mix : r < 0.7 ? WC.clear : WC.settle; },
     watch: { duration: WAIT_REAL, get: () => S.waitT, set: setWait } },
+  { id: 'slides', ...card('slides'), targets: TUBES.map((t) => t.key), view: 'tubes',
+    activeTargets: () => { const n = nextSlide(); return n ? [n.key] : []; },
+    hint: () => { const n = nextSlide(); return n ? fmt(T.steps.slides.hint, { name: tubeText(n.key).label }) : T.steps.slides.done; },
+    caption: () => fmt(T.steps.slides.caption, { name: tubeText(TUBES[Math.max(0, Math.min(TUBES.length - 1, S ? S.nextSlide - 1 : 0))].key).label }),
+    isDone: () => S.nextSlide >= TUBES.length,
+    progress: () => S.nextSlide / TUBES.length,
+    run: actSlide },
   { id: 'scope', ...card('scope'), targets: ['scope'], view: 'scope', caption: T.steps.scope.caption,
-    hint: () => (eye.seen() ? fmt(T.steps.scope.hintMore, { n: eye.seen() }) : T.steps.scope.hint),
-    isDone: () => lesson.mode === 'watch' || eye.seen() >= TUBES.length,
-    progress: () => eye.seen() / TUBES.length,
-    run: async () => { if (!isInstant()) eye.open(); } },
+    hint: () => (slides.seen() ? fmt(T.steps.scope.hintMore, { n: slides.seen() }) : T.steps.scope.hint),
+    isDone: () => lesson.mode === 'watch' || slides.seen() >= TUBES.length,
+    progress: () => slides.seen() / TUBES.length,
+    run: async () => { if (!isInstant()) slides.open(); } },
   { id: 'brain', ...card('brain', { from: HEALTHY_NA, to: JUNIPER.na }), targets: [], view: 'overview', caption: T.steps.brain.caption,
     clock: () => fmt(T.steps.brain.clock, { na: Math.round(brainState.na) }),
     watch: { duration: BRAIN_REAL, get: () => S.brainT, set: setBrain } },
 ];
-const READ = 1, SCOPE = 4, BRAIN = 5;
+const READ = 1, SCOPE = 5, BRAIN = 6;
 const PHASES = [
   { ...T.phases.blood, steps: ['analyze', 'read'] },
-  { ...T.phases.cells, steps: ['cells', 'wait', 'scope'] },
+  { ...T.phases.cells, steps: ['cells', 'wait', 'slides', 'scope'] },
   { ...T.phases.brain, steps: ['brain'] },
 ];
 
@@ -283,7 +315,7 @@ zoom.listen((scale) => { if (scale === 'brain') playBrain(); });
 function restart() {
   newSession();
   firstEnter = false;
-  results.reset(); eye.reset();
+  results.reset(); slides.reset();
   lesson.restart();
 }
 
@@ -296,7 +328,7 @@ stage.onFrame((dt) => {
 });
 
 const intro = createIntro(stage);
-bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, eye, brain, STEPS, closeIntro: intro.close } });
+bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, slides, brain, STEPS, closeIntro: intro.close } });
 
 stage.focus(VIEWS.overview, 0);
 lesson.start();

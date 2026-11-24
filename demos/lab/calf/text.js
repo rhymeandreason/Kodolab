@@ -30,7 +30,7 @@ LabText.add('en', {
     body: ['Diarrhea loses water and salt. Plain water replaces only the water, so the blood gets more dilute. Water then moves into cells by osmosis, and in the brain there is no room for them to swell.'],
     steps: [
       { head: 'Blood work.', text: 'Run her blood on the analyzer and find the value that stands out.' },
-      { head: 'Red cells.', text: 'Put her red cells into four solutions and look at them under the microscope.' },
+      { head: 'Red cells.', text: 'Put her red cells into four solutions, make a slide from each, and look at them under the microscope.' },
       { head: 'The brain.', text: 'Zoom to the membrane between her blood and a brain cell, and watch the water move overnight.' },
     ],
     tips: [
@@ -41,7 +41,7 @@ LabText.add('en', {
 
   phases: {
     blood: { title: 'Blood work', desc: 'What is wrong with her blood?' },
-    cells: { title: 'Red cells', desc: 'Cells in four solutions' },
+    cells: { title: 'Red cells', desc: 'Cells in four solutions, on four slides' },
     brain: { title: 'The brain', desc: 'Water at the blood–brain boundary' },
   },
 
@@ -76,13 +76,21 @@ LabText.add('en', {
       clock: '{m} min',
       captions: { mix: 'Every tube starts cloudy with intact cells', clear: 'In pure water the cells burst, and the tube turns <b>clear red</b>', settle: 'The other three stay cloudy: their cells are still whole' },
     },
+    slides: {
+      title: 'Make a slide from each tube', short: 'Slides',
+      action: 'put a drop on its slide',
+      hint: 'Click the <b>{name}</b> tube to put a drop on its slide',
+      done: 'All four slides are ready',
+      detail: 'Put a drop from each tube on its own slide and lay a coverslip over it.',
+      caption: 'A drop of <b>{name}</b> under a coverslip',
+    },
     scope: {
       title: 'Look under the microscope', short: 'Microscope',
       action: 'look at the slides',
-      hint: 'Click the <b>microscope</b> to look at a slide from each tube',
-      hintMore: 'Look at all four slides · <b>{n}/4</b>',
-      detail: 'Put a drop from each tube on a slide and look at the cells at 400×.',
-      caption: 'A slide from each tube at 400×',
+      hint: 'Click the <b>microscope</b> to look at your slides',
+      hintMore: 'Look at every slide at 40× or more · <b>{n}/4</b>',
+      detail: 'Look at each slide. At 4× the cells are specks: switch to 40× or 100×.',
+      caption: 'Your four slides under the microscope',
     },
     brain: {
       title: 'Last night, in her brain', short: 'Brain',
@@ -135,9 +143,14 @@ LabText.add('en', {
 
   /* the microscope view */
   eyepiece: {
-    title: 'Red cells at 400×',
-    close: 'Back to the bench',
-    seen: '{n} of 4 slides',
+    title: 'Light microscope',
+    slides: 'Your slides',
+    seen: '{n} of 4 slides seen at 40\u00d7 or more',
+    hints: {
+      start: 'Drag to move the slide \u00b7 scroll to focus',
+      mag: 'At 4\u00d7 a red cell is a speck. Switch to <b>40\u00d7</b> or <b>100\u00d7</b>.',
+      look: 'Bring the cells into focus.',
+    },
     shape: {
       iso: '<b>Normal.</b> Flat discs, pale in the middle. Water goes in and out equally.',
       plasma: '<b>Swollen.</b> They hold about {pct}% more water, so they round up and the pale centre fades. Still whole. Her brain cells are swelling the same way.',
@@ -181,5 +194,5 @@ LabText.add('en', {
     rack: { name: 'Tube rack', short: 'Rack', desc: 'Four tubes of solution, 5 mL each' },
     waste: { name: 'Waste', short: 'Waste', desc: 'Used tips' },
   },
-  props: { blood: 'JUNIPER', bloodSub: 'whole blood', waste: 'TIPS' },
+  props: { blood: 'JUNIPER', bloodSub: 'whole blood', waste: 'TIPS', mount: 'red cells' },
 });

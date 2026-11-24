@@ -9,7 +9,7 @@ Built here; the `Experiments/Lab` repo it came from is archived with the origina
 | `photosynthesis/photosynthesis-lab.html` | Floating leaf disks. The first lab, and the timed, scrubbable observation step |
 | `strawberry/strawberry-lab.html` | DNA extraction. Two zoom levels (a cell, the molecules) posed from one clock |
 | `ecoli/ecoli-lab.html` | Bacterial transformation with GFP. One zoom level, a UV step that darkens the room, results on the complete card |
-| `onion/onion-lab.html` | Onion root tip squash. A microscope view (lab.css's "Microscope view") with an eyepiece, a cell counter, and cell-division/'s plant mitosis loaded on the lab's three (`kit.js`) |
+| `onion/onion-lab.html` | Onion root tip squash. The microscope view (`microscope.js`) with a cell counter, and cell-division/'s plant mitosis loaded on the lab's three (`kit.js`) |
 | `gel/gel-lab.html` | Gel electrophoresis: crime-scene DNA against three suspects. A micropipette, a watch step for the run, a blue-light box, a gel level where DNA reptates through agarose (posed from the run alone), and a panel that measures the ladder to size the bands |
 | `gallery.html` | every prop on one bench: the catalog, and the check that a change broke nothing |
 | `props.html` | one prop on a turntable with its size, anchors and state sliders. `props.html#syringe` |
@@ -88,6 +88,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | `follow.js` | Watch mode's camera | new |
 | `zoom.js` | zoom levels: live circles, lens transition, a camera and labels per level | Strawberry |
 | `intro.js` | the intro card, and `createPropArt` (a prop turning on its own renderer) | Ecoli |
+| `microscope.js` | the microscope view: eyepiece, objectives, focus, light, panning, scale bar, and a side panel either side for the lab. The lab draws its specimen into `view.scene` in µm (Onion's squash, Calf's blood slides) | OnionRoot |
 | `hands.js` | hand actions that replay: pour, carry over a wall, drop in a bin, micropipette | Strawberry, Ecoli, Gel |
 | `page.js` | the page around a lab: head (import map, fonts, icons, lab.css) and chrome (topbar, procedure panel, info modal, intro frame), so a lab page holds only its content | new |
 | `chrome.js` | `chromeInsets` (the camera's free area) and `bindChrome` (view and restart buttons, `window.LAB`) | new |

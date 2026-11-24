@@ -569,8 +569,8 @@ body.zooming .zoom-insets { opacity: 0; pointer-events: none; }
 }
 
 /* ==========================================================================
-   Microscope view (from OnionRoot): a full-window view over the bench, with the eyepiece in
-   the middle, a 3D model on the left and a counter on the right. body.scope-open hides the
+   Microscope view (microscope.js, from OnionRoot): a full-window view over the bench, with the
+   eyepiece in the middle and a lab's panels either side (Onion: a 3D model and a counter). body.scope-open hides the
    lesson chrome underneath. Stage and zone colours are content, set inline as --c / --zc.
    ========================================================================== */
 .scope {
@@ -593,6 +593,9 @@ body.scope-open .lab-captions, body.scope-open .lab-mode, body.scope-open .lab-m
 .scope-zone { font-size: 14px; font-weight: 500; color: var(--ink-2); text-align: center; min-height: 20px; }
 
 .scope-grid { position: absolute; inset: 76px var(--gutter) var(--gutter); display: grid; grid-template-columns: 290px minmax(0, 1fr) 310px; gap: var(--gutter); }
+.scope-grid.no-left { grid-template-columns: minmax(0, 1fr) 310px; }
+.scope-grid.no-right { grid-template-columns: 290px minmax(0, 1fr); }
+.scope-grid.no-left.no-right { grid-template-columns: minmax(0, 1fr); }
 .scope .panel { position: relative; }
 .scope-grid > aside { padding: 16px; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .scope-row { display: flex; align-items: center; justify-content: space-between; }

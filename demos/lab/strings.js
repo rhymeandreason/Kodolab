@@ -44,5 +44,18 @@ LabText.add('en', {
     // the card while zoomed in (createLesson's zoom option)
     levelWhy: '<b>{level} level:</b> {text}',
     backToLab: 'Click the <b>Lab</b> circle to go back to the bench and {action}',
+    // the microscope view (microscope.js)
+    scope: {
+      back: 'Bench',
+      focus: 'Focus',
+      light: 'Light',
+      scroll: 'scroll',
+      total: '{n}× total',
+      hints: {
+        blurry: 'Blurry: scroll or use the focus slider',
+        dark: 'Too dark: turn up the light',
+        bright: 'Washed out: turn the light down',
+      },
+    },
   },
 });
