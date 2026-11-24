@@ -171,7 +171,21 @@ async function stir(i, j) {
   notebook.render();
   await moveTo(g, { pos: w.clone().add(V3(0, 4, 0)), dur: 0.25 });
   await moveTo(g, { pos: POS.bin.clone().add(V3(0, 11, 0)), dur: 0.8, arc: 5 });
-  await dropIn(root, g, POS.bin.clone().setY(0.8));
+  await dropInBin(g);
+}
+
+/** Tip-down on the bin floor, leaning on the wall. A stick (9.1 cm) is longer than the bin is wide,
+ *  so it cannot lie flat inside: it stands tip-low, top over the rim. */
+function dropInBin(g) {
+  root.attach(g);
+  const a = g.position.clone(), ry = Math.random() * Math.PI * 2, lean = 0.3 + Math.random() * 0.12;
+  const out = V3(-Math.cos(ry), 0, Math.sin(ry)), r = 1.4;
+  const end = POS.bin.clone().setY(0.8).addScaledVector(out, -r);
+  const q0 = g.quaternion.clone(), q1 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, lean));
+  return anim(0.45, (e) => {
+    g.position.set(lerp(a.x, end.x, e), lerp(a.y, end.y, e), lerp(a.z, end.z, e));
+    g.quaternion.slerpQuaternions(q0, q1, e);
+  }, Ease.in);
 }
 
 async function actStir(key) {
