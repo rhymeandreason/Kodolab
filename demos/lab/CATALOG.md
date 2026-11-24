@@ -112,14 +112,14 @@ not yet in `Lab/` · blank = new
 | Tool holder | small cup for pipettes and loops | 🧪 | P |
 | Tray / bin | open tray ✅ · dissection tray (wax bottom) | ◐ | P, C |
 | Ring stand and clamps | ring · utility clamp · test-tube clamp · burette clamp | | C |
-| Pipette tip box | 10 · 200 · 1000 µL | | C |
+| Pipette tip box | 10 · 200 · 1000 µL (one generic 🧪) | ◐ | P, C |
 
 ## 5. Measuring, testing and transfer
 
 | Prop | Variants | Status | Sources |
 |---|---|---|---|
 | Transfer pipette | ribbed bulb ✅ · smooth squeeze bulb · glass Pasteur pipette with rubber bulb | ◐ | P, C |
-| Micropipette | P10 · P20 · P200 · P1000 | | C, M |
+| Micropipette | P10 · P20 🧪 · P200 · P1000 | ◐ | P, C, M |
 | Serological pipette and pump | 5 · 10 · 25 mL | | C |
 | Syringe | 10 mL | ✅ | P |
 | Balance / scale | top-loading · analytical · kitchen scale · large scale under a pot | | C, H |
@@ -177,7 +177,7 @@ not yet in `Lab/` · blank = new
 | Centrifuge | microcentrifuge · ultracentrifuge with a density-gradient tube · cell fractionation (layered tube) | | C, H, R, K |
 | Vortex mixer | | | C |
 | Thermal cycler | | | C |
-| Gel electrophoresis | gel box · power supply · transilluminator · mini all-in-one kit · sequencing gel (four lanes) | | C, K |
+| Gel electrophoresis | gel box 🧪 · power supply 🧪 · transilluminator 🧪 · mini all-in-one kit · sequencing gel (four lanes) | ◐ | P, C, K |
 | Spectrophotometer / colorimeter | | | C |
 | Kitchen appliances | blender · microwave · stove · fridge (fronts only) | | C, H |
 | Aquarium pump and air stone | | | C |
@@ -264,7 +264,7 @@ not yet in `Lab/` · blank = new
 | Stained cloth swatches | egg, grass, chocolate | Q |
 | Plastic samples | film · fragments · fibers · beads | Q |
 | DNA precipitate ✅ | strands, glob, cloud | P |
-| Agarose gel | wells and stained bands | C |
+| Agarose gel 🧪 | wells and stained bands | P, C |
 
 ## 11. Microscope field
 
@@ -328,7 +328,7 @@ not yet in `Lab/` · blank = new
 | Color change in a liquid (indicators) | | C, Q |
 | Flame | | C |
 | Dye spreading (in agar, water, paper) | | C |
-| Bands moving in a gel | | C |
+| Bands moving in a gel | 🧪 | P, C |
 | Solvent front on paper | | C |
 | Fog / condensation | | C |
 | Sparks | | H |

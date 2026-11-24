@@ -10,6 +10,7 @@ Built here; the `Experiments/Lab` repo it came from is archived with the origina
 | `strawberry/strawberry-lab.html` | DNA extraction. Two zoom levels (a cell, the molecules) posed from one clock |
 | `ecoli/ecoli-lab.html` | Bacterial transformation with GFP. One zoom level, a UV step that darkens the room, results on the complete card |
 | `onion/onion-lab.html` | Onion root tip squash. A microscope view (lab.css's "Microscope view") with an eyepiece, a cell counter, and cell-division/'s plant mitosis loaded on the lab's three (`kit.js`) |
+| `gel/gel-lab.html` | Gel electrophoresis: crime-scene DNA against three suspects. A micropipette, a watch step for the run, a blue-light box, a gel level where DNA reptates through agarose (posed from the run alone), and a panel that measures the ladder to size the bands |
 | `gallery.html` | every prop on one bench: the catalog, and the check that a change broke nothing |
 | `props.html` | one prop on a turntable with its size, anchors and state sliders. `props.html#syringe` |
 | `themes.html` | the colour themes side by side, with the UI in each |

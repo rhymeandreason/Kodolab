@@ -1,0 +1,61 @@
+/* Gel Electrophoresis: only what's specific to this lab. Shared chrome is in ../lab.css. */
+
+.bg-gel, .zoom-lens.bg-gel { background: radial-gradient(1400px 900px at 58% 35%, #fbfdfd 0%, #edf3f4 50%, #dce6e8 100%); }
+body[data-scale='gel'] .bg-gel { opacity: 1; }
+
+/* ---------- complete card ---------- */
+.res-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.reopen {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  border: 0; border-radius: var(--pill); padding: 7px 12px;
+  background: var(--accent-soft); color: var(--accent-ink);
+  font: var(--font-btn); cursor: pointer;
+}
+
+/* ---------- gel image panel ---------- */
+.gel-panel {
+  position: absolute; z-index: 30;
+  top: 76px; right: var(--gutter);
+  width: min(600px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  padding-bottom: 14px;
+}
+.gp-close {
+  border: 0; background: transparent; cursor: pointer;
+  width: 30px; height: 30px; border-radius: var(--pill);
+  color: var(--ink-2); font-size: 17px;
+}
+.gp-close:hover { background: var(--line); }
+.gp-body { display: grid; grid-template-columns: 210px 1fr; gap: 14px; padding: 0 16px; }
+.gp-photo { border-radius: 12px; overflow: hidden; background: #17120a; }
+.gp-img { display: block; width: 100%; height: 440px; }
+.gp-side { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.gp-step { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.gp-step b { color: var(--ink); }
+.gp-plot { display: block; width: 100%; height: 190px; }
+.gp-table { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gp-table table { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; width: 100%; }
+.gp-table table.dim { opacity: .45; }
+.gp-table th { text-align: left; font-weight: 600; color: var(--muted); padding: 2px 4px; }
+.gp-table thead tr:first-child th { color: var(--ink); font-size: 12.5px; }
+.gp-table td { padding: 2px 4px; border-top: 1px solid var(--line); color: var(--ink-2); }
+.gp-table td i { color: var(--muted); font-style: normal; font-size: 11px; }
+.gp-table tr.on td { color: var(--ink); }
+.gp-pick { display: flex; gap: 8px; flex-wrap: wrap; }
+.gp-pick[hidden] { display: none; }
+.gp-pick button {
+  flex: 1; border: 1px solid var(--line-2); background: #fff; cursor: pointer;
+  padding: 9px 10px; border-radius: var(--pill); font: var(--font-btn); color: var(--ink);
+}
+.gp-pick button:hover { border-color: var(--accent); }
+.gp-pick button.right { background: var(--accent); border-color: var(--accent); color: #fff; }
+.gp-pick button.wrong { background: #fdeaee; border-color: #f4b4c2; color: #9f1239; }
+.gp-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.gp-note b { color: var(--ink); }
+
+@media (max-width: 820px) {
+  .gel-panel { top: auto; bottom: var(--gutter); left: var(--gutter); right: var(--gutter); width: auto; max-height: 70vh; }
+  .gp-body { grid-template-columns: 1fr; }
+  .gp-img { height: 300px; }
+}

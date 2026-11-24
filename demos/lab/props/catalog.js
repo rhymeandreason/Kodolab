@@ -15,6 +15,7 @@ import {
   makeStrawberry, makeCalyx, makePlate, makeBowl, makeDnaPrecipitate, makeWasteBin, makeLeaf, makeLeafDisk,
   makeMicroTube, makeAgarPlate, makeLoop, makeToolHolder, makeWaterBath, makeUvLamp, makeBenchCard,
   makeOnion, makeScalpel, makePencil, makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope,
+  makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeTransilluminator, makeMicropipette, makeTipBox, makePipetteStand,
 } from '../lab.js';
 
 const slider = (label, min, max, step, value, unit, set) => ({ label, min, max, step, value, unit, set });
@@ -182,4 +183,36 @@ export const PROPS = [
     desc: 'Compound light microscope, 36 cm, from OnionRoot: lamp, mechanical stage, four objectives on a revolving nosepiece, binocular head. anchors.stage is where a slide goes.',
     make: (mat) => makeMicroscope(mat),
     controls: [slider('Lamp', 0, 1, 0.01, 0, '', (p, v) => p.setLamp(v)), slider('Nosepiece', 0, 6.28, 0.01, 0, 'rad', (p, v) => { p.nose.rotation.y = v; })] },
+  { key: 'gelbox', group: 'Electrophoresis', name: 'Gel box', file: 'electrophoresis.js', call: 'makeGelBox(mat)',
+    desc: 'Mini gel box, 10.2 × 21 cm, from Gel. Long axis z: black (−) electrode at −z, red (+) at +z. setBuffer(cm) fills it; setCurrent(0..1) and update(time) bubble the electrodes, twice as many at the cathode. Its lid is a group you can move.',
+    make: (mat) => { const b = makeGelBox(mat); b.setBuffer(3); return b; },
+    controls: [slider('Buffer', 0, 4, 0.05, 3, 'cm', (p, v) => p.setBuffer(v)), toggle('Lid', true, (p, on) => { p.lid.visible = on; })] },
+  { key: 'agarosegel', group: 'Electrophoresis', name: 'Agarose gel', file: 'electrophoresis.js', call: 'makeAgaroseGel(mat, { lanes: 5 })',
+    desc: 'Agarose gel, 7 × 10 × 0.6 cm, wells at −z. setLanes([{ loaded, dyes, bands }]) paints loading dye and bands; setStain(0..1) fades the bands in as an additive glow, for the transilluminator.',
+    make: (mat) => {
+      const g = makeAgaroseGel(mat);
+      g.setLanes(g.laneX.map((_, i) => ({ loaded: 0, dyes: [{ d: 5, color: '#3730a3', a: 0.8 }, { d: 2.2, color: '#0e7490', a: 0.8 }], bands: [1.6 + i * 0.3, 3, 4.6 - i * 0.2].map((d) => ({ d, a: 0.8, w: 0.12 })) })));
+      return g;
+    },
+    controls: [slider('Stain', 0, 1, 0.01, 0, '', (p, v) => p.setStain(v))] },
+  { key: 'gelcomb', group: 'Electrophoresis', name: 'Gel comb', file: 'electrophoresis.js', call: 'makeGelComb(mat, { xs: gel.laneX })',
+    desc: 'Well comb: one tooth per lane. Origin at the teeth bottoms.', make: (mat) => makeGelComb(mat), controls: [] },
+  { key: 'powersupply', group: 'Electrophoresis', name: 'Power supply', file: 'electrophoresis.js', call: 'makePowerSupply(mat)',
+    desc: 'Electrophoresis power supply, 14 × 10 cm: screen, rocker switch, black and red jacks. setDisplay({ on, volts, mA, time }).',
+    make: (mat) => makePowerSupply(mat),
+    controls: [toggle('On', false, (p, on) => p.setDisplay({ on, volts: 100, mA: 64 }))] },
+  { key: 'transilluminator', group: 'Electrophoresis', name: 'Blue-light transilluminator', file: 'electrophoresis.js', call: 'makeTransilluminator(mat)',
+    desc: 'Blue-light box with an amber filter on a hinge. setOn(0..1) lights the window; setCover(0..1) lowers the filter.',
+    make: (mat) => makeTransilluminator(mat),
+    controls: [slider('Light', 0, 1, 0.01, 0, '', (p, v) => p.setOn(v)), slider('Filter', 0, 1, 0.01, 0, '', (p, v) => p.setCover(v))] },
+  { key: 'micropipette', group: 'Plastic', name: 'Micropipette P20', file: 'micropipette.js', call: 'makeMicropipette(mat, { volume: 10 })',
+    desc: 'Adjustable micropipette, 23 cm with a tip. Origin at the tip point. setPlunger(k): 0.75 is the first stop, 1 the second. setTip(on), setFill(f, color).',
+    make: (mat) => { const p = makeMicropipette(mat); p.setFill(0.6); return p; },
+    controls: [slider('Plunger', 0, 1, 0.01, 0, '', (p, v) => p.setPlunger(v)), slider('Fill', 0, 1, 0.01, 0.6, '', (p, v) => p.setFill(v)), toggle('Tip', true, (p, on) => p.setTip(on))] },
+  { key: 'tipbox', group: 'Plastic', name: 'Pipette tip box', file: 'micropipette.js', call: 'makeTipBox(mat)',
+    desc: 'Box of 96 tips, lid hinged open. tips[i] is a tip point; setTaken(n) empties the first n holes.',
+    make: (mat) => makeTipBox(mat),
+    controls: [slider('Taken', 0, 96, 1, 0, '', (p, v) => p.setTaken(v))] },
+  { key: 'pipettestand', group: 'Plastic', name: 'Pipette stand', file: 'micropipette.js', call: 'makePipetteStand(mat)',
+    desc: 'A micropipette hangs on it by its finger hook (anchors.hang).', make: (mat) => makePipetteStand(mat), controls: [] },
 ];
