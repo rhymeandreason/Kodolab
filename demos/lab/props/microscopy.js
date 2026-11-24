@@ -102,21 +102,29 @@ export function makeFilterPaper(mat, { size = 3 } = {}) {
 
 /* ------------------------------------------------------------- microscope */
 
-/** Compound light microscope, 36 cm tall: lamp in the base, a mechanical stage with clips,
- *  a revolving nosepiece of four objectives (4×, 10×, 40×, 100× oil) and a binocular head.
- *  Faces +z. Drawn in a 1/22 scale inner group, which is the original's unit. */
+/** Compound light microscope, about 40 cm to the eyepieces: lamp in the base, a C-arm with
+ *  coaxial focus knobs, a mechanical stage over a condenser, a revolving nosepiece of four
+ *  objectives (4×, 10×, 40×, 100× oil) and a binocular head. Moulded-plastic look: chamfered
+ *  teal body, slate-blue fittings, a pale grey head. Faces +z. Drawn in a 1/22 scale inner
+ *  group, which is the original's unit. */
 export function makeMicroscope(mat) {
   const K = 22;
   const g = new THREE.Group();
   const u = new THREE.Group();
   u.scale.setScalar(K);
   g.add(u);
-  const dark = mat.make.solid(toLinear('#2a2e35'), 0.45, { metalness: 0.15 });
+  const std = (hex, roughness, o = {}) => mat.make.standard(Object.assign({ color: toLinear(hex), roughness }, o));
   const SM = {
-    white: mat.make.physical({ color: toLinear('#f4f4f2'), roughness: 0.32, clearcoat: 0.5, clearcoatRoughness: 0.3 }),
-    knurlDark: mat.make.standard({ color: toLinear('#2a2e35'), roughness: 0.55, metalness: 0.2, flatShading: true }),
-    knurlSteel: mat.make.standard({ color: toLinear('#d0d4da'), metalness: 0.9, roughness: 0.28, flatShading: true }),
-    barrel: mat.make.standard({ color: toLinear('#aab0b9'), metalness: 0.95, roughness: 0.3 }),
+    body: std('#82bdb3', 0.62),
+    slate: std('#4f7b9e', 0.5),
+    slateFacet: std('#4f7b9e', 0.5, { flatShading: true }),
+    slateDark: std('#3a5d7a', 0.55),
+    head: std('#d9dfe5', 0.5),
+    headFacet: std('#d9dfe5', 0.5, { flatShading: true }),
+    panel: std('#e6eaee', 0.4, { metalness: 0.1 }),
+    knurlSteel: std('#d0d4da', 0.28, { metalness: 0.9, flatShading: true }),
+    barrel: std('#b9c0c8', 0.3, { metalness: 0.85 }),
+    cord: std('#cfd5da', 0.55),
     lensGlass: mat.make.physical({ color: toLinear('#16202e'), roughness: 0.04, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.02 }),
     black: mat.make.solid(toLinear('#121418'), 0.6),
   };
@@ -140,16 +148,27 @@ export function makeMicroscope(mat) {
     if (pts[0][1] > pts[pts.length - 1][1]) pts = pts.slice().reverse();   // faces point outward only when y runs upward
     return put(new THREE.LatheGeometry(pts.map(([r, y]) => V2(r, y)), seg), m, parent);
   }
-  function bandTex(text) {
+  /** A moulded knob: a short cylinder with chamfered faces, `seg` flat facets round. Axis +Y from y0. */
+  function knob(r, h, seg, m, parent, y0 = 0) {
+    const c = Math.min(h * 0.25, r * 0.15);
+    return turn([[0, y0], [r - c, y0], [r, y0 + c], [r, y0 + h - c], [r - c, y0 + h], [0, y0 + h]], m, parent, seg);
+  }
+  /** A group at `pos` whose +Y points along +x (sx = 1) or -x (sx = -1): for knobs on a side face. */
+  function sideAxis(pos, sx, parent = u) {
+    const a = new THREE.Group();
+    a.position.set(pos[0], pos[1], pos[2]); a.rotation.z = -sx * Math.PI / 2; parent.add(a);
+    return a;
+  }
+  function bandTex(text, bg = '#e9ebee', fg = '#2a2e35', n = text.length > 11 ? 2 : 3) {
     const c = makeCanvas(512, 48), x = c.getContext('2d');
-    x.fillStyle = '#e9ebee'; x.fillRect(0, 0, 512, 48);
-    x.fillStyle = '#2a2e35'; x.font = `600 30px ${FONT}`; x.textBaseline = 'middle';
-    const n = text.length > 11 ? 2 : 3;   // long labels wrap the barrel twice so they don't overlap
+    x.fillStyle = bg; x.fillRect(0, 0, 512, 48);
+    x.fillStyle = fg; x.font = `600 30px ${FONT}`; x.textBaseline = 'middle';
     for (let i = 0; i < n; i++) x.fillText(text, 12 + (i * 512) / n, 25);
     return canvasTex(c);
   }
-  /** Side profile as [z, y] points, extruded across x and centred. */
-  function side(pts, width, m, bevel = 0.02, curves) {
+  /** Side profile as [z, y] points, extruded across x and centred. One bevel segment, so edges
+   *  read as chamfers. The bevel grows the profile outward by `bevel`. */
+  function side(pts, width, m, bevel = 0.02, curves, parent = u) {
     const sh = new THREE.Shape();
     sh.moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < pts.length; i++) {
@@ -157,74 +176,87 @@ export function makeMicroscope(mat) {
       if (q) sh.quadraticCurveTo(q[0], q[1], pts[i][0], pts[i][1]); else sh.lineTo(pts[i][0], pts[i][1]);
     }
     const depth = width - bevel * 2;
-    const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 4, curveSegments: 12 });
+    const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 1, curveSegments: 12 });
     geo.translate(0, 0, -depth / 2); geo.rotateY(-Math.PI / 2);
-    return put(geo, m, u);
+    geo.computeVertexNormals();
+    return put(geo, m, parent);
   }
 
-  // base: plinth, housing with a chamfered front, brightness wheel and power switch
-  put(cbox(0.8, 0.05, 1.0, 0.02), mat.rubber, u, [0, 0.025, 0.02]);
-  side([[-0.48, 0.05], [0.5, 0.05], [0.5, 0.1], [0.38, 0.19], [-0.48, 0.19]], 0.78, SM.white, 0.015);
-  const wheel = new THREE.Group();
-  wheel.position.set(0.37, 0.12, 0.22); wheel.rotation.z = -Math.PI / 2; u.add(wheel);
-  knurl(0.05, 0.03, 30, 0.08, SM.knurlDark, wheel, 0.02);
-  put(new THREE.BoxGeometry(0.012, 0.035, 0.05), mat.make.solid(toLinear('#2fbf5a'), 0.4), u, [0.396, 0.115, -0.25]);
-  // pillar, leaning forward at the top into the arm, and the head on it
-  side([[-0.46, 0.19], [-0.18, 0.19], [-0.18, 1.0], [0.02, 1.35], [0.02, 1.42], [-0.36, 1.42], [-0.46, 1.32]], 0.22, SM.white, 0.02, { 6: [-0.46, 1.42] });
-  put(new THREE.BoxGeometry(0.14, 0.34, 0.03), dark, u, [0, 0.53, -0.17]);   // focus rack the stage rides on
-  side([[-0.22, 1.38], [0.2, 1.38], [0.22, 1.4], [0.22, 1.47], [0.045, 1.645], [-0.14, 1.645], [-0.22, 1.56]], 0.3, SM.white, 0.025, { 6: [-0.22, 1.645] });
-  // stage, its aperture, clips and the coaxial focus knobs either side
-  put(cbox(0.62, 0.035, 0.52, 0.012), dark, u, [0, 0.72, 0.14]);
-  put(new THREE.CylinderGeometry(0.04, 0.04, 0.037, 24), new THREE.MeshBasicMaterial({ color: 0x0d0f12 }), u, [0, 0.72, 0.14], { cast: false });
-  put(new THREE.BoxGeometry(0.2, 0.07, 0.26), dark, u, [0, 0.685, -0.08]);
-  for (const sx of [1, -1]) {
-    put(new THREE.BoxGeometry(0.035, 0.007, 0.17), mat.steel, u, [sx * 0.17, 0.742, 0.17]).rotation.y = sx * 0.12;
-    put(new THREE.CylinderGeometry(0.012, 0.012, 0.014, 16), mat.steel, u, [sx * 0.17, 0.746, 0.095]);
-    const kn = new THREE.Group();
-    kn.position.set(0, 0.5, -0.33); kn.rotation.z = -sx * Math.PI / 2; u.add(kn);
-    turn([[0, 0.095], [0.034, 0.095], [0.034, 0.112], [0.03, 0.116], [0, 0.116]], mat.steel, kn);
-    turn([[0, 0.114], [0.072, 0.114], [0.08, 0.118], [0.08, 0.152], [0.072, 0.157], [0, 0.157]], dark, kn, 48);
-    knurl(0.085, 0.03, 64, 0.03, SM.knurlDark, kn, 0.135);
-    turn([[0, 0.156], [0.058, 0.156], [0.058, 0.159], [0.054, 0.162], [0, 0.162]], mat.steel, kn, 48);
-    const sc = makeCanvas(512, 32), x = sc.getContext('2d');
-    x.fillStyle = '#1d2026'; x.fillRect(0, 0, 512, 32); x.fillStyle = '#f2f2f2';
-    for (let i = 0; i < 50; i++) x.fillRect((i * 512) / 50, 0, 2, i % 5 ? 14 : 26);
-    put(new THREE.CylinderGeometry(0.053, 0.053, 0.011, 48, 1, true), mat.make.standard({ map: canvasTex(sc), roughness: 0.5 }), kn, [0, 0.1675, 0]);
-    knurl(0.05, 0.026, 32, 0.06, SM.knurlSteel, kn, 0.186);
-    turn([[0, 0.199], [0.046, 0.199], [0.046, 0.202], [0.04, 0.206], [0, 0.207]], mat.chrome, kn, 40);
-    put(new THREE.CylinderGeometry(0.012, 0.012, 0.004, 20), dark, kn, [0, 0.207, 0]);
-  }
-  // mechanical stage rail and the X/Y knobs under its right side
-  put(new THREE.BoxGeometry(0.5, 0.02, 0.03), mat.steel, u, [0, 0.748, -0.07]);
-  const xy = new THREE.Group();
-  xy.position.set(0.27, 0.7, 0.28); u.add(xy);
-  put(new THREE.CylinderGeometry(0.008, 0.008, 0.16, 12), mat.steel, xy, [0, -0.08, 0]);
-  knurl(0.034, 0.03, 22, 0.07, SM.knurlDark, xy, -0.07);
-  knurl(0.026, 0.03, 18, 0.07, SM.knurlDark, xy, -0.13);
-  put(new THREE.CylinderGeometry(0.02, 0.02, 0.006, 20), mat.chrome, xy, [0, -0.148, 0]);
-  // condenser with its iris lever, and the lamp under it
-  put(new THREE.CylinderGeometry(0.065, 0.055, 0.1, 28), dark, u, [0, 0.64, 0.14]);
-  put(new THREE.TorusGeometry(0.063, 0.006, 8, 36), mat.steel, u, [0, 0.665, 0.14]).rotation.x = Math.PI / 2;
-  put(new THREE.CylinderGeometry(0.005, 0.005, 0.09, 8), mat.steel, u, [0.09, 0.61, 0.2]).rotation.set(Math.PI / 2, 0, -1.0);
-  put(new THREE.SphereGeometry(0.011, 14, 10), dark, u, [0.125, 0.61, 0.225]);
+  const STAGE_Y = 0.8, AXIS_Z = 0.14;   // stage top, and the optical axis everything lines up on
+
+  // base: slate plinth, chamfered teal housing, a pale panel down the front, switch and dimmer
+  put(cbox(0.86, 0.035, 1.0, 0.012), SM.slateDark, u, [0, 0.0175, 0]);
+  side([[-0.48, 0.035], [0.48, 0.035], [0.48, 0.13], [0.33, 0.2], [-0.48, 0.2]], 0.82, SM.body, 0.02);
+  side([[0.22, 0.035], [0.488, 0.035], [0.488, 0.134], [0.335, 0.208], [0.22, 0.208]], 0.24, SM.panel, 0.02);
+  put(new THREE.BoxGeometry(0.05, 0.05, 0.014), SM.slateDark, u, [0, 0.085, 0.512]);
+  put(new THREE.BoxGeometry(0.03, 0.02, 0.01), SM.black, u, [0, 0.094, 0.52]).rotation.x = -0.25;
+  knob(0.055, 0.03, 12, SM.slateFacet, sideAxis([0.41, 0.115, 0.16], 1));
+  // lamp port on the base, under the stage
+  turn([[0.08, 0.22], [0.1, 0.22], [0.11, 0.232], [0.11, 0.262], [0.1, 0.27], [0.08, 0.27]], SM.slate, u, 32).position.z = AXIS_Z;
   const lampMat = mat.make.standard({ color: toLinear('#5a5f68'), emissive: new THREE.Color(0), roughness: 0.3 });
-  turn([[0.07, 0.24], [0.08, 0.243], [0.09, 0.236], [0.092, 0.19], [0.07, 0.19]], dark, u, 40).position.z = 0.14;
-  put(new THREE.CylinderGeometry(0.072, 0.072, 0.012, 32), lampMat, u, [0, 0.236, 0.14], { cast: false });
-  put(new THREE.TorusGeometry(0.081, 0.006, 10, 40), mat.chrome, u, [0, 0.243, 0.14]).rotation.x = Math.PI / 2;
-  const beam = put(new THREE.CylinderGeometry(0.045, 0.07, 0.345, 32, 1, true),
+  put(new THREE.CylinderGeometry(0.081, 0.081, 0.04, 32), lampMat, u, [0, 0.246, AXIS_Z], { cast: false });
+  put(new THREE.TorusGeometry(0.084, 0.005, 8, 40), mat.chrome, u, [0, 0.267, AXIS_Z]).rotation.x = Math.PI / 2;
+
+  // C-arm: a column at the back that turns forward at the top to carry the nosepiece
+  side([[-0.47, 0.2], [-0.15, 0.2], [-0.15, 1.02], [0.02, 1.2], [0.2, 1.2], [0.2, 1.4], [0.16, 1.44], [-0.4, 1.44], [-0.47, 1.37]],
+    0.3, SM.body, 0.025, { 3: [-0.15, 1.2], 8: [-0.47, 1.44] });
+  put(new THREE.BoxGeometry(0.13, 0.4, 0.02), SM.slateDark, u, [0, 0.62, -0.122]);   // rack the stage rides on
+  // coaxial focus knobs either side: coarse (big) and fine (outboard)
+  for (const sx of [1, -1]) {
+    const kn = sideAxis([sx * 0.15, 0.56, -0.3], sx);
+    turn([[0, 0], [0.05, 0], [0.05, 0.02], [0, 0.02]], SM.slateDark, kn, 24);
+    knob(0.115, 0.055, 16, SM.slateFacet, kn, 0.015);
+    knob(0.06, 0.04, 12, SM.slateFacet, kn, 0.07);
+    put(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 16), SM.head, kn, [0, 0.112, 0]);
+  }
+  // power cord out of the back of the arm, falling to the bench
+  const cordPath = new THREE.CatmullRomCurve3([V3(0, 0.95, -0.47), V3(0, 0.95, -0.56), V3(0.02, 0.8, -0.64), V3(0.06, 0.45, -0.67), V3(0.1, 0.12, -0.66), V3(0.14, 0.012, -0.62), V3(0.2, 0.012, -0.58)]);
+  put(new THREE.TubeGeometry(cordPath, 48, 0.011, 8), SM.cord, u);
+  put(new THREE.CylinderGeometry(0.022, 0.018, 0.06, 12), SM.slateDark, u, [0, 0.95, -0.5]).rotation.x = Math.PI / 2;
+
+  // stage: bracket off the rack, two plates, aperture, slide holder, X/Y knobs under the right side
+  put(new THREE.BoxGeometry(0.22, 0.1, 0.16), SM.slateDark, u, [0, STAGE_Y - 0.09, -0.04]);
+  put(cbox(0.5, 0.035, 0.42, 0.01), SM.slateDark, u, [0, STAGE_Y - 0.065, AXIS_Z]);
+  put(cbox(0.62, 0.05, 0.5, 0.012), SM.slate, u, [0, STAGE_Y - 0.025, AXIS_Z]);
+  put(new THREE.CylinderGeometry(0.035, 0.035, 0.042, 24), new THREE.MeshBasicMaterial({ color: 0x0d0f12 }), u, [0, STAGE_Y - 0.02, AXIS_Z], { cast: false });
+  put(new THREE.BoxGeometry(0.46, 0.016, 0.026), SM.barrel, u, [0, STAGE_Y + 0.008, AXIS_Z - 0.075]);   // holder rail behind the slide
+  put(new THREE.BoxGeometry(0.03, 0.016, 0.12), SM.barrel, u, [-0.19, STAGE_Y + 0.008, AXIS_Z - 0.01]); // fixed finger at the label end
+  put(new THREE.BoxGeometry(0.05, 0.012, 0.03), SM.barrel, u, [0.2, STAGE_Y + 0.006, AXIS_Z - 0.045]);  // spring arm
+  put(new THREE.CylinderGeometry(0.01, 0.01, 0.07, 10), SM.barrel, u, [0.2, STAGE_Y + 0.012, AXIS_Z - 0.01]).rotation.x = Math.PI / 2;
+  put(new THREE.BoxGeometry(0.5, 0.014, 0.022), SM.barrel, u, [0, STAGE_Y + 0.007, AXIS_Z + 0.22]);     // vernier rail along the front
+  const xy = new THREE.Group();
+  xy.position.set(0.24, STAGE_Y - 0.07, 0.02); u.add(xy);
+  put(new THREE.CylinderGeometry(0.009, 0.009, 0.2, 10), SM.barrel, xy, [0, -0.1, 0]);
+  knob(0.034, 0.035, 12, SM.slateFacet, xy, -0.11);
+  knob(0.026, 0.035, 10, SM.slateFacet, xy, -0.18);
+  // condenser: a wide collar under the aperture on a carrier, iris lever, focus knob
+  put(new THREE.BoxGeometry(0.09, 0.03, 0.24), SM.slateDark, u, [0, STAGE_Y - 0.18, 0.0]);
+  turn([[0.07, STAGE_Y - 0.21], [0.09, STAGE_Y - 0.2], [0.09, STAGE_Y - 0.13], [0.125, STAGE_Y - 0.125], [0.125, STAGE_Y - 0.1], [0.07, STAGE_Y - 0.095]], SM.slate, u, 32).position.z = AXIS_Z;
+  put(new THREE.TorusGeometry(0.088, 0.005, 8, 36), SM.barrel, u, [0, STAGE_Y - 0.165, AXIS_Z]).rotation.x = Math.PI / 2;
+  put(new THREE.CylinderGeometry(0.005, 0.005, 0.09, 8), SM.barrel, u, [0.1, STAGE_Y - 0.165, AXIS_Z + 0.06]).rotation.set(Math.PI / 2, 0, -1.0);
+  put(new THREE.SphereGeometry(0.012, 12, 8), SM.slateDark, u, [0.137, STAGE_Y - 0.165, AXIS_Z + 0.085]);
+  knob(0.035, 0.03, 10, SM.slateFacet, sideAxis([-0.13, STAGE_Y - 0.2, -0.06], -1));
+  put(new THREE.CylinderGeometry(0.008, 0.008, 0.09, 8), SM.barrel, u, [-0.09, STAGE_Y - 0.2, -0.06]).rotation.z = Math.PI / 2;
+
+  const beamBot = 0.27, beamTop = STAGE_Y - 0.21;
+  const beam = put(new THREE.CylinderGeometry(0.06, 0.075, beamTop - beamBot, 32, 1, true),
     new THREE.MeshBasicMaterial({ color: 0xfff1c2, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
-    u, [0, 0.4175, 0.14], { cast: false, receive: false });
+    u, [0, (beamTop + beamBot) / 2, AXIS_Z], { cast: false, receive: false });
   beam.userData.noSketch = true;
+
   // The nosepiece is tilted: its axis leans back and the objectives sit on a matching cone,
   // so the one in use points straight down at the slide and the others fan out forward.
+  // (0.064 is how far that cone offsets the working objective forward of the turret's centre.)
   const TILT = 0.3;
   const noseTilt = new THREE.Group();
-  noseTilt.position.set(0, 1.356, 0.204); noseTilt.rotation.x = -TILT; u.add(noseTilt);
+  noseTilt.position.set(0, 1.13, AXIS_Z + 0.064); noseTilt.rotation.x = -TILT; u.add(noseTilt);
+  put(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 24), SM.slateDark, noseTilt, [0, 0.08, 0]);   // neck into the arm
   const nose = new THREE.Group();
   noseTilt.add(nose);
-  turn([[0, 0.05], [0.07, 0.045], [0.11, 0.03], [0.12, 0.02], [0.12, -0.012], [0.135, -0.018], [0.135, -0.025], [0, -0.025]], mat.steel, nose, 48);
-  knurl(0.137, 0.014, 60, 0.04, SM.knurlSteel, nose, -0.005);
-  put(new THREE.SphereGeometry(0.009, 12, 8), mat.chrome, nose, [0, 0.03, -0.112]);
+  turn([[0, 0.055], [0.06, 0.052], [0.1, 0.036], [0.122, 0.014], [0.122, 0.008], [0, 0.008]], SM.slate, nose, 48);
+  turn([[0, 0.008], [0.13, 0.008], [0.136, 0.0], [0.136, -0.022], [0.128, -0.026], [0, -0.026]], SM.barrel, nose, 48);
+  knurl(0.137, 0.012, 60, 0.04, SM.knurlSteel, nose, -0.01);
+  put(new THREE.SphereGeometry(0.009, 12, 8), mat.chrome, nose, [0, 0.036, -0.1]);
   const OBJ = [
     { len: 0.12, ring: '#d94040', label: '4× / 0.10', tipR: 0.017, lensR: 0.012 },
     { len: 0.15, ring: '#f2c230', label: '10× / 0.25', tipR: 0.015, lensR: 0.009 },
@@ -237,38 +269,41 @@ export function makeMicroscope(mat) {
     const ob = new THREE.Group();
     ob.position.set(0, -0.025, 0.075); ob.rotation.x = -TILT; arm.add(ob);
     const step = -L * 0.62;
-    turn([[0, 0], [0.021, 0], [0.021, -0.008], [0.029, -0.01], [0.031, -0.014], [0.031, step + 0.006], [0.028, step], [0.024, step - 0.004],
-      [o.tipR + 0.004, step - 0.01], [o.tipR + 0.004, -L + 0.022], [o.tipR, -L + 0.018], [o.tipR, -L + 0.006], [o.lensR + 0.003, -L], [0, -L]], SM.barrel, ob, 36);
-    knurl(0.032, 0.014, 28, 0.06, SM.knurlSteel, ob, -0.02);
-    put(new THREE.CylinderGeometry(0.0318, 0.0318, 0.008, 32), mat.make.solid(toLinear(o.ring), 0.35, { metalness: 0.1 }), ob, [0, -0.034, 0]);
-    put(new THREE.CylinderGeometry(0.0316, 0.0316, 0.016, 40, 1, true), mat.make.standard({ map: bandTex(o.label), roughness: 0.4, metalness: 0.3 }), ob, [0, -0.05, 0]);
-    if (o.oil) put(new THREE.CylinderGeometry(o.tipR + 0.0045, o.tipR + 0.0045, 0.005, 24), SM.black, ob, [0, step - 0.016, 0]);
+    turn([[0, 0], [0.023, 0], [0.023, -0.008], [0.032, -0.01], [0.034, -0.014], [0.034, step + 0.006], [0.031, step], [0.026, step - 0.004],
+      [o.tipR + 0.005, step - 0.01], [o.tipR + 0.005, -L + 0.022], [o.tipR, -L + 0.018], [o.tipR, -L + 0.006], [o.lensR + 0.003, -L], [0, -L]], SM.barrel, ob, 36);
+    knurl(0.035, 0.014, 28, 0.06, SM.knurlSteel, ob, -0.02);
+    put(new THREE.CylinderGeometry(0.0348, 0.0348, 0.009, 32), mat.make.solid(toLinear(o.ring), 0.35, { metalness: 0.1 }), ob, [0, -0.034, 0]);
+    put(new THREE.CylinderGeometry(0.0346, 0.0346, 0.018, 40, 1, true), mat.make.standard({ map: bandTex(o.label), roughness: 0.4, metalness: 0.3 }), ob, [0, -0.05, 0]);
+    if (o.oil) put(new THREE.CylinderGeometry(o.tipR + 0.0055, o.tipR + 0.0055, 0.005, 24), SM.black, ob, [0, step - 0.016, 0]);
     put(new THREE.TorusGeometry(o.lensR + 0.0012, 0.0012, 6, 24), SM.black, ob, [0, -L - 0.0002, 0]).rotation.x = Math.PI / 2;
     put(new THREE.SphereGeometry(o.lensR, 20, 8, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38), SM.lensGlass, ob, [0, -L + o.lensR * 0.78, 0], { cast: false });
   });
-  // binocular head: pivot and two eyepieces (tube, collar, diopter ring on the left, rubber cup, ocular)
+
+  // head: a faceted block on the arm, then the binocular body tilted toward the user, two eyepieces
+  side([[-0.24, 1.465], [0.2, 1.465], [0.2, 1.54], [0.1, 1.64], [-0.16, 1.64], [-0.24, 1.57]], 0.28, SM.head, 0.02);
+  const EYE_TILT = 0.9, EYE_PIVOT = V3(0, 1.63, 0.06), EYE_LEN = 0.42;
   const eyeG = new THREE.Group();
-  eyeG.position.set(0, 1.57, 0.12); eyeG.rotation.x = 0.75; u.add(eyeG);
-  put(cbox(0.22, 0.08, 0.14, 0.03), dark, eyeG, [0, 0.02, 0]);
-  put(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 24), mat.chrome, eyeG, [0, 0.07, 0]);
+  eyeG.position.copy(EYE_PIVOT); eyeG.rotation.x = EYE_TILT; u.add(eyeG);
+  put(cbox(0.3, 0.16, 0.17, 0.025), SM.headFacet, eyeG, [0, 0.07, 0]);
+    const tubeTex = bandTex('10×', '#4f7b9e', '#eef2f6', 2);
   for (const sx of [1, -1]) {
     const ep = new THREE.Group();
-    ep.position.set(sx * 0.055, 0, 0); eyeG.add(ep);
-    put(new THREE.CylinderGeometry(0.03, 0.036, 0.22, 28), dark, ep, [0, 0.13, 0]);
-    turn([[0.03, 0.235], [0.033, 0.238], [0.033, 0.258], [0.03, 0.262], [0.026, 0.262]], mat.chrome, ep, 32);
-    if (sx < 0) knurl(0.035, 0.016, 26, 0.06, SM.knurlDark, ep, 0.25);
-    turn([[0.022, 0.27], [0.026, 0.262], [0.034, 0.264], [0.038, 0.28], [0.039, 0.318], [0.036, 0.326], [0.03, 0.326], [0.028, 0.32], [0.026, 0.29], [0.022, 0.282]], mat.rubber, ep, 32);
-    put(new THREE.SphereGeometry(0.03, 24, 6, 0, Math.PI * 2, 0, Math.PI * 0.22), SM.lensGlass, ep, [0, 0.256, 0], { cast: false });
-    put(new THREE.CircleGeometry(0.022, 24), SM.black, ep, [0, 0.27, 0], { cast: false }).rotation.x = -Math.PI / 2;
+    ep.position.set(sx * 0.07, 0, 0); eyeG.add(ep);
+    put(new THREE.CylinderGeometry(0.048, 0.052, 0.12, 8), SM.headFacet, ep, [0, 0.2, 0]);
+    put(new THREE.CylinderGeometry(0.051, 0.051, 0.155, 8, 1, true), mat.make.standard({ map: tubeTex, roughness: 0.5, flatShading: true }), ep, [0, EYE_LEN - 0.0825, 0]);
+    put(new THREE.CylinderGeometry(0.045, 0.051, 0.01, 8), SM.slateFacet, ep, [0, EYE_LEN - 0.005, 0]);
+    put(new THREE.SphereGeometry(0.034, 24, 6, 0, Math.PI * 2, 0, Math.PI * 0.2), SM.lensGlass, ep, [0, EYE_LEN - 0.034 * 0.95, 0], { cast: false });
+    put(new THREE.CircleGeometry(0.03, 24), SM.black, ep, [0, EYE_LEN - 0.012, 0], { cast: false }).rotation.x = -Math.PI / 2;
   }
-  const eyeAxis = V3(0, 1, 0).applyAxisAngle(V3(1, 0, 0), 0.75);
+  const eyeAxis = V3(0, 1, 0).applyAxisAngle(V3(1, 0, 0), EYE_TILT);
+  const eyeTop = EYE_PIVOT.clone().addScaledVector(eyeAxis, EYE_LEN);
   return {
     group: g, nose, K,
     anchors: {
-      stage: V3(0, 0.7375, 0.14).multiplyScalar(K),
-      eye: V3(0, 1.57, 0.12).multiplyScalar(K).addScaledVector(eyeAxis, 0.33 * K),
+      stage: V3(0, STAGE_Y, AXIS_Z).multiplyScalar(K),
+      eye: eyeTop.clone().multiplyScalar(K),
       eyeAxis,
-      top: V3(0, 1.645 * K, 0),
+      top: V3(0, eyeTop.y * K, 0),
     },
     setLamp(k) {
       lampMat.emissive.setRGB(1.6 * k, 1.45 * k, 1.1 * k);

@@ -44,7 +44,7 @@ const VIEWS = {
   acid: { t: V3(-17, 4, -6), p: V3(-17, 24, 28) },
   stain: { t: V3(5, 4, -1), p: V3(5, 26, 34) },
   slide: { t: V3(8, 1, 7), p: V3(8, 17, 24) },
-  scope: { t: V3(27, 15, -5), p: V3(13, 38, 58) },
+  scope: { t: V3(27, 17, -5), p: V3(13, 40, 60) },
 };
 
 // =========================================================================
@@ -130,7 +130,7 @@ function rebuild() {
   STAIN_KEYS.forEach((k) => ix.register(k, stains[k].group, { ...O[k], anchor: V3(0, 9.6, 0) }));
   ix.register('coverslip', coverslip.group, { ...O.coverslip, anchor: V3(0, 1, 0) });
   ix.register('pencil', pencil.group, { ...O.pencil, anchor: V3(0, 8.5, 0) });
-  ix.register('scope', micro.group, { ...O.scope, anchor: V3(0, 38.5, 0) });
+  ix.register('scope', micro.group, { ...O.scope, anchor: micro.anchors.top.clone() });
   ix.register('scalpel', scalpel.group, { ...O.scalpel });
   ix.register('glass', glass.group, { ...O.glass });
   ix.register('slide', slide.group, { ...O.slide });

@@ -190,7 +190,7 @@ export const PROPS = [
     desc: 'A 3 cm square of filter paper. setSpot() is stain it has soaked up.', make: (mat) => makeFilterPaper(mat),
     controls: [slider('Spot', 0, 1, 0.01, 0, '', (p, v) => p.setSpot(v, 0x8e1d47))] },
   { key: 'microscope', group: 'Microscopy', name: 'Compound microscope', file: 'microscopy.js', call: 'makeMicroscope(mat)',
-    desc: 'Compound light microscope, 36 cm, from OnionRoot: lamp, mechanical stage, four objectives on a revolving nosepiece, binocular head. anchors.stage is where a slide goes.',
+    desc: 'Compound light microscope, about 40 cm, from OnionRoot: lamp, mechanical stage, four objectives on a revolving nosepiece, binocular head. anchors.stage is where a slide goes.',
     make: (mat) => makeMicroscope(mat),
     controls: [slider('Lamp', 0, 1, 0.01, 0, '', (p, v) => p.setLamp(v)), slider('Nosepiece', 0, 6.28, 0.01, 0, 'rad', (p, v) => { p.nose.rotation.y = v; })] },
   { key: 'gelbox', group: 'Electrophoresis', name: 'Gel box', file: 'electrophoresis.js', call: 'makeGelBox(mat)',
