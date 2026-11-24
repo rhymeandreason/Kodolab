@@ -17,7 +17,7 @@ export function makeJar(mat, { ingredient = 'bakingSoda', ...o } = {}) {
   const g = new THREE.Group();
   const bodyMat = mat.make.standard({ color: bodyColor, roughness: 0.35, side: THREE.DoubleSide });
   const body = mesh(new THREE.LatheGeometry([
-    V2(0.001, 0), V2(2.8, 0), V2(3.05, 0.35), V2(3.05, 5.6), V2(2.72, 6.0), V2(2.72, 6.7), V2(2.52, 6.7), V2(2.52, 6.1), V2(2.85, 5.6), V2(2.85, 0.4), V2(0.001, 0.4),
+    V2(0.001, 0.015), V2(2.8, 0.015), V2(3.05, 0.35), V2(3.05, 5.6), V2(2.72, 6.0), V2(2.72, 6.7), V2(2.52, 6.7), V2(2.52, 6.1), V2(2.85, 5.6), V2(2.85, 0.4), V2(0.001, 0.4),
   ], 48), bodyMat);
   g.add(body);
   for (let i = 0; i < 2; i++) {
@@ -49,7 +49,7 @@ export function makeJarLid(mat, { ingredient = 'bakingSoda', color = getIngredie
 export function makeSqueezeBottle(mat, { color = 0x3fbf7f, title = ['DISH', 'SOAP'], line = 'liquid detergent', ink = '#15803d', cap: capColor = toLinear('#f5c518') } = {}) {
   const g = new THREE.Group();
   const capMat = capColor == null ? mat.white : mat.make.solid(capColor, 0.42);
-  const b = mesh(new THREE.LatheGeometry([V2(0.001, 0), V2(2.1, 0), V2(2.4, 0.4), V2(2.45, 8.4), V2(2.1, 10.5), V2(1.0, 11.8), V2(0.9, 12.5), V2(0.001, 12.5)], 40),
+  const b = mesh(new THREE.LatheGeometry([V2(0.001, 0.015), V2(2.1, 0.015), V2(2.4, 0.4), V2(2.45, 8.4), V2(2.1, 10.5), V2(1.0, 11.8), V2(0.9, 12.5), V2(0.001, 12.5)], 40),
     mat.make.physical({ color, roughness: 0.15, transparent: true, opacity: 0.88, clearcoat: 1 }));
   const cap = mesh(new THREE.CylinderGeometry(0.95, 1.0, 1.5, 24), capMat);
   cap.position.y = 13.2;
@@ -68,7 +68,7 @@ export function makeSqueezeBottle(mat, { color = 0x3fbf7f, title = ['DISH', 'SOA
  *  fills 0..1 of the body (below the shoulder); liquid.setPour(k) while you tilt it. */
 export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91%', note = 'keep ice-cold', color = '#2f6fed', liquidColor = 0xdff0ff } = {}) {
   const g = new THREE.Group();
-  const shell = mesh(new THREE.LatheGeometry([V2(0.001, 0), V2(1.7, 0), V2(1.8, 0.2), V2(1.8, 6.8), V2(1.6, 7.4), V2(0.75, 8.3), V2(0.6, 8.5), V2(0.6, 9.6), V2(0.55, 9.7)], 56),
+  const shell = mesh(new THREE.LatheGeometry([V2(0.001, 0.015), V2(1.7, 0.015), V2(1.8, 0.2), V2(1.8, 6.8), V2(1.6, 7.4), V2(0.75, 8.3), V2(0.6, 8.5), V2(0.6, 9.6), V2(0.55, 9.7)], 56),
     mat.make.glass({ color: '#eef6ff', opacity: 0.3 }), { cast: false });
   shell.renderOrder = 3;
   g.add(shell);
@@ -139,7 +139,7 @@ export function makeDropperBottle(mat, { title = '1 M HCl', line = 'HYDROCHLORIC
 export function makeNozzleBottle(mat, { title = 'Anti-A', sub = 'Antiserum', footer = 'Typing reagent', color = '#2f6fe4', liquidColor = 0x2a66e0, liquidOpacity = 0.9 } = {}) {
   const TIP = 8.6;
   const g = new THREE.Group();
-  const body = mesh(new THREE.LatheGeometry([[0, 0], [1.35, 0], [1.55, 0.08], [1.62, 0.3], [1.62, 4.5], [1.56, 5.0], [1.3, 5.4], [0.92, 5.66], [0.8, 5.78], [0.8, 6.0], [0, 6.0]].map((p) => V2(p[0], p[1])), 56),
+  const body = mesh(new THREE.LatheGeometry([[0, 0.015], [1.35, 0.015], [1.55, 0.08], [1.62, 0.3], [1.62, 4.5], [1.56, 5.0], [1.3, 5.4], [0.92, 5.66], [0.8, 5.78], [0.8, 6.0], [0, 6.0]].map((p) => V2(p[0], p[1])), 56),
     mat.make.plastic({ opacity: 0.2, color: '#f4f7fb' }), { cast: false });
   body.renderOrder = 3;
   g.add(body);

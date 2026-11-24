@@ -30,9 +30,6 @@ export function makeBench(mat, { w = 152, d = 76, color = '#8b9eb4' } = {}) {
   }), { cast: false });
   top.position.y = -1.5;
   g.add(top);
-  const edge = mesh(new THREE.BoxGeometry(w + 0.4, 0.5, 0.6), mat.make.standard({ color: 0x7d90a6, roughness: 0.5 }), { cast: false });
-  edge.position.set(0, -0.25, d / 2 + 0.1);
-  g.add(edge);
   const cab = mesh(new THREE.BoxGeometry(w - 6, 42, d - 6), mat.make.standard({ color: 0xd3dae1, roughness: 0.7 }), { cast: false });
   cab.position.set(0, -24, -1);
   g.add(cab);
