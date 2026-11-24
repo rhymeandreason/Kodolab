@@ -84,6 +84,7 @@
     });
     const mat = createMaterials(stage);
     const sketch = stage.sketch;
+    sketch.enabled = false;
 
     const ITEMS = PROPS.slice();
     // keep each group together in the list, in order of first appearance
@@ -94,9 +95,11 @@
     /* ---------- scene furniture ---------- */
     const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.02, 1, 96), new THREE.MeshStandardMaterial({ color: 0xeef2f5, roughness: 0.62 }));
     pedestal.receiveShadow = true;
+    pedestal.visible = false;
     stage.scene.add(pedestal);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(1, 0.004, 6, 128), new THREE.MeshBasicMaterial({ color: 0xc7d0d9 }));
     rim.rotation.x = Math.PI / 2;
+    rim.visible = false;
     stage.scene.add(rim);
 
     const scaleBar = new THREE.Group();
@@ -114,7 +117,7 @@
     pivot.add(boundsHelper);
 
     /* ---------- state ---------- */
-    const opts = { spin: false, anchors: true, bounds: false, sketch: sketch.enabled };
+    const opts = { spin: false, anchors: false, bounds: false, sketch: sketch.enabled };
     let cur = null;   // { it, prop, center, radius, size, markers[] }
     const tagsEl = document.getElementById('tags');
     let tags = [];
@@ -177,7 +180,20 @@
 
       renderCatalog(); renderInspector();
       frame(0.9);
-      if (location.hash.slice(1) !== it.key) history.replaceState(null, '', '#' + it.key);
+      setHash(it.key);
+    }
+
+    // #key, #right, or #key/right. A bare view name keeps the current (or first) prop.
+    const VIEWS = { right: [1, 0, 0] };
+    let view = null;
+    function parseHash() {
+      const parts = location.hash.slice(1).split('/');
+      const v = parts.find((p) => VIEWS[p]) || null;
+      return { key: parts.find((p) => !VIEWS[p]) || '', view: v };
+    }
+    function setHash(key) {
+      const h = '#' + key + (view ? '/' + view : '');
+      if (location.hash !== h) history.replaceState(null, '', h);
     }
 
     function frame(dur = 0.9) {
@@ -190,7 +206,7 @@
       const r = Math.max(cur.radius, 3);
       const dist = (r / Math.min(tanV, tanH)) * 1.08;
       const t = cur.center.clone();
-      const dir = V3(0.42, 0.5, 1).normalize();
+      const dir = V3(...(VIEWS[view] || [0.42, 0.5, 1])).normalize();
       stage.focus({ t, p: t.clone().add(dir.multiplyScalar(dist)) }, dur);
     }
 
@@ -286,7 +302,10 @@
       else if (e.key === 'f') frame();
       else if (e.key === ' ') { opts.spin = !opts.spin; renderInspector(); e.preventDefault(); }
     });
-    window.addEventListener('hashchange', () => { const k = location.hash.slice(1); if (byKey[k] && (!cur || cur.it.key !== k)) load(k); });
+    window.addEventListener('hashchange', () => {
+      const p = parseHash(); view = p.view;
+      if (byKey[p.key] && (!cur || cur.it.key !== p.key)) load(p.key); else frame();
+    });
     stage.onResize(() => frame(0.3));
 
     /* ---------- frame loop ---------- */
@@ -307,7 +326,7 @@
 
     // Load after the first frame: a clipping-plane material (beaker liquid) compiled
     // in three r128's very first render gets stuck throwing on every frame.
-    stage.onFirstFrame(() => load(location.hash.slice(1) || ITEMS[0].key));
+    stage.onFirstFrame(() => { const p = parseHash(); view = p.view; load(byKey[p.key] ? p.key : ITEMS[0].key); });
     stage.start();
     window.VIEWER = { stage, sketch, mat, load, get cur() { return cur; } };
   </script>

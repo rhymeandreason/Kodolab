@@ -182,28 +182,30 @@ export function makeMicroscope(mat) {
     return put(geo, m, parent);
   }
 
-  const STAGE_Y = 0.8, AXIS_Z = 0.14;   // stage top, and the optical axis everything lines up on
+  const STAGE_Y = 0.8, AXIS_Z = 0.19;   // stage top, and the optical axis everything lines up on
+  const BASE_Y = 0.27, COL_F = -0.22;   // top of the base; front face of the column
 
   // base: slate plinth, chamfered teal housing, a pale panel down the front, switch and dimmer
   put(cbox(0.86, 0.035, 1.0, 0.012), SM.slateDark, u, [0, 0.0175, 0]);
-  side([[-0.48, 0.035], [0.48, 0.035], [0.48, 0.13], [0.33, 0.2], [-0.48, 0.2]], 0.82, SM.body, 0.02);
-  side([[0.22, 0.035], [0.488, 0.035], [0.488, 0.134], [0.335, 0.208], [0.22, 0.208]], 0.24, SM.panel, 0.02);
-  put(new THREE.BoxGeometry(0.05, 0.05, 0.014), SM.slateDark, u, [0, 0.085, 0.512]);
-  put(new THREE.BoxGeometry(0.03, 0.02, 0.01), SM.black, u, [0, 0.094, 0.52]).rotation.x = -0.25;
-  knob(0.055, 0.03, 12, SM.slateFacet, sideAxis([0.41, 0.115, 0.16], 1));
+  side([[-0.48, 0.035], [0.48, 0.035], [0.48, 0.17], [0.31, BASE_Y - 0.02], [-0.48, BASE_Y - 0.02]], 0.82, SM.body, 0.02);
+  side([[0.2, 0.035], [0.488, 0.035], [0.488, 0.174], [0.314, BASE_Y - 0.012], [0.2, BASE_Y - 0.012]], 0.24, SM.panel, 0.02);
+  put(new THREE.BoxGeometry(0.05, 0.05, 0.014), SM.slateDark, u, [0, 0.1, 0.512]);
+  put(new THREE.BoxGeometry(0.03, 0.02, 0.01), SM.black, u, [0, 0.109, 0.52]).rotation.x = -0.25;
+  knob(0.055, 0.03, 12, SM.slateFacet, sideAxis([0.41, 0.14, 0.1], 1));
   // lamp port on the base, under the stage
-  turn([[0.08, 0.22], [0.1, 0.22], [0.11, 0.232], [0.11, 0.262], [0.1, 0.27], [0.08, 0.27]], SM.slate, u, 32).position.z = AXIS_Z;
+  turn([[0.08, BASE_Y], [0.1, BASE_Y], [0.11, BASE_Y + 0.012], [0.11, BASE_Y + 0.042], [0.1, BASE_Y + 0.05], [0.08, BASE_Y + 0.05]], SM.slate, u, 32).position.z = AXIS_Z;
   const lampMat = mat.make.standard({ color: toLinear('#5a5f68'), emissive: new THREE.Color(0), roughness: 0.3 });
-  put(new THREE.CylinderGeometry(0.081, 0.081, 0.04, 32), lampMat, u, [0, 0.246, AXIS_Z], { cast: false });
-  put(new THREE.TorusGeometry(0.084, 0.005, 8, 40), mat.chrome, u, [0, 0.267, AXIS_Z]).rotation.x = Math.PI / 2;
+  put(new THREE.CylinderGeometry(0.081, 0.081, 0.04, 32), lampMat, u, [0, BASE_Y + 0.026, AXIS_Z], { cast: false });
+  put(new THREE.TorusGeometry(0.084, 0.005, 8, 40), mat.chrome, u, [0, BASE_Y + 0.047, AXIS_Z]).rotation.x = Math.PI / 2;
 
   // C-arm: a column at the back that turns forward at the top to carry the nosepiece
-  side([[-0.47, 0.2], [-0.15, 0.2], [-0.15, 1.02], [0.02, 1.2], [0.32, 1.2], [0.32, 1.4], [0.28, 1.44], [-0.4, 1.44], [-0.47, 1.37]],
-    0.3, SM.body, 0.025, { 3: [-0.15, 1.2], 8: [-0.47, 1.44] });
-  put(new THREE.BoxGeometry(0.13, 0.4, 0.02), SM.slateDark, u, [0, 0.62, -0.122]);   // rack the stage rides on
+  // A slim column and a long, thin arm, so the stage sits well forward of the column.
+  side([[-0.47, BASE_Y - 0.02], [COL_F, BASE_Y - 0.02], [COL_F, 1.06], [-0.07, 1.21], [0.34, 1.21], [0.34, 1.33], [0.3, 1.36], [-0.42, 1.36], [-0.47, 1.31]],
+    0.3, SM.body, 0.025, { 3: [COL_F, 1.21], 8: [-0.47, 1.36] });
+  put(new THREE.BoxGeometry(0.13, 0.4, 0.02), SM.slateDark, u, [0, 0.62, COL_F + 0.032]);   // rack the stage rides on
   // coaxial focus knobs either side: coarse (big) and fine (outboard)
   for (const sx of [1, -1]) {
-    const kn = sideAxis([sx * 0.15, 0.56, -0.3], sx);
+    const kn = sideAxis([sx * 0.15, 0.6, (COL_F - 0.47) / 2], sx);
     turn([[0, 0], [0.05, 0], [0.05, 0.02], [0, 0.02]], SM.slateDark, kn, 24);
     knob(0.115, 0.055, 16, SM.slateFacet, kn, 0.015);
     knob(0.06, 0.04, 12, SM.slateFacet, kn, 0.07);
@@ -215,7 +217,7 @@ export function makeMicroscope(mat) {
   put(new THREE.CylinderGeometry(0.022, 0.018, 0.06, 12), SM.slateDark, u, [0, 0.95, -0.5]).rotation.x = Math.PI / 2;
 
   // stage: bracket off the rack, two plates, aperture, slide holder, X/Y knobs under the right side
-  put(new THREE.BoxGeometry(0.22, 0.1, 0.16), SM.slateDark, u, [0, STAGE_Y - 0.09, -0.04]);
+  put(new THREE.BoxGeometry(0.22, 0.1, 0.2), SM.slateDark, u, [0, STAGE_Y - 0.09, COL_F + 0.12]);
   put(cbox(0.5, 0.035, 0.42, 0.01), SM.slateDark, u, [0, STAGE_Y - 0.065, AXIS_Z]);
   put(cbox(0.62, 0.05, 0.5, 0.012), SM.slate, u, [0, STAGE_Y - 0.025, AXIS_Z]);
   put(new THREE.CylinderGeometry(0.035, 0.035, 0.042, 24), new THREE.MeshBasicMaterial({ color: 0x0d0f12 }), u, [0, STAGE_Y - 0.02, AXIS_Z], { cast: false });
@@ -225,20 +227,20 @@ export function makeMicroscope(mat) {
   put(new THREE.CylinderGeometry(0.01, 0.01, 0.07, 10), SM.barrel, u, [0.2, STAGE_Y + 0.012, AXIS_Z - 0.01]).rotation.x = Math.PI / 2;
   put(new THREE.BoxGeometry(0.5, 0.014, 0.022), SM.barrel, u, [0, STAGE_Y + 0.007, AXIS_Z + 0.22]);     // vernier rail along the front
   const xy = new THREE.Group();
-  xy.position.set(0.24, STAGE_Y - 0.07, 0.02); u.add(xy);
+  xy.position.set(0.24, STAGE_Y - 0.07, AXIS_Z - 0.12); u.add(xy);
   put(new THREE.CylinderGeometry(0.009, 0.009, 0.2, 10), SM.barrel, xy, [0, -0.1, 0]);
   knob(0.034, 0.035, 12, SM.slateFacet, xy, -0.11);
   knob(0.026, 0.035, 10, SM.slateFacet, xy, -0.18);
   // condenser: a wide collar under the aperture on a carrier, iris lever, focus knob
-  put(new THREE.BoxGeometry(0.09, 0.03, 0.24), SM.slateDark, u, [0, STAGE_Y - 0.18, 0.0]);
+  put(new THREE.BoxGeometry(0.09, 0.03, AXIS_Z - COL_F), SM.slateDark, u, [0, STAGE_Y - 0.18, (AXIS_Z + COL_F) / 2]);
   turn([[0.07, STAGE_Y - 0.21], [0.09, STAGE_Y - 0.2], [0.09, STAGE_Y - 0.13], [0.125, STAGE_Y - 0.125], [0.125, STAGE_Y - 0.1], [0.07, STAGE_Y - 0.095]], SM.slate, u, 32).position.z = AXIS_Z;
   put(new THREE.TorusGeometry(0.088, 0.005, 8, 36), SM.barrel, u, [0, STAGE_Y - 0.165, AXIS_Z]).rotation.x = Math.PI / 2;
   put(new THREE.CylinderGeometry(0.005, 0.005, 0.09, 8), SM.barrel, u, [0.1, STAGE_Y - 0.165, AXIS_Z + 0.06]).rotation.set(Math.PI / 2, 0, -1.0);
   put(new THREE.SphereGeometry(0.012, 12, 8), SM.slateDark, u, [0.137, STAGE_Y - 0.165, AXIS_Z + 0.085]);
-  knob(0.035, 0.03, 10, SM.slateFacet, sideAxis([-0.13, STAGE_Y - 0.2, -0.06], -1));
-  put(new THREE.CylinderGeometry(0.008, 0.008, 0.09, 8), SM.barrel, u, [-0.09, STAGE_Y - 0.2, -0.06]).rotation.z = Math.PI / 2;
+  knob(0.035, 0.03, 10, SM.slateFacet, sideAxis([-0.13, STAGE_Y - 0.2, COL_F + 0.1], -1));
+  put(new THREE.CylinderGeometry(0.008, 0.008, 0.09, 8), SM.barrel, u, [-0.09, STAGE_Y - 0.2, COL_F + 0.1]).rotation.z = Math.PI / 2;
 
-  const beamBot = 0.27, beamTop = STAGE_Y - 0.21;
+  const beamBot = BASE_Y + 0.05, beamTop = STAGE_Y - 0.21;
   const beam = put(new THREE.CylinderGeometry(0.06, 0.075, beamTop - beamBot, 32, 1, true),
     new THREE.MeshBasicMaterial({ color: 0xfff1c2, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
     u, [0, (beamTop + beamBot) / 2, AXIS_Z], { cast: false, receive: false });
@@ -281,8 +283,8 @@ export function makeMicroscope(mat) {
   });
 
   // head: a faceted block on the arm, then the binocular body tilted toward the user, two eyepieces
-  side([[-0.24, 1.465], [0.32, 1.465], [0.32, 1.54], [0.22, 1.64], [-0.16, 1.64], [-0.24, 1.57]], 0.28, SM.head, 0.02);
-  const EYE_TILT = 0.9, EYE_PIVOT = V3(0, 1.63, 0.19), EYE_LEN = 0.42;
+  side([[-0.08, 1.385], [0.34, 1.385], [0.34, 1.45], [0.25, 1.54], [0.0, 1.54], [-0.08, 1.48]], 0.28, SM.head, 0.02);
+  const EYE_TILT = 0.9, EYE_PIVOT = V3(0, 1.5, 0.31), EYE_LEN = 0.42;
   const eyeG = new THREE.Group();
   eyeG.position.copy(EYE_PIVOT); eyeG.rotation.x = EYE_TILT; u.add(eyeG);
   put(cbox(0.3, 0.16, 0.17, 0.025), SM.headFacet, eyeG, [0, 0.07, 0]);
