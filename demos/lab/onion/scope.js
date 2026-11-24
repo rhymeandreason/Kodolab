@@ -505,10 +505,6 @@ export function createScope({ onClose = () => {} } = {}) {
       <header class="scope-top">
         <button class="btn scope-back" data-act="back"><i class="ph-bold ph-arrow-left"></i>${W.back}</button>
         <div class="scope-title"><b>${W.title}</b><span class="scope-sub"></span></div>
-        <div class="scope-chips">
-          <span class="chip scope-zone"></span>
-          <span class="chip scope-mag"></span>
-        </div>
       </header>
       <div class="scope-grid">
         <aside class="panel scope-model">
@@ -536,6 +532,7 @@ export function createScope({ onClose = () => {} } = {}) {
               <label class="slider-row"><span>${W.light}</span><input type="range" class="scope-light" min="0" max="1000" value="620"><span class="kbd scope-light-val"></span></label>
             </div>
           </div>
+          <div class="scope-zone"></div>
         </main>
         <aside class="panel scope-count">
           <div class="panel-label">${W.countTitle}</div>
@@ -680,7 +677,6 @@ export function createScope({ onClose = () => {} } = {}) {
     obj = i;
     fieldT = OBJECTIVES[i].field;
     root.querySelectorAll('.objectives button').forEach((b, j) => b.classList.toggle('active', j === i));
-    $('.scope-mag').textContent = fmt(T.scope.total, { n: OBJECTIVES[i].mag * 10 });
     if (i < PICK_FROM && selected >= 0) select(-1);
     eyeEl.classList.toggle('can-pick', false);
   }
@@ -785,7 +781,6 @@ export function createScope({ onClose = () => {} } = {}) {
     if (z.name !== lastZone) {
       const zc = $('.scope-zone');
       zc.textContent = z.name;
-      zc.style.setProperty('--zc', z.c);
       lastZone = z.name;
     }
     const rect = eyeEl.getBoundingClientRect();

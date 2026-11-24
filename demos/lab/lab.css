@@ -590,10 +590,7 @@ body.scope-open .lab-captions, body.scope-open .lab-mode, body.scope-open .lab-m
 .scope-title { display: flex; flex-direction: column; line-height: 1.25; }
 .scope-title b { font-family: var(--display); font-size: 17px; font-weight: 500; }
 .scope-title span { font-size: 12.5px; color: var(--muted); }
-.scope-chips { margin-left: auto; display: flex; gap: 8px; }
-.scope-zone { gap: 7px; height: 30px; padding: 0 12px; background: var(--panel); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-2); }
-.scope-zone::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--zc, #94a3b8); }
-.scope-mag { height: 30px; padding: 0 12px; background: var(--ink); color: #fff; font-family: var(--mono); }
+.scope-zone { font-size: 14px; font-weight: 500; color: var(--ink-2); text-align: center; min-height: 20px; }
 
 .scope-grid { position: absolute; inset: 76px var(--gutter) var(--gutter); display: grid; grid-template-columns: 290px minmax(0, 1fr) 310px; gap: var(--gutter); }
 .scope .panel { position: relative; }
@@ -625,11 +622,11 @@ body.scope-open .lab-captions, body.scope-open .lab-mode, body.scope-open .lab-m
 .scope-controls { display: flex; align-items: center; gap: 22px; padding: 10px 16px; flex-wrap: wrap; justify-content: center; border-radius: var(--radius); }
 .objectives { display: flex; gap: 4px; padding: 4px; background: rgba(23, 24, 26, .05); border-radius: var(--radius-pop); }
 .objectives button {
-  position: relative; width: 66px; height: 50px; border: 0; border-radius: 11px; background: transparent; cursor: pointer; color: var(--ink);
+  position: relative; width: 72px; min-height: 58px; padding: 14px 4px 8px; border: 0; border-radius: 11px; background: transparent; cursor: pointer; color: var(--ink);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; transition: background .2s, box-shadow .2s;
 }
 .objectives button b { font-size: 15px; font-weight: 700; font-family: var(--mono); }
-.objectives button small { font-size: 10px; color: var(--muted); }
+.objectives button small { font-size: 10px; color: var(--muted); white-space: nowrap; }
 .objectives button::before { content: ''; position: absolute; top: 6px; left: 50%; width: 18px; margin-left: -9px; height: 3px; border-radius: 3px; background: var(--ring); }
 .objectives button.active { background: #fff; box-shadow: 0 2px 8px -2px rgba(20, 26, 36, .2); }
 .objectives button:not(.active):hover { background: rgba(255, 255, 255, .6); }
@@ -666,7 +663,7 @@ body.scope-open .lab-captions, body.scope-open .lab-mode, body.scope-open .lab-m
 .sel-box { border-radius: var(--radius-pop); padding: 12px; background: rgba(255, 255, 255, .7); box-shadow: inset 0 0 0 1px var(--line-2); transition: box-shadow .2s; }
 .sel-box:not(.empty) { box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 4px var(--accent-soft); }
 .sel-box.empty .sel-main, .sel-box:not(.empty) .sel-empty { display: none; }
-.sel-empty { font-size: 13px; line-height: 1.5; color: var(--muted); }
+.sel-empty { font-size: 16px; line-height: 1.5; color: var(--muted); }
 .sel-empty b { color: var(--ink); }
 .sel-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); font-weight: 600; }
 .sel-q { font-size: 14px; font-weight: 600; margin: 6px 0 10px; }
@@ -723,7 +720,7 @@ body.scope-open .lab-captions, body.scope-open .lab-mode, body.scope-open .lab-m
 }
 @media (max-width: 820px) {
   .scope-top { gap: 10px; }
-  .scope-title span, .scope-zone { display: none; }
+  .scope-title span { display: none; }
   .scope-controls { gap: 12px; }
   .sliders { min-width: 0; width: 100%; }
 }

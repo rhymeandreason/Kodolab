@@ -432,6 +432,10 @@
       membrane:  0x5ab6c9, membraneTint:0xe4f5f7, membraneDeep:0x2a8aa1,
       envelope:  0x8c7be3, envelopeTint:0xf1edff, envelopePore:0x5f4fc6, envelopeEdge:0xc5b6ff,
       ring:0xf08c6c,          // the actin-myosin ring, warm against the teal membrane it pinches
+      /* The plant's cortical division zone: the ring of proteins (TANGLED,
+         POK1/2) the preprophase band leaves in the membrane. A deep green in
+         the wall's family, darker than the lamella so the two stay apart. */
+      zone:0x2f8f4e,
     },
 
     radii: { O:0.95, H:0.55, C:0.85, N:0.90, S:1.05, Na:0.70, Cl:1.24, K:0.85, P:1.00,
