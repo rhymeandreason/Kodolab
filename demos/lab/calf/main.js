@@ -3,6 +3,9 @@
  *   2 Red cells: a drop of blood into four solutions, the tubes clear or stay cloudy, the
  *     slides under the microscope (eyepiece.js)
  *   3 The brain: replay last night at the membrane between blood and an astrocyte (brain.js)
+ *   4 Explain it to Dana: the cause-and-effect chain from cards (chain.js)
+ *   5 Treat her: an IV bag and a volume (rx.js), six hours on the drip, then why the rest goes
+ *     slowly, at the brain level. Juniper's pose and Na⁺ ride along in patient.js
  * Every number is model.js's. The bench is rebuilt on every timeline jump (rebuild()); all
  * bench state lives in S. */
 import * as THREE from 'three';
@@ -12,9 +15,15 @@ import {
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createZoom, createIntro,
   chromeInsets, bindChrome, PHONE,
   makeBench, makeMicroscope, makeTubeRack, makeTestTube, makeBenchCard, makeAnalyzer,
-  makeMicropipette, makeTipBox, makePipetteStand, makeWasteBin, makeSlide, makeCoverslip,
+  makeMicropipette, makeTipBox, makePipetteStand, makeWasteBin, makeSlide, makeCoverslip, makeIVBag, stripTags,
 } from '../lab.js';
-import { JUNIPER, HEALTHY_NA, TUBES, CLEAR_MIN } from './model.js';
+import {
+  JUNIPER, HEALTHY_NA, TUBES, CLEAR_MIN, FLUIDS, RATE, RX_HOURS, SEIZURE_STOP, SAFE_24H,
+  CELL_OSM, ADAPTED_NA, ADAPTED_OSM, DAY3_NA, plasmaOsm, rxNa,
+} from './model.js';
+import { createChain } from './chain.js';
+import { createRx, fluidName, volText } from './rx.js';
+import { createPatient } from './patient.js';
 import { createResults, ROWS, flagOf } from './results.js';
 import { createSlides } from './slides.js';
 import { createBrainLevel } from './brain.js';
@@ -30,16 +39,23 @@ const POS = {
   rack: V3(-2, 0, -4), tips: V3(18, 0, 12), stand: V3(18, 0, -8), waste: V3(30, 0, 12),
   scope: V3(40, 0, -6),
   slides: V3(-2, 0, 10),      // the four slides, one in front of each tube
+  bags: V3(-27, 0, 22),       // the three IV bags, front left, ports toward the student
 };
+const BAG_GAP = 9, BAG_SCALE = 0.7;
 /* intact cells scatter light: an opaque, milky red. Burst cells leave hemoglobin dissolved: clear red */
 const COL = { saline: '#e4f0fb', cells: '#9b3a33', milky: '#a3463e', lysed: '#c8102e' };
 const WAIT_REAL = 8;      // seconds the wait plays in
 const BRAIN_REAL = 12;    // seconds last night plays in
+const DRIP_REAL = 10;     // seconds the six hours on the drip play in
+const SLOW_REAL = 16;     // seconds the next day plays in
+/* the next day on SLOW_REAL's clock: adapt (0 → ADAPT_END), hold, the fast fix (FAST), then the limit */
+const ADAPT_END = 0.42, FAST = [0.5, 0.72], SLOW_H = [RX_HOURS, RX_HOURS + 24, RX_HOURS + 28];
 const VIEWS = {
   overview: { t: V3(2, 4, 0), p: V3(2, 64, 78) },
   analyze: { t: V3(-28, 5, -2), p: V3(-28, 40, 44) },
   tubes: { t: V3(4, 6, -2), p: V3(4, 38, 44) },
   scope: { t: V3(34, 12, -4), p: V3(34, 46, 52) },
+  treat: { t: V3(-24, 2, 18), p: V3(-24, 40, 58) },
 };
 
 // =========================================================================
@@ -58,22 +74,57 @@ const slides = createSlides({
     if (lesson.step === SCOPE && slides.seen() >= TUBES.length && !slides.isOpen) lesson.jumpTo(SCOPE + 1);
   },
 });
+const chain = createChain({
+  onChange: () => {
+    lesson.render(); requestAnimationFrame(() => stage.resize());
+    if (lesson.step === DANA && chain.solved()) lesson.jumpTo(DANA + 1);
+  },
+});
+const rx = createRx({
+  onChange: () => { lesson.render(); requestAnimationFrame(() => stage.resize()); },
+  onGive: () => { rx.close(); lesson.jumpTo(DRIP); },
+});
+const patient = createPatient();
+const sidePanel = () => [results, chain, rx].find((p) => p.isOpen);
 const stage = createStage({
   canvas: $('#scene'), views: VIEWS,
   controls: { minDistance: 8, maxDistance: 170 },
   insets: (w, h) => {
     const r = chromeInsets(w, h);
-    if (results.isOpen && w > PHONE) r.right = Math.max(r.right, w - results.el.getBoundingClientRect().left + 10);
+    const p = sidePanel();
+    if (p && w > PHONE) r.right = Math.max(r.right, w - p.el.getBoundingClientRect().left + 10);
     return r;
   },
 });
 const mat = createMaterials(stage);
 
 const brain = createBrainLevel(stage.env);
-const brainState = { na: JUNIPER.na };
+const brainState = { na: JUNIPER.na, cellOsm: CELL_OSM, mode: 'night', phase: '', h: 0 };
+const ease = (x) => x * x * (3 - 2 * x);
+/** Blood Na⁺, what an astrocyte holds, and the hour, for the step on screen: the zoom, the
+ *  patient panel and the clocks all read this one pose. */
+function pose() {
+  const st = brainState, id = lesson && STEPS[lesson.step] ? STEPS[lesson.step].id : 'done';
+  st.cellOsm = CELL_OSM; st.mode = 'night'; st.phase = ''; st.h = 0;
+  if (!S) { st.na = JUNIPER.na; return st; }
+  if (id === 'drip') {
+    st.mode = 'drip'; st.h = RX_HOURS * clamp(S.dripT / DRIP_REAL);
+    st.na = rxNa(rx.choice(), st.h);
+  } else if (id === 'slow') {
+    const r = clamp(S.slowT / SLOW_REAL), a = ease(clamp(r / ADAPT_END)), f = ease(clamp((r - FAST[0]) / (FAST[1] - FAST[0])));
+    st.mode = 'slow';
+    st.phase = r < FAST[0] ? 'adapt' : r <= FAST[1] + 0.04 ? 'fast' : 'limit';
+    st.cellOsm = lerp(CELL_OSM, ADAPTED_OSM, a);
+    st.na = lerp(ADAPTED_NA, HEALTHY_NA, f);
+    st.h = r < FAST[0] ? lerp(SLOW_H[0], SLOW_H[1], a) : lerp(SLOW_H[1], SLOW_H[2], f);
+  } else if (id === 'done') {
+    st.mode = 'done'; st.na = DAY3_NA; st.cellOsm = plasmaOsm(DAY3_NA);
+  } else st.na = S.brainOn ? lerp(HEALTHY_NA, JUNIPER.na, S.brainT / BRAIN_REAL) : JUNIPER.na;
+  return st;
+}
 const zoom = createZoom(stage, {
   levels: [{ key: 'brain', world: brain, name: T.levels.brain.name, meta: T.levels.brain.meta, bg: '#f1eef4' }],
-  getT: () => { brainState.na = S && S.brainOn ? lerp(HEALTHY_NA, JUNIPER.na, S.brainT / BRAIN_REAL) : JUNIPER.na; return brainState; },
+  getT: pose,
   getStep: () => 0,
 });
 
@@ -127,13 +178,20 @@ function rebuild() {
   waste.group.scale.setScalar(0.7);
   place(waste, POS.waste);
   const scope = place(makeMicroscope(mat), POS.scope, -0.3);
+  const bags = FLUIDS.map((f, i) => {
+    const F = T.rx.fluids[f.key];
+    const bag = place(makeIVBag(mat, { name: F.name, sub: F.bag, band: F.band }), POS.bags.clone().add(V3((i - 1) * BAG_GAP, 0, 0)));
+    bag.group.scale.setScalar(BAG_SCALE);
+    return bag;
+  });
 
-  B = { blood, analyzer, rack, tubes, mounts, tipBox, stand, pip, waste, scope };
+  B = { blood, analyzer, rack, tubes, mounts, tipBox, stand, pip, waste, scope, bags };
   S = {
     tipsUsed: 0, run: -1,           // analyzer: -1 idle, 0..1 running, 1 results
     mix: TUBES.map(() => 0), next: 0,
     drop: TUBES.map(() => 0), cover: TUBES.map(() => 0), nextSlide: 0,
     waitT: 0, brainT: 0, brainOn: false,
+    lift: FLUIDS.map(() => 0), dripT: 0, slowT: 0,
     cap: null, painted: '',
   };
 
@@ -145,8 +203,14 @@ function rebuild() {
   ix.register('tips', tipBox.group, { ...T.objects.tips });
   ix.register('rack', rack.group, { ...T.objects.rack });
   ix.register('waste', waste.group, { ...T.objects.waste });
+  FLUIDS.forEach((f, i) => {
+    const F = T.rx.fluids[f.key];
+    ix.register(bagKey(f.key), bags[i].group, { name: `${F.name} · ${F.full}`, short: F.name, desc: fmt(F.desc, { na: f.na }), anchor: V3(0, 4, 0) });
+  });
   paint();
 }
+
+const bagKey = (f) => `bag-${f}`;
 
 function pipRest(stand) {
   return POS.stand.clone().add(stand ? stand.anchors.hang : V3(0, 21.6, -0.1)).sub(V3(0, 18.6, -1.6));
@@ -156,7 +220,7 @@ function pipRest(stand) {
 const tmpC = new THREE.Color();
 function paint() {
   const lysedT = clamp(S.waitT / WAIT_REAL);
-  const key = `${S.run.toFixed(3)}|${S.mix.map((m) => m.toFixed(3)).join()}|${lysedT.toFixed(3)}|${S.drop.join()}|${S.cover.join()}`;
+  const key = `${S.run.toFixed(3)}|${S.mix.map((m) => m.toFixed(3)).join()}|${lysedT.toFixed(3)}|${S.drop.join()}|${S.cover.join()}|${S.lift.join()}`;
   if (key === S.painted) return;
   S.painted = key;
   if (S.run < 0) B.analyzer.setScreen({ title: T.analyzer.ready });
@@ -171,6 +235,7 @@ function paint() {
     c.visible = S.cover[i] > 0;
     c.position.y = top + (1 - S.cover[i]) * 3;
   });
+  B.bags.forEach((b, i) => { b.group.position.y = S.lift[i] * 1.6; b.group.rotation.x = -S.lift[i] * 0.12; });
 }
 
 // =========================================================================
@@ -223,6 +288,14 @@ async function actSlide(key) {
   await anim(0.8, (e) => { S.cover[i] = e; });
 }
 
+/** A bag clicked: it lifts, the others settle, and the prescription opens on that fluid. */
+async function actBag(key) {
+  const f = key.slice(4), i = FLUIDS.findIndex((x) => x.key === f);
+  if (!isInstant()) rx.open(f);
+  const from = S.lift.slice();
+  await anim(0.45, (e) => { S.lift = from.map((v, j) => lerp(v, j === i ? 1 : 0, e)); });
+}
+
 function setWait(t) { S.waitT = t; }
 function setBrain(t) { S.brainT = t; S.brainOn = true; }
 
@@ -268,13 +341,34 @@ const STEPS = [
   { id: 'brain', ...card('brain', { from: HEALTHY_NA, to: JUNIPER.na }), targets: [], view: 'overview', caption: T.steps.brain.caption,
     clock: () => fmt(T.steps.brain.clock, { na: Math.round(brainState.na) }),
     watch: { duration: BRAIN_REAL, get: () => S.brainT, set: setBrain } },
+  { id: 'dana', ...card('dana'), targets: [], view: 'overview', caption: T.steps.dana.caption,
+    isDone: () => lesson.mode === 'watch' || chain.solved(),
+    run: async () => {} },
+  { id: 'rx', ...card('rx'), targets: FLUIDS.map((f) => bagKey(f.key)), view: 'treat', caption: T.steps.rx.caption,
+    isDone: () => lesson.mode === 'watch' || lesson.isReplaying() || !!rx.pending,
+    run: actBag },
+  { id: 'drip', ...card('drip'), targets: [], view: 'treat',
+    detail: () => fmt(T.steps.drip.detail, dripSlots()),
+    caption: () => fmt(T.steps.drip.caption, dripSlots()),
+    clock: () => fmt(T.steps.drip.clock, { h: Math.floor(brainState.h), na: Math.round(brainState.na) }),
+    watch: { duration: DRIP_REAL, get: () => S.dripT, set: (t) => { S.dripT = t; } } },
+  { id: 'slow', ...card('slow', { na: Math.round(ADAPTED_NA) }), targets: [], view: 'overview', caption: T.steps.slow.caption,
+    clock: () => fmt(T.steps.slow.clock, { h: Math.floor(brainState.h), na: Math.round(brainState.na) }),
+    watch: { duration: SLOW_REAL, get: () => S.slowT, set: (t) => { S.slowT = t; } } },
 ];
-const READ = 1, SCOPE = 5, BRAIN = 6;
+const READ = 1, SCOPE = 5, BRAIN = 6, DANA = 7, RX = 8, DRIP = 9, SLOW = 10;
+const AT_BRAIN = [BRAIN, SLOW];            // timed steps that zoom in on their own
 const PHASES = [
   { ...T.phases.blood, steps: ['analyze', 'read'] },
   { ...T.phases.cells, steps: ['cells', 'wait', 'slides', 'scope'] },
   { ...T.phases.brain, steps: ['brain'] },
+  { ...T.phases.explain, steps: ['dana'] },
+  { ...T.phases.treat, steps: ['rx', 'drip', 'slow'] },
 ];
+function dripSlots() {
+  const c = rx.choice();
+  return { vol: volText(c.vol), fluid: fluidName(c.fluid), rate: RATE };
+}
 
 // =========================================================================
 // Wire it together
@@ -285,14 +379,28 @@ lesson = createLesson({
   levelWhy: () => { const c = brain.cue(brainState); return c && c.text; },
   steps: STEPS, phases: PHASES, rebuild,
   panel: $('#stepsPanel'),
-  completeHint: T.complete.hint,
+  completeHint: fmt(T.complete.hint, { limit: SAFE_24H, na: Math.round(DAY3_NA) }),
   completeWhy: T.complete.why,
-  onEnter: (step) => {
+  onEnter: (step, i) => {
     requestAnimationFrame(() => stage.resize());
     zoom.onStep();
-    if (!step || step.id !== 'read') results.close();
-    if (!step) return;
-    if (step.id === 'brain') { if (zoom.scale !== 'brain') zoom.go('brain'); else playBrain(); }
+    if (window.Track) Track.step(i, STEPS.length, step ? stripTags(step.title) : T.complete.prompt);
+    const id = step ? step.id : 'done', live = !isInstant() && lesson.mode === 'do';
+    if (id !== 'read') results.close();
+    if (id === 'dana' && live) chain.open(); else chain.close();
+    if (id === 'rx' && live) rx.open(); else rx.close();
+    document.body.classList.toggle('calf-done', !step);
+    /* the drip just ended: file the run, and send an unsafe one back to the prescription */
+    if (id === 'slow' && rx.pending) {
+      if (!rx.played() && lesson.mode === 'do') { Promise.resolve().then(() => lesson.jumpTo(RX)); return; }
+      report();
+    }
+    if (!step) {
+      if (window.Track && !completed) { completed = true; Track.event('complete'); }
+      stage.focus(VIEWS.overview);
+      return;
+    }
+    if (AT_BRAIN.includes(i)) { if (zoom.scale !== 'brain') zoom.go('brain'); else playBrain(); }
     if (firstEnter) { firstEnter = false; intro.started.then(() => stage.focus(step.view, 2.2)); return; }
     stage.focus(step.view);
   },
@@ -302,25 +410,81 @@ ix = createInteraction(stage, {
 });
 const follow = createFollowCam(stage, ix, {
   acting: lesson.acting, watching: () => lesson.mode === 'watch',
-  rig: { t: V3(2, 4, 0), p: V3(2, 50, 62) }, special: ['analyze', 'tubes', 'scope'],
+  rig: { t: V3(2, 4, 0), p: V3(2, 50, 62) }, special: ['analyze', 'tubes', 'scope', 'treat'],
 });
 
-/* Zoomed in, the lab holds Watch mode, where a timed step waits for Play: start last night as
-   soon as the brain is on screen. */
+/* Zoomed in, the lab holds Watch mode, where a timed step waits for Play: start it as soon as
+   the brain is on screen. */
 function playBrain() {
-  if (lesson.step === BRAIN && S && S.brainT < BRAIN_REAL && !lesson.autoplaying && !isInstant()) lesson.play();
+  const s = STEPS[lesson.step];
+  if (s && s.watch && [BRAIN, DRIP, SLOW].includes(lesson.step) && s.watch.get() < s.watch.duration && !lesson.autoplaying && !isInstant()) lesson.play();
+}
+
+/** What /teach sees: the chain and the prescriptions, once the drip has been solved. */
+let reported = false, completed = false;
+function report() {
+  if (reported || !window.Track || !rx.solved()) return;
+  reported = true;
+  const runs = rx.runs(), R = T.report;
+  Track.event('quiz', {
+    score: (chain.tries() === 1) + (runs[0].out === 'safe'), total: 2,
+    answers: [
+      { q: R.chain, answer: fmt(R.checks, { n: chain.tries() }), correct: chain.tries() === 1 },
+      { q: R.rx, answer: runs.map((r) => `${fluidName(r.fluid)} ${volText(r.vol)} (${T.rx.predict[r.out]})`).join(' → '), correct: runs[0].out === 'safe' },
+    ],
+  });
 }
 zoom.listen((scale) => { if (scale === 'brain') playBrain(); });
+
+/** Juniper's pose follows her Na⁺: the seizures stop once it has risen SEIZURE_STOP. */
+function patientPose() {
+  const st = pose(), id = STEPS[lesson.step] ? STEPS[lesson.step].id : 'done';
+  if (id === 'done') return { pose: 'standing', na: st.na };
+  if (id === 'slow') return { pose: 'sternal', na: st.na };
+  const rise = st.na - JUNIPER.na;
+  return { pose: id === 'drip' && rise >= SEIZURE_STOP ? 'sternal' : rise < -0.3 ? 'worse' : 'seizing', na: st.na };
+}
+
+/* The complete card's one free-text answer, in the student's own words, sent to /teach as a
+   survey keyed by the prompt (the dashboard shows the key as the question). It lives beside the
+   card's text, which lesson.js rewrites on every render, so typing survives a render. */
+const answer = (() => {
+  const A = T.complete, KEY = 'calf.answer';
+  const box = document.createElement('div');
+  box.className = 'calf-answer';
+  box.innerHTML = `
+    <div class="calf-art"><div class="crop"><img src="${new URL('art/calf-standing.webp', import.meta.url).href}" alt="${T.patient.alt.standing}"></div></div>
+    <label class="ans-q" for="calfAnswer">${A.prompt}</label>
+    <textarea id="calfAnswer" rows="3" maxlength="500" placeholder="${A.placeholder}"></textarea>
+    <div class="ans-row"><span class="ans-sent" aria-live="polite"></span><button type="button" class="ans-send">${A.send}</button></div>`;
+  document.querySelector('#lab-card .card-body > div').appendChild(box);
+  const ta = box.querySelector('textarea'), send = box.querySelector('.ans-send'), sent = box.querySelector('.ans-sent');
+  const store = { get() { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } }, set(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch { /* private window */ } } };
+  ta.value = store.get();
+  const paint = (done) => { send.disabled = !ta.value.trim(); sent.textContent = done ? (window.Track ? A.sent : A.saved) : ''; };
+  ta.addEventListener('input', () => paint(false));
+  send.addEventListener('click', () => {
+    const v = ta.value.trim().slice(0, 500);
+    if (!v) return;
+    store.set(v);
+    if (window.Track) Track.event('survey', { answers: { [stripTags(A.prompt)]: v } });
+    paint(true);
+  });
+  paint(false);
+  return { reset() { ta.value = ''; store.set(''); paint(false); } };
+})();
 
 function restart() {
   newSession();
   firstEnter = false;
-  results.reset(); slides.reset();
+  results.reset(); slides.reset(); chain.reset(); rx.reset(); answer.reset();
+  reported = false; completed = false;
   lesson.restart();
 }
 
 stage.onFrame((dt) => {
   lesson.update(dt);
+  patient.set(patientPose());
   follow.update(dt);
   if (B) paint();
   zoom.update(dt);
@@ -328,7 +492,7 @@ stage.onFrame((dt) => {
 });
 
 const intro = createIntro(stage);
-bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, slides, brain, STEPS, closeIntro: intro.close } });
+bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, slides, chain, rx, brain, patient, STEPS, pose, closeIntro: intro.close } });
 
 stage.focus(VIEWS.overview, 0);
 lesson.start();

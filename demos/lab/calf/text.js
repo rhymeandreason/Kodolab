@@ -11,7 +11,7 @@ LabText.add('en', {
   intro: {
     kicker: 'Interactive 3D case',
     title: 'Why is Juniper <em>seizing</em>?',
-    body: 'Juniper, a 3-week-old calf, got diarrhea. Her owner stopped her milk and gave her all the fresh water she wanted. Now she can’t stand, and every few minutes she has a seizure. Find out what the water did.',
+    body: 'Juniper, a 3-week-old calf, got diarrhea. Her owner, Dana, stopped her milk and gave her all the fresh water she wanted. Yesterday Juniper bumped her head on the gate, and last night Dana wrapped her in a heated blanket. Now she can’t stand, and every few minutes she has a seizure. Find out why, then treat her.',
     keys: [
       { color: '#38bdf8', text: '<b>Water</b> crosses a membrane toward the side with more dissolved particles' },
       { color: '#94a3b8', text: '<b>Sodium</b> can’t follow it quickly, so cells swell or shrink' },
@@ -32,6 +32,8 @@ LabText.add('en', {
       { head: 'Blood work.', text: 'Run her blood on the analyzer and find the value that stands out.' },
       { head: 'Red cells.', text: 'Put her red cells into four solutions, make a slide from each, and look at them under the microscope.' },
       { head: 'The brain.', text: 'Zoom to the membrane between her blood and a brain cell, and watch the water move overnight.' },
+      { head: 'Explain it to Dana.', text: 'Put the cause and effect in order, from the evidence you collected.' },
+      { head: 'Treat her.', text: 'Choose an IV fluid and a volume, predict what it will do, and watch six hours of it.' },
     ],
     tips: [
       { icon: 'ph-magnifying-glass-plus', text: 'The circle on the right zooms to the brain. It always shows Juniper’s blood as it is on the bench.' },
@@ -43,6 +45,8 @@ LabText.add('en', {
     blood: { title: 'Blood work', desc: 'What is wrong with her blood?' },
     cells: { title: 'Red cells', desc: 'Cells in four solutions, on four slides' },
     brain: { title: 'The brain', desc: 'Water at the blood–brain boundary' },
+    explain: { title: 'Explain it to Dana', desc: 'What happened, in order' },
+    treat: { title: 'Treat her', desc: 'An IV fluid, and how fast' },
   },
 
   steps: {
@@ -100,11 +104,118 @@ LabText.add('en', {
       clock: 'Na⁺ {na} mEq/L',
       caption: 'As she drinks plain water, her blood sodium falls',
     },
+    dana: {
+      title: 'Explain it to Dana', short: 'Explain',
+      action: '',
+      hint: 'Put the cards in order in the <b>panel</b>',
+      detail: 'Dana wants to know what went wrong. Build the chain from cause to effect, using what you found.',
+      caption: 'From cause to effect, with the evidence for each link',
+    },
+    rx: {
+      title: 'Prescribe', short: 'Prescribe',
+      action: 'prescribe it',
+      hint: 'Click an <b>IV bag</b>, or choose in the panel',
+      detail: 'Pick a fluid and a volume, and predict what it will do to her sodium before you run it.',
+      caption: 'Three IV fluids: which one raises her sodium?',
+    },
+    drip: {
+      title: 'Six hours on the drip', short: 'Drip',
+      action: '',
+      hint: 'Watch <b>Juniper</b>, and her brain in the circle',
+      detail: '{vol} of {fluid}, at {rate} mL/h.',
+      clock: '{h} h · Na⁺ {na}',
+      caption: '{vol} of {fluid} into her vein',
+    },
+    slow: {
+      title: 'Why slowly', short: 'Slowly',
+      action: '',
+      hint: 'Watch the <b>Brain</b> view',
+      detail: 'Her seizures have stopped, but her sodium is only {na}. Watch an astrocyte over the next day, then see what a fast fix would do.',
+      clock: '{h} h · Na⁺ {na}',
+      caption: 'The next day, in her brain',
+      why: 'A shrinking brain cell can strip the myelin off nerve fibres nearby (osmotic demyelination). The damage shows days later and does not heal.',
+    },
   },
 
   complete: {
-    hint: '<b>Her brain cells swelled.</b> Treatment is next.',
-    why: 'Plain water diluted her blood. Water moved into her brain cells, which still held their solutes, and inside the skull there is no room to swell.',
+    hint: '<b>Juniper is up.</b> Raised about {limit} mEq/L a day, her sodium reached {na} by day 3.',
+    why: 'Slow enough for her brain cells to take their solutes back in as the sodium rose.',
+    prompt: 'Fresh water hurt her because…',
+    placeholder: 'In your own words',
+    send: 'Send',
+    sent: 'Sent to your teacher.',
+    saved: 'Saved.',
+    edit: 'Edit',
+  },
+
+  /* Dana's chain: five true links in order, two red herrings. {slots} come from model.js */
+  chain: {
+    title: 'Explain it to Dana',
+    lead: 'Click the cards into order, cause first. Two don’t belong.',
+    cards: {
+      loss: { text: 'Diarrhea lost water and salt', ev: 'Na⁺ {na} mEq/L · analyzer' },
+      water: { text: 'Plain water replaced only the water', ev: 'plasma {osm} vs ~{healthy} mOsm/kg' },
+      swell: { text: 'Cells in dilute fluid swell', ev: 'her red cells +{rbc}% · slide' },
+      skull: { text: 'Brain cells can’t swell inside the skull', ev: 'astrocyte +{astro}% · brain zoom' },
+      seize: { text: 'That pressure causes seizures', ev: 'a seizure every few minutes · Dana' },
+      blanket: { text: 'The blanket overheated her' },
+      gate: { text: 'She hurt her head on the gate' },
+    },
+    /* what a wrong card in a slot points back to: the evidence that belongs there */
+    hints: {
+      blanket: 'Nothing you measured points to heat. Every finding traces back to her blood. Take the blanket out.',
+      gate: 'A knock on the head would not change her blood, and every finding you made starts there. Take the gate out.',
+      loss: 'What started it? The analyzer showed what she lost.',
+      water: 'Why so dilute? Her plasma held {osm} mOsm/kg against a healthy ~{healthy}. What did Dana give her?',
+      swell: 'Before the brain: what did plasma that dilute do to her red cells on the slide?',
+      skull: 'Red cells can swell freely. Which cells have no room? The brain zoom.',
+      seize: 'Last: what does that pressure do to her?',
+    },
+    slot: 'Card {n}',
+    full: 'Fill all five places first.',
+    check: 'Check',
+    clear: 'Start over',
+    solved: '<b>That’s the chain.</b> Dana sees it now: the water was the problem, and her heart was in the right place.',
+  },
+
+  /* the prescription. Every number comes from model.js (Adrogué–Madias) */
+  rx: {
+    title: 'Prescribe',
+    lead: 'Choose a fluid and a volume, predict, then run six hours.',
+    fluids: {
+      d5w: { name: 'D5W', full: '5% dextrose', desc: 'Sugar water. Her cells burn the sugar, leaving plain water.', band: '#f59e0b', bag: '1000 mL' },
+      iso: { name: '0.9% NaCl', full: 'Normal saline', desc: 'Na⁺ {na} mEq/L, about as strong as healthy plasma', band: '#2563eb', bag: '1000 mL' },
+      hyper: { name: '3% NaCl', full: 'Hypertonic saline', desc: 'Na⁺ {na} mEq/L, more than three times stronger', band: '#dc2626', bag: '1000 mL' },
+    },
+    fluid: 'Fluid',
+    volume: 'Volume',
+    vol: '{ml} mL',
+    predictQ: 'Predict: what will it do to her sodium?',
+    predict: { worse: 'Lower it', barely: 'Barely move it', safe: 'Raise it safely', over: 'Raise it too fast' },
+    give: 'Start the drip',
+    need: 'Make a prediction first.',
+    tried: 'Your runs',
+    row: '{fluid} · {vol}',
+    move: 'Na⁺ {from} → {to}',
+    predicted: 'You predicted: {p}',
+    outcomes: {
+      worse: '<b>Worse.</b> Once the sugar is burned, D5W is plain water: her blood got more dilute and the seizures came faster.',
+      barely: '<b>Barely moved.</b> 0.9% saline is only a little stronger than her blood, so it nudged her to {to}. Still seizing.',
+      safe: '<b>Up {d} mEq/L, and the seizures stopped.</b> A small drop in brain swelling eased the pressure, well under the day’s limit of {limit}.',
+      over: '<b>Seizures stopped, but too fast.</b> Up {d} mEq/L in {h} hours, past the {limit} a day her brain can take.',
+    },
+    retry: 'Try another prescription.',
+  },
+
+  /* what /teach shows for the chain and the prescription */
+  report: { chain: 'Explained it to Dana', checks: '{n} checks to get the order', rx: 'Prescriptions run' },
+
+  /* the patient panel */
+  patient: {
+    name: 'Juniper',
+    na: 'Na⁺ <b>{na}</b> mEq/L',
+    poses: { seizing: 'Seizing', worse: 'Seizing more often', sternal: 'Resting on her chest', standing: 'Standing' },
+    alt: { seizing: 'Juniper lying on her side, seizing.', sternal: 'Juniper resting upright on her chest.', standing: 'Juniper standing.' },
   },
 
   /* the analyzer and the results panel */
@@ -180,6 +291,13 @@ LabText.add('en', {
         falling: 'Her blood is more dilute than the cell. <b>More water enters</b> than leaves',
         swollen: 'The astrocyte has swollen about <b>{pct}%</b>. In the skull there is no room for that',
         tight: 'Tight junctions in the vessel wall keep <b>Na⁺</b> in the blood, so only water moves',
+        dripStill: 'Her blood is still dilute. The astrocyte stays swollen, <b>+{pct}%</b>',
+        dripWorse: 'More free water in her blood: the astrocyte swells further, <b>+{pct}%</b>',
+        dripShrink: 'Na⁺ rises, and water leaves the astrocyte. Swelling down to <b>+{pct}%</b>',
+        adapt: 'Over a day the astrocyte pushes out <b>K⁺</b> and other solutes, and shrinks back to its own size',
+        fast: 'Now put Na⁺ back to {na} in a few hours: water rushes out and the cell <b>shrinks {pct}%</b>',
+        limit: 'Solutes take days to come back in, so Na⁺ may rise only about <b>{limit} mEq/L a day</b>',
+        done: 'Raised slowly, the astrocyte takes its solutes back in as Na⁺ climbs, and stays its own size',
       },
       tally: '{in} in · {out} out',
     },

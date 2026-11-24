@@ -63,4 +63,48 @@ export const CLEAR_MIN = 3;
 /** An astrocyte against the blood: same osmometer, its own non-water fraction. Acute only:
  *  over hours brain cells export K⁺, Cl⁻ and then organic osmolytes, and shrink back. */
 export const ASTRO_B = 0.3;
-export const astroVolume = (na) => cellVolume(plasmaOsm(na), CELL_OSM, ASTRO_B);
+export const astroVolume = (na, cellOsm = CELL_OSM) => cellVolume(plasmaOsm(na), cellOsm, ASTRO_B);
+
+/* ---------- treatment ----------
+ * Adrogué–Madias: one litre of a fluid moves serum Na⁺ by
+ *   ΔNa⁺ = (infusate Na⁺ + K⁺ − serum Na⁺) / (total body water + 1)
+ * It assumes she keeps every drop and loses no salt or water meanwhile (no fresh water,
+ * no more diarrhea), so it is a best case for the 6 h it is used over. */
+export const CALF = { kg: 50, waterFrac: 0.7 };   // a 3-week-old Holstein; neonates run ~70% water
+export const TBW = CALF.kg * CALF.waterFrac;      // L
+/** The three bags on the bench: Na⁺ per litre of each. */
+export const FLUIDS = [
+  { key: 'd5w', na: 0 },                                  // 5% dextrose: the sugar is burned, leaving free water
+  { key: 'iso', na: 154 },                                // 0.9% NaCl
+  { key: 'hyper', na: 513 },                              // 3% NaCl
+];
+export const VOLUMES = [0.5, 1];                          // L
+export const adrogueMadias = (fluidNa, na = JUNIPER.na) => (fluidNa - na) / (TBW + 1);
+/** A rise this big eases the swelling enough to stop the seizures. */
+export const SEIZURE_STOP = 4;
+/** The most serum Na⁺ may rise in 24 h once the brain has adapted (8 for a high-risk patient). */
+export const SAFE_24H = 10;
+/** mL/h through the catheter: 1 L takes 2 h, then the 6 h replay shows Na⁺ settled. */
+export const RATE = 500;
+export const RX_HOURS = 6;
+/** Serum Na⁺ for a prescription, h hours after the drip starts. */
+export function rxNa({ fluid, vol }, h) {
+  const f = FLUIDS.find((x) => x.key === fluid);
+  const run = Math.min(1, h / (vol * 1000 / RATE));
+  return JUNIPER.na + adrogueMadias(f.na) * vol * run;
+}
+/** 'worse' · 'barely' (seizures go on) · 'safe' · 'over' (past the day's safe rise). */
+export function outcome(rx) {
+  const d = rxNa(rx, RX_HOURS) - JUNIPER.na;
+  return d < 0 ? 'worse' : d < SEIZURE_STOP ? 'barely' : d <= SAFE_24H ? 'safe' : 'over';
+}
+export const SAFE_RX = { fluid: 'hyper', vol: 0.5 };
+
+/* ---------- adaptation ----------
+ * Over the next day an astrocyte in dilute plasma exports K⁺ and Cl⁻, then organic osmolytes
+ * (taurine, myo-inositol, glutamine), until its contents match the plasma and it is its own size
+ * again. Taking them back in takes days, so a fast rise in Na⁺ then shrinks it. */
+export const ADAPTED_NA = rxNa(SAFE_RX, RX_HOURS);        // where the safe dose leaves her
+export const ADAPTED_OSM = plasmaOsm(ADAPTED_NA);
+/** Where a rise of SAFE_24H a day leaves her on day 3, when she stands. */
+export const DAY3_NA = Math.min(HEALTHY_NA, ADAPTED_NA + 2 * SAFE_24H);

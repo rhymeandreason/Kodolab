@@ -1,4 +1,6 @@
-/* Zip-top bag lying flat, with a liquid inside and foam on top. From the
+/* Two soft bags: a zip-top bag (Strawberry) and an IV fluid bag (Calf).
+ *
+ * Zip-top bag lying flat, with a liquid inside and foam on top. From the
  * Strawberry lab.
  *
  *   const bag = makeZipBag(mat, { liquidColor: 0xc8284a });
@@ -15,6 +17,7 @@ import { V3 } from '../core/math.js';
 import { seeded } from '../core/random.js';
 import { mesh, roundedRectShape } from '../core/geometry.js';
 import { makeLiquid } from '../core/liquid.js';
+import { makeCanvas, canvasTex, FONT } from '../core/canvas.js';
 
 function pillow(W, D, sx = 40, sz = 44) {
   const g = new THREE.BoxGeometry(W, 1, D, sx, 2, sz);
@@ -95,4 +98,63 @@ export function makeZipBag(mat, { w = 12, d = 14, liquidColor = 0xc8284a, foamCo
   };
   api.setPuff(0.5);
   return api;
+}
+
+/* IV fluid bag lying flat, printed face up: a colour band, the fluid's name and its volume.
+ *
+ *   const bag = makeIVBag(mat, { name: '3% NaCl', sub: '500 mL', band: '#dc2626' });
+ *
+ * Origin: centre of the underside. Long axis along z: the ports at +z (toward the student),
+ * the hanger tab with its hole at -z. anchors.port is the tip of the giving-set port.
+ */
+export function makeIVBag(mat, { w = 9, d = 15, name = '0.9% NaCl', sub = '1000 mL', band = '#2563eb', puff = 1.1 } = {}) {
+  const g = new THREE.Group();
+  const shell = mesh(pillow(w, d), mat.make.physical({
+    color: 0xeef4fb, roughness: 0.18, transparent: true, opacity: 0.4, clearcoat: 1, clearcoatRoughness: 0.12,
+    side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 1.3,
+  }), { cast: false });
+  shell.scale.y = puff; shell.renderOrder = 3;
+  const fluid = mesh(pillow(w * 0.88, d * 0.86, 24, 30), mat.make.physical({ color: 0xd6ebfa, roughness: 0.08, transparent: true, opacity: 0.55, clearcoat: 0.6 }), { cast: false });
+  fluid.scale.y = puff * 0.82; fluid.position.y = 0.03; fluid.renderOrder = 2;
+  g.add(shell, fluid);
+
+  // the welded rim, wider at the hanger end where the hole is punched
+  const rim = roundedRectShape(w + 0.7, d + 2.4, 0.5);
+  rim.holes.push(roundedRectShape(w - 0.2, d - 0.2, 0.35));
+  const hole = new THREE.Path(); hole.absellipse(0, d / 2 + 0.75, 0.9, 0.42, 0, Math.PI * 2, true);
+  rim.holes.push(hole);
+  const rimGeo = new THREE.ShapeGeometry(rim, 6); rimGeo.rotateX(-Math.PI / 2); rimGeo.translate(0, 0, -0.6);
+  const seal = mesh(rimGeo, mat.make.standard({ color: 0xe8eef6, transparent: true, opacity: 0.9, roughness: 0.4, side: THREE.DoubleSide, depthWrite: false }), { cast: false });
+  seal.position.y = 0.03; seal.renderOrder = 3;
+  g.add(seal);
+
+  // the label, printed on the face: it rides the top of the pillow
+  const c = makeCanvas(360, 520), x = c.getContext('2d');
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, 360, 520);
+  x.fillStyle = band; x.fillRect(0, 0, 360, 92);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = '#ffffff'; x.font = `800 46px ${FONT}`; x.fillText('IV', 180, 48);
+  x.fillStyle = '#0f172a'; x.font = `800 ${name.length > 8 ? 56 : 66}px ${FONT}`; x.fillText(name, 180, 200);
+  x.font = `600 40px ${FONT}`; x.fillStyle = '#475569'; x.fillText(sub, 180, 280);
+  x.fillStyle = 'rgba(15,23,42,.18)'; for (let i = 0; i < 6; i++) x.fillRect(60, 350 + i * 22, 240 - (i % 3) * 50, 7);
+  const lw = w * 0.62, ld = d * 0.6, labelGeo = new THREE.PlaneGeometry(lw, ld, 12, 16);
+  labelGeo.rotateX(-Math.PI / 2);
+  const lp = labelGeo.attributes.position;
+  for (let i = 0; i < lp.count; i++) lp.setY(i, 0.04 + puff * pillowH(lp.getX(i), lp.getZ(i), w, d));
+  labelGeo.computeVertexNormals();
+  const label = mesh(labelGeo, mat.make.standard({ map: canvasTex(c), roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2 }), { cast: false });
+  label.renderOrder = 4;
+  g.add(label);
+
+  // two ports at +z: the giving-set port (twist-off cap) and the injection port
+  const tubeMat = mat.make.standard({ color: 0xf1f5f9, roughness: 0.35 });
+  const port = (px, len, capColor) => {
+    const t = mesh(new THREE.CylinderGeometry(0.32, 0.32, len, 14), tubeMat);
+    t.rotation.x = Math.PI / 2; t.position.set(px, 0.36, d / 2 + len / 2 - 0.2);
+    const cap = mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.7, 14), mat.make.standard({ color: capColor, roughness: 0.45 }));
+    cap.rotation.x = Math.PI / 2; cap.position.set(px, 0.36, d / 2 + len - 0.1);
+    g.add(t, cap);
+  };
+  port(-1.1, 2.2, 0x2563eb); port(1.1, 1.6, 0xf8fafc);
+  return { group: g, shell, label, w, d, anchors: { port: V3(-1.1, 0.36, d / 2 + 2.4), center: V3(0, puff * 0.5, 0) } };
 }

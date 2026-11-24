@@ -2,16 +2,18 @@
  * endfeet wrap the vessel. A world for Lab's zoom.js. Illustrative scale: beads are molecules,
  * the box is ~15 nm across, the membrane is drawn ~2× thick.
  *
- * It follows the bench through st = { na }: blood Na⁺ in mEq/L. Water beads random-walk and
+ * It follows the bench through st = { na, cellOsm?, mode? }: blood Na⁺ in mEq/L, what the
+ * astrocyte holds (CELL_OSM until it adapts: fewer K⁺ beads), and which story the cue tells
+ * ('night' · 'drip' · 'slow' · 'done'). Water beads random-walk and
  * cross the membrane, fast through aquaporin-4 and slowly through the bilayer. Na⁺ and Cl⁻
  * never cross (the vessel's tight junctions hold them in the blood; this one membrane stands
  * for both barriers). Each crossing is a coin flip, weighted toward the split
- *   water in cell / water in blood = astroVolume(na),
+ *   water in cell / water in blood = astroVolume(na, cellOsm),
  * the Boyle–van 't Hoff volume from model.js. So the net flow is the model's, and every
  * individual bead still moves at random, both ways. */
 import * as THREE from 'three';
 import { clamp, seeded, T, fmt, LIGHT } from '../lab.js';
-import { astroVolume, plasmaOsm, CELL_OSM, HEALTHY_NA } from './model.js';
+import { astroVolume, plasmaOsm, CELL_OSM, HEALTHY_NA, JUNIPER, SAFE_24H } from './model.js';
 
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const TX = T.levels.brain;
@@ -94,12 +96,12 @@ export function createBrainLevel(env) {
   /* ---------- the walk ---------- */
   const inAqp = (p) => AQP.some(([y, z]) => (p.y - y) ** 2 + (p.z - z) ** 2 < AQP_R * AQP_R);
   const tot = { in: 0, out: 0 };   // crossings since the blood was last healthy          // recent crossings: [time, +1 into the cell | −1 out]
-  let last = null, na = HEALTHY_NA, shownIons = NION;
+  let last = null, na = HEALTHY_NA, cellOsm = CELL_OSM, shownIons = NION, shownCell = NCELL;
   const nIn = () => water.reduce((s, w) => s + (w.p.x > 0 ? 1 : 0), 0);
 
   function walk(dt, time) {
     // steer the coin toward the model's split: water in cell / in blood = astroVolume(na)
-    const k = astroVolume(na), want = NW * k / (1 + k);
+    const k = astroVolume(na, cellOsm), want = NW * k / (1 + k);
     const bias = clamp(Math.exp(0.08 * (want - nIn())), 0.5, 2);
     const kick = TURN * Math.sqrt(dt) * SPEED;
     for (const w of water) {
@@ -139,12 +141,14 @@ export function createBrainLevel(env) {
         dummy.position.copy(ions[i * 2 + j].p); dummy.scale.setScalar(on ? 1 : 1e-4); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix);
       });
     }
-    cellS.forEach((s, i) => { dummy.position.copy(s.p); dummy.scale.setScalar(1); dummy.updateMatrix(); kM.setMatrixAt(i, dummy.matrix); });
+    cellS.forEach((s, i) => { dummy.position.copy(s.p); dummy.scale.setScalar(i < shownCell ? 1 : 1e-4); dummy.updateMatrix(); kM.setMatrixAt(i, dummy.matrix); });
     [naM, clM, kM].forEach((m) => { m.instanceMatrix.needsUpdate = true; });
   }
 
   function update(st, time) {
     na = st.na;
+    cellOsm = st.cellOsm || CELL_OSM;
+    shownCell = Math.round(NCELL * cellOsm / CELL_OSM);
     if (na >= HEALTHY_NA - 0.5) { tot.in = 0; tot.out = 0; }
     shownIons = Math.round(NION * plasmaOsm(na) / plasmaOsm(HEALTHY_NA) / 2) * 2;
     const dt = last == null ? 0 : Math.min(0.05, time - last);
@@ -167,7 +171,17 @@ export function createBrainLevel(env) {
     { root: headM, priority: 0, info: () => TX.info.bilayer },
   ];
   function cue(st) {
-    const pct = Math.round((astroVolume(st.na) - 1) * 100);
+    const v = astroVolume(st.na, st.cellOsm || CELL_OSM), pct = Math.round((v - 1) * 100);
+    if (st.mode === 'done') return { text: TX.cues.done, mark: 'cell' };
+    if (st.mode === 'slow') {
+      if (st.phase === 'adapt') return { text: TX.cues.adapt, mark: 'cell' };
+      if (st.phase === 'fast') return { text: fmt(TX.cues.fast, { na: HEALTHY_NA, pct: -pct }), mark: 'cell' };
+      return { text: fmt(TX.cues.limit, { limit: SAFE_24H }), mark: 'cell' };
+    }
+    if (st.mode === 'drip') {
+      const key = st.na < JUNIPER.na - 0.3 ? 'dripWorse' : st.na > JUNIPER.na + 0.5 ? 'dripShrink' : 'dripStill';
+      return { text: fmt(TX.cues[key], { pct }), mark: 'cell' };
+    }
     if (st.na >= HEALTHY_NA - 2) return { text: TX.cues.even, mark: 'aqp' };
     if (pct >= 15) return { text: fmt(TX.cues.swollen, { pct }), mark: 'cell' };
     if (st.na > 128) return { text: TX.cues.tight, mark: 'blood' };

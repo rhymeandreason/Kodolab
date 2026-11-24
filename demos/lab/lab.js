@@ -25,7 +25,7 @@ export { makeBeaker, makeCup, makeDish, makeTestTube, makeFunnel, makeMicroTube,
 export { makeJar, makeJarLid, makeSqueezeBottle, makeReagentBottle, makeDropperBottle, makeNozzleBottle } from './props/bottles.js';
 export { makeTypingTray, makeStirStick, makeStickCup, STICK_COLORS } from './props/serology.js';
 export { INGREDIENTS, ingredient } from './props/ingredients.js';
-export { makeZipBag, pillowH } from './props/bag.js';
+export { makeZipBag, makeIVBag, pillowH } from './props/bag.js';
 export { makePlate, makeBowl, makeIceBath } from './props/kitchen.js';
 export { makeTubeRack, makeToolHolder } from './props/racks.js';
 export { makePipette, makeSyringe, SYRINGE_ML, SYRINGE_BOT, makeScoop, makeRod, makeSkewer, makePunch, makeLoop, makeScalpel, makePencil } from './props/tools.js';
