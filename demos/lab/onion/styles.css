@@ -1,0 +1,8 @@
+/* Onion Root Tip: only what's this lab's. The microscope view is lab.css's. */
+.intro-card { --intro-em: linear-gradient(90deg, #a82d5c, #4f46e5); }
+.scope-jump { padding: 9px 16px; box-shadow: var(--shadow-ctl); }
+.scope-jump i { color: var(--accent-glow); font-size: 16px; }
+.scope-open-row { display: flex; margin-top: 12px; }
+.scope-open-row .btn { background: var(--accent); }
+.scope-open-row .btn:hover { background: var(--accent-ink); }
+@media (max-width: 820px) { .scope-jump span { display: none; } }

@@ -1,5 +1,5 @@
 /* Hand tools: transfer pipette, 10 mL syringe, scoop, stirring rod, wooden skewer,
- * hole punch, inoculation loop. Each file notes its origin where it isn't the base centre. */
+ * hole punch, inoculation loop, scalpel, pencil. Each file notes its origin where it isn't the base centre. */
 import * as THREE from 'three';
 import { V2, V3, lerp } from '../core/math.js';
 import { mesh, rbox, roundedRectShape, wrapLabel } from '../core/geometry.js';
@@ -209,4 +209,35 @@ export function makeLoop(mat, { color = toLinear('#2563eb') } = {}) {
     setBlob(k) { blob.scale.setScalar(Math.max(0.001, k)); },
     setFilm(k) { film.visible = k > 0.01; film.material.opacity = 0.65 * k; },
   };
+}
+
+/** Scalpel (from OnionRoot), 14 cm, lying flat. Origin at the blade's cutting edge on the
+ *  bench; the handle runs along -z. */
+export function makeScalpel(mat) {
+  const g = new THREE.Group();
+  const handle = mesh(rbox(1.0, 0.36, 10.8, 0.15), mat.steel);
+  handle.position.set(0, 0, -6.6);
+  const grip = mesh(new THREE.BoxGeometry(1.08, 0.39, 3.6), mat.make.solid(toLinear('#b5bcc5'), 0.55, { metalness: 0.6 }), { cast: false });
+  grip.position.set(0, 0.19, -7.8);
+  const s = new THREE.Shape();
+  s.moveTo(-0.48, -1.2); s.lineTo(0.36, -1.2);
+  s.quadraticCurveTo(0.6, 0.9, -0.36, 2.25);
+  s.quadraticCurveTo(-0.36, 0.6, -0.48, -1.2);
+  const blade = mesh(new THREE.ExtrudeGeometry(s, { depth: 0.06, bevelEnabled: false }), mat.make.standard({ color: toLinear('#eef1f4'), metalness: 1, roughness: 0.12 }));
+  blade.rotation.x = -Math.PI / 2; blade.position.y = 0.12;
+  g.add(handle, grip, blade);
+  return { group: g, anchors: { tip: V3(0, 0.12, 1.2), end: V3(0, 0.2, -12) } };
+}
+
+/** HB pencil with an eraser, 17 cm. Origin at the eraser end (the end that presses a
+ *  coverslip), along +y. */
+export function makePencil(mat) {
+  const g = new THREE.Group();
+  const add = (geo, m, y) => { const x = mesh(geo, m); x.position.y = y; g.add(x); return x; };
+  add(new THREE.CylinderGeometry(0.33, 0.33, 0.9, 16), mat.make.solid(toLinear('#e8898a'), 0.8), 0.45);
+  add(new THREE.CylinderGeometry(0.35, 0.35, 1.1, 16), mat.steel, 1.4);
+  add(new THREE.CylinderGeometry(0.34, 0.34, 13.2, 6), mat.make.solid(toLinear('#f2c230'), 0.5), 1.95 + 6.6);
+  add(new THREE.ConeGeometry(0.34, 1.6, 6), mat.make.solid(toLinear('#e9cfa4'), 0.8), 15.15 + 0.8).rotation.y = Math.PI / 6;
+  add(new THREE.ConeGeometry(0.1, 0.45, 8), mat.charcoal, 16.5);
+  return { group: g, anchors: { tip: V3(0, 0, 0), end: V3(0, 16.7, 0) } };
 }

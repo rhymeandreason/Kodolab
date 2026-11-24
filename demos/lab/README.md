@@ -9,6 +9,7 @@ Built here; the `Experiments/Lab` repo it came from is archived with the origina
 | `photosynthesis/photosynthesis-lab.html` | Floating leaf disks. The first lab, and the timed, scrubbable observation step |
 | `strawberry/strawberry-lab.html` | DNA extraction. Two zoom levels (a cell, the molecules) posed from one clock |
 | `ecoli/ecoli-lab.html` | Bacterial transformation with GFP. One zoom level, a UV step that darkens the room, results on the complete card |
+| `onion/onion-lab.html` | Onion root tip squash. A microscope view (lab.css's "Microscope view") with an eyepiece, a cell counter, and cell-division/'s plant mitosis loaded on the lab's three (`kit.js`) |
 | `gallery.html` | every prop on one bench: the catalog, and the check that a change broke nothing |
 | `props.html` | one prop on a turntable with its size, anchors and state sliders. `props.html#syringe` |
 | `themes.html` | the colour themes side by side, with the UI in each |
@@ -64,7 +65,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | --- | --- |
 | Units | 1 unit = 1 cm. The bench top is at y = 0. |
 | Origin | Centre of the base, +Y up. Exceptions are noted in each file (a syringe's is its tip, a punch's its die). |
-| Files | One per category, following [PROPS.md](PROPS.md)'s sections: `surfaces`, `glassware`, `bottles`, `bag`, `kitchen`, `racks`, `tools`, `equipment`, `culture`, `specimens`, `effects`, `ingredients`. |
+| Files | One per category, following [PROPS.md](PROPS.md)'s sections: `surfaces`, `glassware`, `bottles`, `bag`, `kitchen`, `racks`, `tools`, `equipment`, `culture`, `specimens`, `onion`, `microscopy`, `effects`, `ingredients`. |
 | Shape | `makeX(mat, opts)` returns `{ group, anchors, ...controls }`. `worldOf(prop.group, prop.anchors.spout)` gives an anchor's world position. |
 | Anchors | Named points in local space: `top` (centre of an opening), `floor` (where contents rest), `spout` (where it pours from), `tip` (a tool's working end), `end`, `center`. A specific name (`powder`, `die`) only when none fit. |
 | Liquids | Every container with a liquid has `prop.liquid` from `core/liquid.js`: `setVolume(mL)`, `setLevel(cm)`, `setFraction(f)`, `setRange(f0, f1)` for layers, `setPour(k)` while tilting, `setColor`, `setCloud`, world-space `surfaceY()`. The container's inner wall profile sets the volume, and the surface stays level as it moves or tilts with no per-frame code. |
@@ -96,6 +97,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | `props/*` | strawberry, zip-top bag, test tubes, funnel and filter, reagent bottle, ice bath, skewer, DNA precipitate | Strawberry |
 | `props/*` | microcentrifuge tube, agar plate (colonies, lawn, UV glow), loop, block rack, water bath, UV lamp, bench card | Ecoli |
 | `props/surfaces.js` | waste bin | BloodType |
+| `props/*` | onion, scalpel, pencil, slide, coverslip, filter paper, compound microscope | OnionRoot |
 
 ## Upgrading three.js
 

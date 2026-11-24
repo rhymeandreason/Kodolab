@@ -129,10 +129,10 @@ export function makeTimer(mat, { color = toLinear('#f08a4b') } = {}) {
 }
 
 /** Water bath (from Ecoli): an open tank of water with a float rack and a control panel
- *  showing the setpoint. 15 × 10.4 cm, 5.5 cm deep. slots[] are where tubes stand in the
+ *  showing the setpoint and `label` while active. 15 × 10.4 cm, 5.5 cm deep. slots[] are where tubes stand in the
  *  float (local). setActive(on, blink) lights the panel; update(time) ripples the water
  *  (call it every frame; stronger while active). */
-export function makeWaterBath(mat, { setpoint = '42.0', color = toLinear('#e9eef4'), floatColor = toLinear('#fecdd3') } = {}) {
+export function makeWaterBath(mat, { setpoint = '42.0', label = 'HEAT SHOCK', color = toLinear('#e9eef4'), floatColor = toLinear('#fecdd3') } = {}) {
   const K = 6.5;
   const W = 2.3 * K, H = 0.85 * K, D = 1.6 * K, t = 0.45;
   const g = new THREE.Group();
@@ -174,7 +174,7 @@ export function makeWaterBath(mat, { setpoint = '42.0', color = toLinear('#e9eef
       x.fillText(setpoint, 34, 104);
       x.font = `600 46px ${FONT}`; x.fillText('°C', 300, 82);
       x.fillStyle = active ? '#fb923c' : '#334155';
-      x.font = `700 26px ${FONT}`; x.fillText(active ? 'HEAT SHOCK' : 'READY', 300, 138);
+      x.font = `700 26px ${FONT}`; x.fillText(active ? label : 'READY', 300, 138);
       tex.needsUpdate = true;
     },
     update(time) {
