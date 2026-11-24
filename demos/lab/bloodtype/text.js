@@ -33,7 +33,7 @@ LabText.add('en', {
 
   phases: {
     prep: { title: 'Prepare the trays', desc: 'Blood, antisera, stir' },
-    read: { title: 'Read the wells', desc: 'Clumping or not' },
+    read: { title: 'Read the wells', desc: 'Clumping, then type' },
     solve: { title: 'Solve the case', desc: 'Punnett squares' },
   },
 
@@ -63,12 +63,19 @@ LabText.add('en', {
       caption: 'Stir, and watch the magnifier',
     },
     record: {
-      title: 'Record the results', short: 'Record',
+      title: 'Mark the clumping', short: 'Mark',
       action: 'look at it in the magnifier',
-      hint: 'Fill in the <b>data table</b>',
-      detail: 'Mark each well + (clumped) or − (smooth), then pick each person\'s type.',
+      hint: 'Mark each well in the <b>data table</b>',
+      detail: 'Mark each well + (clumped) or − (smooth).',
       why: 'Smooth red means no antigen for that antibody. Gritty clumps in clear fluid mean it found its antigen.',
       caption: 'Read every well: clumped or smooth?',
+    },
+    type: {
+      title: 'Name the blood types', short: 'Types',
+      hint: 'Pick each person\'s <b>type</b>',
+      detail: 'Anti-A and anti-B give the letter, anti-Rh gives the sign.',
+      why: 'Each clump is an antigen on the red cells, and the antigens are the type.',
+      caption: 'What type is each person?',
     },
     solve: {
       title: 'Who is the father?', short: 'Solve',
@@ -99,9 +106,13 @@ LabText.add('en', {
     keyTitle: 'How to read the results',
     keyAbo: '1 · ABO letter', keyRhHead: '2 · Rh sign',
     keyRh: 'The Anti-Rh well gives the + or − after the letter. Anti-A −, anti-B +, anti-Rh + is <b>B+</b>.',
-    check: 'Check my results',
+    check: 'Check my readings',
+    checkTypes: 'Check the blood types',
+    leadType: 'Use the key below to name each person\'s type.',
+    obsRight: '<b>All twelve wells are right.</b> Now name each type.',
+    fillObs: 'Mark all twelve wells.',
+    fillTypes: 'Pick a type for each person.',
     notStirred: 'Stir every well first.',
-    fillAll: 'Record all twelve wells and pick a type for each person.',
     wrongObs1: '{n} well doesn\'t match. Look again in the magnifier.',
     wrongObsN: '{n} wells don\'t match. Look again in the magnifier.',
     wrongType1: '{n} type is wrong. Clumping means that antigen is present.',

@@ -64,7 +64,8 @@ const notebook = createNotebook({
   onChange: () => {
     lesson.render();
     requestAnimationFrame(() => stage.resize());
-    if (lesson.step === RECORD && notebook.checked()) lesson.jumpTo(RECORD + 1);
+    if (lesson.step === RECORD && notebook.marked()) lesson.jumpTo(TYPE);
+    else if (lesson.step === TYPE && notebook.checked()) lesson.jumpTo(SOLVE);
     else if (lesson.step === SOLVE && notebook.solved()) lesson.jumpTo(SOLVE + 1);
   },
 });
@@ -231,6 +232,10 @@ const STEPS = [
     isDone: () => S.stirred.every(Boolean), progress: () => count(S.stirred) / PATIENTS.length, run: actStir },
   /* Reading and the genetics happen in the notebook, off the bench. Watch stops at the bench. */
   { id: 'record', ...card('record'), targets: [], view: 'trays',
+    isDone: () => lesson.mode === 'watch' || notebook.marked(),
+    progress: () => notebook.progress(),
+    run: async () => { if (!isInstant()) notebook.open('data'); } },
+  { id: 'type', ...card('type'), targets: [], view: 'trays',
     isDone: () => lesson.mode === 'watch' || notebook.checked(),
     progress: () => notebook.progress(),
     run: async () => { if (!isInstant()) notebook.open('data'); } },
@@ -238,10 +243,11 @@ const STEPS = [
     isDone: () => lesson.mode === 'watch' || notebook.solved(),
     run: async () => { if (!isInstant()) notebook.open('genetics'); } },
 ];
-const RECORD = STEPS.findIndex((s) => s.id === 'record'), SOLVE = RECORD + 1;
+const at = (id) => STEPS.findIndex((s) => s.id === id);
+const RECORD = at('record'), TYPE = at('type'), SOLVE = at('solve');
 const PHASES = [
   { ...T.phases.prep, steps: ['blood', 'sera', 'stir'] },
-  { ...T.phases.read, steps: ['record'] },
+  { ...T.phases.read, steps: ['record', 'type'] },
   { ...T.phases.solve, steps: ['solve'] },
 ];
 
@@ -305,6 +311,13 @@ function placeCase() {
 }
 new ResizeObserver(placeCase).observe($('#stepsPanel'));
 window.addEventListener('resize', placeCase);
+/* Testing: Alt+Shift+F skips the bench steps, then each press fills the next notebook stage. */
+window.addEventListener('keydown', async (e) => {
+  if (!(e.altKey && e.shiftKey && e.code === 'KeyF')) return;
+  e.preventDefault();
+  if (lesson.step < RECORD) await lesson.jumpTo(RECORD);
+  else notebook.cheat();
+});
 renderCase();
 
 function restart() {

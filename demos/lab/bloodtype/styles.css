@@ -88,7 +88,7 @@
 .nb-keys th, .nb-keys td { padding: 2px 6px; font-size: 13px; text-align: center; }
 .nb-keys th { color: var(--muted); font-weight: 600; }
 .nb-keys p { margin: 0; line-height: 1.5; }
-.nb-check { width: 100%; justify-content: center; }
+.nb-check { width: 100%; justify-content: center; margin-top: 16px; }
 .nb-msg { margin: 8px 0 0; font-size: 13.5px; line-height: 1.45; }
 .nb-msg:empty { display: none; }
 .nb-msg.no { color: #b42318; }

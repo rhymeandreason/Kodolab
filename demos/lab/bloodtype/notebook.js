@@ -4,7 +4,7 @@
  *
  *   const nb = createNotebook({ getCase, ready(pid, well), onFocus(pid, well?), onChange });
  *   nb.open('data' | 'genetics') · close() · reset() · render()
- *   nb.checked() · nb.solved() · nb.progress() · nb.isOpen · nb.el
+ *   nb.marked() · nb.checked() · nb.solved() · nb.progress() · nb.isOpen · nb.el
  *   nb.answer('man1') · nb.guess        the case's answer, asked on the step card */
 import { T, fmt } from '../lab.js';
 import { WELLS, TYPES, hasAntigen, typeLabel, genotypes, punnett, canParent, aboOf, rhOf } from './model.js';
@@ -36,15 +36,16 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
   function reset() {
     st = {
       record: Object.fromEntries(PATIENTS.map((p) => [p.id, { A: null, B: null, Rh: null, type: '' }])),
-      fb: null, msg: '', checked: false,
+      fb: null, msg: '', obsOk: false, checked: false,
       man: 'man1', mom: null, manG: null, guess: null,
     };
     tab = 'data';
     render();
   }
   const types = () => getCase().types;
-  const recorded = () => PATIENTS.reduce((n, p) => n + WELLS.filter((k) => st.record[p.id][k] !== null).length + (st.record[p.id].type ? 1 : 0), 0);
-  const TOTAL = PATIENTS.length * (WELLS.length + 1);
+  const marked = () => PATIENTS.reduce((n, p) => n + WELLS.filter((k) => st.record[p.id][k] !== null).length, 0);
+  const typed = () => PATIENTS.filter((p) => st.record[p.id].type).length;
+  const WELL_COUNT = PATIENTS.length * WELLS.length;
 
   /* ---------- data table ---------- */
   function dataTab() {
@@ -54,21 +55,22 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
       const cells = WELLS.map((k) => {
         const v = r[k], ok = ready(p.id, k);
         const cls = ['nb-obs', v === true ? 'pos' : v === false ? 'neg' : ok ? 'ready' : ''];
-        if (fb) cls.push(fb[p.id][k] ? 'right' : 'wrong');
-        return `<td><button class="${cls.join(' ')}" data-p="${p.id}" data-k="${k}" ${ok && !st.checked ? '' : 'disabled'}>${sign(v) || (ok ? '?' : '·')}</button></td>`;
+        if (fb && !st.obsOk) cls.push(fb[p.id][k] ? 'right' : 'wrong');
+        return `<td><button class="${cls.join(' ')}" data-p="${p.id}" data-k="${k}" ${ok && !st.obsOk ? '' : 'disabled'}>${sign(v) || (ok ? '?' : '·')}</button></td>`;
       }).join('');
       const opts = ['', ...TYPES].map((o) => `<option value="${o}" ${r.type === o ? 'selected' : ''}>${o || '·'}</option>`).join('');
-      const scls = fb ? (fb[p.id].type ? 'right' : 'wrong') : '';
-      return `<tr data-p="${p.id}"><th>${dot(p.color)}${name(p.id)}</th>${cells}<td><select class="${scls}" data-p="${p.id}" ${st.checked ? 'disabled' : ''} aria-label="${fmt(N.typeOf, { name: name(p.id) })}">${opts}</select></td></tr>`;
+      const scls = fb && st.obsOk ? (fb[p.id].type ? 'right' : 'wrong') : '';
+      const sel = st.obsOk ? `<td><select class="${scls}" data-p="${p.id}" ${st.checked ? 'disabled' : ''} aria-label="${fmt(N.typeOf, { name: name(p.id) })}">${opts}</select></td>` : '';
+      return `<tr data-p="${p.id}"><th>${dot(p.color)}${name(p.id)}</th>${cells}${sel}</tr>`;
     }).join('');
     const head = WELLS.map((k) => `<th>${dot(serumColor[k])}${T.props.sera[k]}</th>`).join('');
     return `
-      <p class="nb-lead">${st.checked ? N.doneLead : N.lead}</p>
-      <div class="nb-legend"><span><b class="nb-mini pos">+</b>${N.pos}</span><span><b class="nb-mini neg">−</b>${N.neg}</span></div>
-      <table class="nb-data"><thead><tr><th>${N.sample}</th>${head}<th>${N.type}</th></tr></thead><tbody>${rows}</tbody></table>
-      ${st.checked ? '' : `<button class="btn nb-check">${N.check}</button>`}
-      <p class="nb-msg ${st.checked ? 'ok' : st.msg ? 'no' : ''}">${st.checked ? N.allRight : st.msg}</p>
-      <section class="nb-key"><h3><i class="ph ph-info"></i>${N.keyTitle}</h3>${keyBody()}</section>`;
+      <p class="nb-lead">${st.checked ? N.doneLead : st.obsOk ? N.leadType : N.lead}</p>
+      ${st.obsOk ? '' : `<div class="nb-legend"><span><b class="nb-mini pos">+</b>${N.pos}</span><span><b class="nb-mini neg">−</b>${N.neg}</span></div>`}
+      <table class="nb-data"><thead><tr><th>${N.sample}</th>${head}${st.obsOk ? `<th>${N.type}</th>` : ''}</tr></thead><tbody>${rows}</tbody></table>
+      ${st.checked ? '' : `<button class="btn nb-check">${st.obsOk ? N.checkTypes : N.check}</button>`}
+      <p class="nb-msg ${st.checked || (st.obsOk && !st.msg) ? 'ok' : st.msg ? 'no' : ''}">${st.checked ? N.allRight : st.msg || (st.obsOk ? N.obsRight : '')}</p>
+      ${st.obsOk && !st.checked ? `<section class="nb-key"><h3><i class="ph ph-info"></i>${N.keyTitle}</h3>${keyBody()}</section>` : ''}`;
   }
   function keyBody() {
     const row = (a, b, t) => `<tr><td><b class="nb-mini ${a ? 'pos' : 'neg'}">${a ? '+' : '−'}</b></td><td><b class="nb-mini ${b ? 'pos' : 'neg'}">${b ? '+' : '−'}</b></td><td>→</td><td><b>${t}</b></td></tr>`;
@@ -80,23 +82,32 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
   function check() {
     const missing = PATIENTS.some((p) => WELLS.some((k) => !ready(p.id, k)));
     if (missing) { st.msg = N.notStirred; return; }
-    if (recorded() < TOTAL) { st.msg = N.fillAll; return; }
-    let wrongObs = 0, wrongType = 0;
+    if (!st.obsOk) {
+      if (marked() < WELL_COUNT) { st.msg = N.fillObs; return; }
+      let wrong = 0;
+      st.fb = Object.fromEntries(PATIENTS.map((p) => {
+        const t = types()[p.id], f = {};
+        WELLS.forEach((k) => { f[k] = st.record[p.id][k] === hasAntigen(t, k); if (!f[k]) wrong++; });
+        return [p.id, f];
+      }));
+      if (!wrong) { st.obsOk = true; st.fb = null; st.msg = ''; return; }
+      st.msg = fmt(wrong > 1 ? N.wrongObsN : N.wrongObs1, { n: wrong });
+      return;
+    }
+    if (typed() < PATIENTS.length) { st.msg = N.fillTypes; return; }
+    let wrong = 0;
     st.fb = Object.fromEntries(PATIENTS.map((p) => {
-      const t = types()[p.id], r = st.record[p.id], f = {};
-      WELLS.forEach((k) => { f[k] = r[k] === hasAntigen(t, k); if (!f[k]) wrongObs++; });
-      f.type = r.type === typeLabel(t);
-      if (!f.type) wrongType++;
-      return [p.id, f];
+      const ok = st.record[p.id].type === typeLabel(types()[p.id]);
+      if (!ok) wrong++;
+      return [p.id, { type: ok }];
     }));
-    if (!wrongObs && !wrongType) {
+    if (!wrong) {
       st.checked = true; st.msg = '';
       st.mom = genotypes(types().mother)[0];
       st.manG = genotypes(types()[st.man])[0];
       return;
     }
-    st.msg = [wrongObs ? fmt(wrongObs > 1 ? N.wrongObsN : N.wrongObs1, { n: wrongObs }) : '',
-      wrongType ? fmt(wrongType > 1 ? N.wrongTypeN : N.wrongType1, { n: wrongType }) : ''].filter(Boolean).join(' ');
+    st.msg = fmt(wrong > 1 ? N.wrongTypeN : N.wrongType1, { n: wrong });
   }
 
   /* ---------- genetics ---------- */
@@ -207,6 +218,7 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
     open(t) { if (t) tab = t; const was = el.hidden; el.hidden = false; render(); if (was) onChange(); },
     close() { if (el.hidden) return; el.hidden = true; onChange(); },
     reset, render,
+    marked: () => st.obsOk,
     checked: () => st.checked,
     solved: () => st.guess != null && st.guess === getCase().father,
     /** The student's answer to the case (asked on the step card, not here). */
@@ -214,7 +226,17 @@ export function createNotebook({ getCase, ready, onFocus = () => {}, onChange = 
     answer(m) { st.guess = m; changed(); },
     /** Why each man is in or out, for the end card. */
     explain: explanation,
-    progress: () => recorded() / TOTAL,
+    /** Testing shortcut: fill the current stage with the right answers and check it. */
+    cheat() {
+      if (st.checked) return;
+      PATIENTS.forEach((p) => {
+        const t = types()[p.id], r = st.record[p.id];
+        if (!st.obsOk) WELLS.forEach((k) => { r[k] = hasAntigen(t, k); });
+        else r.type = typeLabel(t);
+      });
+      check(); if (st.checked) tab = 'genetics'; changed();
+    },
+    progress: () => (st.obsOk ? typed() / PATIENTS.length : marked() / WELL_COUNT),
   };
   reset();
   return api;
