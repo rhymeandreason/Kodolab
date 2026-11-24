@@ -25,7 +25,7 @@ Each layer may use the ones above it and knows nothing of the ones below.
 
 **Share the plumbing, not the physics.** Deliberately no monolithic `engine.js`. The test for whether something belongs in a shared module — *would two lessons disagree about it?* — and the same split a level down inside the bonding builder: `Modules.md`.
 
-**A featured lesson and its component are two copies of one physics for now.** `membrane-lab.html` still runs its own inline membrane, `water-lab.html` its own driving of WaterSim. Until each migrates, a physics fix has two homes, and `Modules.md` says which.
+ `membrane-lab.html` still runs its own inline membrane, it doesn’t use the component yet.
 
 ## What to read
 
@@ -123,7 +123,7 @@ Framing, spacing, rotation, captions: the human tests in the browser.
 
 ## Copywriting
 
-Write as a tutor for a college Bio 101 student. Concise, no repetition. The text supports the visuals and interaction. Prioritize core concepts, and steer the reader toward asking more rather than dumping facts.
+Concise, no repetition. The text supports the visuals and interaction. Prioritize core concepts, and steer the reader toward asking more rather than dumping facts.
 
 **A number in user-facing text must be read from the data at render time.** A typed number is a claim nothing checks and a re-bake silently falsifies. **Read it from where the fact lives, not the nearest lookalike**. Example: counting helices in a trajectory's `ss` gives five because adjacent ones merge, so the eight the page says is carried across from the HELIX records by the baker.
 
@@ -139,7 +139,7 @@ The human uses `molecule-viewer.html` to manually choose a good default rotation
 
 **Don't write a changelog in a code file's comments. Comments should be active voice, and only document things that are not obvious from reading the code.**
 
-**Read a module's own header before using it a way you have not used it before.** The load-bearing reasoning in this repo lives in the file headers, not only in `docs/` — and most of it is a trap that ships looking merely ugly, so it is written where someone about to fall in will be looking. `kit/ribbon.js` says not to slice a chain and build per secondary-structure element; a page did it anyway and drew the protein as scattered splinters.
+**Read a module's own header before using it a way you have not used it before.** The important notes in this repo lives in the file headers, not only in `docs/` . `kit/ribbon.js` says not to slice a chain and build per secondary-structure element; a page did it anyway and drew the protein as scattered splinters.
 
 ## Never use these structures when writing:
 
