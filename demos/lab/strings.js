@@ -41,5 +41,8 @@ LabText.add('en', {
     zoomIn: 'Zoom in',
     zoomOut: 'Zoom out',
     zoomTo: '{dir} to the {level} level',
+    // the card while zoomed in (createLesson's zoom option)
+    levelWhy: '<b>{level} level:</b> {text}',
+    backToLab: 'Click the <b>Lab</b> circle to go back to the bench and {action}',
   },
 });

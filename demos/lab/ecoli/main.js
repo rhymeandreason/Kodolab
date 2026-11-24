@@ -7,9 +7,9 @@
  * cells have reached, which the actions set as they go. */
 import * as THREE from 'three';
 import {
-  V3, Q, clamp, lerp, smooth, Ease,
+  V3, Q, clamp, lerp, Ease,
   rand, newSession, anim, wait, moveTo,
-  disposeTree, toast, mesh,
+  disposeTree, toast, mesh, carry,
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createZoom, createIntro, chromeInsets, bindChrome,
   makeBench, makeMicroTube, makeTubeRack, makeReagentBottle, makeIceBath, makeWaterBath,
   makeAgarPlate, makeBenchCard, makePipette, makeLoop, makeToolHolder, makeWasteBin, makeUvLamp,
@@ -76,7 +76,6 @@ const zoom = createZoom(stage, {
   levels: [{ key: 'cell', world: createCell(stage.env), name: T.levels.cell.name, meta: T.levels.cell.meta, bg: '#eef1f8' }],
   getT: () => { cellState.stage = S ? S.micro : 0; cellState.ara = ara; cellState.uv = S ? S.uv : 0; return cellState; },
   getStep: () => 0,
-  onChange: (scale) => { lesson.holdWatch(scale !== 'lab'); lesson.render(); requestAnimationFrame(() => stage.resize()); },
 });
 
 // =========================================================================
@@ -278,15 +277,6 @@ function tint(tube, color, dur = 0.6) {
   const c0 = new THREE.Color(tube.liquid.mesh.material.color), c1 = new THREE.Color(color);
   const c = new THREE.Color();
   return anim(dur, (e) => tube.liquid.setColor(c.copy(c0).lerp(c1, e)));
-}
-/** Lift a tube straight up, carry it level, then lower it straight down (clears container walls). */
-function carry(tube, to, dur = 1.4, clear = 7) {
-  const o = tube.group, a = o.position.clone(), b = to.clone(), top = Math.max(a.y, b.y) + clear;
-  return anim(dur, (e, k) => {
-    const h = smooth(clamp((k - 0.25) / 0.5));
-    o.position.x = lerp(a.x, b.x, h); o.position.z = lerp(a.z, b.z, h);
-    o.position.y = k < 0.5 ? lerp(a.y, top, smooth(clamp(k / 0.3))) : lerp(top, b.y, smooth(clamp((k - 0.7) / 0.3)));
-  }, Ease.linear);
 }
 const SLOTS = {
   rack: () => B.rack.holes.map((h) => POS.rack.clone().add(h)),
@@ -533,13 +523,6 @@ const STEPS = [
     run: actUv,
   },
 ];
-// The card's "why" follows the level in the main view; bench clicks only work at the Lab level.
-const cellWhy = () => fmt(T.levelWhy, { level: zoom.names.cell, text: captionFor(cellState) });
-STEPS.forEach((s) => {
-  const why = s.why, hint = s.hint;
-  s.why = () => (zoom.scale === 'lab' ? why : cellWhy());
-  s.hint = () => (zoom.scale === 'lab' ? hint : fmt(T.backToLab, { action: s.action }));
-});
 const PHASES = [
   { ...T.phases.prepare, steps: ['cacl2', 'cells', 'plasmid'] },
   { ...T.phases.shock, steps: ['ice', 'heat'] },
@@ -555,7 +538,6 @@ const PHASES = [
 /** A number in the page's language (English if the browser doesn't know it). */
 function num(x, opts) { try { return x.toLocaleString(LANG, opts); } catch (e) { return x.toLocaleString('en-US', opts); } }
 function results() {
-  if (zoom.scale !== 'lab') return cellWhy();
   const n = B ? B.plates[3].colonies : 46;
   const dna = 0.8 * 100 / 510, eff = Math.round(n / dna);
   return fmt(T.complete.efficiency, { n, dna: num(dna, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), eff: num(eff) });
@@ -574,7 +556,8 @@ const completeHint = () => {
 // =========================================================================
 let firstEnter = true;
 lesson = createLesson({
-  levelCaption: () => zoom.caption(),
+  zoom,
+  levelWhy: () => captionFor(cellState),
   steps: STEPS,
   phases: PHASES,
   rebuild,
@@ -590,18 +573,16 @@ lesson = createLesson({
     stage.focus(step.view);
   },
 });
-const benchActive = () => zoom.scale === 'lab' && !zoom.transitioning;
 ix = createInteraction(stage, {
-  targets: () => (benchActive() ? lesson.targets() : []),
+  zoom,
+  targets: lesson.targets,
   busy: lesson.isBusy,
   onClick: (k) => {
-    if (!benchActive()) return undefined;
     if (k === 'uv' && lesson.step >= STEPS.length) return toggleUv();
     return lesson.click(k);
   },
   status: lesson.status,
   markerStyle: new URLSearchParams(location.search).get('marker') || 'circle',
-  enabled: benchActive,
 });
 // Watch mode's camera: one default zoom that pans along the bench (rules in follow.js)
 const follow = createFollowCam(stage, ix, {

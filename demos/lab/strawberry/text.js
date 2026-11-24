@@ -135,7 +135,6 @@ LabText.add('en', {
       },
     },
   },
-  backToLab: 'Click the <b>Lab</b> circle to go back to the bench and {action}',
 
   complete: {
     hint: '<b>You extracted strawberry DNA.</b> Click the circles to see the cell and the molecules.',
@@ -176,7 +175,6 @@ LabText.add('en', {
       mol: 'Every visible fibre is a bundle of countless double helices. One helix is only 2 nanometres wide, about 40,000 times thinner than a human hair.',
     },
   ],
-  levelWhy: '<b>{level} level:</b> {text}',
 
   /* bench objects: hover name, short name, and what they are for */
   objects: {

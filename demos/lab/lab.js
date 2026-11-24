@@ -15,6 +15,7 @@ export { T, UI, LANG, fmt } from './text.js';
 export { createFollowCam } from './follow.js';
 export { createZoom } from './zoom.js';
 export { createIntro, createPropArt } from './intro.js';
+export { pourPose, carry, dropIn, takeTip, pipetteDraw, pipetteDispense, ejectTip } from './hands.js';
 export { chromeInsets, bindChrome, PHONE } from './chrome.js';
 export { toast, ensureEl, uiRoot, stripTags, THEMES, setTheme, getTheme, themeColor } from './ui.js';
 

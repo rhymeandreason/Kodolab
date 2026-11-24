@@ -9,12 +9,13 @@
  *     levels: [{ key: 'cell', world: createCell(stage.env), name: 'Cell', meta: '≈ 100 µm', bg: '#e9f2ee' }],
  *     getT: () => S.t,          // passed to each world's update(t, time) and info(t)
  *     getStep: () => i,         // index into each world's views[] (its camera for this step)
- *     onChange: (scale) => {},  // after the main view switched level
+ *     onChange: (scale) => {},  // after the main view switched level (or zoom.listen(fn))
  *   });
  *   zoom.scale            // 'lab' | a level key
  *   zoom.go('cell')       // zoom with the lens transition
  *   zoom.onStep()         // fly the level cameras to the current step's view
  *   zoom.caption()        // the main view's level caption now, or null at the Lab (createLesson's levelCaption)
+ *   zoom.listen(fn)       // fn(scale) after every switch; createLesson({ zoom }) listens itself
  *   stage.onFrame((dt) => zoom.update(dt));
  *
  * A world: { scene, views: [{ pos, target }], labels: [{ text, sub?, anchor(), show(t) }],
@@ -25,6 +26,10 @@
  * view. mark names one of its labels by key (or text, if it has no key): that tag is spotlit
  * while the cue is up, the others dim. A world's labels: [{ key?, text, sub?, anchor(), show(t) }].
  * insetBg tints the level's circle from its `bg` (Ecoli's cell goes dark with the room lights).
+ *
+ *   labels: [{ key: 'pore', text: 'Pore', sub: '0.2 µm', anchor: () => pore.getWorldPosition(V3()),
+ *              show: (t) => t.stage === 2 }],
+ *   cue: (t) => (t.stage === 2 ? { text: 'A <b>pore</b> opens', mark: 'pore' } : null),
  *
  * It builds its own DOM: one `.zoom-inset` circle per level you're not looking at, in
  * #zoomInsets, and a `.scale-bg.bg-<key>` behind the canvas per level. page.js makes #zoomLens
@@ -76,6 +81,7 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
   let active = 'lab';
   let transition = null;
   let time = 0;
+  const listeners = [onChange];
 
   /* ---------- worlds ---------- */
   const worlds = { lab: { key: 'lab', scene: stage.scene, camera: stage.camera, controls: stage.controls, views: null } };
@@ -270,7 +276,8 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
         document.body.dataset.scale = active;
         refreshInsets();
         lens.style.clipPath = 'none';
-        onChange(active);
+        listeners.forEach((fn) => fn(active));
+        requestAnimationFrame(() => stage.resize());   // the card and circles change the free area
       }
     } else {
       const k = clamp((T.t - A) / B);
@@ -426,5 +433,6 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
     get scale() { return active; },
     get transitioning() { return !!transition; },
     go, onStep, update, caption, worlds, names: NAMES, order: ORDER,
+    listen(fn) { listeners.push(fn); },
   };
 }

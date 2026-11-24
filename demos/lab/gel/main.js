@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import {
   V3, Q, lerp, clamp, Ease, worldOf,
-  rand, newSession, anim, wait, moveTo, isInstant,
+  newSession, anim, wait, moveTo, isInstant,
+  pourPose, takeTip, pipetteDraw, pipetteDispense, ejectTip,
   disposeTree, toast,
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createZoom, createIntro, chromeInsets, bindChrome, PHONE,
   makeBench, makeMicroTube, makeTubeRack, makeReagentBottle, makeWasteBin, makeStream,
@@ -83,7 +84,6 @@ const zoom = createZoom(stage, {
     return gelState;
   },
   getStep: () => 0,
-  onChange: (scale) => { lesson.holdWatch(scale !== 'lab'); lesson.render(); requestAnimationFrame(() => stage.resize()); },
 });
 
 // =========================================================================
@@ -198,16 +198,6 @@ function applyLights() {
 // =========================================================================
 // Actions
 // =========================================================================
-const _q = new THREE.Quaternion(), _p = V3();
-/** Pose a bottle tilted `angle·kTilt` about `axis`, its spout on `target`, `kMove` of the way from home. */
-function pourPose(obj, home, q0, spoutLocal, target, axis, angle, kMove, kTilt, arc) {
-  _q.setFromAxisAngle(axis, angle * kTilt).multiply(q0);
-  _p.copy(spoutLocal).applyQuaternion(_q);
-  obj.position.lerpVectors(home, target.clone().sub(_p), kMove);
-  obj.position.y += Math.sin(Math.PI * kMove) * arc;
-  obj.quaternion.copy(_q);
-}
-
 async function actBuffer() {
   const b = B.tae, g = b.group, home = g.position.clone(), q0 = g.quaternion.clone();
   const target = POS.box.clone().add(B.box.anchors.fill).add(V3(0, 2, 0));
@@ -238,57 +228,31 @@ const capTube = (tube, open, dur = 0.3) => { const a = tube.capOpen; return anim
 
 /** Pipette 10 µL from sample i into well i: fresh tip, draw, load, eject, hang it back up. */
 async function load(i) {
-  const pip = B.pip, g = pip.group, tube = B.tubes[i], C = T.steps.ladder.captions;
-  const rest = pipRest(B.stand);
-  if (i === 0) S.cap = C.tip;
-  const tp = POS.tips.clone().add(B.tipBox.tips[S.tipsUsed]);
-  await moveTo(g, { pos: tp.clone().add(V3(0, 3.5, 0)), dur: 0.8, arc: 3 });
-  await moveTo(g, { pos: tp, dur: 0.25 });
-  pip.setTip(true); B.tipBox.setTaken(++S.tipsUsed);
-  await moveTo(g, { pos: tp.clone().add(V3(0, 4, 0)), dur: 0.25 });
+  const pip = B.pip, tube = B.tubes[i], C = T.steps.ladder.captions;
+  const say = (c) => { if (i === 0) S.cap = c; };
+  say(C.tip);
+  await takeTip(pip, POS.tips.clone().add(B.tipBox.tips[S.tipsUsed]), { onSeat: () => B.tipBox.setTaken(++S.tipsUsed) });
 
-  if (i === 0) S.cap = fmt(C.draw, { ul: LOAD_UL });
-  const tpos = tube.group.position, above = V3(tpos.x, tubeTop(tube) + 1.4, tpos.z);
-  const opened = capTube(tube, true);
-  await moveTo(g, { pos: above, dur: 0.6, arc: 2 });
-  await opened;
-  await anim(0.2, (e) => pip.setPlunger(0.75 * e));
-  await moveTo(g, { pos: V3(tpos.x, tube.liquid.surfaceY() - 0.3, tpos.z), dur: 0.3 });
-  const lv = tube.liquid.level;
-  await anim(0.4, (e) => { pip.setPlunger(0.75 * (1 - e)); pip.setFill(e, hex(COL.dye)); tube.liquid.setLevel(lv - 0.2 * e); });
-  await moveTo(g, { pos: above, dur: 0.3 });
+  say(fmt(C.draw, { ul: LOAD_UL }));
+  const tpos = tube.group.position, lv = tube.liquid.level;
+  capTube(tube, true);
+  await pipetteDraw(pip, {
+    above: V3(tpos.x, tubeTop(tube) + 1.4, tpos.z), into: V3(tpos.x, tube.liquid.surfaceY() - 0.3, tpos.z),
+    color: hex(COL.dye), onDraw: (e) => tube.liquid.setLevel(lv - 0.2 * e),
+  });
   capTube(tube, false);
 
-  if (i === 0) S.cap = C.load;
+  say(C.load);
   const well = worldOf(B.gel.group, B.gel.anchors.wells[i]);
-  await moveTo(g, { pos: well.clone().add(V3(0, 2.5, 0)), dur: 0.8, arc: 2 });
-  await moveTo(g, { pos: well.clone().add(V3(0, -0.15, 0)), dur: 0.3 });   // inside the well, above its floor
-  await anim(0.6, (e) => { pip.setPlunger(0.75 * e); pip.setFill(1 - e); S.loaded[i] = e; });
-  await anim(0.15, (e) => pip.setPlunger(0.75 + 0.25 * e));
-  await moveTo(g, { pos: well.clone().add(V3(0, 2.5, 0)), dur: 0.3 });
-  anim(0.2, (e) => pip.setPlunger(1 - e));
+  await pipetteDispense(pip, {
+    above: well.clone().add(V3(0, 2.5, 0)), into: well.clone().add(V3(0, -0.15, 0)),   // inside the well, above its floor
+    onDispense: (e) => { S.loaded[i] = e; },
+  });
 
-  if (i === 0) S.cap = C.eject;
-  const over = POS.waste.clone().add(V3(0, 9.5, 0));
-  await moveTo(g, { pos: over, dur: 0.7, arc: 2 });
-  ejectTip();
-  await moveTo(g, { pos: rest, dur: 0.7, arc: 2 });
+  say(C.eject);
+  await ejectTip(pip, root, POS.waste.clone().add(V3(0, 9.5, 0)), POS.waste.clone().setY(0.9));
+  await moveTo(pip.group, { pos: pipRest(B.stand), dur: 0.7, arc: 2 });
   S.cap = null;
-}
-
-/** Drop the tip into the waste, where it stays. */
-function ejectTip() {
-  const pip = B.pip;
-  const t = pip.tip.clone();
-  pip.group.updateMatrixWorld(true);
-  t.position.copy(worldOf(pip.group, V3()));
-  pip.setTip(false);
-  root.add(t);
-  const x = POS.waste.x + rand(-0.9, 0.9), z = POS.waste.z + rand(-0.9, 0.9), y0 = t.position.y, rz = rand(1.1, 1.5), ry = rand(0, 6.28);
-  return anim(0.45, (e) => {
-    t.position.set(lerp(t.position.x, x, e), lerp(y0, 0.9, e), lerp(t.position.z, z, e));
-    t.rotation.set(0, ry, rz * e);
-  }, Ease.in);
 }
 
 async function actLadder() { await load(0); }
@@ -375,12 +339,6 @@ const STEPS = [
     run: async () => { if (!isInstant()) measure.open(); } },
 ];
 const MEASURE = STEPS.length - 1;
-const gelWhy = () => fmt(T.levelWhy, { level: zoom.names.gel, text: captionFor(gelState) });
-STEPS.forEach((s) => {
-  const why = s.why, hint = s.hint;
-  s.why = () => (zoom.scale === 'lab' ? why : gelWhy());
-  s.hint = () => (zoom.scale === 'lab' ? (typeof hint === 'function' ? hint() : hint) : fmt(T.backToLab, { action: s.action || '' }));
-});
 const PHASES = [
   { ...T.phases.setup, steps: ['buffer', 'comb'] },
   { ...T.phases.load, steps: ['ladder', 'samples'] },
@@ -398,13 +356,14 @@ const completeHint = () => `<span class="res-head"><b>${fmt(T.complete.head, { n
 // =========================================================================
 let firstEnter = true;
 lesson = createLesson({
-  levelCaption: () => zoom.caption(),
+  zoom,
+  levelWhy: () => captionFor(gelState),
   steps: STEPS,
   phases: PHASES,
   rebuild,
   panel: $('#stepsPanel'),
   completeHint,
-  completeWhy: () => (zoom.scale === 'lab' ? T.complete.why : gelWhy()),
+  completeWhy: T.complete.why,
   completeCaption: { text: fmt(T.complete.caption.text, { name: matchName() }), note: T.complete.caption.note },
   onEnter: (step) => {
     requestAnimationFrame(() => stage.resize());
@@ -415,17 +374,13 @@ lesson = createLesson({
     stage.focus(step.view);
   },
 });
-const benchActive = () => zoom.scale === 'lab' && !zoom.transitioning;
 ix = createInteraction(stage, {
-  targets: () => (benchActive() ? lesson.targets() : []),
+  zoom,
+  targets: lesson.targets,
   busy: lesson.isBusy,
-  onClick: (k) => {
-    if (!benchActive()) return undefined;
-    return lesson.click(k);
-  },
+  onClick: lesson.click,
   status: lesson.status,
   markerStyle: 'circle',
-  enabled: benchActive,
 });
 const follow = createFollowCam(stage, ix, {
   acting: lesson.acting,

@@ -46,7 +46,12 @@
  *   closer together than the bench's.
  *   lesson.holdWatch(true) forces Watch and greys out Hands-on (a zoomed-in
  *   level, where there is no bench to click); holdWatch(false) restores the
- *   reader's mode. A lab with zoom levels calls it from createZoom's onChange.
+ *   reader's mode.
+ *   zoom: the createZoom() object wires all of that: levelCaption defaults to
+ *   zoom.caption(), Watch is held while zoomed in, and the card follows the
+ *   level, its hint pointing back to the Lab and its why (and completeWhy)
+ *   replaced by levelWhy(levelKey, step) (step is null on the complete card;
+ *   return null for no why there).
  *
  * Going back or jumping ahead rebuilds the bench and replays, instantly, the
  * clicks the student made in earlier steps; steps they skipped are completed
@@ -91,6 +96,8 @@ export function createLesson({
   completeCaption = UI.labComplete, // Watch mode's last caption (string, { text, note } or function)
   introCaption = UI.introCaption,
   levelCaption = null,             // Watch mode, zoomed in: () => the level's caption, or null (zoom.caption)
+  zoom = null,                     // createZoom(): the card and Watch follow the level (header)
+  levelWhy = null,                 // (levelKey, step | null) => the card's why at that level
   mode = new URLSearchParams(location.search).get('mode') === 'watch' ? 'watch' : 'do',
   autoDwell = 1.1,                 // Watch mode: seconds to read the hint before each auto-click
 }) {
@@ -117,6 +124,22 @@ export function createLesson({
   const watching = () => S.mode === 'watch';
 
   const text = (v) => (typeof v === 'function' ? v() : v);
+  if (zoom) {
+    const zoomed = () => zoom.scale !== 'lab';
+    const atLevel = (s) => {
+      const t = levelWhy && levelWhy(zoom.scale, s);
+      return t ? fmt(UI.levelWhy, { level: zoom.names[zoom.scale], text: t }) : null;
+    };
+    steps.forEach((s) => {
+      const why = s.why, hint = s.hint;
+      s.why = () => (zoomed() ? atLevel(s) : text(why));
+      s.hint = () => (zoomed() ? fmt(UI.backToLab, { action: text(s.action) || '' }) : text(hint));
+    });
+    const cw = completeWhy;
+    completeWhy = () => (zoomed() ? atLevel(null) : text(cw));
+    if (!levelCaption) levelCaption = () => zoom.caption();
+    zoom.listen((scale) => { holdWatch(scale !== 'lab'); render(); });
+  }
   const clickable = (i) => (steps[i] && steps[i].targets) || [];
   const active = (i) => { const s = steps[i]; if (!s) return []; return s.activeTargets ? s.activeTargets() : clickable(i); };
   function isDone(i) {

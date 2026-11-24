@@ -44,7 +44,7 @@ Built here; the `Experiments/Lab` repo it came from is archived with the origina
 
 ### Zoom levels
 
-`zoom.js` draws the levels you're not looking at into circles (render-to-texture) and runs the lens transition when you click one; keys 1, 2, 3 switch too. It takes over the frame's render with `stage.setRender()` and gives each level its own camera and orbit controls on the same `stage.insets()`. Bench clicks only work in the Lab view: `createInteraction(stage, { enabled })` turns picking, hover and markers off elsewhere.
+`zoom.js` draws the levels you're not looking at into circles (render-to-texture) and runs the lens transition when you click one; keys 1, 2, 3 switch too. It takes over the frame's render with `stage.setRender()` and gives each level its own camera and orbit controls on the same `stage.insets()`. Pass the zoom to `createLesson({ zoom, levelWhy })` and `createInteraction(stage, { zoom })`: the card and Watch follow the level, and picking, hover and markers turn off outside the Lab view (`AddingALab.md` §6).
 
 ### Colour themes
 
@@ -88,6 +88,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | `follow.js` | Watch mode's camera | new |
 | `zoom.js` | zoom levels: live circles, lens transition, a camera and labels per level | Strawberry |
 | `intro.js` | the intro card, and `createPropArt` (a prop turning on its own renderer) | Ecoli |
+| `hands.js` | hand actions that replay: pour, carry over a wall, drop in a bin, micropipette | Strawberry, Ecoli, Gel |
 | `page.js` | the page around a lab: head (import map, fonts, icons, lab.css) and chrome (topbar, procedure panel, info modal, intro frame), so a lab page holds only its content | new |
 | `chrome.js` | `chromeInsets` (the camera's free area) and `bindChrome` (view and restart buttons, `window.LAB`) | new |
 | `core/liquid.js` | the liquid in every container | new, merging three versions |

@@ -109,6 +109,10 @@ Going back or jumping ahead calls `rebuild()`, replays the earlier clicks instan
 5. **Timed steps** use `watch: { duration, get, set, rate }`. `set(t)` poses everything from `t` alone, so the student can scrub (Photosynthesis's observation step).
 6. **A sim that poses objects every frame** poses them only when its state changes, or the hover lift is overwritten.
 
+**Hand actions are shared:** `lab/hands.js` has `pourPose`, `carry` (over a container wall), `dropIn` (a used item into a bin) and the micropipette's `takeTip`, `pipetteDraw`, `pipetteDispense`, `ejectTip`. They keep these rules; use them before writing your own, and add one there when a second lab would repeat it.
+
+**A step finished off the bench** (a panel where the student counts or measures: Onion's eyepiece, Gel's gel image) keeps its state in that panel, not in `S`, so a rebuild leaves it alone and only restart clears it. The step's `isDone` reads the panel and returns true in Watch (`lesson.mode === 'watch'`), since Watch stops at the bench; `progress` reads it too; its `run` opens the panel unless `isInstant()`. The panel's change handler calls `lesson.jumpTo(i + 1)` once it is done, because no bench click is coming to advance the step.
+
 ## 5. The intro card
 
 Its text is `intro` in `text.js`, built by `page.js` before any module loads, so it shows at once while the bench loads: a kicker, a title with one `<em>` word, a short paragraph and three `keys`, the ideas the lab is about. `info` is the (i) modal: `body`, numbered `steps`, an `equation`, muted `notes` and icon `tips`, all optional. Markup the page keeps for itself (a panel, the intro art) takes its words from `data-t="key.path"`. The Start button is added for you; a `.intro-art` in the page's `.lab-intro` replaces the default empty one (Ecoli's plasmid). Call `createIntro(stage, { art })` near the end of `main.js`.
@@ -118,11 +122,11 @@ Its text is `intro` in `text.js`, built by `page.js` before any module loads, so
 
 ## 6. Zoom levels, if the bench needs explaining
 
-`createZoom(stage, { levels: [{ key: 'cell', world, name, meta, bg }], getT, getStep })`. A world is the lab's own scene, in its folder (`strawberry/cell.js`); its shape is the header of `lab/zoom.js`. `zoom.js` makes the circles and the per-level backgrounds; the lab's CSS only colours `.bg-<key>`.
+`createZoom(stage, { levels: [{ key: 'cell', world, name, meta, bg }], getT, getStep })`, then pass the result to both `createLesson({ zoom, levelWhy })` and `createInteraction(stage, { zoom })`. That is all the wiring: Watch is held while zoomed in, the card's hint points back to the Lab, its why (and `completeWhy`) becomes `levelWhy(levelKey, step)` (`step` is null on the complete card; return null for none), bench clicks stop off the Lab view, and the free area is re-measured on every switch. A world is the lab's own scene, in its folder (`strawberry/cell.js`); its shape is the header of `lab/zoom.js`. `zoom.js` makes the circles and the per-level backgrounds; the lab's CSS only colours `.bg-<key>`.
 
 **Every level shows the same moment.** Pose bench, cell and molecule from one number (Strawberry's clock `S.t`, animated between resting points with `anim()`), or have the world ease toward a stage the bench sets (Ecoli's `S.micro`). Either way replay needs no extra code. A world whose background changes with the bench (Ecoli's UV) returns `insetBg(bg)` so its circle follows.
 
-**Each level narrates itself in Watch.** A world's `cue(t)` returns `{ text, mark }`: what is happening at that scale, not the bench step. `cueAt([[t, cue], …], t)` from `lesson.js` picks one off a clock; Ecoli's switches on stage and its eased state. `mark` is a label's `text`, spotlit while the cue is up. Pass `levelCaption: () => zoom.caption()` to `createLesson`; Play then holds on each cue until it is readable, so a level's beats may sit closer than the bench's. Time cues to the labels' `show` windows, and give a step that changes nothing at this scale one short line rather than none.
+**Each level narrates itself in Watch.** A world's `cue(t)` returns `{ text, mark }`: what is happening at that scale, not the bench step. `cueAt([[t, cue], …], t)` from `lesson.js` picks one off a clock; Ecoli's switches on stage and its eased state. `mark` is a label's `key` (or its `text`), spotlit while the cue is up. `createLesson({ zoom })` shows it as the caption; Play then holds on each cue until it is readable, so a level's beats may sit closer than the bench's. Time cues to the labels' `show` windows, and give a step that changes nothing at this scale one short line rather than none.
 
 ## 7. The camera
 
@@ -132,7 +136,7 @@ Its text is `intro` in `text.js`, built by `page.js` before any module loads, so
 
 ## 8. Props
 
-Reuse first: `lab/gallery.html` shows every prop, and `lab/props.html#<key>` one at a time with its sliders. A new prop:
+Reuse first: `lab/gallery.html` shows every prop, and `lab/props.html#<key>` one at a time with its sliders. **For a prop's call, origin, anchors and state setters, read its entry in `props/catalog.js`, not its source**; `PROPS.md` is the spec for new props and `CATALOG.md` the build status of every planned one. A new prop:
 
 1. goes in its category file in `lab/props/`, even if only this lab uses it, so the next lab finds it. Start a new file when one passes about 300 lines
 2. is exported from `lab/lab.js`

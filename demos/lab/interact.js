@@ -34,7 +34,14 @@ import { UI } from './text.js';
 
 const STATUS_ICON = { ok: 'ph-bold ph-hand-tap', warn: 'ph-bold ph-warning', muted: 'ph-bold ph-clock' };
 
-export function createInteraction(stage, { targets = () => [], busy = () => false, onClick = () => {}, status, markerStyle = 'dot', hoverLift = 0.8, enabled = () => true } = {}) {
+export function createInteraction(stage, { targets = () => [], busy = () => false, onClick = () => {}, status, markerStyle = 'dot', hoverLift = 0.8, enabled = () => true, zoom = null } = {}) {
+  if (zoom) {   // with zoom levels, the bench is clickable only in the Lab view, and not mid-transition
+    const bench = () => zoom.scale === 'lab' && !zoom.transitioning;
+    const t0 = targets, c0 = onClick, e0 = enabled;
+    targets = () => (bench() ? t0() : []);
+    onClick = (k) => (bench() ? c0(k) : undefined);
+    enabled = () => bench() && e0();
+  }
   const { camera, canvas, controls } = stage;
   let objects = {};
   const raycaster = new THREE.Raycaster();

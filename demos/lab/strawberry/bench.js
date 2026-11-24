@@ -16,7 +16,7 @@ import {
   makeBench, makeBeaker, makeWasteBin, makeJar, makeSqueezeBottle,
   makeStrawberry, makeCalyx, STRAWBERRY_H as BH, strawberrySeed,
   makeZipBag, makeTestTube, makeTubeRack, makeFunnel, makePlate, makeBowl,
-  makeReagentBottle, makeIceBath, makeSkewer, makeDnaPrecipitate, makeStream, makeBubbles, mesh, T,
+  makeReagentBottle, makeIceBath, makeSkewer, makeDnaPrecipitate, makeStream, makeBubbles, mesh, T, pourPose,
 } from '../lab.js';
 
 const linear = (k) => k;
@@ -177,15 +177,6 @@ export function buildBench(mat, root) {
   const bubbles = makeBubbles(mat, root, { count: 16 });
 
   /* ---------- helpers ---------- */
-  const _q = new THREE.Quaternion(), _p = V3();
-  function pourPose(obj, homePos, baseQ, spoutLocal, target, axis, angle, kMove, kTilt, arc) {
-    _q.setFromAxisAngle(axis, angle * kTilt).multiply(baseQ);
-    _p.copy(spoutLocal).applyQuaternion(_q);
-    const posed = target.clone().sub(_p);
-    obj.position.lerpVectors(homePos, posed, kMove);
-    obj.position.y += Math.sin(Math.PI * kMove) * arc;
-    obj.quaternion.copy(_q);
-  }
   const BK_TARGET = V3(POS.bag.x - 2.0, 8.5, POS.bag.z + 1.5);
   const BAG_TARGET = V3(POS.rack.x - 0.2, 22.5, POS.rack.z + 0.2);
   const BT_TARGET = V3(POS.rack.x + 0.75, tubeTop + 1.3, POS.rack.z);

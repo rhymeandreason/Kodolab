@@ -123,8 +123,6 @@ LabText.add('en', {
       caption: 'Measure the bands and compare the lanes',
     },
   },
-  backToLab: 'Click the <b>Lab</b> circle to go back to the bench and {action}',
-  levelWhy: '<b>{level} level:</b> {text}',
 
   clock: { line: '{v} V · {time}', time: '{m}:{ss}' },
 

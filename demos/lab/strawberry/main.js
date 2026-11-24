@@ -60,14 +60,10 @@ const zoom = createZoom(stage, {
   ],
   getT: () => S.t,
   getStep: origStep,
-  onChange: (scale) => { lesson.holdWatch(scale !== 'lab'); lesson.render(); requestAnimationFrame(() => stage.resize()); },
 });
 
-/** The card's "why" line follows the level in the main view. */
-const why = (i) => () => {
-  const k = zoom.scale;
-  return k === 'lab' ? T.why[i].lab : fmt(T.levelWhy, { level: zoom.names[k], text: T.why[i][k] });
-};
+/** The card's "why" at the bench; createLesson swaps in levelWhy's when zoomed in. */
+const why = (i) => T.why[i].lab;
 
 // =========================================================================
 // The bench (rebuilt on every jump)
@@ -185,13 +181,6 @@ const STEPS = [
     },
   },
 ];
-// Bench clicks only work in the Lab view: elsewhere the card says how to get back.
-STEPS.forEach((s) => {
-  const hint = s.hint;
-  s.hint = () => (zoom.scale === 'lab'
-    ? (typeof hint === 'function' ? hint() : hint)
-    : fmt(T.backToLab, { action: s.action }));
-});
 const PHASES = [
   { ...T.phases.berry, steps: ['berry'] },
   { ...T.phases.mash, steps: ['mash'] },
@@ -206,7 +195,9 @@ const PHASES = [
 // =========================================================================
 let firstEnter = true;
 lesson = createLesson({
-  levelCaption: () => zoom.caption(),
+  zoom,
+  // spool has no why: what you are holding is explained on the complete card
+  levelWhy: (k, s) => (s && s.id === 'spool' ? null : T.why[s ? s.orig : 5][k]),
   steps: STEPS,
   phases: PHASES,
   rebuild,
@@ -222,14 +213,13 @@ lesson = createLesson({
     stage.focus(step.view);
   },
 });
-const benchActive = () => zoom.scale === 'lab' && !zoom.transitioning;
 ix = createInteraction(stage, {
-  targets: () => (benchActive() ? lesson.targets() : []),
+  zoom,
+  targets: lesson.targets,
   busy: lesson.isBusy,
-  onClick: (k) => (benchActive() ? lesson.click(k) : undefined),
+  onClick: lesson.click,
   status: lesson.status,
   markerStyle: new URLSearchParams(location.search).get('marker') || 'circle',
-  enabled: benchActive,
 });
 // Watch mode's camera: one default zoom that pans along the bench; only the close-ups
 // on the DNA zoom in (rules in follow.js)

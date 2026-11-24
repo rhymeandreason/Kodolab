@@ -148,8 +148,6 @@ LabText.add('en', {
       caption: 'Turn off the lights and shine the UV lamp on the plates',
     },
   },
-  backToLab: 'Click the <b>Lab</b> circle to go back to the bench and {action}',
-  levelWhy: '<b>{level} level:</b> {text}',
 
   /* the card's timer while a timed step runs */
   clock: {
