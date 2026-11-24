@@ -384,7 +384,8 @@
   // with round edges, and an analytic normal. Tracks: ppb (0..1), ppbW (band
   // width), phrag (phragmoplast 0..1), s (plate radius as a fraction of the
   // cell's cross-section, which bodies() reads as the cells' separation), m
-  // (plate maturing into wall).
+  // (plate maturing into wall), split (one shell fading into two daughters),
+  // gap (how far each daughter has slid out; see scenarios.js's PLANT.part).
   const SE_N = 6;
   const MEM_IN = 0.14; // the membrane, just inside the wall
   const PPB_IN = 0.24; // the band, just inside the membrane
@@ -427,14 +428,26 @@
       this.shell = new THREE.Group();
       this.group.add(this.shell);
 
-      this.wallMat = CD.makeMembraneMaterial({
-        tint: CD.COLORS.wallRim, rim: CD.COLORS.wall, deep: CD.COLORS.lamella, opacity: 0.9,
-      });
-      const wall = new THREE.Mesh(seGeometry(hx, hy, hz), this.wallMat);
-      wall.renderOrder = 5;
-      const mem = new THREE.Mesh(seGeometry(hx - MEM_IN, this.hy, this.hz), CD.mat.membrane);
-      mem.renderOrder = 4;
-      this.shell.add(wall, mem);
+      // The mother's wall and membrane, then each daughter's: once the plate has
+      // fused with the old wall the one shell fades into two, so the seam shows
+      // two membranes with the new wall between them instead of a plane in a box.
+      // A daughter's outer faces lie on the mother's, so only the seam changes.
+      const wallLook = { tint: CD.COLORS.wallRim, rim: CD.COLORS.wall, deep: CD.COLORS.lamella, opacity: 0.9 };
+      const shellOf = (hx2, cx) => {
+        const g = new THREE.Group();
+        const wm = CD.makeMembraneMaterial(wallLook);
+        const mm = CD.makeMembraneMaterial();
+        const wall = new THREE.Mesh(seGeometry(hx2, hy, hz), wm);
+        wall.renderOrder = 5;
+        const mem = new THREE.Mesh(seGeometry(hx2 - MEM_IN, this.hy, this.hz), mm);
+        mem.renderOrder = 4;
+        g.add(wall, mem);
+        g.position.x = cx;
+        this.shell.add(g);
+        return { g, mats: [[wm, wallLook.opacity], [mm, mm.uniforms.uOpacity.value]] };
+      };
+      this.mother = shellOf(hx, 0);
+      this.daughters = [shellOf(hx / 2, hx / 2), shellOf(hx / 2, -hx / 2)];
 
       // ---- cell plate: a disc on the division plane, the cross-section's shape
       const SEG = 160;
@@ -519,10 +532,22 @@
       this.group.position.copy(st.center);
       this.shell.visible = shown;
       const s = CD.clamp(st.s, 0, 1);
+      const k = CD.clamp(st.split, 0, 1);
+      const fade = (sh, a) => {
+        sh.g.visible = a > 0.005;
+        for (const [m, o] of sh.mats) m.uniforms.uOpacity.value = o * a;
+      };
+      fade(this.mother, 1 - k);
+      this.daughters.forEach((d, i) => {
+        fade(d, k);
+        d.g.position.x = (i ? -1 : 1) * (this.r + st.gap);
+      });
 
-      this.plate.visible = s > 0.002;
+      // the daughters' own walls take over the seam, so the plate fades as they appear
+      this.plate.visible = s > 0.002 && k < 0.995;
       this.plate.scale.set(1, s, s);
       this.plateMat.color.copy(this.cVes).lerp(this.cWall, st.m);
+      this.plateMat.opacity = 0.85 * (1 - k);
 
       this.ppb.visible = spindle && st.ppb > 0.01;
       this.ppb.scale.x = st.ppbW;

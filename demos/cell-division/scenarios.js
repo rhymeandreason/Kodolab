@@ -325,7 +325,10 @@
   // ================================================================ MITOSIS
   /* The plant track is the same chromosomes on the same clock: what differs is
      the cell around them. Its words replace the animal cell's phase by phase. */
-  const PLANT = { hx: 3.9, hy: 2.7, hz: 2.7 };
+  /* `part` is how far each daughter slides out at the very end. PEDAGOGICAL
+     EXAGGERATION: real daughters never part, they stay joined by the middle
+     lamella the plate became. The gap is there so two cells read as two. */
+  const PLANT = { hx: 3.9, hy: 2.7, hz: 2.7, part: 0.15 };
   const PLANT_DESC = [
     'A root-tip cell in G2: its DNA is copied, so each chromosome is two sister chromatids, still unwound. A rigid wall boxes the cell in, and there are no centrosomes. Instead, microtubules gather into a band under the membrane around the middle: the preprophase band, marking where the new wall will go.',
     'Chromosomes coil up and the nucleolus fades. With no centrosomes, microtubules grow from the surface of the nucleus itself and gather at two broad poles. The preprophase band tightens.',
@@ -404,7 +407,7 @@
     const GAP = 0.3;
     const DN0 = 2.25; // daughter nucleus as it forms
     // daughter cell centre after separation; a plant's daughters are the two halves of its box
-    const DN1 = plant ? plant.hx / 2 : R1 + GAP;
+    const DN1 = plant ? plant.hx / 2 + plant.part : R1 + GAP;
     const POLE_RING = 0.85; // how much of the metaphase-plate radius the pole cluster keeps
     const chrs = baseChromosomes(rnd);
     const ringOrder = [0, 3, 4, 1, 5, 2];
@@ -514,7 +517,7 @@
     // cell
     if (plant) {
       const cell = { plant: true, R: plant.hx, axis: X.clone(), ...plant, tracks: [] };
-      track(cell).key(0, { center: O, vis: 1, gap: 0 });
+      track(cell).key(0, { center: O, vis: 1 });
       track(cell)
         .key(0, { ppb: 0, ppbW: 1 })
         .key(T(0, 0.35), {})
@@ -530,7 +533,9 @@
         .key(T(6, 0.65), {})
         .key(T(6, 0.85), { phrag: 0 });
       track(cell).key(0, { s: 0 }).key(T(5, 0.55), {}).key(T(6, 0.7), { s: 1 }, 'inOut');
-      track(cell).key(0, { m: 0 }).key(T(6, 0.6), {}).key(T(6, 1), { m: 1 });
+      track(cell).key(0, { m: 0 }).key(T(6, 0.6), {}).key(T(6, 0.95), { m: 1 });
+      track(cell).key(0, { split: 0 }).key(T(6, 0.7), {}).key(T(6, 0.9), { split: 1 });
+      track(cell).key(0, { gap: 0 }).key(T(6, 0.85), {}).key(T(6, 1), { gap: plant.part });
       def.cells.push(cell);
     } else {
       const cell = { R: CELL_R, axis: X.clone(), tracks: [] };
