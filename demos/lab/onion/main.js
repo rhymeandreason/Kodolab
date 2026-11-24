@@ -66,7 +66,8 @@ const scope = createScope({
   onClose: () => {
     stage.setRender(null);
     stage.glide(VIEWS.scope, 0);
-    lesson.render();
+    if (lesson.step === COUNT && scope.tally().total >= ENOUGH) lesson.jumpTo(COUNT + 1);
+    else lesson.render();
   },
 });
 
@@ -290,13 +291,21 @@ const STEPS = [
     detail: () => fmt(T.steps.squash.detail, { n: Math.min((S ? S.presses : 0) + 1, PRESSES), total: PRESSES }),
     isDone: () => S.presses >= PRESSES, progress: () => S.presses / PRESSES, run: press },
   { id: 'observe', ...T.steps.observe, targets: ['scope'], view: 'scope', run: observe },
+  /* Counting happens in the microscope view, outside the bench: the step reads the view's tally,
+     so a rebuild leaves it alone. Watch mode stops at the bench; counting is the student's. */
+  { id: 'count', ...T.steps.count, targets: ['scope'], view: 'scope',
+    detail: () => fmt(T.steps.count.detail, { n: ENOUGH, done: scope.tally().total }),
+    isDone: () => lesson.mode === 'watch' || scope.tally().total >= ENOUGH,
+    progress: () => Math.min(1, scope.tally().total / ENOUGH),
+    run: async () => { if (!isInstant()) lookIn(); } },
 ];
+const COUNT = STEPS.length - 1;
 const PHASES = [
   { ...T.phases.cut, steps: ['cut'] },
   { ...T.phases.acid, steps: ['acid'] },
   { ...T.phases.stain, steps: ['stain'] },
   { ...T.phases.squash, steps: ['cover', 'squash'] },
-  { ...T.phases.observe, steps: ['observe'] },
+  { ...T.phases.observe, steps: ['observe', 'count'] },
 ];
 
 // =========================================================================
@@ -322,11 +331,15 @@ async function lookIn() {
 }
 /** The topbar's Microscope button: finish the bench if needed, then look in. */
 async function jumpToScope() {
-  if (lesson.step < STEPS.length) await lesson.jumpTo(STEPS.length);
+  if (lesson.step < COUNT) await lesson.jumpTo(COUNT);
   lookIn();
 }
 
-const completeHint = () => `${fmt(T.complete.hint, { n: ENOUGH })}<span class="scope-open-row"><button class="btn" data-act="scope"><i class="ph-bold ph-microscope"></i>${T.complete.open}</button></span>`;
+const completeHint = () => {
+  const t = scope.tally();
+  const head = t.total ? fmt(T.complete.hint, { mi: t.mi.toFixed(1), n: t.total, dividing: t.dividing }) : T.complete.skipped;
+  return `${head}<span class="scope-open-row"><button class="btn" data-act="scope"><i class="ph-bold ph-microscope"></i>${T.complete.open}</button></span>`;
+};
 
 // =========================================================================
 // Wire it together
@@ -342,11 +355,8 @@ lesson = createLesson({
   completeCaption: T.complete.caption,
   onEnter: (step) => {
     requestAnimationFrame(() => stage.resize());
-    if (!step) {
-      if (S && S.openAfter) { S.openAfter = false; lookIn(); return; }
-      stage.focus(VIEWS.scope, 1.4);
-      return;
-    }
+    if (S && S.openAfter) { S.openAfter = false; lookIn(); return; }
+    if (!step) { stage.focus(VIEWS.scope, 1.4); return; }
     if (firstEnter) { firstEnter = false; intro.started.then(() => stage.focus(step.view, 2.2)); return; }
     stage.focus(step.view);
   },
@@ -356,7 +366,7 @@ ix = createInteraction(stage, {
   busy: lesson.isBusy,
   onClick: (k) => {
     if (scope.isOpen) return undefined;
-    if (k === 'scope' && lesson.step >= STEPS.length) return lookIn();
+    if (k === 'scope' && lesson.step > COUNT) return lookIn();
     return lesson.click(k);
   },
   status: lesson.status,

@@ -91,12 +91,21 @@ LabText.add('en', {
       why: 'Low power shows the whole tip, so you can find where cells divide. High power shows chromosomes in each cell.',
       caption: 'Clip the slide onto the microscope stage',
     },
+    count: {
+      title: 'Count dividing cells', short: 'Count',
+      action: 'look through the eyepiece',
+      hint: 'Click the <b>microscope</b>',
+      detail: 'Find the meristem, switch to high power, and name the stage of at least {n} cells. Named so far: <b>{done}</b>.',
+      why: 'The more cells you count, the closer your mitotic index gets to the true share of dividing cells.',
+      caption: 'Look through the eyepiece and count the dividing cells',
+    },
   },
 
   complete: {
-    hint: '<b>Your slide is on the microscope.</b> Find the meristem, name {n} or more cells, and work out the mitotic index.',
+    hint: '<b>Your mitotic index: {mi}%.</b> Dividing: {dividing} of the {n} cells you named.',
+    skipped: '<b>Your slide is on the microscope.</b> Look through the eyepiece to count its cells.',
     why: 'Most cells are in interphase, because it is the longest part of the cell cycle. The share caught in each stage tells you how long that stage lasts.',
-    open: 'Look through the eyepiece',
+    open: 'Back to the eyepiece',
     caption: 'Look through the eyepiece and count the dividing cells',
     toast: 'Slide ready',
   },

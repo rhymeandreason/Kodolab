@@ -148,6 +148,23 @@ export function createScope({ onClose = () => {} } = {}) {
       TX.cyto = tex(c);
       TX.cyto.wrapS = TX.cyto.wrapT = THREE.RepeatWrapping;
     }
+    TX.label = STAGES.map((_, i) => badgeTex(i, true));
+    TX.answer = STAGES.map((_, i) => badgeTex(i, false));
+  }
+
+  /** A round badge with the stage's letter. filled: the student's label (stage colour, white
+   *  letter); outline: an answer (white, stage-coloured ring and letter). */
+  function badgeTex(stage, filled) {
+    const [c, g] = cnv(128);
+    const col = STAGES[stage].color;
+    g.beginPath(); g.arc(64, 64, 58, 0, 7);
+    g.fillStyle = filled ? col : '#ffffff'; g.fill();
+    g.lineWidth = 10; g.strokeStyle = filled ? '#ffffff' : col; g.stroke();
+    g.fillStyle = filled ? '#ffffff' : col;
+    g.font = '700 70px system-ui, -apple-system, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(STAGES[stage].key, 64, 68);
+    return tex(c);
   }
 
   /* ---------- Geometry helpers ---------- */
@@ -348,23 +365,25 @@ export function createScope({ onClose = () => {} } = {}) {
         const [x, y] = place(c, (R() - 0.5) * 1.5, (R() - 0.5) * 1.5);
         (c.sub < 0.5 ? proA : proB).push({ x, y, r: R() * 6.28, sx: dn, sy: dn, c: cChrom.clone().lerp(cNuc, c.sub < 0.5 ? 0.4 : 0.12) });
       } else if (c.stage === 2) {
+        // Each chromosome is one rod across the plate, darkest where its centromere sits on it:
+        // two arms drawn apart leave a pale line down the plate that reads as anaphase.
         for (let k = 0; k < 16; k++) {
-          const cx = (R() - 0.5) * c.w * 0.62, cy = (R() - 0.5) * 1.4;
-          for (const arm of [1, -1]) {
-            const a = (R() - 0.5) * 0.8 + (arm < 0 ? Math.PI : 0);
-            const len = 2.2 + R() * 2.3;
-            rod(c, cx + (Math.sin(a) * len) / 2, cy + (Math.cos(a) * len) / 2, a, len, 1.45);
-          }
+          const cx = (R() - 0.5) * c.w * 0.62, cy = (R() - 0.5) * 0.8;
+          const a = (R() - 0.5) * 0.5;
+          rod(c, cx, cy, a, 4.4 + R() * 3.4, 1.55);
         }
       } else if (c.stage === 3) {
-        const dd = c.h * (0.1 + 0.22 * c.sub);
+        // The two sets start clear of the plate, arms trailing back toward it, so even early
+        // anaphase shows a gap down the middle.
+        const len0 = 1.8, lenR = 1.6;
+        const dd = Math.max(c.h * (0.2 + 0.16 * c.sub), len0 + lenR + 1.2);
         for (const sg of [1, -1]) {
           for (let k = 0; k < 16; k++) {
-            const cx = (R() - 0.5) * c.w * (0.62 - 0.22 * c.sub), cy = sg * (dd + (R() - 0.5) * 1.6);
+            const cx = (R() - 0.5) * c.w * (0.62 - 0.22 * c.sub), cy = sg * (dd + (R() - 0.5) * 1.2);
             const back = sg > 0 ? Math.PI : 0;
             for (const arm of [1, -1]) {
               const a = back + arm * (0.12 + R() * 0.32);
-              const len = 2.0 + R() * 2.6;
+              const len = len0 + R() * lenR;
               rod(c, cx + (Math.sin(a) * len) / 2, cy + (Math.cos(a) * len) / 2, a, len, 1.25);
             }
           }
@@ -412,26 +431,17 @@ export function createScope({ onClose = () => {} } = {}) {
     inst(new THREE.RingGeometry(0.42, 0.5, 64), basicMat({ transparent: true, opacity: 0.75 }), bubbleRim, 7);
     inst(new THREE.RingGeometry(0.36, 0.4, 64), basicMat({ transparent: true, opacity: 0.25 }), bubbleRim, 7);
 
+    // letter badges, one instanced mesh per stage: answers (outlined) under labels (filled)
+    const badges = (texs, n, order) => texs.map((map) => {
+      const m = new THREE.InstancedMesh(discGeo, basicMat({ map, transparent: true }), Math.max(1, n));
+      m.count = 0; m.renderOrder = order; m.frustumCulled = false;
+      scene.add(m);
+      return m;
+    });
     M.answerData = answers;
-    M.answers = new THREE.InstancedMesh(ringGeo, basicMat({ transparent: true, opacity: 0.95 }), Math.max(1, answers.length));
-    answers.forEach((a, i) => M.answers.setColorAt(i, a.c));
-    M.answers.count = answers.length;
-    M.answers.renderOrder = 8;
-    M.answers.frustumCulled = false;
-    M.answers.visible = showAnswers;
-    scene.add(M.answers);
-
-    M.labels = new THREE.InstancedMesh(discGeo, basicMat({ transparent: true }), 2000);
-    M.labels.setColorAt(0, white);
-    M.labels.count = 0;
-    M.labels.renderOrder = 9;
-    M.labels.frustumCulled = false;
-    scene.add(M.labels);
-    M.labelRings = new THREE.InstancedMesh(ringGeo, basicMat({ color: 0xffffff }), 2000);
-    M.labelRings.count = 0;
-    M.labelRings.renderOrder = 9;
-    M.labelRings.frustumCulled = false;
-    scene.add(M.labelRings);
+    M.answers = badges(TX.answer, answers.length, 8);
+    M.answers.forEach((m) => { m.visible = showAnswers; });
+    M.labels = badges(TX.label, cells.length, 9);
 
     selFrame = new THREE.Mesh(new THREE.BufferGeometry(), basicMat({ color: new THREE.Color(themeColor('--accent') || '#4f46e5'), transparent: true }));
     selFrame.renderOrder = 10;
@@ -448,34 +458,26 @@ export function createScope({ onClose = () => {} } = {}) {
   function updateBadges() {
     const s = field * 0.022;
     const d = new THREE.Object3D();
+    const put = (meshes, stage, x, y, k) => {
+      const m = meshes[stage];
+      d.position.set(x, y, 0);
+      d.scale.set(s * k, s * k, 1);
+      d.updateMatrix();
+      m.setMatrixAt(m.count++, d.matrix);
+    };
     if (M.answerData) {
-      M.answerData.forEach((a, i) => {
-        d.position.set(a.x, a.y, 0);
-        d.scale.set(s, s, 1);
-        d.updateMatrix();
-        M.answers.setMatrixAt(i, d.matrix);
-      });
-      M.answers.instanceMatrix.needsUpdate = true;
+      M.answers.forEach((m) => { m.count = 0; });
+      M.answerData.forEach((a) => put(M.answers, a.cell.stage, a.x, a.y, 1.15));
+      M.answers.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
     }
-    let i = 0;
+    M.labels.forEach((m) => { m.count = 0; });
     labels.forEach((stage, idx) => {
       const c = cells[idx];
       const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
       const lx = -c.w * 0.3, ly = c.h * 0.34;
-      d.position.set(c.x + lx * cs - ly * sn, c.y + lx * sn + ly * cs, 0);
-      d.scale.set(s * 0.9, s * 0.9, 1);
-      d.updateMatrix();
-      M.labels.setMatrixAt(i, d.matrix);
-      M.labels.setColorAt(i, new THREE.Color(STAGE_COLORS[stage]));
-      d.scale.set(s * 1.1, s * 1.1, 1);
-      d.updateMatrix();
-      M.labelRings.setMatrixAt(i, d.matrix);
-      i++;
+      put(M.labels, stage, c.x + lx * cs - ly * sn, c.y + lx * sn + ly * cs, 1.3);
     });
-    M.labels.count = M.labelRings.count = i;
-    M.labels.instanceMatrix.needsUpdate = true;
-    if (M.labels.instanceColor) M.labels.instanceColor.needsUpdate = true;
-    M.labelRings.instanceMatrix.needsUpdate = true;
+    M.labels.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
     lastBadgeField = field;
     setFrame(selFrame, selected);
     setFrame(hovFrame, hovered === selected ? -1 : hovered);
@@ -584,7 +586,7 @@ export function createScope({ onClose = () => {} } = {}) {
 
     $('.answers').addEventListener('change', (e) => {
       showAnswers = e.target.checked;
-      if (M.answers) M.answers.visible = showAnswers;
+      if (M.answers) M.answers.forEach((m) => { m.visible = showAnswers; });
       updateTally();
     });
     root.addEventListener('click', (e) => {
@@ -864,7 +866,13 @@ export function createScope({ onClose = () => {} } = {}) {
   return {
     open, close,
     get isOpen() { return isOpen; },
+    /** The student's count so far: cells named, how many of them as dividing, and the mitotic index (%). */
+    tally() {
+      let dividing = 0;
+      labels.forEach((s) => { if (s > 0) dividing++; });
+      return { total: labels.size, dividing, mi: labels.size ? (dividing / labels.size) * 100 : 0 };
+    },
     /** For tests: the field's cells, the labels so far, and one frame drawn by hand. */
-    debug: { get cells() { return cells; }, labels, frame: (now = performance.now()) => { if (isOpen) { cancelAnimationFrame(raf); frame(now); } }, select, labelSelected, setObjective },
+    debug: { get cells() { return cells; }, labels, frame: (now = performance.now()) => { if (isOpen) { cancelAnimationFrame(raf); frame(now); } }, select, labelSelected, setObjective, look(x, y) { camX = x; camY = y; } },
   };
 }

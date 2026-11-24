@@ -1,7 +1,13 @@
 /* Onion Root Tip: only what's this lab's. The microscope view is lab.css's. */
 .intro-card { --intro-em: linear-gradient(90deg, #a82d5c, #4f46e5); }
-.scope-jump { padding: 9px 16px; box-shadow: var(--shadow-ctl); }
-.scope-jump i { color: var(--accent-glow); font-size: 16px; }
+/* an action, not a mode: glass like the icon buttons, so it never reads as the pressed half of a toggle */
+.scope-jump {
+  height: 44px; padding: 0 16px; background: var(--panel); color: var(--ink-2);
+  backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass);
+  border: 1px solid var(--line); box-shadow: var(--shadow-ctl); transition: background .15s, color .15s, transform .15s;
+}
+.scope-jump:hover { background: #fff; color: var(--ink); transform: translateY(-1px); }
+.scope-jump i { color: var(--accent); font-size: 17px; }
 .scope-open-row { display: flex; margin-top: 12px; }
 .scope-open-row .btn { background: var(--accent); }
 .scope-open-row .btn:hover { background: var(--accent-ink); }
