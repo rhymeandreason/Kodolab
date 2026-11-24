@@ -244,7 +244,7 @@ Good for: temperature, phase change, why ice floats, salt dissolving, colligativ
 
 ```js
 const m = Membrane.mount(el, {
-  proteins: { K:{ x:-36 }, CL:null, NA:null, AQP:null, pump:{ x:36 } },   // which machines stand in the sheet, and where (±x, world units, |x| ≤ 110). Too close and the layout spreads them itself, keeping your order
+  proteins: { K:{ x:-36 }, CL:null, NA:null, AQP:null, pump:{ x:36 } },   // which machines stand in the sheet, and where (±x, world units, |x| ≤ 110). Too close and the layout spreads them itself, keeping your order. `AQP` alone may be a list, `[{ x:-72 }, { x:0 }, { x:72 }]`, for a membrane packed with aquaporins
   potential: 'nernst',   // 'off': pores conduct forever · 'fixed': E_K, E_Cl constant · 'nernst': from the live counts
   E: { K:-90, CL:-75 },  // mV, used by 'fixed'
   pumpAuto: true,        // the pump re-arms itself; false waits for m.spend()

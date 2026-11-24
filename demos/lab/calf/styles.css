@@ -54,8 +54,10 @@
 
 .bg-brain, .zoom-lens.bg-brain { background: radial-gradient(1400px 900px at 58% 35%, #fbfafc 0%, #f1eef4 50%, #e2dde8 100%); }
 body[data-scale='brain'] .bg-brain { opacity: 1; }
+.bg-bubble, .zoom-lens.bg-bubble { background: radial-gradient(1400px 900px at 58% 35%, #fbfcfd 0%, #eef2f6 50%, #dde4ec 100%); }
+body[data-scale='bubble'] .bg-bubble { opacity: 1; }
 
-/* ---------- Juniper, bottom left ---------- */
+/* ---------- Juniper, bottom left while the drip runs ---------- */
 .patient { position: absolute; z-index: 20; left: var(--gutter); bottom: var(--gutter); width: 230px; padding: 8px 10px 10px; }
 .patient .crop, .calf-answer .crop { border-radius: 10px; background: #f7f5f1; }
 .pt-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 4px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -63,7 +65,8 @@ body[data-scale='brain'] .bg-brain { opacity: 1; }
 .patient[data-pose='worse'] .pt-pose { color: #b91c1c; }
 .patient[data-pose='sternal'] .pt-pose, .patient[data-pose='standing'] .pt-pose { color: var(--accent); }
 .lab-watch .patient { bottom: 96px; }
-body.calf-done .patient { display: none; }
+.patient[hidden] { display: none; }
+body.calf-bench .zoom-insets { display: none; }
 @media (max-width: 820px) { .patient { width: 140px; top: 76px; bottom: auto; padding: 6px; } .pt-row { font-size: 11px; flex-direction: column; gap: 0; } }
 
 /* ---------- Dana's chain ---------- */

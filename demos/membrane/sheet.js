@@ -227,15 +227,25 @@
        symmetrically about where the crowd was. */
     const PORE_GAP = 72;
     function spaced(pr) {
-      const on = Object.keys(pr).filter(k => pr[k]).map(k => ({ k, x: pr[k].x || 0 })).sort((a, b) => a.x - b.x);
+      /* A key holds one protein, or a list of them for a machine that can
+         stand several of a kind in the row; each takes its own place in it. */
+      const on = [];
+      for (const k of Object.keys(pr)) {
+        const many = Array.isArray(pr[k]);
+        (many ? pr[k] : [pr[k]]).filter(Boolean).forEach((q, i) => on.push({ k, i, q, many, x: q.x || 0 }));
+      }
+      on.sort((a, b) => a.x - b.x);
       /* A machine may ask for a tighter row: four complexes of a split chain
          at the plasma membrane's spacing run off the frame. */
       const gap = Math.min(PORE_GAP, ...machines.map(m => m.poreGap ? m.poreGap() : PORE_GAP));
       for (let i = 1; i < on.length; i++) if (on[i].x - on[i - 1].x < gap) on[i].x = on[i - 1].x + gap;
-      const mean0 = on.length ? on.reduce((s, o) => s + (pr[o.k].x || 0), 0) / on.length : 0;
+      const mean0 = on.length ? on.reduce((s, o) => s + (o.q.x || 0), 0) / on.length : 0;
       const mean1 = on.length ? on.reduce((s, o) => s + o.x, 0) / on.length : 0;
       const out = {};
-      for (const o of on) out[o.k] = Object.assign({}, pr[o.k], { x: Math.round(o.x - mean1 + mean0) });
+      for (const o of on) {
+        const placed = Object.assign({}, o.q, { x: Math.round(o.x - mean1 + mean0) });
+        if (o.many) (out[o.k] = out[o.k] || [])[o.i] = placed; else out[o.k] = placed;
+      }
       return Object.assign({}, PROTEIN_KEYS, out);
     }
     let warnedKeys = false;

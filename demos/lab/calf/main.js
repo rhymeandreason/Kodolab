@@ -2,10 +2,11 @@
  *   1 Blood work: a drop into the analyzer, the results panel (results.js)
  *   2 Red cells: a drop of blood into four solutions, the tubes clear or stay cloudy, the
  *     slides under the microscope (eyepiece.js)
- *   3 The brain: replay last night at the membrane between blood and an astrocyte (brain.js)
+ *   3 The brain: replay last night at a brain capillary and the astrocyte wrapping it
+ *     (capillary.js), and one level in, at a patch of its endfoot membrane (bubble.js)
  *   4 Explain it to Dana: the cause-and-effect chain from cards (chain.js)
  *   5 Treat her: an IV bag and a volume (rx.js), six hours on the drip, then why the rest goes
- *     slowly, at the brain level. Juniper's pose and Na⁺ ride along in patient.js
+ *     slowly, at the brain level. Juniper's pose shows during the drip (patient.js)
  * Every number is model.js's. The bench is rebuilt on every timeline jump (rebuild()); all
  * bench state lives in S. */
 import * as THREE from 'three';
@@ -26,7 +27,8 @@ import { createRx, fluidName, volText } from './rx.js';
 import { createPatient } from './patient.js';
 import { createResults, ROWS, flagOf } from './results.js';
 import { createSlides } from './slides.js';
-import { createBrainLevel } from './brain.js';
+import { createCapillaryLevel } from './capillary.js';
+import { createBubbleLevel, loadMembrane } from './bubble.js';
 
 const $ = (s) => document.querySelector(s);
 const hex = (c) => new THREE.Color(c).getHex();
@@ -85,6 +87,7 @@ const rx = createRx({
   onGive: () => { rx.close(); lesson.jumpTo(DRIP); },
 });
 const patient = createPatient();
+patient.el.hidden = true;
 const sidePanel = () => [results, chain, rx].find((p) => p.isOpen);
 const stage = createStage({
   canvas: $('#scene'), views: VIEWS,
@@ -98,7 +101,9 @@ const stage = createStage({
 });
 const mat = createMaterials(stage);
 
-const brain = createBrainLevel(stage.env);
+const brain = createCapillaryLevel(stage.env);
+await loadMembrane();
+const bubble = createBubbleLevel(stage.env);
 const brainState = { na: JUNIPER.na, cellOsm: CELL_OSM, mode: 'night', phase: '', h: 0 };
 const ease = (x) => x * x * (3 - 2 * x);
 /** Blood Na⁺, what an astrocyte holds, and the hour, for the step on screen: the zoom, the
@@ -123,7 +128,10 @@ function pose() {
   return st;
 }
 const zoom = createZoom(stage, {
-  levels: [{ key: 'brain', world: brain, name: T.levels.brain.name, meta: T.levels.brain.meta, bg: '#f1eef4' }],
+  levels: [
+    { key: 'brain', world: brain, name: T.levels.brain.name, meta: T.levels.brain.meta, bg: '#f1eef4' },
+    { key: 'bubble', world: bubble, name: T.levels.bubble.name, meta: T.levels.bubble.meta, bg: '#eef2f6' },
+  ],
   getT: pose,
   getStep: () => 0,
 });
@@ -376,7 +384,7 @@ function dripSlots() {
 let firstEnter = true;
 lesson = createLesson({
   zoom,
-  levelWhy: () => { const c = brain.cue(brainState); return c && c.text; },
+  levelWhy: (key) => { const w = zoom.worlds[key], c = w && w.cue && w.cue(brainState); return c && c.text; },
   steps: STEPS, phases: PHASES, rebuild,
   panel: $('#stepsPanel'),
   completeHint: fmt(T.complete.hint, { limit: SAFE_24H, na: Math.round(DAY3_NA) }),
@@ -389,7 +397,11 @@ lesson = createLesson({
     if (id !== 'read') results.close();
     if (id === 'dana' && live) chain.open(); else chain.close();
     if (id === 'rx' && live) rx.open(); else rx.close();
-    document.body.classList.toggle('calf-done', !step);
+    /* the bench has its own clock until the brain replay: no brain circles before it */
+    const bench = !!step && i < BRAIN;
+    document.body.classList.toggle('calf-bench', bench);
+    if (bench && zoom.scale !== 'lab') zoom.go('lab');
+    patient.el.hidden = id !== 'drip';   // her pose is the drip's result; elsewhere the clock carries her Na⁺
     /* the drip just ended: file the run, and send an unsafe one back to the prescription */
     if (id === 'slow' && rx.pending) {
       if (!rx.played() && lesson.mode === 'do') { Promise.resolve().then(() => lesson.jumpTo(RX)); return; }
@@ -492,7 +504,7 @@ stage.onFrame((dt) => {
 });
 
 const intro = createIntro(stage);
-bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, slides, chain, rx, brain, patient, STEPS, pose, closeIntro: intro.close } });
+bindChrome({ stage, zoom, restart, expose: { get S() { return S; }, get B() { return B; }, lesson, ix, stage, follow, zoom, results, slides, chain, rx, brain, bubble, patient, STEPS, pose, closeIntro: intro.close } });
 
 stage.focus(VIEWS.overview, 0);
 lesson.start();

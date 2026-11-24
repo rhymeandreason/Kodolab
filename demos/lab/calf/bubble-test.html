@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" data-lab-theme="teal">
+<head>
+  <meta charset="utf-8">
+  <script defer src="/demos/lib/site.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bubble bench</title>
+  <script src="../page.js"></script>
+  <style>
+    .bg-bubble { background: #f1eef4; }
+    #bench { position: absolute; z-index: 40; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; gap: 14px; align-items: center;
+      padding: 10px 16px; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px #0002; font: 13px/1.3 system-ui; }
+    #bench input { width: 260px; }
+    #bench output { font-variant-numeric: tabular-nums; min-width: 9em; }
+  </style>
+</head>
+<body>
+  <div id="app" data-title="Bubble bench"></div>
+  <div id="bench">
+    <label>Blood Na⁺ <input id="na" type="range" min="110" max="145" step="1" value="110"></label>
+    <output id="out"></output>
+  </div>
+  <script>LabPage.chrome()</script>
+  <script type="module">
+    import { createStage, createZoom } from '../lab.js';
+    import { createBubbleLevel, loadMembrane } from './bubble.js';
+    import { plasmaOsm, CELL_OSM, HEALTHY_NA, JUNIPER } from './model.js';
+    await loadMembrane();
+    const stage = createStage({ canvas: document.getElementById('scene') });
+    const bubble = createBubbleLevel(stage.env);
+    const st = { na: JUNIPER.na, cellOsm: CELL_OSM, mode: 'night', phase: '', h: 0 };
+    const zoom = createZoom(stage, { levels: [{ key: 'bubble', world: bubble, name: 'Bubble', meta: '≈ 30 nm', bg: '#f1eef4' }], getT: () => st, getStep: () => 0 });
+    const slider = document.getElementById('na'), out = document.getElementById('out');
+    const show = () => {
+      st.na = +slider.value;
+      const t = bubble.tally();
+      out.textContent = `${Math.round(plasmaOsm(st.na))} vs ${Math.round(CELL_OSM)} mOsm · in ${t.in} out ${t.out}`;
+    };
+    slider.oninput = show;
+    stage.onFrame((dt) => { zoom.update(dt); show(); });
+    Object.assign(window, { bubble, st, zoom, stage });
+    zoom.go('bubble');
+    stage.start();
+  </script>
+</body>
+</html>

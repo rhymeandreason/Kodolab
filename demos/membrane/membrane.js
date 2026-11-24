@@ -29,6 +29,7 @@
  *
  *  Proteins are a LAYOUT, not a step:
  *      proteins: { K | CL | NA | AQP | pump: {x} | null }
+ *  AQP alone may be a list, [{x}, {x}], for a membrane packed with them.
  *  K, CL and NA are channels for their ion; AQP is an aquaporin, a pore for
  *  water and nothing charged, single file, direction by headcount alone.
  *
@@ -82,7 +83,13 @@
        nothing charged. Slimmer than the ion channels; teal, so it reads as a
        different kind of door. */
     const AQP_R = 12.0, AQP_LOBE = 0.10, AQP_HOLE = AQP_R * (1 + AQP_LOBE) + 0.5;
-    const AQP     = rgb.transporter({ half:HALF, site:6.4, mouth:8.4, radius:AQP_R, lobes:4, lobeDepth:AQP_LOBE, color:0x3fa7a0 });
+    const aquaporin = () => {
+      const a = rgb.transporter({ half:HALF, site:6.4, mouth:8.4, radius:AQP_R, lobes:4, lobeDepth:AQP_LOBE, color:0x3fa7a0 });
+      a.group.name = 'aquaporin';   // a host picks them out of the root by name
+      return a;
+    };
+    const AQP     = aquaporin();
+    const AQPS    = [AQP];          // layout() grows it to the longest list asked for
     /* A P-TYPE ATPase IS MOSTLY NOT IN THE MEMBRANE. The part in the
        bilayer carries the ions; the cytoplasmic head, where the ATP binds and
        the phosphate is held, is a big domain hanging into the cytosol. Drawn
@@ -308,7 +315,7 @@
     const _dock = new THREE.Vector3();
     return {
       keys: { K:null, CL:null, NA:null, AQP:null, pump:null },
-      parts: [CHANNEL, CLCHAN, NACHAN, AQP, PUMP],
+      get parts() { return [CHANNEL, CLCHAN, NACHAN, ...AQPS, PUMP]; },
       tOrder: [['pump', PUMP], ['K', CHANNEL], ['CL', CLCHAN], ['NA', NACHAN], ['AQP', AQP]],
       tFallback: PUMP,
       handles: { K:CHANNEL, CL:CLCHAN, pump:PUMP },
@@ -322,9 +329,14 @@
         NACHAN.group.visible = !!pr.NA;
         if (pr.NA) { NACHAN.group.position.x = pr.NA.x; NACHAN.setGates(1, 1);
           holes.push([pr.NA.x, NA_HOLE]); PORES.push({ x:pr.NA.x, R:NA_R, lumen:8.4, kind:'NA', capture:pr.NA.capture, pull:pr.NA.pull }); }
-        AQP.group.visible = !!pr.AQP;
-        if (pr.AQP) { AQP.group.position.x = pr.AQP.x; AQP.setGates(1, 1);
-          holes.push([pr.AQP.x, AQP_HOLE]); PORES.push({ x:pr.AQP.x, R:AQP_R, lumen:8.4, kind:'water' }); }
+        const aqps = [].concat(pr.AQP || []);
+        while (AQPS.length < aqps.length) { const a = aquaporin(); eng.root.add(a.group); AQPS.push(a); }
+        AQPS.forEach((a, i) => {
+          a.group.visible = i < aqps.length;
+          if (!a.group.visible) return;
+          a.group.position.x = aqps[i].x; a.setGates(1, 1);
+          holes.push([aqps[i].x, AQP_HOLE]); PORES.push({ x:aqps[i].x, R:AQP_R, lumen:8.4, kind:'water' });
+        });
         PUMP.group.visible = !!pr.pump;
         if (pr.pump) { pumpX = pr.pump.x; PUMP.group.position.x = pumpX;
           /* MOUTH rather than site — the site is narrowest and would seat an ion in the wall. */
