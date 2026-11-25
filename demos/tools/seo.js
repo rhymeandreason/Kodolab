@@ -110,6 +110,8 @@ const PAGES = {
     description: 'Type blood in a 3D virtual lab: drop anti-A, anti-B and anti-Rh serum on four samples, read which wells clump, then use Punnett squares to rule out a father.' },
   '/labs/gel-electrophoresis': {
     description: 'Gel electrophoresis in a 3D virtual lab: load crime-scene and suspect DNA, run the gel, size the bands against a ladder, and find whose pattern matches.' },
+  '/labs/egg-osmosis': {
+    description: 'Osmosis in a 3D virtual lab: dissolve three eggshells in vinegar, soak the bare eggs in water, saline and corn syrup, and weigh which way the water moved.' },
   '/nodes': {
     description: 'All of Bio 101 as one interactive map: how the concepts connect, from molecules to cells to organisms and ecosystems.' },
   '/labs':

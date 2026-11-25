@@ -16,7 +16,7 @@ The four with a short URL are rows in `lib/lessons.js`; the rest are not wired t
 | Blood Typing | `bloodtype/blood-lab.html` | /labs/blood-typing | Type four people's blood, then Punnett squares to rule out a father |
 | Yeast Catalase | `catalase/catalase-lab.html` | none | Yeast-soaked paper disks float in H₂O₂ at five concentrations, then boiled yeast. Rate against concentration levels off. Disk and molecule zoom levels |
 | Mendel's Peas | `mendel/mendel-lab.html` | none | Cross a green-pea bud with yellow-pea pollen, open the F₁ pod, grow and self the F₁, shell and count the F₂, fill a Punnett square. Cell (meiosis) and molecule (SGR, chlorophyll) zoom levels |
-| Egg Osmosis | `egg/egg-lab.html` | none | Dissolve three shells in vinegar, then weigh the eggs before and after a day in water, saline and corn syrup. Predictions live in the mass table |
+| Egg Osmosis | `egg/egg-lab.html` | /labs/egg-osmosis | Dissolve three shells in vinegar, then weigh the eggs before and after a day in water, saline and corn syrup. Predictions live in the mass table |
 | Juniper's Seizures | `calf/calf-lab.html` | none | Calf seizure case, drawn from frame art in `calf/art/`. Not in `README.md` |
 
 Benches: `gallery.html` (every prop), `props.html#<prop>` (one prop on a turntable), `themes.html` (colour themes).
