@@ -114,7 +114,7 @@ const pileOf = (set, id) => { const s = sortOf(set); if (!s) return null; for (c
 // =========================================================================
 const POS = {
   stocks: V3(-24, 0, 0), scope: V3(0, 0, -12), vials: V3(24, 0, 0),
-  gun: V3(-13, 0, 13), brush: V3(-3, 0, 15), morgue: V3(8, 0, 14),
+  gun: V3(-6, 0, 13), brush: V3(5, 0, 4), morgue: V3(8, 0, 14),
 };
 const LIE = { A: V3(22, 0, 9), B: V3(22, 0, 12.5), C: V3(22, 0, 16) };   // vials on their sides while the parents wake
 const VIEWS = {
@@ -429,10 +429,10 @@ function pose(force = false) {
 }
 
 /* ---------- the CO₂ needle ---------- */
-const GUN_REST_Q = Q(Math.PI / 2, -0.5, 0);             // lying on the bench, grip toward the back
+const GUN_REST_Q = new THREE.Quaternion().multiplyQuaternions(Q(0, 0.25, 0), Q(Math.PI / 2, 0, 0));   // flat on its side, grip toward the back, needle toward the scope
 const GUN_IN_Q = Q(0, 0, -Math.PI / 2);                 // needle (pointing +x) straight down
 function poseGun() {
-  const G = B.gun, rest = POS.gun.clone().add(V3(0, 1.2, 0));
+  const G = B.gun, rest = POS.gun.clone().add(V3(0, 2, 0));
   // the action in progress, if any: which vial and how far
   const act = [['W', S.knock.W], ['w', S.knock.w], ['A', S.clear1.A], ['B', S.clear1.B], ['A', S.count.A], ['B', S.count.B], ['C', S.clear2], ['C', S.count.C]]
     .find(([, a]) => a > 0 && a < KO.out[1]);
@@ -446,7 +446,7 @@ function poseGun() {
 }
 
 /* ---------- the brush: piles from the pad into a vial's mouth, leftovers into the morgue ---------- */
-const BRUSH_REST_Q = Q(0, 0, 0);
+const BRUSH_REST_Q = Q(0, Math.PI / 2 + 0.12, 0);   // lying in front of the scope, tip to the right
 const BRUSH_WORK_Q = Q(-0.9, 0, 0);       // tip down toward the pad
 function poseBrush() {
   const Br = B.brush, rest = POS.brush.clone();
