@@ -254,7 +254,7 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
 
   /* 'circle': a flat band on whatever the object stands on, hugging its base. The base is
    * the vertices in the bottom slab of the object, measured in a frame that turns with the
-   * group, so a box gets a rounded rectangle along its sides and a pot gets a circle. */
+   * group, so a box gets a rounded rectangle along its sides and anything else a circle. */
   const tmpBox = new THREE.Box3(), v = new THREE.Vector3(), P = new THREE.Vector3(), X = new THREE.Vector3(), Qw = new THREE.Quaternion();
   const yawOf = (g) => { X.set(1, 0, 0).applyQuaternion(g.getWorldQuaternion(Qw)); return Math.atan2(-X.z, X.x); };
   function footprint(o) {
@@ -323,6 +323,7 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
     return path;
   }
   function bandGeo({ hx, hz, round }) {
+    if (round) hx = hz = Math.max(hx, hz);   // anything not boxy gets a circle, never an oval
     const gap = 0.3, band = Math.min(1.2, Math.max(0.5, 0.15 * Math.min(hx, hz)));
     const rIn = round ? Math.min(hx, hz) + gap : Math.min(0.2 * Math.min(hx, hz), 1.5) + gap;
     const shape = rrect(new THREE.Shape(), hx + gap + band, hz + gap + band, rIn + band);
