@@ -29,14 +29,12 @@ export function makeBalance(mat, { color = toLinear('#e9edf2'), trim = toLinear(
     b.position.set(x, H + 0.42, D / 2 - 2.5); b.rotation.x = 0.22;
     g.add(b);
   });
-  // the pan on its post, behind the display
-  const post = mesh(new THREE.CylinderGeometry(0.9, 1.1, 0.6, 24), mat.charcoal);
-  post.position.set(0, H + 0.3, -1.6);
-  const pan = mesh(new THREE.CylinderGeometry(6, 5.8, 0.3, 64), mat.steel);
-  pan.position.set(0, H + 0.75, -1.6);
-  const lip = mesh(new THREE.TorusGeometry(5.95, 0.12, 8, 64), mat.steel);
-  lip.rotation.x = Math.PI / 2; lip.position.set(0, H + 0.92, -1.6);
-  g.add(post, pan, lip);
+  // a square steel pan floating on a dark support, behind the display; a round pan reads as a hot plate
+  const post = mesh(rbox(9, 0.55, 9, 0.5), mat.charcoal);
+  post.position.set(0, H - 0.05, -1.6);
+  const pan = mesh(rbox(12, 0.35, 12, 0.6), mat.steel);
+  pan.position.set(0, H + 0.5, -1.6);
+  g.add(post, pan);
 
   let last = '';
   const api = {
