@@ -44,7 +44,11 @@ LabText.add('en', {
       hint: 'Click each <b>blood sample</b>',
       detail: 'One drop of each person\'s blood in all three wells of their tray.',
       why: 'Three wells, three tests on the same blood: one for each antigen.',
-      caption: 'A drop of blood in each well',
+      /* Watch: the instruction plays over the first sample, then the explanation over the rest */
+      captions: [
+        'Put one drop of each person’s blood in all three wells of their tray',
+        'Three wells test the same blood three times, once for each antigen: A, B and Rh',
+      ],
     },
     sera: {
       title: 'Add the antisera', short: 'Antisera',
@@ -52,7 +56,10 @@ LabText.add('en', {
       hint: 'Click each <b>antiserum</b>',
       detail: 'Anti-A in every A well, anti-B in every B well, anti-Rh in every Rh well.',
       why: 'Each antiserum carries antibodies against one antigen. The dyes only tell the bottles apart.',
-      caption: 'Each antiserum into its own well, on every tray',
+      captions: [
+        'Add anti-A to every A well, anti-B to every B well and anti-Rh to every Rh well',
+        'Each antiserum holds antibodies against one antigen. The dyes only tell the bottles apart',
+      ],
     },
     stir: {
       title: 'Stir each well', short: 'Stir',
@@ -60,7 +67,11 @@ LabText.add('en', {
       hint: 'Click each <b>tray</b>',
       detail: 'A clean stick for every well, then into the biohazard bin.',
       why: 'One stick per well, or a trace of one antiserum lands in the next well and gives a false clump.',
-      caption: 'Stir, and watch the magnifier',
+      captions: [
+        'Stir each well with a clean stick, then drop the stick in the biohazard bin',
+        'A reused stick carries antiserum into the next well and can fake a clump',
+        'Where an antibody meets its antigen, it links red cells into clumps. Watch the magnifier',
+      ],
     },
     record: {
       title: 'Mark the clumping', short: 'Mark',
@@ -68,21 +79,21 @@ LabText.add('en', {
       hint: 'Mark each well in the <b>data table</b>',
       detail: 'Mark each well + (clumped) or − (smooth).',
       why: 'Smooth red means no antigen for that antibody. Gritty clumps in clear fluid mean it found its antigen.',
-      caption: 'Read every well: clumped or smooth?',
+      caption: 'Mark each well + if it clumped or − if it stayed smooth. A clump means that antigen is on the red cells',
     },
     type: {
       title: 'Name the blood types', short: 'Types',
       hint: 'Pick each person\'s <b>type</b>',
       detail: 'Anti-A and anti-B give the letter, anti-Rh gives the sign.',
       why: 'Each clump is an antigen on the red cells, and the antigens are the type.',
-      caption: 'What type is each person?',
+      caption: 'Name each person’s type: anti-A and anti-B give the letter, anti-Rh gives the + or −',
     },
     solve: {
       title: 'Who is the father?', short: 'Solve',
       hint: 'Use the <b>Genetics</b> tab',
       detail: 'Try each man\'s possible genotypes against the mother\'s in the Punnett squares.',
       why: 'One impossible combination is enough to rule a man out. A possible one only means he could be.',
-      caption: 'Which man could pass on what the baby needs?',
+      caption: 'Try each man’s possible genotypes against the mother’s. One impossible combination rules a man out',
     },
   },
 

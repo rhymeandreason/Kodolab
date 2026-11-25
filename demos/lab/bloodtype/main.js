@@ -200,6 +200,8 @@ async function actStir(key) {
 // Steps
 // =========================================================================
 const card = (id) => { const s = T.steps[id]; return { title: s.title, short: s.short, action: s.action, hint: s.hint, detail: s.detail, why: s.why, caption: s.caption }; };
+/** Watch's caption for a step done item by item: captions[n - 1] while the nth item runs, the last held. */
+const beat = (id, flags) => () => { const c = T.steps[id].captions; return c[Math.min(c.length - 1, Math.max(0, count(S ? flags() : []) - 1))]; };
 const keys = (pre, list) => list.map((x) => `${pre}${x}`);
 const BLOOD_KEYS = keys('blood', PATIENTS.map((_, i) => i));
 const SERUM_KEYS = keys('serum', SERA.map((s) => s.id));
@@ -221,13 +223,13 @@ function solveCard() {
 }
 
 const STEPS = [
-  { id: 'blood', ...card('blood'), targets: BLOOD_KEYS, view: 'samples',
+  { id: 'blood', ...card('blood'), caption: beat('blood', () => S.blooded), targets: BLOOD_KEYS, view: 'samples',
     activeTargets: () => left(S.blooded, BLOOD_KEYS),
     isDone: () => S.blooded.every(Boolean), progress: () => count(S.blooded) / PATIENTS.length, run: actBlood },
-  { id: 'sera', ...card('sera'), targets: SERUM_KEYS, view: 'overview',
+  { id: 'sera', ...card('sera'), caption: beat('sera', () => S.sera), targets: SERUM_KEYS, view: 'overview',
     activeTargets: () => left(S.sera, SERUM_KEYS),
     isDone: () => S.sera.every(Boolean), progress: () => count(S.sera) / SERA.length, run: actSerum },
-  { id: 'stir', ...card('stir'), targets: TRAY_KEYS, view: 'overview',
+  { id: 'stir', ...card('stir'), caption: beat('stir', () => S.stirred), targets: TRAY_KEYS, view: 'overview',
     activeTargets: () => left(S.stirred, TRAY_KEYS),
     isDone: () => S.stirred.every(Boolean), progress: () => count(S.stirred) / PATIENTS.length, run: actStir },
   /* Reading and the genetics happen in the notebook, off the bench. Watch stops at the bench. */
