@@ -92,7 +92,7 @@ function rebuild() {
   const O = T.objects;
   PATIENTS.forEach((p, i) => ix.register(`blood${i}`, B.bloods[i].group, { name: fmt(O.blood.name, { name: T.props.people[p.id] }), short: T.props.people[p.id], desc: O.blood.desc, anchor: V3(0, 10, 0) }));
   SERA.forEach((s, j) => ix.register(`serum${s.id}`, B.sera[j].group, { name: T.props.sera[s.id], short: T.props.sera[s.id], desc: O.serum[s.id], anchor: V3(0, 10, 0) }));
-  PATIENTS.forEach((p, i) => ix.register(`tray${i}`, B.trays[i].group, { name: fmt(O.tray.name, { name: T.props.people[p.id] }), short: T.props.people[p.id], desc: O.tray.desc, anchor: V3(0, 1.5, -0.5), ringRadius: 8.6 }));
+  PATIENTS.forEach((p, i) => ix.register(`tray${i}`, B.trays[i].group, { name: fmt(O.tray.name, { name: T.props.people[p.id] }), short: T.props.people[p.id], desc: O.tray.desc, anchor: V3(0, 1.5, -0.5) }));
   ix.register('cup', B.cup.group, { ...O.cup, anchor: V3(0, 10, 0) });
   ix.register('bin', B.bin.group, { ...O.bin, anchor: V3(0, 7, 0) });
 }
