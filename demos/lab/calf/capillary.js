@@ -21,6 +21,8 @@
  * a thin slab on the cut face. Water crosses the wall anywhere, each crossing a coin flip
  * weighted toward the same density of water on both sides, so a swelling sleeve draws a net
  * flow. Na⁺ and Cl⁻ never leave the lumen. An adapting cell sends K⁺ beads out to the blood.
+ * The cross-section carries the same traffic on its own face, by the same rule in polar form,
+ * so the swelling there has a visible cause.
  *
  * LEFT OUT: the basement membrane, pericytes, neurons, and the red cells' biconcave shape. */
 import * as THREE from 'three';
@@ -41,6 +43,7 @@ const LOBES = 4, CLEFT = 0.04;                            // endfeet around the 
 const FEET = [[-LX, -13.2], [-12.8, -0.2], [0.2, XW]];    // the endfeet along the cut-open part, a cleft between each
 const NRBC = 7, RBC_R = 2.35, RBC_T = 0.95;
 const NW = 420, NCELL = 30;
+const NW2 = 170, NCELL2 = 30;          // and on the cross-section's face
 const P_CROSS = 0.12;                 // odds per hit. Low: a bead that fails tries again next frame, so high odds would wash out the bias
 const SPEED = 5, TURN = 5, STEP = 1.4, FLOW = 2.4, EXIT = 2.5;
 const RATE = 2.5;                     // 1/s: how fast the sleeve follows the model
@@ -186,7 +189,15 @@ export function createCapillaryLevel(env) {
     const inside = rnd() < cIn0 / (bIn0 + cIn0);
     return { p: inside ? inFoot() : inLumen(), v: V3(gauss(), gauss(), gauss()).setLength(SPEED), in: inside, glow: 0 };
   });
-  const waterM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }), NW);
+  /* the cross-section's beads: a thin slab in front of its face, lumen inside R, lobes outside E0 */
+  const RL = R - PAD, RS = E0 + PAD, aL = RL * RL, aS0 = (E0 + T0 - PAD) ** 2 - RS * RS;   // areas over π
+  const polar = (r0, r1) => { const a = rand(0, Math.PI * 2), r = Math.sqrt(rand(r0 * r0, r1 * r1)); return V3(rand(XE + 0.15, XE + 0.7), r * Math.sin(a), r * Math.cos(a)); };
+  const water2 = Array.from({ length: NW2 }, () => {
+    const inside = rnd() < aS0 / (aL + aS0);
+    return { p: inside ? polar(RS, E0 + T0 - PAD) : polar(0, RL), v: V3(0, gauss(), gauss()).setLength(SPEED), in: inside, glow: 0 };
+  });
+  const allWater = water.concat(water2);
+  const waterM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }), NW + NW2);
   waterM.frustumCulled = false;
   const cWater = new THREE.Color(COL.water), cGlow = new THREE.Color(COL.glow), tmpC = new THREE.Color();
   scene.add(waterM);
@@ -197,7 +208,10 @@ export function createCapillaryLevel(env) {
   const cellS = Array.from({ length: NCELL }, () => ({ p: inFoot(), out: 0 }));   // out: 0 in the cell … 1 carried off
   const ionGeo = new THREE.SphereGeometry(0.2, 12, 10);
   const ionMesh = (c, n) => new THREE.InstancedMesh(ionGeo, new THREE.MeshStandardMaterial({ color: c, roughness: 0.4 }), n);
-  const naM = ionMesh(COL.na, NION / 2), clM = ionMesh(COL.cl, NION / 2), kM = ionMesh(COL.k, NCELL);
+  const NION2 = Math.round(NCELL2 * aL / aS0 * plasmaOsm(HEALTHY_NA) / CELL_OSM / 2) * 2;
+  const ions2 = Array.from({ length: NION2 }, () => ({ p: polar(0, RL - 0.1) }));
+  const cell2 = Array.from({ length: NCELL2 }, () => ({ p: polar(RS + 0.1, E0 + T0 - PAD - 0.1) }));
+  const naM = ionMesh(COL.na, (NION + NION2) / 2), clM = ionMesh(COL.cl, (NION + NION2) / 2), kM = ionMesh(COL.k, NCELL + NCELL2);
   [naM, clM, kM].forEach((mm) => { mm.frustumCulled = false; scene.add(mm); });
 
   /* ---------- the walk ---------- */
@@ -247,7 +261,39 @@ export function createCapillaryLevel(env) {
         else { s.out = Math.min(1, s.out + dt * 0.8); s.p.x += FLOW * dt; }
       }
     });
+    walkFace(dt, kick);
     for (const m of rbcs) { m.position.x += FLOW * dt; if (m.position.x > XE) m.position.x -= LX + XE + 3; }
+  }
+
+  /* put a bead at radius r along its own direction; `bounce` turns its radial velocity round */
+  const toRadius = (w, r, bounce) => {
+    const d = Math.hypot(w.p.y, w.p.z) || 1, ny = w.p.y / d, nz = w.p.z / d;
+    w.p.y = ny * r; w.p.z = nz * r;
+    if (bounce) { const vr = w.v.y * ny + w.v.z * nz; w.v.y -= 2 * vr * ny; w.v.z -= 2 * vr * nz; }
+  };
+  function walkFace(dt, kick) {
+    const rs = E0 + th - PAD, aS = rs * rs - RS * RS;
+    const bias = clamp(Math.exp(0.12 * (NW2 * aS / (aL + aS) - water2.reduce((n, w) => n + (w.in ? 1 : 0), 0))), 0.5, 2);
+    for (const w of water2) {
+      w.v.y += gauss() * kick; w.v.z += gauss() * kick; w.v.x = 0;
+      w.v.setLength(SPEED);
+      w.p.addScaledVector(w.v, dt);
+      const r = Math.hypot(w.p.y, w.p.z);
+      if (!w.in) {
+        // the lumen's edge is shorter than the lobes' inner edge, so its hits count for more
+        if (r > RL) { if (rnd() < P_CROSS * bias * RS / RL) { toRadius(w, RS + 0.05); w.in = true; w.glow = 1; tot.in++; } else toRadius(w, RL, true); }
+      } else if (r < RS) {
+        if (rnd() < P_CROSS / bias) { toRadius(w, RL - 0.05); w.in = false; w.glow = 1; tot.out++; } else toRadius(w, RS, true);
+      } else if (r > rs) toRadius(w, rs, true);
+      w.glow = Math.max(0, w.glow - dt * 1.2);
+    }
+    const drift = (p, r0, r1) => {
+      p.y += gauss() * STEP * dt; p.z += gauss() * STEP * dt;
+      const r = Math.hypot(p.y, p.z) || 1, to = clamp(r, r0, r1) / r;
+      p.y *= to; p.z *= to;
+    };
+    for (const s of ions2) drift(s.p, 0, RL - 0.1);
+    for (const s of cell2) drift(s.p, RS + 0.1, rs - 0.1);
   }
 
   function paint() {
@@ -269,7 +315,7 @@ export function createCapillaryLevel(env) {
     const fat = RBC_T * cellVolume(plasmaOsm(na));
     // a red cell shrinks out of sight as it reaches the cross-section, where the vessel stops being drawn
     for (const m of rbcs) { const k = clamp((XE - 0.3 - m.position.x) / 2); m.scale.set(fat * k, RBC_R * k, RBC_R * k); }
-    water.forEach((w, i) => {
+    allWater.forEach((w, i) => {
       dummy.position.copy(w.p); dummy.scale.setScalar(1 + w.glow * 0.9); dummy.updateMatrix();
       waterM.setMatrixAt(i, dummy.matrix);
       waterM.setColorAt(i, tmpC.copy(cWater).lerp(cGlow, w.glow));
@@ -282,6 +328,9 @@ export function createCapillaryLevel(env) {
       });
     }
     cellS.forEach((s, i) => { dummy.position.copy(s.p); dummy.scale.setScalar(Math.max(1e-4, 1 - s.out)); dummy.updateMatrix(); kM.setMatrixAt(i, dummy.matrix); });
+    const put = (mm, i, p, on) => { dummy.position.copy(p); dummy.scale.setScalar(on ? 1 : 1e-4); dummy.updateMatrix(); mm.setMatrixAt(i, dummy.matrix); };
+    ions2.forEach((s, i) => put(i % 2 ? clM : naM, NION / 2 + (i >> 1), s.p, i < NION2 * shownIons / NION));
+    cell2.forEach((s, i) => put(kM, NCELL + i, s.p, i < NCELL2 * shownCell / NCELL));
     [naM, clM, kM].forEach((mm) => { mm.instanceMatrix.needsUpdate = true; });
   }
 
