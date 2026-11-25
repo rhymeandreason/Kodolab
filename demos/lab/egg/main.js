@@ -69,7 +69,7 @@ function massAt(i) {
 // Layout and views
 // =========================================================================
 const BX = [-4, 8, 20], BZ = 4, BOTTLE_Z = -15;
-const BK = { r: 4.3, h: 11, t: 0.14 };
+const BK = { r: 4.3, h: 12, t: 0.14 };   // 500 mL Griffin, about 8.6 × 12 cm
 const POS = {
   towel: V3(-36, 0, 5), balance: V3(-20, 0, 2), vinegar: V3(-12, 0, -15), waste: V3(33, 0, 1),
 };
@@ -131,7 +131,7 @@ function rebuild() {
   const beakers = LIQ.map((L, i) => place(makeBeaker(mat, {
     r: BK.r, h: BK.h, level: 0, cap: 500, label: fmt(T.props.beaker, { egg: LETTER[i] }), sub: T.liquids[i].name, color: L.tape, liquidColor: VINEGAR.color, labelAt: 1.25,
   }), V3(BX[i], 0, BZ)));
-  const waste = place(makeBeaker(mat, { r: 5.4, h: 13, level: 0, cap: 1000, label: T.props.waste, color: '#64748b', liquidColor: VINEGAR.color }), POS.waste);
+  const waste = place(makeBeaker(mat, { r: 5.3, h: 14.5, level: 0, cap: 1000, label: T.props.waste, color: '#64748b', liquidColor: VINEGAR.color }), POS.waste);
   const vinegar = place(makeReagentBottle(mat, { ...T.props.vinegar, color: '#b38b1d', liquidColor: VINEGAR.color, scale: 1.6 }), POS.vinegar);
   const bottles = LIQ.map((L, i) => place(makeReagentBottle(mat, { ...T.props.bottles[i], color: L.tape, liquidColor: L.color, scale: 1.25 }), V3(BX[i], 0, BOTTLE_Z)));
   bottles[2].liquid.mesh.material.opacity = LIQ[2].opacity;
@@ -293,7 +293,7 @@ function pose(force = false) {
     const e = S.E[i];
     if (changed('bk' + i, e.w1)) {
       const kMove = win(e.w1, 0.2, 0.36, 0.6, 0.72), kTilt = win(e.w1, 0.36, 0.42, 0.54, 0.6);
-      const target = V3(POS.waste.x - 3.6, 13 + 9, POS.waste.z);   // high enough that the upright beaker clears the rim
+      const target = V3(POS.waste.x - 3.6, B.waste.h + 9, POS.waste.z);   // high enough that the upright beaker clears the rim
       pourPose(B.beakers[i].group, V3(BX[i], 0, BZ), qI, B.beakers[i].anchors.spout, target, Z, -1.9, kMove, kTilt, 13);
       B.beakers[i].liquid.setPour(kTilt);
     }

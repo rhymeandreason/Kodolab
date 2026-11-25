@@ -39,8 +39,10 @@ export function rbox(w, h, d, r = 0.3) {
   return g;
 }
 
-/** A printed label wrapped on a (possibly tapered) cylinder, centred at angle `center` (0 = +z). */
-export function wrapLabel({ rTop, rBot, y0, y1, arc, center = 0, w = 512, h = 256, draw, order = 5 }) {
+/** A printed label wrapped on a (possibly tapered) cylinder, centred at angle `center` (0 = +z).
+ *  Leave h out and the canvas takes the printed area's own aspect, so text is not stretched. */
+export function wrapLabel({ rTop, rBot, y0, y1, arc, center = 0, w = 512, h, draw, order = 5 }) {
+  h ??= Math.round(w * (y1 - y0) / (arc * (rTop + rBot) / 2));
   const c = makeCanvas(w, h); const g = c.getContext('2d');
   draw(g, w, h);
   const geo = new THREE.CylinderGeometry(rTop, rBot, y1 - y0, 48, 1, true, center - arc / 2, arc);

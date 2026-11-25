@@ -81,7 +81,7 @@ export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91
   });
   liquid.setFraction(0.8);
   g.add(wrapLabel({
-    rTop: 1.83, rBot: 1.83, y0: 1.8, y1: 5.4, arc: 2.5, center: 0, w: 512, h: 256, order: 5,
+    rTop: 1.83, rBot: 1.83, y0: 1.8, y1: 5.4, arc: 2.5, center: 0, order: 5,
     draw: (c, w, h) => bandLabel(c, w, h, { title, line, note, color, ink: '#1b2a4a', lineColor: '#1b2a4a' }),
   }));
   const cap = mesh(new THREE.CylinderGeometry(0.72, 0.72, 1.0, 24), mat.make.physical({ color, roughness: 0.35 }));
@@ -111,7 +111,7 @@ export function makeDropperBottle(mat, { title = '1 M HCl', line = 'HYDROCHLORIC
   });
   liquid.setFraction(0.75);
   g.add(wrapLabel({
-    rTop: 1.69, rBot: 1.69, y0: 1.0, y1: 3.6, arc: 2.5, center: 0, w: 512, h: 256, order: 5,
+    rTop: 1.69, rBot: 1.69, y0: 1.0, y1: 3.6, arc: 2.5, center: 0, order: 5,
     draw: (c, w, h) => bandLabel(c, w, h, { title, line, note, color, ink: '#151a22', lineColor: '#5b6575' }),
   }));
   const dropper = new THREE.Group();
