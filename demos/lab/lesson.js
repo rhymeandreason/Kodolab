@@ -26,6 +26,8 @@
  *     card?: (el) => {...},              // fill el, a slot in the card under the detail, on entering
  *                                        // the step (UI the step asks for: choices, a form). el is
  *                                        // emptied, and its onclick cleared, when the step changes
+ *     respond?: bool,                    // the student answers here (default: has a card); Watch's
+ *                                        // timeline draws it as a dot, not a bar
  *     clock?: () => '3:24' | null,       // text for the card's top-right clock (a time-lapse); null hides it
  *     isDone?: () => bool,               // multi-click steps (default: done after one click)
  *     progress?: () => 0..1,             // timeline fill while in progress
@@ -493,9 +495,10 @@ export function createLesson({
     phaseIdx[p].forEach((i) => {
       const s = steps[i];
       const el = document.createElement('div');
-      el.className = 'tl-seg' + (s.watch ? ' watch' : '');
-      el.style.flex = s.watch ? 3 : 1;
-      weight += s.watch ? 3 : 1;
+      const respond = s.respond ?? !!s.card;
+      el.className = 'tl-seg' + (s.watch ? ' watch' : '') + (respond ? ' respond' : '');
+      el.style.flex = respond ? 'none' : s.watch ? 3 : 1;
+      weight += respond ? 0.5 : s.watch ? 3 : 1;
       el.title = `${i + 1}. ${s.short || s.title}`;
       el.dataset.i = i;
       el.innerHTML = '<div class="tl-fill"></div>';
