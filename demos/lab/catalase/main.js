@@ -492,21 +492,42 @@ function buildPanel() {
       </tbody>
     </table>
     <svg class="cat-graph" id="catGraph" viewBox="0 0 300 168" aria-hidden="true"></svg>
-    <div class="cat-ask" id="catAsk" hidden>
-      <p>${fmt(P.ask, { lo: pct(CONC[LO]), hi: pct(CONC[HI]) })}</p>
-      <div class="cat-answers">${Object.entries(P.answers).map(([k, a]) => `<button type="button" data-a="${k}">${a.text}</button>`).join('')}</div>
-      <p class="cat-verdict" id="catVerdict"></p>
-    </div>
     <p class="cat-note">${fmt(P.note, { max: MAX_S })}</p>`;
-  $('#catPanel').addEventListener('click', (ev) => {
-    const b = ev.target.closest('button[data-a]');
-    if (!b || !canAnswer()) return;
-    ANSWER.pick = b.dataset.a;
-    panelKey = '';
-    if (T.panel.answers[ANSWER.pick].right && lesson.step === READ) lesson.jumpTo(READ + 1);
-  });
 }
 const canAnswer = () => lesson && lesson.mode !== 'watch' && lesson.step === READ;
+
+/** The read step's card: the question, its answers, and right / try again under them. */
+function mountAsk(el) {
+  const P = T.panel;
+  el.innerHTML = `<div class="cat-ask">
+    <p class="cat-q">${fmt(P.ask, { lo: pct(CONC[LO]), hi: pct(CONC[HI]) })}</p>
+    <div class="cat-answers">${Object.entries(P.answers).map(([k, a]) => `<button type="button" data-a="${k}">${a.text}</button>`).join('')}</div>
+    <p class="cat-verdict" hidden></p>
+  </div>`;
+  const v = el.querySelector('.cat-verdict');
+  const sync = () => {
+    const pick = ANSWER.pick, right = pick && P.answers[pick].right;
+    el.querySelectorAll('button[data-a]').forEach((b) => {
+      b.className = b.dataset.a === pick ? (right ? 'right' : 'wrong') : '';
+      b.disabled = !canAnswer() || !!right;
+    });
+    const a = rateOf(LO), b = rateOf(HI);
+    v.hidden = !pick || a == null || b == null;
+    if (v.hidden) return;
+    v.className = 'cat-verdict ' + (right ? 'ok' : 'no');
+    v.innerHTML = `<i class="ph-fill ${right ? 'ph-check-circle' : 'ph-x-circle'}"></i><span>${right
+      ? fmt(P.right, { pct: Math.round((b / a - 1) * 100) }) : fmt(P.wrong, { a: rateFmt(a), b: rateFmt(b) })}</span>`;
+  };
+  el.onclick = (ev) => {
+    const btn = ev.target.closest('button[data-a]');
+    if (!btn || !canAnswer()) return;
+    ANSWER.pick = btn.dataset.a;
+    sync();
+    // time to read the verdict before the card moves on
+    if (P.answers[ANSWER.pick].right) setTimeout(() => { if (lesson.step === READ) lesson.jumpTo(READ + 1); }, 1800);
+  };
+  sync();
+}
 
 /** The graph: mean rate against % H₂O₂, the boiled-yeast point hollow. Axes scale to the data. */
 function drawGraph() {
@@ -533,7 +554,7 @@ function renderPanel() {
   const res = CUPS.map((C, c) => [0, 1, 2].map((i) => result(c, i)));
   const c = S.focus;
   const clock = c >= 0 && S.run[c] > DROP(0) ? `${Math.floor(clockS(c))} s` : '';
-  const key = JSON.stringify([res, ANSWER.pick, canAnswer(), lesson.step, clock]);
+  const key = JSON.stringify([res, clock]);
   if (key === panelKey) return;
   panelKey = key;
   $('#catClock').textContent = clock;
@@ -547,17 +568,6 @@ function renderPanel() {
     row.classList.toggle('live', ci === c && !done(ci) && S.run[ci] > 0);
   });
   drawGraph();
-  const ask = $('#catAsk');
-  ask.hidden = lesson.step < READ;
-  $('#catPanel').classList.toggle('asking', canAnswer());
-  ask.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', ANSWER.pick === b.dataset.a); b.disabled = !canAnswer(); });
-  const v = $('#catVerdict');
-  const a = rateOf(LO), b = rateOf(HI);
-  if (ANSWER.pick && a != null && b != null) {
-    const right = T.panel.answers[ANSWER.pick].right;
-    v.innerHTML = right ? fmt(T.panel.right, { pct: Math.round((b / a - 1) * 100) }) : fmt(T.panel.wrong, { a: rateFmt(a), b: rateFmt(b) });
-    v.className = 'cat-verdict ' + (right ? 'ok' : 'no');
-  } else v.innerHTML = '';
 }
 
 // =========================================================================
@@ -620,9 +630,9 @@ const STEPS = [
     run: runCup,
     clock: () => (S.focus === BOILED && S.run[BOILED] > DROP(0) ? fmt(T.steps.boiled.clock, { s: Math.floor(clockS(BOILED)) }) : null),
     caption: () => runCaption('boiled') },
-  /* Answering happens in the panel, off the bench: the step reads ANSWER, so a rebuild leaves it
+  /* Answering happens on the card, off the bench: the step reads ANSWER, so a rebuild leaves it
      alone. Watch mode stops at the bench; the answer is the student's. */
-  { id: 'read', respond: true, ...card('read', { lo: pct(CONC[LO]), hi: pct(CONC[HI]) }), targets: [], view: 'graph', caption: T.steps.read.caption,
+  { id: 'read', respond: true, ...card('read', { lo: pct(CONC[LO]), hi: pct(CONC[HI]) }), targets: [], view: 'graph', caption: T.steps.read.caption, card: mountAsk,
     isDone: () => lesson.mode === 'watch' || (ANSWER.pick && T.panel.answers[ANSWER.pick].right),
     progress: () => (ANSWER.pick ? 1 : 0) },
 ];

@@ -81,7 +81,7 @@ LabText.add('en', {
     },
     read: {
       title: 'Read the graph', short: 'Graph',
-      hint: 'Answer the question under the <b>graph</b>',
+      hint: 'Answer the question below',
       detail: 'Rate is 1 ÷ the time to float. Compare the rate at {lo} and at {hi}.',
       caption: 'Rate rises with peroxide, then levels off',
     },
@@ -107,7 +107,7 @@ LabText.add('en', {
       same: { text: 'did not change', right: false },
     },
     right: 'Right. Doubling the peroxide raised the rate by {pct}%. The enzymes are nearly saturated.',
-    wrong: 'Look again: the rate went from {a} to {b} s⁻¹.',
+    wrong: 'Try again. The rate went from {a} to {b} s⁻¹.',
   },
 
   objects: {
