@@ -35,10 +35,10 @@ export const eyeOf = (e, p) => (e === 'W' || p === 'W' ? 'red' : 'white');
 export const whoOf = (p) => (p === 'Y' ? 'son' : 'daughter');
 
 const COL = {
-  x: '#2a3a9c', y: '#08766c', auto: '#8f89b0',
-  cell: ['#f3f5fb', '#93a3cf'], nuc: ['#eceffa', '#a7b3db'], egg: ['#fff8ea', '#bfa478'], chorion: ['#fbf6ea', '#c2ad86'],
-  zygote: ['#fdf2ea', '#d79a7c'], pro: ['#fff4e6', '#d8a979'], spindle: '#7f8cc4', centro: '#56609e',
-  sperm: ['#eef1fb', '#7f8fc4'], tail: '#9aa6d2', tile: '#fbfaff', tileHot: '#fbe8e6', ring: '#c2453b',
+  x: '#1f2d98', y: '#056b5d', auto: '#625c8f',
+  cell: ['#eef1fb', '#5f76c2'], nuc: ['#e6eaf9', '#7d8dcc'], egg: ['#fff5e0', '#b0813f'], chorion: ['#fbf3e2', '#b08f5c'],
+  zygote: ['#fdeee2', '#c9714a'], pro: ['#fff0dc', '#c98545'], spindle: '#5d6cbc', centro: '#3f4a96',
+  sperm: ['#e9edfb', '#5468b8'], tail: '#7584c6', tile: '#fbfaff', tileHot: '#fbe8e6', ring: '#c2453b',
 };
 
 /* chromosome shapes: centromere at the origin, the arm(s) along -y; the centromere faces the pole (+y) */
@@ -158,11 +158,11 @@ export function createCell(env, { stepIds = [] } = {}) {
   const TX = LEVELS.cell, L = TX.labels, W = TX.words;
   const scene = new THREE.Scene();
   scene.environment = env;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d4e6, 0.2 * LIGHT));
-  const key = new THREE.DirectionalLight(0xffffff, 0.5 * LIGHT);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d4e6, 0.55 * LIGHT));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9 * LIGHT);
   key.position.set(-20, 40, 50);
   scene.add(key);
-  const back = new THREE.DirectionalLight(0xf0f0ff, 0.2 * LIGHT);
+  const back = new THREE.DirectionalLight(0xf0f0ff, 0.35 * LIGHT);
   back.position.set(30, -20, -40);
   scene.add(back);
 
@@ -192,7 +192,7 @@ export function createCell(env, { stepIds = [] } = {}) {
       if (type === 'X') bmat.color.set(ALLELE_COLORS[allele] || EYE.white);
       const faint = type === 'M' || type === 'D';
       mat.color.set(faint ? COL.auto : type === 'Y' ? COL.y : COL.x);
-      c.base = faint ? 0.22 : 1;
+      c.base = faint ? 0.7 : 1;
       mat.depthWrite = !faint;
       body.renderOrder = faint ? 1 : 2;
     };

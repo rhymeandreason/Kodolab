@@ -1,8 +1,8 @@
 /* Fruit Fly Genetics: only what's specific to this lab. Shared chrome is in ../lab.css. */
 
 /* ---------- backgrounds per zoom level ---------- */
-.bg-cell, .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%, #fffdfb 0%, #f7efeb 50%, #eadcd5 100%); }
-.bg-mol, .zoom-lens.bg-mol { background: radial-gradient(1400px 900px at 58% 35%, #fdfbf7 0%, #f3ece2 50%, #e4d8c8 100%); }
+.bg-cell, .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%, #fcfdff 0%, #eef1f7 50%, #dce2ee 100%); }
+.bg-mol, .zoom-lens.bg-mol { background: radial-gradient(1400px 900px at 58% 35%, #fbfcfe 0%, #edf0f5 50%, #d9dfe9 100%); }
 body[data-scale='cell'] .bg-cell, body[data-scale='mol'] .bg-mol { opacity: 1; }
 
 /* ---------- the counts panel ---------- */

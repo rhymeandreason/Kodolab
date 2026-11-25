@@ -169,8 +169,8 @@ function zoomState() {
 }
 const zoom = createZoom(stage, {
   levels: [
-    { key: 'cell', world: createCell(stage.env, { stepIds: STEP_IDS }), name: T.levels.cell.name, meta: T.levels.cell.meta, bg: '#f7efeb' },
-    { key: 'mol', world: createMolecule(stage.env, { stepIds: STEP_IDS }), name: T.levels.mol.name, meta: T.levels.mol.meta, bg: '#f3ece2' },
+    { key: 'cell', world: createCell(stage.env, { stepIds: STEP_IDS }), name: T.levels.cell.name, meta: T.levels.cell.meta, bg: '#eef1f7' },
+    { key: 'mol', world: createMolecule(stage.env, { stepIds: STEP_IDS }), name: T.levels.mol.name, meta: T.levels.mol.meta, bg: '#edf0f5' },
   ],
   getT: zoomState,
   getStep: () => (lesson ? Math.min(lesson.step, STEPS.length) : 0),

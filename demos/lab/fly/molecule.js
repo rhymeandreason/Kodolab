@@ -39,9 +39,9 @@ const TILT = 0.17;
 const RATE = { 4: 1.4, 2: 1.06 };      // granule fill per unit pigment, by White count: one dose still fills by the end
 const N_DEPOSIT = 1700, N_FREE = 10;
 const COL = {
-  white: '#6d7fc6', brown: '#4d9a8b', scarlet: '#9a70c2', alone: '#a9aeb8',
-  head: '#d8d2c4', core: '#efe3b8', tail: '#d9c58e', guanine: '#d79a92', hk: '#d9b04e',
-  drosopterin: '#a3170f', ommochrome: '#4d2813', base: '#93a6cc', ribose: '#cfc7a6',
+  white: '#4257c6', brown: '#23907a', scarlet: '#8846c4', alone: '#9aa0ac',
+  head: '#d6c49c', core: '#f0dfa8', tail: '#cdae5e', guanine: '#d0685a', hk: '#d6990f',
+  drosopterin: '#a3170f', ommochrome: '#4d2813', base: '#6684c8', ribose: '#c2ae6c',
 };
 function V3(x = 0, y = 0, z = 0) { return new THREE.Vector3(x, y, z); }
 const ramp = (x, a, b) => smooth(clamp((x - a) / (b - a)));
@@ -77,11 +77,11 @@ export function createMolecule(env, { stepIds = [] } = {}) {
   const TX = LEVELS.mol, L = TX.labels, I = TX.info, W = TX.words, CU = TX.cues;
   const scene = new THREE.Scene();
   scene.environment = env;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xe6e0dc, 0.35 * LIGHT));
-  const key = new THREE.DirectionalLight(0xffffff, 0.6 * LIGHT);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xe6e0dc, 0.6 * LIGHT));
+  const key = new THREE.DirectionalLight(0xffffff, 0.95 * LIGHT);
   key.position.set(-30, 60, 50);
   scene.add(key);
-  const back = new THREE.DirectionalLight(0xfff0f0, 0.2 * LIGHT);
+  const back = new THREE.DirectionalLight(0xfff0f0, 0.35 * LIGHT);
   back.position.set(40, -30, -60);
   scene.add(back);
   const root = new THREE.Group();
@@ -121,9 +121,9 @@ export function createMolecule(env, { stepIds = [] } = {}) {
   coreGeo.rotateX(-Math.PI / 2);
   coreGeo.translate(0, 0, (PATCH.front + PATCH.back) / 2);
   { const p = coreGeo.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, yMem(p.getX(i), p.getZ(i))); coreGeo.computeVertexNormals(); }
-  const coreMat = std(COL.core, { transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, roughness: 0.9 });
+  const coreMat = std(COL.core, { transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide, roughness: 0.9 });
   const core = new THREE.Mesh(coreGeo, coreMat);
-  core.scale.set(1, 1, 1);
+  core.renderOrder = -1;     // drawn first, so the pumps through it are not veiled by three sheets
   root.add(core);
   const coreTop = core.clone(), coreBot = core.clone();
   coreTop.position.y = HALF_T * 0.55; coreBot.position.y = -HALF_T * 0.55;
@@ -169,7 +169,7 @@ export function createMolecule(env, { stepIds = [] } = {}) {
     white: makeHalf(COL.white, i * 2),
     partner: makeHalf(COL[PARTNER[i]], i * 2 + 1),
     kind: PARTNER[i],
-    on: new THREE.Color(COL[PARTNER[i]]), off: new THREE.Color(COL[PARTNER[i]]).lerp(new THREE.Color(COL.alone), 0.55),
+    on: new THREE.Color(COL[PARTNER[i]]), off: new THREE.Color(COL[PARTNER[i]]).lerp(new THREE.Color(COL.alone), 0.3),
   }));
 
   /* ---------- small molecules: ATP (base, ribose, three phosphates), phosphate, precursors, pigment ---------- */
@@ -234,7 +234,7 @@ export function createMolecule(env, { stepIds = [] } = {}) {
       const o = run ? ramp(ph, 0.30, 0.45) * (1 - ramp(ph, 0.76, 0.94)) : 0;
       p.o = o;
       p.white.pose(p.base, -1, o, hasW ? 1 : 0);
-      p.partner.pose(p.base, hasW ? 1 : 0, o, hasW ? 1 : 0.6);
+      p.partner.pose(p.base, hasW ? 1 : 0, o, hasW ? 1 : 0.85);
       p.partner.mat.color.copy(hasW ? p.on : p.off);
       // ATP: arrive, bind at the interface, split; the phosphate leaves, then the ADP
       for (let k = 0; k < 2; k++) {
