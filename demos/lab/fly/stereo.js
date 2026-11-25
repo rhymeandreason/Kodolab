@@ -488,6 +488,14 @@ export function createStereoView({ title, words } = {}) {
         const r = Math.min(lim, R - half - 10);
         x = R + ux * r; y = R + uy * r;
       }
+      // pull the chip in along its radius until its outer corner clears the rim
+      const hw = c.offsetWidth / 2, hh = c.offsetHeight / 2;
+      for (let k = 0; k < 8; k++) {
+        const cx = x - R, cy = y - R, far = Math.hypot(Math.abs(cx) + hw, Math.abs(cy) + hh), d0 = Math.hypot(cx, cy);
+        if (far <= R - 8 || d0 < 1) break;
+        const s = Math.max(0, d0 - (far - (R - 8))) / d0;
+        x = R + cx * s; y = R + cy * s;
+      }
       c.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
       if (c.classList.contains('edge') !== edge) { c.classList.toggle('edge', edge); c.title = edge ? W.offscreen : ''; }
       if (edge) c.querySelector('i').style.transform = `rotate(${(Math.atan2(dy, dx) * 180 / Math.PI + 90).toFixed(0)}deg)`;

@@ -180,6 +180,8 @@ LabText.add('en', {
   panel: {
     title: 'Fly counts',
     vial: 'Vial', fRed: '♀ red', fWhite: '♀ white', mRed: '♂ red', mWhite: '♂ white',
+    /* the parent piles: each one is the fly that goes into that vial */
+    Af: 'Vial A: red ♀', Am: 'Vial A: white ♂', Bf: 'Vial B: white ♀', Bm: 'Vial B: red ♂',
     rows: { A: 'A F₁', B: 'B F₁', C: 'C F₂', morgan: 'Morgan F₂' },
     morganNote: 'Morgan 1910, from vial A’s cross',
     hints: {

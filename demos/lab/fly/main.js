@@ -76,10 +76,10 @@ const COUNT_PILES = [
   { key: 'mWhite', label: P.mWhite, color: COLORS.mWhite, fits: fits('m', 'white') },
 ].map((p) => ({ ...p, hint: pileHint(p.key.endsWith('Red') ? 'red' : 'white') }));
 const PARENT_PILES = [
-  { key: 'Af', label: 'A ♀', color: COLORS.A, fits: fits('f', 'red') },
-  { key: 'Am', label: 'A ♂', color: COLORS.A, fits: fits('m', 'white') },
-  { key: 'Bf', label: 'B ♀', color: COLORS.B, fits: fits('f', 'white') },
-  { key: 'Bm', label: 'B ♂', color: COLORS.B, fits: fits('m', 'red') },
+  { key: 'Af', label: P.Af, color: COLORS.A, fits: fits('f', 'red') },
+  { key: 'Am', label: P.Am, color: COLORS.A, fits: fits('m', 'white') },
+  { key: 'Bf', label: P.Bf, color: COLORS.B, fits: fits('f', 'white') },
+  { key: 'Bm', label: P.Bm, color: COLORS.B, fits: fits('m', 'red') },
 ].map((p) => ({ ...p, cap: PAIRS, hint: pileHint(p.key === 'Af' || p.key === 'Bm' ? 'red' : 'white') }));
 
 const SORT = { parents: null, A: null, B: null, C: null };
