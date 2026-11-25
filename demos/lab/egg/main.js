@@ -83,11 +83,9 @@ const VIEWS = {
   weigh: { t: V3(-3, 4, 2), p: V3(-3, 52, 74) },
   vinegar: { t: V3(4, 6, -4), p: V3(4, 40, 52) },
   soak: { t: V3(8, 4, 3), p: V3(8, 30, 36) },
-  drain: { t: V3(12, 6, 0), p: V3(12, 42, 62) },
   predict: { t: V3(8, 4, 2), p: V3(8, 34, 44) },
   fill: { t: V3(8, 6, -4), p: V3(8, 40, 50) },
   osmosis: { t: V3(8, 4, 3), p: V3(8, 28, 33) },
-  results: { t: V3(-4, 4, 5), p: V3(-4, 38, 58) },
   lineup: { t: V3(8, 2.5, EGG_Z), p: V3(8, 22, EGG_Z + 26) },
 };
 
@@ -524,7 +522,7 @@ const STEPS = [
     clock: () => clockText(S.hours, T.steps.soak.clock),
     caption: cues(() => S.hours, [[0, C.soak.bubbles], [14, C.soak.thin], [32, C.soak.gone], [41, C.soak.swell]]),
     watch: { duration: SOAK_H, get: () => S.hours, set: (t) => { S.hours = t; }, rate: () => (SOAK_H / 16) * debugSpeed } },
-  { ...multi('weigh1', 'beaker', 'w1', 6.5, 'drain'),
+  { ...multi('weigh1', 'beaker', 'w1', 6.5, 'weigh'),
     caption: () => { const k = S.E[last.i].w1; return k < 0.36 ? C.weigh1.lift : k < 0.7 ? C.weigh1.drain : C.weigh1.back; } },
   /* Predicting happens in the data panel, off the bench: the step reads PRED, so a rebuild leaves
      it alone. Watch mode stops at the bench; predicting is the student's. */
@@ -538,7 +536,7 @@ const STEPS = [
     clock: () => clockText(S.osmo, T.steps.osmosis.clock),
     caption: cues(() => S.osmo, [[0, C.osmosis.both], [4, C.osmosis.net], [10, C.osmosis.iso], [17, C.osmosis.slow]]),
     watch: { duration: OSMO_H, get: () => S.osmo, set: (t) => { S.osmo = t; }, rate: () => (OSMO_H / 14) * debugSpeed } },
-  { ...multi('weigh2', 'beaker', 'w2', 4.8, 'results'),
+  { ...multi('weigh2', 'beaker', 'w2', 4.8, 'weigh'),
     caption: () => (S.E[last.i].w2 < 0.6 ? fmt(C.weigh2.lift, { egg: LETTER[last.i] }) : C.weigh2.set) },
 ];
 const PREDICT = STEPS.findIndex((s) => s.id === 'predict');
