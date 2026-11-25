@@ -138,7 +138,7 @@ function rebuild() {
     bottles: LIQ.map((L) => makeStream(mat, root, { color: L.color })) };
   B = { balance, beakers, waste, vinegar, bottles, eggs, streams, fx: eggs.map((e, i) => makeEggFx(i)), where: [] };
 
-  eggs.forEach((e, i) => ix.register('egg' + i, e.group, { ...objText('egg', i), anchor: V3(0, 2.4, 0) }));
+  eggs.forEach((e, i) => ix.register('egg' + i, e.group, { ...objText('egg', i), anchor: V3(0, 2.4, 0), ringShape: 'circle' }));
   beakers.forEach((b, i) => ix.register('beaker' + i, b.group, { ...objText('beaker', i), anchor: V3(0, BK.h + 0.4, 0) }));
   bottles.forEach((b, i) => ix.register('bottle' + i, b.group, { ...T.objects['bottle' + i], anchor: V3(0, 13, 0) }));
   ix.register('vinegar', vinegar.group, { ...T.objects.vinegar, anchor: V3(0, 16.5, 0) });

@@ -78,7 +78,7 @@ function rebuild() {
   const P = B.props;
   // targets
   // the strawberry and its leaves are one target: one click pulls the leaves off and bags it
-  ix.register('berry', B.berryGroup, { ...T.objects.berry, anchor: V3(0, 1.9, 0) });
+  ix.register('berry', B.berryGroup, { ...T.objects.berry, anchor: V3(0, 1.9, 0), ringShape: 'circle' });
   ix.addGroup('berry', P.calyx.group);
   ix.register('bag', P.bag.group, { ...T.objects.bag, anchor: V3(0, 2.2, 0) });
   ix.register('beaker', P.beaker.group, { ...T.objects.beaker, anchor: V3(0, 9.4, 0) });
