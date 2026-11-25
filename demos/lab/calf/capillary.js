@@ -10,6 +10,12 @@
  * sleeve is that much thicker (it can only swell away from the vessel) and the cell body's
  * radius grows by the cube root. Red cells thicken by cellVolume(), the number the slides show.
  *
+ * ONE MODEL, TWO VIEWS. Left of XW the vessel is cut lengthwise, for the traffic: red cells in
+ * single file, water crossing the wall, Na⁺ held in. From XW to XE it is whole, and ends in a
+ * cross-section where the endfeet are separate lobes around the ring. view(st) says which the
+ * camera should face: side-on while the blood is still close to normal, end-on once the
+ * astrocyte's size is the story.
+ *
  * WHAT IS NOT TO SCALE: the beads. Water, Na⁺, Cl⁻ and K⁺ are drawn thousands of times too big
  * so the traffic shows; membrane.js's level is where a molecule is its own size. Beads live in
  * a thin slab on the cut face. Water crosses the wall anywhere, each crossing a coin flip
@@ -23,13 +29,16 @@ import { astroVolume, cellVolume, plasmaOsm, CELL_OSM, HEALTHY_NA, JUNIPER, SAFE
 
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const TX = T.levels.brain;
-const LX = 26;                        // half-length of the vessel drawn
+const LX = 26;                        // the vessel runs from −LX …
+const XW = 10, XE = 18;               // … is whole from XW, and is cut across at XE
 const R = 3, RW = 3.55, E0 = 3.7;     // lumen radius, wall's outer radius, where the endfoot sleeve starts
-const T0 = 1.6;                       // sleeve thickness at the cell's normal size
-const SOMA = V3(3, 10, -1.6), SOMA_R = 2.6;
+const T0 = 2.4;                       // sleeve thickness at the cell's normal size
+const SOMA = V3(3, 11, -1.6), SOMA_R = 2.6;
 const Z0 = 0.15, Z1 = 0.9, PAD = 0.22;                    // the bead slab, in front of the cut face
-const JUNCTIONS = [-21, -14, -7, 0, 7, 14, 21];           // where two endothelial cells meet
-const FEET = [[-LX, -13.2], [-12.8, -0.2], [0.2, 12.8], [13.2, LX]];   // the endfeet along the vessel, a cleft between each
+const JUNCTIONS = [-21, -14, -7, 0, 7];                   // where two endothelial cells meet, along the cut-open part
+const SEAMS = [0.9, 0.9 + Math.PI];                       // and around the ring: two cells wrap this capillary
+const LOBES = 4, CLEFT = 0.04;                            // endfeet around the ring, and half the angle between two
+const FEET = [[-LX, -13.2], [-12.8, -0.2], [0.2, XW]];    // the endfeet along the cut-open part, a cleft between each
 const NRBC = 7, RBC_R = 2.35, RBC_T = 0.95;
 const NW = 420, NCELL = 30;
 const P_CROSS = 0.12;                 // odds per hit. Low: a bead that fails tries again next frame, so high odds would wash out the bias
@@ -39,7 +48,7 @@ const COL = {
   lumen: '#f6cfc7', wall: '#cf6f61', wallCut: '#c9675a', junction: '#5f1d1d',
   astro: '#7f97d8', astroCut: '#cdd8f4', rbc: '#a31919',
   water: '#1f7fd1', glow: '#fde047', na: '#7c3aed', cl: '#16a34a', k: '#d97706',
-  more: '#3b9ee6', less: '#f59e0b',
+  more: '#1d4ed8', less: '#f59e0b',
 };
 
 export function createCapillaryLevel(env) {
@@ -65,12 +74,40 @@ export function createCapillaryLevel(env) {
   const faceGeo = new THREE.PlaneGeometry(1, 1);
   const face = (mat, x0, x1, z = 0) => { const m = new THREE.Mesh(faceGeo, mat); m.position.set((x0 + x1) / 2, 0, z); m.scale.x = x1 - x0; return m; };
   const setFace = (m, s, r0, r1) => { m.visible = r1 - r0 > 0.01; m.scale.y = Math.max(0.001, r1 - r0); m.position.y = s * (r0 + r1) / 2; };
+  /* part of a whole pipe along x, between two angles about the axis (0 faces the side-on camera) */
+  const arcPipe = (mat, r, x0, x1, a0 = 0, a1 = Math.PI * 2) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, Math.max(8, Math.round(48 * (a1 - a0) / (Math.PI * 2))), 1, true, a0, a1 - a0), mat);
+    m.rotation.z = Math.PI / 2; m.scale.set(r, x1 - x0, r); m.position.x = (x0 + x1) / 2;
+    return m;
+  };
+  /* a flat arc across the vessel at x, between two angles; set(r0, r1) moves its radii */
+  const arcFace = (mat, x, a0, a1) => {
+    const n = Math.max(6, Math.round(64 * (a1 - a0) / (Math.PI * 2))), pos = new Float32Array((n + 1) * 6), idx = [];
+    for (let i = 0; i < n; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setIndex(idx);
+    const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false;
+    const set = (r0, r1) => {
+      mesh.visible = r1 - r0 > 0.01;
+      for (let i = 0; i <= n; i++) {
+        const a = a0 + (a1 - a0) * i / n, sy = Math.sin(a), cz = Math.cos(a);
+        pos.set([x, r0 * sy, r0 * cz, x, r1 * sy, r1 * cz], i * 6);
+      }
+      geo.attributes.position.needsUpdate = true;
+    };
+    return { mesh, set };
+  };
+  const flat2 = (color, opacity) => Object.assign(flat(color, opacity), { side: THREE.DoubleSide });
 
   /* ---------- the vessel wall ---------- */
   const wallG = new THREE.Group();
-  wallG.add(pipe(std(COL.lumen), R, -LX, LX), pipe(std(COL.wall), RW, -LX, LX));
-  for (const s of [1, -1]) { const f = face(flat(COL.wallCut), -LX, LX); setFace(f, s, R, RW); wallG.add(f); }
-  const jMat = flat(COL.junction);
+  wallG.add(pipe(std(COL.lumen), R, -LX, XW), pipe(std(COL.wall), RW, -LX, XW));
+  wallG.add(arcPipe(std(COL.lumen), R, XW, XE), arcPipe(std(COL.wall), RW, XW, XE));
+  for (const s of [1, -1]) { const f = face(flat(COL.wallCut), -LX, XW); setFace(f, s, R, RW); wallG.add(f); }
+  /* where the lengthwise cut stops, and the cross-section at the end */
+  for (const [x, a0, a1] of [[XW, -Math.PI / 2, Math.PI / 2], [XE, 0, Math.PI * 2]]) { const f = arcFace(flat2(COL.wallCut), x, a0, a1); f.set(R, RW); wallG.add(f.mesh); }
+  const jMat = flat2(COL.junction);
+  for (const a of SEAMS) { const f = arcFace(jMat, XE + 0.01, a - 0.035, a + 0.035); f.set(R, RW); wallG.add(f.mesh); }
   for (const x of JUNCTIONS) {
     const seam = new THREE.Mesh(new THREE.TorusGeometry(R + 0.02, 0.06, 6, 32, Math.PI), jMat);
     seam.rotation.set(0, Math.PI / 2, -Math.PI / 2); seam.position.x = x;
@@ -87,8 +124,19 @@ export function createCapillaryLevel(env) {
     astroG.add(shell, ...cuts.map((c) => c.m));
     return { shell, cuts };
   });
-  const bands = [1, -1].map((s) => ({ s, m: face(flat(COL.more, 0.55), -LX, LX, 0.02) }));
+  const bands = [1, -1].map((s) => ({ s, m: face(flat(COL.more, 0.8), -LX, XW, 0.02) }));
   bands.forEach((b) => astroG.add(b.m));
+  /* the whole part: LOBES endfeet around the ring, the first centred on top */
+  const step = Math.PI * 2 / LOBES;
+  const lobes = Array.from({ length: LOBES }, (_, i) => {
+    const a0 = Math.PI / 2 + (i - 0.5) * step + CLEFT, a1 = Math.PI / 2 + (i + 0.5) * step - CLEFT;
+    const shell = arcPipe(astroMat, 1, XW, XE, a0, a1);
+    const cut = arcFace(flat2(COL.astroCut), XE, a0, a1), band = arcFace(flat2(COL.more, 0.85), XE + 0.02, a0, a1);
+    astroG.add(shell, cut.mesh, band.mesh);
+    return { shell, cut, band };
+  });
+  const stop = arcFace(flat2(COL.astroCut), XW, -Math.PI / 2, Math.PI / 2);
+  astroG.add(stop.mesh);
   /* the cell body and its processes swell about the body's centre */
   const body = new THREE.Group(); body.position.copy(SOMA);
   body.add(new THREE.Mesh(new THREE.SphereGeometry(SOMA_R, 32, 20), astroMat));
@@ -97,6 +145,7 @@ export function createCapillaryLevel(env) {
   body.add(
     limb([V3(-1, -1, 0), V3(-5, -3.2, 0.3), V3(-9, footY, 0.4)], 0.55),      // down to two endfeet
     limb([V3(1, -1.5, 0), V3(3.5, -3.6, 0.3), V3(5.5, footY, 0.4)], 0.55),
+    limb([V3(2, -1, 0), V3(7.5, -3, 1), V3(XE - 4 - SOMA.x, footY, 1.6)], 0.55),   // and to the top lobe of the whole part
     limb([V3(-1.5, 1, 0), V3(-6, 3.5, -1), V3(-12, 5, -2)], 0.4),            // and off to synapses, out of frame
     limb([V3(1.5, 1.5, 0), V3(5, 4.5, -1), V3(9, 8, -2)], 0.4),
     limb([V3(2, 0, 0), V3(7, 0.5, -1), V3(13, -0.5, -2.5)], 0.4),
@@ -110,7 +159,8 @@ export function createCapillaryLevel(env) {
   /* the normal size, dashed: the sleeve's outer edge, and the cell body's outline */
   const dashed = new THREE.LineDashedMaterial({ color: '#334155', dashSize: 0.45, gapSize: 0.32, transparent: true, opacity: 0.75, depthTest: false });
   const line = (pts) => { const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), dashed); l.computeLineDistances(); l.renderOrder = 5; return l; };
-  const restLines = [1, -1].map((s) => line([V3(-LX, s * (E0 + T0), 0.03), V3(LX, s * (E0 + T0), 0.03)]));
+  const restLines = [1, -1].map((s) => line([V3(-LX, s * (E0 + T0), 0.03), V3(XW, s * (E0 + T0), 0.03)]));
+  restLines.push(line(Array.from({ length: 97 }, (_, i) => V3(XE + 0.04, Math.sin(i / 96 * Math.PI * 2) * (E0 + T0), Math.cos(i / 96 * Math.PI * 2) * (E0 + T0)))));
   const restRing = line(Array.from({ length: 65 }, (_, i) => V3(Math.cos(i / 64 * Math.PI * 2) * SOMA_R, Math.sin(i / 64 * Math.PI * 2) * SOMA_R, 0)));
   restRing.position.copy(SOMA);
   scene.add(...restLines, restRing);
@@ -120,7 +170,7 @@ export function createCapillaryLevel(env) {
   const rbcGeo = new THREE.SphereGeometry(1, 28, 18), rbcMat = std(COL.rbc, { roughness: 0.5, side: THREE.FrontSide });
   const rbcs = Array.from({ length: NRBC }, (_, i) => {
     const m = new THREE.Mesh(rbcGeo, rbcMat);
-    m.position.x = -LX - 3 + (i + 0.5) * (2 * LX + 6) / NRBC;
+    m.position.x = -LX - 3 + (i + 0.5) * (LX + XE + 3) / NRBC;
     rbcG.add(m);
     return m;
   });
@@ -129,8 +179,8 @@ export function createCapillaryLevel(env) {
   /* ---------- beads ---------- */
   let th = T0;   // the sleeve's thickness now
   const sign = () => (rnd() < 0.5 ? -1 : 1);
-  const inLumen = () => V3(rand(-LX, LX), rand(-R + PAD, R - PAD), rand(Z0, Z1));
-  const inFoot = () => V3(rand(-LX, LX), sign() * rand(E0 + PAD, E0 + th - PAD), rand(Z0, Z1));
+  const inLumen = () => V3(rand(-LX, XE), rand(-R + PAD, R - PAD), rand(Z0, Z1));
+  const inFoot = () => V3(rand(-LX, XE), sign() * rand(E0 + PAD, E0 + th - PAD), rand(Z0, Z1));
   const bIn0 = 2 * (R - PAD), cIn0 = 2 * (T0 - 2 * PAD);
   const water = Array.from({ length: NW }, () => {
     const inside = rnd() < cIn0 / (bIn0 + cIn0);
@@ -154,7 +204,7 @@ export function createCapillaryLevel(env) {
   const tot = { in: 0, out: 0 };   // crossings since the blood was last healthy
   let last = null, na = HEALTHY_NA, cellOsm = CELL_OSM, shownIons = NION, shownCell = NCELL;
   const nIn = () => water.reduce((s, w) => s + (w.in ? 1 : 0), 0);
-  const wrap = (x) => (x > LX ? x - 2 * LX : x < -LX ? x + 2 * LX : x);
+  const wrap = (x) => (x > XE ? x - (LX + XE) : x < -LX ? x + (LX + XE) : x);
 
   function walk(dt) {
     th += (T0 * astroVolume(na, cellOsm) - th) * (1 - Math.exp(-RATE * dt));
@@ -175,7 +225,7 @@ export function createCapillaryLevel(env) {
           else { w.p.y = s * (R - PAD); w.v.y *= -1; }
         }
       } else {
-        if (Math.abs(w.p.x) > LX) { w.v.x *= -1; w.p.x = clamp(w.p.x, -LX, LX); }
+        if (w.p.x < -LX || w.p.x > XE) { w.v.x *= -1; w.p.x = clamp(w.p.x, -LX, XE); }
         if (a < E0 + PAD) {
           if (rnd() < P_CROSS / bias) { w.p.y = s * (R - PAD - 0.05); w.in = false; w.glow = 1; tot.out++; }
           else { w.p.y = s * (E0 + PAD); w.v.y *= -1; }
@@ -190,14 +240,14 @@ export function createCapillaryLevel(env) {
       if (i < shownCell) {
         if (s.out > 0) { s.out = 0; s.p.copy(inFoot()); }   // scrubbed back: it was never exported
         jit(s.p);
-        s.p.x = clamp(s.p.x, -LX, LX); s.p.y = sg * clamp(Math.abs(s.p.y), E0 + PAD, E0 + th - PAD);
+        s.p.x = clamp(s.p.x, -LX, XE); s.p.y = sg * clamp(Math.abs(s.p.y), E0 + PAD, E0 + th - PAD);
       } else if (s.out < 1) {
         // exported: through the wall, then carried off in the blood
         if (Math.abs(s.p.y) > R - 0.6) s.p.y -= sg * EXIT * dt;
         else { s.out = Math.min(1, s.out + dt * 0.8); s.p.x += FLOW * dt; }
       }
     });
-    for (const m of rbcs) { m.position.x += FLOW * dt; if (m.position.x > LX + 3) m.position.x -= 2 * LX + 6; }
+    for (const m of rbcs) { m.position.x += FLOW * dt; if (m.position.x > XE) m.position.x -= LX + XE + 3; }
   }
 
   function paint() {
@@ -207,11 +257,18 @@ export function createCapillaryLevel(env) {
       f.cuts.forEach((c) => setFace(c.m, c.s, E0, rOut));
     }
     bands.forEach((b) => { setFace(b.m, b.s, Math.min(rOut, rest), Math.max(rOut, rest)); b.m.material.color.set(rOut > rest ? COL.more : COL.less); });
+    for (const l of lobes) {
+      l.shell.scale.x = l.shell.scale.z = rOut;
+      l.cut.set(E0, rOut);
+      l.band.set(Math.min(rOut, rest), Math.max(rOut, rest)); l.band.mesh.material.color.set(rOut > rest ? COL.more : COL.less);
+    }
+    stop.set(E0, rOut);
     body.scale.setScalar(Math.cbrt(th / T0));
     if (world.camera) restRing.quaternion.copy(world.camera.quaternion);
     restLines.forEach((l) => { l.visible = off(); });
     const fat = RBC_T * cellVolume(plasmaOsm(na));
-    for (const m of rbcs) m.scale.set(fat, RBC_R, RBC_R);
+    // a red cell shrinks out of sight as it reaches the cross-section, where the vessel stops being drawn
+    for (const m of rbcs) { const k = clamp((XE - 0.3 - m.position.x) / 2); m.scale.set(fat * k, RBC_R * k, RBC_R * k); }
     water.forEach((w, i) => {
       dummy.position.copy(w.p); dummy.scale.setScalar(1 + w.glow * 0.9); dummy.updateMatrix();
       waterM.setMatrixAt(i, dummy.matrix);
@@ -229,6 +286,7 @@ export function createCapillaryLevel(env) {
   }
 
   function update(st, time) {
+    endOn = view(st) === 1;
     na = st.na;
     cellOsm = st.cellOsm || CELL_OSM;
     shownCell = Math.round(NCELL * cellOsm / CELL_OSM);
@@ -242,14 +300,19 @@ export function createCapillaryLevel(env) {
 
   /* ---------- labels, hover info, cues ---------- */
   const off = () => Math.abs(th - T0) > 0.06;
+  const pct = () => Math.round((th / T0 - 1) * 100);
+  let endOn = false;
+  /** Which of views[] the camera belongs at: 1, the cross-section, once the cell's size is the story. */
+  const view = (st) => (st.mode && st.mode !== 'night' ? 1 : st.na <= 128 ? 1 : 0);
   const lead = () => rbcs.reduce((b, m) => (Math.abs(m.position.x + 4) < Math.abs(b.position.x + 4) ? m : b));
   const labels = [
     { key: 'blood', ...TX.labels.blood, anchor: () => V3(-13, R - 0.5, 0.2), show: () => true },
     { key: 'rbc', ...TX.labels.rbc, anchor: () => V3(lead().position.x, RBC_R * 0.7, 0.8), show: () => true },
-    { key: 'wall', ...TX.labels.wall, anchor: () => V3(7, -(R + RW) / 2, 0.1), show: () => true },
-    { key: 'endfoot', ...TX.labels.endfoot, anchor: () => V3(13, E0 + th / 2, 0.1), show: () => true },
+    { key: 'wall', ...TX.labels.wall, anchor: () => (endOn ? V3(XE, -(R + RW) / 2, 0) : V3(4, -(R + RW) / 2, 0.1)), show: () => true },
+    { key: 'endfoot', ...TX.labels.endfoot, sub: () => (pct() > 0 ? fmt(TX.labels.bigger, { pct: pct() }) : pct() < 0 ? fmt(TX.labels.smaller, { pct: -pct() }) : TX.labels.endfoot.sub),
+      anchor: () => (endOn ? V3(XE, E0 + th / 2, 0) : V3(5, E0 + th / 2, 0.1)), show: () => true },
     { key: 'astro', ...TX.labels.astro, anchor: () => V3(SOMA.x, SOMA.y + SOMA_R, SOMA.z), show: () => true },
-    { key: 'normal', ...TX.labels.normal, anchor: () => V3(-16, -(E0 + T0), 0.1), show: off },
+    { key: 'normal', ...TX.labels.normal, anchor: () => (endOn ? V3(XE, -(E0 + T0), 0) : V3(-16, -(E0 + T0), 0.1)), show: off },
   ];
   const interactives = [
     { root: rbcG, priority: 2, info: () => TX.info.rbc },
@@ -270,17 +333,17 @@ export function createCapillaryLevel(env) {
       return { text: fmt(TX.cues[key], { pct }), mark: 'normal' };
     }
     if (st.na >= HEALTHY_NA - 2) return { text: TX.cues.even, mark: 'endfoot' };
-    if (pct >= 15) return { text: fmt(TX.cues.swollen, { pct }), mark: 'normal' };
+    if (pct >= 15) return { text: fmt(TX.cues.swollen, { pct }), mark: 'endfoot' };
     if (st.na > 128) return { text: TX.cues.tight, mark: 'wall' };
     return { text: TX.cues.falling, mark: 'endfoot' };
   }
   const tally = () => ({ in: tot.in, out: tot.out, cell: nIn(), total: NW });
 
   const world = {
-    scene, labels, interactives, update, cue, tally,
+    scene, labels, interactives, update, cue, tally, view,
     get thickness() { return th / T0; },
     fov: 34, near: 0.1, far: 300, minDist: 10, maxDist: 110,
-    views: [{ pos: V3(0, 7, 50), target: V3(0, 3.6, 0) }],
+    views: [{ pos: V3(-6, 7, 50), target: V3(-6, 3.6, 0) }, { pos: V3(XE + 26, 4, 9), target: V3(XE - 1, 0.8, 0) }],
   };
   return world;
 }

@@ -25,6 +25,7 @@
  * cue(t) is what is happening at this level now, shown as Watch's caption while it is the main
  * view. mark names one of its labels by key (or text, if it has no key): that tag is spotlit
  * while the cue is up, the others dim. A world's labels: [{ key?, text, sub?, anchor(), show(t) }].
+ * A label's sub may be a function, re-read every frame, for a number that follows the sim.
  * insetBg tints the level's circle from its `bg` (Ecoli's cell goes dark with the room lights).
  *
  *   labels: [{ key: 'pore', text: 'Pore', sub: '0.2 µm', anchor: () => pore.getWorldPosition(V3()),
@@ -302,7 +303,9 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
     w.labelEls = w.labels.map((L) => {
       const el = document.createElement('div');
       el.className = 'zoom-tag';
-      el.innerHTML = `<div class="zt-inner"><div class="zt-pill"><b>${L.text}</b>${L.sub ? `<small>${L.sub}</small>` : ''}</div><div class="zt-stem"></div></div><div class="zt-dot"></div>`;
+      const sub = typeof L.sub === 'function' ? L.sub() : L.sub;
+      el.innerHTML = `<div class="zt-inner"><div class="zt-pill"><b>${L.text}</b>${sub ? `<small>${sub}</small>` : ''}</div><div class="zt-stem"></div></div><div class="zt-dot"></div>`;
+      if (typeof L.sub === 'function') { L.subEl = el.querySelector('small'); L.subText = sub; }
       labelLayer.appendChild(el);
       return el;
     });
@@ -323,6 +326,7 @@ export function createZoom(stage, { levels, getT, getStep, onChange = () => {}, 
         const el = w.labelEls[i];
         el.classList.toggle('hot', k === active && !!mark && (L.key || L.text) === mark);
         if (k !== active || transition || !L.show(t)) { el.classList.remove('on'); return; }
+        if (L.subEl) { const sub = L.sub(); if (sub !== L.subText) { L.subText = sub; L.subEl.innerHTML = sub; } }
         _v.copy(L.anchor()).project(w.camera);
         if (_v.z > 1 || Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) { el.classList.remove('on'); return; }
         el.style.transform = `translate(${((_v.x * 0.5 + 0.5) * W).toFixed(1)}px, ${((-_v.y * 0.5 + 0.5) * H).toFixed(1)}px)`;

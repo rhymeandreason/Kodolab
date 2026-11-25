@@ -139,7 +139,7 @@ const zoom = createZoom(stage, {
     { key: 'bubble', world: bubble, name: T.levels.bubble.name, meta: T.levels.bubble.meta, bg: '#eef2f6' },
   ],
   getT: pose,
-  getStep: () => 0,
+  getStep: () => brain.view(brainState),   // side-on or the cross-section; the membrane level has one view
 });
 
 // =========================================================================
@@ -392,6 +392,7 @@ function dripSlots() {
 // Wire it together
 // =========================================================================
 let firstEnter = true;
+let faced = 0;
 lesson = createLesson({
   zoom,
   levelWhy: (key) => { const w = zoom.worlds[key], c = w && w.cue && w.cue(brainState); return c && c.text; },
@@ -509,6 +510,8 @@ function restart() {
 stage.onFrame((dt) => {
   lesson.update(dt);
   patient.set(patientPose());
+  const facing = brain.view(brainState);
+  if (facing !== faced) { faced = facing; zoom.onStep(); }   // swing the brain's camera round
   follow.update(dt);
   if (B) paint();
   zoom.update(dt);
