@@ -179,35 +179,41 @@ export function createSketch(stage, params = {}) {
     enabled: true,
     params: P,
     set(o) { Object.assign(P, o); },
+    /** f(camera), drawn over the bench after its ink, whether the ink is on or not (interact.js's halo) */
+    overlays: [],
     render() { sketch.draw(stage.scene, stage.camera); },
     draw(scene, camera) {
-      renderer.render(scene, camera);
-      if (!sketch.enabled) return;
-      // the passes and the ink run at `resolution` × CSS pixels, capped at the canvas's own.
-      // 1 on Retina is a quarter of the work, stretched onto the canvas, and reads as pixelated
-      renderer.getSize(size);
-      const k = Math.min(P.resolution, renderer.getPixelRatio());
-      size.set(Math.max(1, Math.round(size.x * k)), Math.max(1, Math.round(size.y * k)));
-      if (rtA.width !== size.x || rtA.height !== size.y) [rtA, rtB, rtInk].forEach((rt) => rt.setSize(size.x, size.y));
-      const prevClear = renderer.getClearColor(clear).getHex(), prevAlpha = renderer.getClearAlpha();
-      const autoShadow = renderer.shadowMap.autoUpdate, autoClear = renderer.autoClear;
-      renderer.shadowMap.autoUpdate = false;
-      pass(scene, camera, rtA, true);
-      pass(scene, camera, rtB, false);
-      renderer.shadowMap.autoUpdate = autoShadow;
-
-      const u = mat.uniforms;
-      u.res.value.copy(size); u.px.value = P.width * k; u.wob.value = P.wobble * k;
-      u.near.value = camera.near; u.far.value = camera.far;
-      u.opacity.value = P.opacity; u.grain.value = P.grain; u.ink.value.set(P.color);
-      u.lw.value = P.liquidWidth; u.ref.value = P.ref; u.minK.value = P.minScale; u.lInk.value.set(P.liquidColor);
-      drawQuad(mat, rtInk);
-      renderer.setClearColor(prevClear, prevAlpha);
-      renderer.autoClear = false;
-      drawQuad(copy, null);
-      renderer.autoClear = autoClear;
+      ink(scene, camera);
+      if (scene === stage.scene) sketch.overlays.forEach((f) => f(camera));
     },
     dispose() { [rtA, rtB, rtInk, mat, copy, quad.geometry].forEach((x) => x.dispose()); },
   };
+  function ink(scene, camera) {
+    renderer.render(scene, camera);
+    if (!sketch.enabled) return;
+    // the passes and the ink run at `resolution` × CSS pixels, capped at the canvas's own.
+    // 1 on Retina is a quarter of the work, stretched onto the canvas, and reads as pixelated
+    renderer.getSize(size);
+    const k = Math.min(P.resolution, renderer.getPixelRatio());
+    size.set(Math.max(1, Math.round(size.x * k)), Math.max(1, Math.round(size.y * k)));
+    if (rtA.width !== size.x || rtA.height !== size.y) [rtA, rtB, rtInk].forEach((rt) => rt.setSize(size.x, size.y));
+    const prevClear = renderer.getClearColor(clear).getHex(), prevAlpha = renderer.getClearAlpha();
+    const autoShadow = renderer.shadowMap.autoUpdate, autoClear = renderer.autoClear;
+    renderer.shadowMap.autoUpdate = false;
+    pass(scene, camera, rtA, true);
+    pass(scene, camera, rtB, false);
+    renderer.shadowMap.autoUpdate = autoShadow;
+
+    const u = mat.uniforms;
+    u.res.value.copy(size); u.px.value = P.width * k; u.wob.value = P.wobble * k;
+    u.near.value = camera.near; u.far.value = camera.far;
+    u.opacity.value = P.opacity; u.grain.value = P.grain; u.ink.value.set(P.color);
+    u.lw.value = P.liquidWidth; u.ref.value = P.ref; u.minK.value = P.minScale; u.lInk.value.set(P.liquidColor);
+    drawQuad(mat, rtInk);
+    renderer.setClearColor(prevClear, prevAlpha);
+    renderer.autoClear = false;
+    drawQuad(copy, null);
+    renderer.autoClear = autoClear;
+  }
   return sketch;
 }

@@ -28,7 +28,7 @@ Built here; the `Experiments/Lab` repo it came from is archived with the origina
 * **Watch is video-like**: the card and procedure list hide, and the step's caption shows large above the timeline. `introCaption` shows before Play, `completeCaption` at the end, a step's `clock` above the caption. Toasts are muted. Zoomed into a level, the level's own caption (`zoom.caption()`, from its world's `cue(t)`) replaces the step's, and Play holds until each has been up long enough to read.
 * **Procedure list** (from OnionRoot): numbered *phases*, not steps. The current phase shows one pip per step; clicking a phase jumps to it.
 * **Instruction card**, bottom centre (from OnionRoot): a chip numbered like the list ("Step 3b of 6"), `title`, `detail`, then `why` once the object is clicked. When the lab ends it shows `completeHint` and `completeWhy`, gets `.complete`, rises in (`.arrive`) and folds to its title from a caret or a click on the title.
-* **Target markers**, `markerStyle: 'circle' | 'dot'` (or `ix.setMarkerStyle()`): a dark pill with a pulsing band on the bench that hugs the object's base (a circle, or a rounded rectangle for a boxy base), or a white pill on a stem. Both label the object with its `short` name, never an instruction.
+* **Target markers**, `markerStyle: 'circle' | 'dot'` (or `ix.setMarkerStyle()`): a dark pill with a pulsing band on the bench that hugs the object's base (a circle, or a rounded rectangle for a boxy base; `ringPlane: 'vertical'` swaps it for a halo round the silhouette of a held object), or a white pill on a stem. Both label the object with its `short` name, never an instruction.
 * **Hover lift**: a clickable object rises 0.8 cm under the pointer (`hoverLift`, 0 turns it off). It's an offset dropped before a click runs, so step animations are unaffected. Liquids from `core/liquid.js` follow it. A prop resting on a clickable one joins its group with `ix.addGroup` while it rests there, or it gets left behind on hover and blocks the host's clicks: `interact.js`'s header.
 * **Hover glow**: `ix.register` gives each mesh its own copy of its material. Liquids from `core/liquid.js` set their clip planes on whichever material is drawing; a hand-built liquid that keeps its own plane or material needs `userData.noHL = true`.
 
@@ -85,6 +85,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | `core/stage.js` | renderer, studio and glass reflection maps, lights, `focus(view)`, frame loop, `setRender()` | Photosynthesis, plus Ecoli's glass reflection map |
 | `materials.js` | `glassMaterial` and the shared material set | Ecoli (glass), Photosynthesis (the rest) |
 | `interact.js` | picking, hover highlight, target markers, hover label with a status line | Photosynthesis, BloodType, OnionRoot |
+| `halo.js` | a screen-space band round an object's silhouette, for a held target (`ringPlane: 'vertical'`) | Strawberry |
 | `lesson.js` | steps, both modes and autoplay, procedure list, instruction card, timeline | Strawberry (timeline, play), OnionRoot (list, card) |
 | `follow.js` | Watch mode's camera | new |
 | `zoom.js` | zoom levels: live circles, lens transition, a camera and labels per level | Strawberry |
