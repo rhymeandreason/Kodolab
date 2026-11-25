@@ -1,33 +1,40 @@
-/* Molecule scale: one yeast catalase subunit in water, and the H₂O₂ it splits. 1 unit = 1 Å.
+/* Molecule scale: yeast catalase in water, and the H₂O₂ it splits. 1 unit = 1 Å.
  * A protein is real ångströms in a scene of its own (MolecularGeometry.md §1.5), so the small
  * molecules here are at true size beside it.
  *
- * The subunit is 1A4E chain A (yeast catalase A, the lab's enzyme): kit/ribbon.js over its CA
- * trace and the file's own secondary structure, and the heme from the bake's pocket atoms. The
- * azide in that pocket is the crystal's inhibitor and is not drawn; its N1 marks the distal side
- * of the iron, where H₂O₂ binds. catalase-lab.html loads palette.js and ribbon.js as classic
- * scripts; MolPalette and RibbonLib are read by their global names.
+ * The enzyme is 1A4E's tetramer (yeast catalase A, the lab's enzyme), baked as 1A4E-tetramer in
+ * 1A4E's frame. Chain A is the subject: kit/ribbon.js over its CA trace and the file's own
+ * secondary structure, its heme from the bake's pocket atoms. Chains B-D are its partners, drawn
+ * whole in their registry hues on the first step, then ghosted. The azide on each iron is the
+ * crystal's inhibitor and is not drawn; chain A's N1 marks the distal side, where H₂O₂ binds.
+ * catalase-lab.html loads palette.js, ribbon.js and proteins/proteins.js as classic scripts;
+ * MolPalette, RibbonLib and ProteinLib are read by their global names.
  *
  * What the state drives:
- *   fold = boiled ? 1 : step 'boil' ? heat : 0   ribbon → disordered chain, heme drifts out
+ *   whole = step 'yeast' or 'boil'                 the four chains in their hues, or chain A alone
+ *   fold = boiled ? 1 : step 'boil' ? heat : 0   partners drift off by SPLIT, then chain A unfolds
  *   conc → how many H₂O₂ drift in the water      rate → how often a cycle starts at the iron
  * `time` only moves what carries no meaning: diffusion, tumbling, a cycle already under way.
  * fold is never eased: easing it back would draw a boiled enzyme refolding.
  */
 import * as THREE from 'three';
 import { LIGHT } from '../core/three-compat.js';
-import { clamp, smooth } from '../core/math.js';
+import { clamp, lerp, smooth } from '../core/math.js';
 import { cueAt } from '../lesson.js';
 import { T as TEXT, fmt } from '../text.js';
 
 const PAL = globalThis.MolPalette;
-const DATA = new URL('../../proteins/catalase/data/catalase-1A4E.json', import.meta.url);
+const DATA = new URL('../../proteins/catalase/data/catalase-1A4E-tetramer.json', import.meta.url);
+const HUE = globalThis.ProteinLib.byKey('catalase').draw.byStrand;
 
 /* Catalase's turnover number, kcat = 4 × 10⁷ s⁻¹ (Lehninger, Table 6-7). One cycle here takes
    CYCLE seconds and splits two H₂O₂, so the caption's slow-down is read off these two. */
 const KCAT = 4e7;
 const CYCLE = 6;
-const SUBUNITS = 4;            // catalase is a homotetramer; 1A4E's assembly is four of this chain
+/* Heat first parts the subunits (fold 0..SPLIT, each pushed APART Å from the tetramer's centre),
+   then chain A unfolds over the rest. Drawn in that order so each change reads on its own; in the
+   tube they overlap, and the free chains clump. */
+const SPLIT = 0.3, APART = 30;
 
 /* Bondi van der Waals radii, drawn at VDW_K so the atoms of one molecule stay separate lumps. */
 const VDW = { O: 1.52, H: 1.20 };
@@ -44,6 +51,8 @@ const Y = V(0, 1, 0);
 const DEG = Math.PI / 180;
 const ramp = (x, a, b) => smooth(clamp((x - a) / (b - a)));
 const foldOf = (t) => (t.boiled ? 1 : t.step === 'boil' ? clamp(t.heat || 0) : 0);
+const unfoldOf = (fold) => clamp((fold - SPLIT) / (1 - SPLIT));
+const wholeOf = (t) => t.step === 'yeast' || t.step === 'boil';
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -162,8 +171,14 @@ export function createMolecule(env) {
   protGroup.add(placeholder);
   /* Translucent, so the heme and the traffic inside read; no depth write, or the near wall
      would hide the far one (kit/proteinbox.js's setGhost). Groups 0/1/2 are coil/helix/strand. */
-  const ribMats = ['C', 'H', 'E'].map((k) => new THREE.MeshStandardMaterial({ color: C(PAL.ss[k]), roughness: 0.55, transparent: true, opacity: 0.6, depthWrite: false }));
-  let ribbon = null, ribOp = 0.6;
+  const ghostMat = (hex) => new THREE.MeshStandardMaterial({ color: C(hex), roughness: 0.55, transparent: true, opacity: 0.6, depthWrite: false });
+  const ribMats = ['C', 'H', 'E'].map((k) => ghostMat(PAL.ss[k]));
+  const hueA = ghostMat(HUE.A);
+  let ribbon = null, ribbonHue = null, ribOp = 0.6, whole = 1, nSub = 4;
+  /* Chains B-D: one group each, so the boil can push it off; ribbon and heme share its fade. */
+  const partners = new THREE.Group();
+  root.add(partners);
+  const parts = [];       // { group, rib, heme, out }
 
   const hemeGroup = new THREE.Group();
   root.add(hemeGroup);
@@ -182,38 +197,45 @@ export function createMolecule(env) {
   const P = { ready: false, fe: V(), drift: V(), driftAxis: V(1, 0, 0), anchorIdx: 0 };
 
   function build(j) {
-    const ch = j.chains[j.order[0]];
-    const CA = ch.CA.map((p) => V(p[0], p[1], p[2]));
+    const ch = j.chains.A;
+    const toV = (c) => c.CA.map((p) => V(p[0], p[1], p[2]));
+    const CA = toV(ch);
     const n = CA.length;
+    const others = j.order.filter((id) => id !== 'A');
+    const caOf = Object.fromEntries(others.map((id) => [id, toV(j.chains[id])]));
+    const allCA = CA.concat(...others.map((id) => caOf[id]));
+    nSub = j.order.length;
     const atoms = j.pocket.atoms;
-    const hemeIdx = atoms.map((a, i) => (a.group === 'heme' ? i : -1)).filter((i) => i >= 0);
-    const feA = atoms.find((a) => a.group === 'heme' && elOf(a.el) === 'Fe');
+    const hemeOf = (id) => atoms.map((a, i) => (a.group === 'heme' && a.chain === id ? i : -1)).filter((i) => i >= 0);
+    const hemeIdx = hemeOf('A');
+    const feA = atoms.find((a) => a.group === 'heme' && a.chain === 'A' && elOf(a.el) === 'Fe');
     const fe = V(...feA.p);
     P.fe.copy(fe);
 
     /* Distal axis: toward the inhibitor's bound N, which sits where peroxide binds; failing that,
        the porphyrin's normal on the side away from the proximal Tyr. */
     let nD;
-    const az = atoms.find((a) => a.group === 'inhibitor' && a.name === 'N1');
+    const az = atoms.find((a) => a.group === 'inhibitor' && a.chain === 'A' && a.name === 'N1');
     if (az) nD = V(...az.p).sub(fe).normalize();
     else {
-      const at = (nm) => V(...atoms.find((a) => a.group === 'heme' && a.name === nm).p);
+      const at = (nm) => V(...atoms.find((a) => a.group === 'heme' && a.chain === 'A' && a.name === nm).p);
       nD = V().crossVectors(at('NC').sub(at('NA')), at('ND').sub(at('NB'))).normalize();
       const tyr = atoms.find((a) => a.group === 'proximal' && a.name === 'OH');
       if (tyr && V(...tyr.p).sub(fe).dot(nD) > 0) nD.negate();
     }
 
     /* The channel, approximated: from just above the iron, step 2 Å at a time toward the most
-       open point within a cone, biased outward, until clear of the chain. Clearance is to CA
-       atoms only, so this is the most open route on the trace, not a computed tunnel. */
+       open point within a cone, biased outward, until clear of the protein. Clearance is to every
+       chain's CA atoms (a neighbour's arm lines part of the way), so this is the most open route
+       on the trace, not a computed tunnel. */
     const cen = V();
     CA.forEach((p) => cen.add(p));
     cen.divideScalar(n);
-    const xyz = new Float32Array(n * 3);
-    CA.forEach((p, i) => { xyz[i * 3] = p.x; xyz[i * 3 + 1] = p.y; xyz[i * 3 + 2] = p.z; });
+    const xyz = new Float32Array(allCA.length * 3);
+    allCA.forEach((p, i) => { xyz[i * 3] = p.x; xyz[i * 3 + 1] = p.y; xyz[i * 3 + 2] = p.z; });
     const clearance = (q) => {
       let m = Infinity;
-      for (let i = 0; i < n * 3; i += 3) {
+      for (let i = 0; i < xyz.length; i += 3) {
         const dx = xyz[i] - q.x, dy = xyz[i + 1] - q.y, dz = xyz[i + 2] - q.z, d2 = dx * dx + dy * dy + dz * dz;
         if (d2 < m) m = d2;
       }
@@ -262,28 +284,45 @@ export function createMolecule(env) {
     setDock();
 
     /* Ribbon: one build over the whole chain (ribbon.js's header: never slice it per element). */
-    ribbon = new THREE.Mesh(RibbonLib.build(THREE, CA, ch.ss.split(''), { sub: 4 }), ribMats);
+    const geoA = RibbonLib.build(THREE, CA, ch.ss.split(''), { sub: 4 });
+    ribbon = new THREE.Mesh(geoA, ribMats);
+    ribbonHue = new THREE.Mesh(geoA, hueA);     // one material: groups ignored, the whole chain in A's hue
     protGroup.remove(placeholder);
-    protGroup.add(ribbon);
+    protGroup.add(ribbon, ribbonHue);
 
     /* Heme, ball-and-stick in proteinbox's proportions, a little larger; the iron its own metal mesh. */
     const HB = 0.53, rOf = (el) => (PAL.radii[el] || PAL.radii.C) * HB, rFe = PAL.radii.C * HB * 2.7;
-    const local = (a) => V(...a.p).sub(fe);
-    const parts = [];
-    for (const i of hemeIdx) {
-      const a = atoms[i], el = elOf(a.el);
-      if (el === 'Fe') continue;
-      const v = local(a);
-      parts.push({ geo: new THREE.SphereGeometry(rOf(el), 12, 9).translate(v.x, v.y, v.z), color: PAL.atoms[el] });
+    const hemeGeo = (idx, origin, withFe) => {
+      const local = (a) => V(...a.p).sub(origin), bits = [];
+      for (const i of idx) {
+        const a = atoms[i], el = elOf(a.el);
+        if (el === 'Fe' && !withFe) continue;
+        const v = local(a);
+        bits.push({ geo: new THREE.SphereGeometry(el === 'Fe' ? rFe : rOf(el), 12, 9).translate(v.x, v.y, v.z), color: PAL.atoms[el] });
+      }
+      const inHeme = new Set(idx);
+      for (const [i, k] of j.pocket.bonds) {
+        if (!inHeme.has(i) || !inHeme.has(k)) continue;
+        const a = local(atoms[i]), b = local(atoms[k]), mid = a.clone().add(b).multiplyScalar(0.5);
+        bits.push({ geo: stick(a, mid, 0.2), color: PAL.atoms[elOf(atoms[i].el)] });
+        bits.push({ geo: stick(mid, b, 0.2), color: PAL.atoms[elOf(atoms[k].el)] });
+      }
+      return mergeColored(bits);
+    };
+    hemeGroup.add(new THREE.Mesh(hemeGeo(hemeIdx, fe, false), hemeMat));
+
+    /* The partners, each pushed out along the line from the tetramer's centre to its own, less
+       chain A's push, so A holds still under the camera while the four come apart. */
+    const mean = (pts) => pts.reduce((a, v) => a.add(v), V()).divideScalar(pts.length);
+    const tc = mean(allCA), outA = cen.clone().sub(tc).normalize();
+    for (const id of others) {
+      const group = new THREE.Group();
+      const rib = new THREE.Mesh(RibbonLib.build(THREE, caOf[id], j.chains[id].ss.split(''), { sub: 4 }), ghostMat(HUE[id]));
+      const heme = new THREE.Mesh(hemeGeo(hemeOf(id), V(), true), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, transparent: true }));
+      group.add(rib, heme);
+      partners.add(group);
+      parts.push({ group, rib, heme, out: mean(caOf[id]).sub(tc).normalize().sub(outA).multiplyScalar(APART) });
     }
-    const inHeme = new Set(hemeIdx);
-    for (const [i, k] of j.pocket.bonds) {
-      if (!inHeme.has(i) || !inHeme.has(k)) continue;
-      const a = local(atoms[i]), b = local(atoms[k]), mid = a.clone().add(b).multiplyScalar(0.5);
-      parts.push({ geo: stick(a, mid, 0.2), color: PAL.atoms[elOf(atoms[i].el)] });
-      parts.push({ geo: stick(mid, b, 0.2), color: PAL.atoms[elOf(atoms[k].el)] });
-    }
-    hemeGroup.add(new THREE.Mesh(mergeColored(parts), hemeMat));
     feMesh.scale.setScalar(rFe);
     feMesh.visible = true;
     hemeGroup.position.copy(fe);
@@ -319,8 +358,15 @@ export function createMolecule(env) {
     CA.forEach((v, i) => { const x = toW(v); if (x.x + 0.3 * x.y > bx) { bx = x.x + 0.3 * x.y; P.anchorIdx = i; } });
 
     // bulk molecules: off the chain, and out of the line between camera and iron
-    const caW = CA.map(toW);
+    const caW = allCA.map(toW);
     const clear = (v) => caW.every((c) => c.distanceToSquared(v) > 64);
+
+    // the tetramer's label on its topmost CA; the first two steps' cameras frame all four
+    P.top = caW.reduce((a, v) => (v.y > a.y ? v : a), caW[0]).clone();
+    const tcW = toW(tc);
+    const frame = (v, target, dist) => { const d = v.pos.clone().sub(v.target).normalize(); v.target.copy(target); v.pos.copy(target).addScaledVector(d, dist); };
+    frame(views[0], tcW, 270);
+    frame(views[1], tcW.clone().multiplyScalar(0.6), 290);
     bulkH2O2.forEach((b, i) => { if (i > 0) placeBulk(b.base, clear, 28); });
     bulkWat.forEach((b) => placeBulk(b.base, clear, 28));
     bulkH2O2[0].base.copy(chanAt(1.1, V())).add(V(9, -4, 5));
@@ -471,10 +517,24 @@ export function createMolecule(env) {
 
   /* ---------- the fold ---------- */
   let shownFold = -1;
-  function poseFold(fold) {
+  function poseParts(fold) {
+    const sep = ramp(fold, 0, SPLIT), op = lerp(0.12, ribOp, whole) * (1 - sep);
+    partners.visible = op > 0.005;
+    for (const q of parts) {
+      q.group.position.copy(q.out).multiplyScalar(sep);
+      q.rib.material.opacity = op;
+      q.heme.material.opacity = Math.min(1, op * 1.6);
+      q.heme.material.depthWrite = op > 0.5;
+    }
+  }
+  function poseFold(raw) {
     if (!P.ready) return;
-    ribbon.visible = fold < 0.18;
-    ribMats.forEach((m) => { m.opacity = ribOp * (1 - ramp(fold, 0, 0.18)); });
+    poseParts(raw);
+    const fold = unfoldOf(raw);
+    ribbon.visible = ribbonHue.visible = fold < 0.18;
+    const fade = ribOp * (1 - ramp(fold, 0, 0.18));
+    ribMats.forEach((m) => { m.opacity = fade * (1 - whole); });
+    hueA.opacity = fade * whole;
     wormGroup.visible = fold > 0.001;
     const h = ramp(fold, 0.35, 1);
     hemeGroup.position.copy(P.fe).addScaledVector(P.drift, h);
@@ -522,6 +582,7 @@ export function createMolecule(env) {
     const fold = foldOf(t);
     const close = t.step === 'disks' || t.step === 'read';
     ribOp += ((close ? 0.4 : 0.6) - ribOp) * Math.min(1, dt * 2);
+    whole += ((wholeOf(t) ? 1 : 0) - whole) * Math.min(1, dt * 2);
     poseFold(fold);
 
     // peroxide in the water, in number ∝ concentration
@@ -572,9 +633,11 @@ export function createMolecule(env) {
   const o2Now = () => (lastO2 && lastO2.alive) || (E.on && E.u >= 0.66 && E.u < 0.94);
   const L = TX.labels;
   const labels = [
-    { key: 'subunit', text: L.subunit.text, sub: fmt(L.subunit.sub, { n: SUBUNITS }),
+    { key: 'tetramer', text: L.tetramer.text, sub: () => fmt(L.tetramer.sub, { n: nSub }),
+      anchor: () => (P.ready ? root.localToWorld(P.top.clone()) : V(0, 40, 0)), show: (t) => wholeOf(t) && foldOf(t) < SPLIT / 2 },
+    { key: 'subunit', text: L.subunit.text, sub: () => fmt(L.subunit.sub, { n: nSub }),
       anchor: () => (P.ready ? root.localToWorld((wormGroup.visible ? worm.cur : worm.native)[P.anchorIdx].clone()) : V(30, 0, 0)),
-      show: (t) => foldOf(t) < 0.5 },
+      show: (t) => foldOf(t) < 0.5 && !(t.step === 'yeast') },
     { key: 'channel', ...L.channel, anchor: () => chanAt(0.85, V()), show: (t) => foldOf(t) < 0.18 },
     { key: 'iron', text: L.iron.text, sub: () => (E.oxo ? L.iron.oxo : L.iron.sub), anchor: () => wp(feMesh), show: (t) => foldOf(t) < 0.5 },
     { key: 'h2o2', ...L.h2o2, anchor: () => instAt(h2o2Mesh, 0), show: (t) => !!t.inLiquid && t.conc > 0 },
@@ -587,7 +650,8 @@ export function createMolecule(env) {
 
   const I = TX.info;
   const interactives = [
-    { root: protGroup, priority: 1, info: () => ({ title: I.subunit.title, text: fmt(I.subunit.text, { n: SUBUNITS }) }) },
+    { root: protGroup, priority: 1, info: () => ({ title: I.subunit.title, text: fmt(I.subunit.text, { n: nSub }) }) },
+    { root: partners, priority: 1, info: () => ({ title: I.subunit.title, text: fmt(I.subunit.text, { n: nSub }) }) },
     { root: wormGroup, priority: 1, info: () => I.unfolded },
     { root: hemeGroup, priority: 3, info: () => I.heme },
     { root: evGroup, priority: 3, info: () => I.reaction },
@@ -609,12 +673,12 @@ export function createMolecule(env) {
 
   const CU = TX.cues;
   const slowNote = fmt(CU.slow, { slow: Math.round((KCAT * CYCLE) / 2 / 1e6), kcat: Math.round(KCAT / 1e6) });
-  const HEAT = [[0, { text: CU.heat, mark: 'subunit' }], [0.45, { text: CU.unfold, mark: 'unfolded' }]];
+  const HEAT = [[0, { text: CU.heat, mark: 'subunit' }], [SPLIT + 0.3 * (1 - SPLIT), { text: CU.unfold, mark: 'unfolded' }]];
   function cue(t) {
     if (!t) return null;
     const f = foldOf(t);
     switch (t.step) {
-      case 'yeast': return { text: CU.yeast, mark: 'subunit' };
+      case 'yeast': return { text: fmt(CU.yeast, { n: nSub }), mark: 'tetramer' };
       case 'boil': return cueAt(HEAT, t.heat || 0);
       case 'disks':
         if (t.inLiquid && t.conc > 0) return { text: CU.react, note: slowNote, mark: 'iron' };

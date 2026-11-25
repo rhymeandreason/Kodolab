@@ -1214,6 +1214,24 @@
         declared: 488,
         ec: "1.11.1.6",
         baked: "catalase-1A4E.json" } },
+    /* The lab's molecule view: 1A4E's asymmetric unit is the tetramer (REMARK
+       350, identity on A-D), fitted on chain A's heme like 1A4E, so chain A
+       lands where the site view has it and the other three sit around it. */
+    { id: '1A4E-tetramer',
+      purpose: 'yeast catalase whole, for the lab: chain A and its three partners',
+      species: 'yeast', label: 'yeast tetramer',
+      source: { kind: 'rcsb', id: '1A4E' },
+      frame: 'site',
+      chains: 'A,B,C,D',
+      strands: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      pocket: { hemes: 'A,B,C,D', inhibitor: 'AZI', distal: { 70: 'HIS', 143: 'ASN' }, proximal: { 355: 'TYR' } },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 4,
+        residues: 1952,
+        declared: 1952,
+        ec: "1.11.1.6",
+        baked: "catalase-1A4E-tetramer.json" } },
   ];
 
   /* 1OVA numbers its residues on α1-antitrypsin, with insertion codes; the
@@ -2351,7 +2369,7 @@
          about what sits on the iron, so the iron is what has to hold still.
          The tetramer is a scale of the same file, not a state. */
       fit: { on: '1DGF-site', by: 'the heme\u2019s atoms, matched by name',
-             among: ['1DGF-site', '1A4E'] },
+             among: ['1DGF-site', '1A4E', '1A4E-tetramer'] },
       fitWhy: 'the two site views share a heme; the tetramer is a scale of the same file',
       /* Four identical subunits, told apart so the tetramer reads as four
          parts. The site views keep the ss palette. */

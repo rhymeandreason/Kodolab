@@ -175,6 +175,7 @@ LabText.add('en', {
     mol: {
       name: 'Molecule', meta: '≈ 10 nm',
       labels: {
+        tetramer: { text: 'Catalase', sub: '{n} identical subunits' },
         subunit: { text: 'Catalase subunit', sub: 'one of {n}' },
         channel: { text: 'Channel', sub: 'the way in' },
         iron: { text: 'Heme iron', sub: 'where H₂O₂ splits', oxo: 'holding one O' },
@@ -194,8 +195,8 @@ LabText.add('en', {
       },
       /* Watch mode's captions at this level */
       cues: {
-        yeast: 'One <b>catalase</b> subunit from yeast, with a <b>heme iron</b> buried inside',
-        heat: 'Heat shakes the folded chain harder and harder',
+        yeast: 'Yeast <b>catalase</b>: {n} identical subunits, each with a <b>heme iron</b> buried inside',
+        heat: 'Heat shakes the <b>subunits</b> apart',
         unfold: 'The chain <b>unfolds</b> and the heme falls out of its pocket',
         waiting: 'No peroxide yet: the enzyme waits in water',
         noPeroxide: 'Plain water: nothing here for catalase to split',
