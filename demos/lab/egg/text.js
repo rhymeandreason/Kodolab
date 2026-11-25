@@ -112,13 +112,13 @@ LabText.add('en', {
       action: 'weigh its egg',
       hint: 'Click a <b>beaker</b> to weigh its egg',
       hintMore: 'Click the next <b>beaker</b> · <b>{n}/3</b>',
-      detail: 'Weigh each egg and set it on the paper towel, beside the others.',
-      captions: { lift: 'Weigh egg {egg}', set: 'Set it beside the others' },
+      detail: 'Weigh each egg and set it back in front of its beaker.',
+      captions: { lift: 'Weigh egg {egg}', set: 'Set it in front of its beaker' },
     },
   },
 
   complete: {
-    hint: '<b>Compare the three eggs</b> on the towel and in the table.',
+    hint: '<b>Compare the three eggs</b> on the bench and in the table.',
     why: 'Water moved toward the side with more dissolved particles. Distilled water has none, so water flowed in. Corn syrup is about three quarters sugar, so water flowed out. 0.9% salt water is close to the egg’s own concentration, so little net water moved.',
     caption: 'Water moved toward the side with more dissolved particles',
     toast: 'Lab complete',
@@ -149,7 +149,6 @@ LabText.add('en', {
     bottle2: { name: 'Corn syrup', short: 'Corn syrup', desc: 'About three quarters sugar, one quarter water. Denser than an egg.' },
     balance: { name: 'Balance', desc: 'Reads to 0.1 g.' },
     waste: { name: 'Waste beaker', desc: 'For the used vinegar.' },
-    towel: { name: 'Paper towel', desc: 'Where the eggs wait, and end up side by side.' },
   },
 
   props: {

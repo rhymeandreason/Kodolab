@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import {
   V3, Q, clamp, lerp, smooth, Ease, anim, newSession, reseed, gauss, seeded, disposeTree, toast, isInstant, debugSpeed,
   createStage, createMaterials, createInteraction, createLesson, createFollowCam, createIntro, chromeInsets, bindChrome, PHONE,
-  makeBench, makePaperTowel, makeBeaker, makeReagentBottle, makeStream, makeEgg, makeBalance, pourPose, cues, toLinear, T, fmt,
+  makeBench, makeBeaker, makeReagentBottle, makeStream, makeEgg, makeBalance, pourPose, cues, toLinear, T, fmt,
 } from '../lab.js';
 
 const $ = (s) => document.querySelector(s);
@@ -72,23 +72,23 @@ const BX = [-4, 8, 20], BZ = 4, BOTTLE_Z = -15;
 const BK = { r: 4.3, h: 12, t: 0.14 };   // 500 mL Griffin, about 8.6 × 12 cm
 const BK_LABEL = 0.8;              // the tape label's angle round the wall; each beaker turns it to face front
 const POS = {
-  towel: V3(-36, 0, 5), balance: V3(-20, 0, 2), vinegar: V3(-12, 0, -15), waste: V3(33, 0, 1),
+  balance: V3(-19, 0, 2), vinegar: V3(-12, 0, -15), waste: V3(33, 0, 1),
 };
-const TOWEL_X = [-42.5, -36, -29.5];
+const EGG_Z = BZ + BK.r + 4.5;     // each egg waits on the bench in front of its beaker
 const YAW = [0.38, -0.22, 0.16];
 const CLEAR = 17;                  // carry height over a beaker rim
 
 const VIEWS = {
   overview: { t: V3(-6, 4, -2), p: V3(-6, 56, 74) },
-  weigh: { t: V3(-22, 4, 2), p: V3(-19, 34, 46) },
+  weigh: { t: V3(-3, 4, 2), p: V3(-3, 52, 74) },
   vinegar: { t: V3(4, 6, -4), p: V3(4, 40, 52) },
   soak: { t: V3(8, 4, 3), p: V3(8, 30, 36) },
   drain: { t: V3(12, 6, 0), p: V3(12, 42, 62) },
   predict: { t: V3(8, 4, 2), p: V3(8, 34, 44) },
   fill: { t: V3(8, 6, -4), p: V3(8, 40, 50) },
   osmosis: { t: V3(8, 4, 3), p: V3(8, 28, 33) },
-  results: { t: V3(-24, 4, 3), p: V3(-22, 34, 48) },
-  towel: { t: V3(-36, 2.5, 5), p: V3(-36, 18, 24) },
+  results: { t: V3(-4, 4, 5), p: V3(-4, 38, 58) },
+  lineup: { t: V3(8, 2.5, EGG_Z), p: V3(8, 22, EGG_Z + 26) },
 };
 
 // =========================================================================
@@ -127,7 +127,6 @@ function rebuild() {
   S = { vin: 0, hours: 0, osmo: 0, E: LIQ.map(() => ({ w0: 0, w1: 0, fill: 0, w2: 0 })), key: {} };
 
   place(makeBench(mat), V3());
-  const towel = place(makePaperTowel(mat, { w: 21, d: 12 }), POS.towel);
   const balance = place(makeBalance(mat), POS.balance);
   const beakers = LIQ.map((L, i) => place(makeBeaker(mat, {
     r: BK.r, h: BK.h, level: 0, cap: 500, label: fmt(T.props.beaker, { egg: LETTER[i] }), sub: T.liquids[i].name, color: L.tape, liquidColor: VINEGAR.color, labelAt: BK_LABEL, labelTop: true,
@@ -139,7 +138,7 @@ function rebuild() {
   const eggs = LIQ.map(() => { const e = makeEgg(mat); root.add(e.group); return e; });
   const streams = { vinegar: makeStream(mat, root, { color: VINEGAR.color }), waste: makeStream(mat, root, { color: VINEGAR.color }),
     bottles: LIQ.map((L) => makeStream(mat, root, { color: L.color })) };
-  B = { towel, balance, beakers, waste, vinegar, bottles, eggs, streams, fx: eggs.map((e, i) => makeEggFx(i)), where: [] };
+  B = { balance, beakers, waste, vinegar, bottles, eggs, streams, fx: eggs.map((e, i) => makeEggFx(i)), where: [] };
 
   eggs.forEach((e, i) => ix.register('egg' + i, e.group, { ...objText('egg', i), anchor: V3(0, 2.4, 0) }));
   beakers.forEach((b, i) => ix.register('beaker' + i, b.group, { ...objText('beaker', i), anchor: V3(0, BK.h + 0.4, 0) }));
@@ -147,7 +146,6 @@ function rebuild() {
   ix.register('vinegar', vinegar.group, { ...T.objects.vinegar, anchor: V3(0, 16.5, 0) });
   ix.register('balance', balance.group, { ...T.objects.balance });
   ix.register('waste', waste.group, { ...T.objects.waste });
-  ix.register('towel', towel.group, { ...T.objects.towel });
   pose(true);
 }
 const objText = (k, i) => {
@@ -279,14 +277,14 @@ function vinHop(j, k) {
 const drained = (i) => ph(S.E[i].w1, 0.38, 0.56, Ease.linear);
 const solFill = (i) => ph(S.E[i].fill, 0.3, 0.7, Ease.linear);
 
-/** Where egg i is: 'towel', 'path' (in a hand), 'pan' (on the balance) or 'beaker'. */
+/** Where egg i is: 'bench', 'path' (in a hand), 'pan' (on the balance) or 'beaker'. */
 function eggStage(i) {
   const e = S.E[i];
   const seg = (k, a, b) => (k < a ? 'path' : k < b ? 'pan' : k < 1 ? 'path' : null);
-  if (e.w2 > 0) return seg(e.w2, 0.3, 0.6) || 'towel';
+  if (e.w2 > 0) return seg(e.w2, 0.3, 0.6) || 'bench';
   if (e.w1 > 0 && e.w1 < 1) return seg(e.w1, 0.3, 0.7);
   if (e.w0 > 0 && e.w0 < 1) return seg(e.w0, 0.35, 0.6);
-  return e.w0 >= 1 ? 'beaker' : 'towel';
+  return e.w0 >= 1 ? 'beaker' : 'bench';
 }
 
 function pose(force = false) {
@@ -353,7 +351,7 @@ function pose(force = false) {
 
     // where the egg is, and the liquid it pushes aside while it sits in the beaker
     const where = eggStage(i), bottom = egg.bottom(), D = 2 * bottom;
-    const home = V3(TOWEL_X[i], 0.07 + bottom, POS.towel.z);
+    const home = V3(BX[i], bottom, EGG_Z);
     const pan = V3(POS.balance.x, B.balance.anchors.pan.y + bottom, POS.balance.z + B.balance.anchors.pan.z);
     const bk = beaker.group.position;
     const restIn = V3(bk.x, bk.y + BK.t + bottom, bk.z);
@@ -371,13 +369,13 @@ function pose(force = false) {
 
     const P = _p;
     let yaw = YAW[i];
-    if (where === 'towel' && e.w2 === 0) { P.copy(home); yaw = Math.PI / 2; }
+    if (where === 'bench' && e.w2 === 0) { P.copy(home); yaw = Math.PI / 2; }
     else if (where === 'beaker') P.copy(inBk);
     else if (e.w2 > 0) {
       const k = e.w2;
       if (k < 0.3) liftPath(inBk, pan, k / 0.3, CLEAR, P);
       else if (k < 0.6) P.copy(pan);
-      else liftPath(pan, home, (k - 0.6) / 0.4, CLEAR - 4, P);
+      else liftPath(pan, home, (k - 0.6) / 0.4, CLEAR, P);
       yaw = k < 0.6 ? lerp(YAW[i], 0, ph(k, 0, 0.3)) : lerp(0, Math.PI / 2, ph(k, 0.6, 1));
     } else if (e.w1 > 0) {
       const k = e.w1;
@@ -387,7 +385,7 @@ function pose(force = false) {
       yaw = lerp(YAW[i], 0, win(k, 0, 0.3, 0.7, 1));
     } else {
       const k = e.w0;
-      if (k < 0.35) liftPath(home, pan, k / 0.35, pan.y + 5, P);
+      if (k < 0.35) liftPath(home, pan, k / 0.35, CLEAR, P);
       else if (k < 0.6) P.copy(pan);
       else liftPath(pan, restIn, (k - 0.6) / 0.4, CLEAR, P);
       yaw = k < 0.6 ? lerp(Math.PI / 2, 0, ph(k, 0, 0.35)) : lerp(0, YAW[i], ph(k, 0.6, 1));
@@ -566,7 +564,7 @@ lesson = createLesson({
   onEnter: (step) => {
     requestAnimationFrame(() => stage.resize());
     panelKey = '';
-    if (!step) { stage.focus('towel', 1.6); toast(T.complete.toast, { icon: 'ph-egg' }); return; }
+    if (!step) { stage.focus('lineup', 1.6); toast(T.complete.toast, { icon: 'ph-egg' }); return; }
     if (firstEnter) { firstEnter = false; intro.started.then(() => stage.focus(step.view, 2.2)); return; }
     stage.focus(step.view);
   },
@@ -582,7 +580,7 @@ const follow = createFollowCam(stage, ix, {
   acting: lesson.acting,
   watching: () => lesson.mode === 'watch',
   rig: { t: V3(0, 5, 1), p: V3(2, 30, 52) },
-  special: ['soak', 'osmosis', 'towel'],
+  special: ['soak', 'osmosis', 'lineup'],
 });
 
 function restart() {
