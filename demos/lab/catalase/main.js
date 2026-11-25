@@ -412,10 +412,15 @@ function pose(force = false) {
   if (changed('boil', `${S.boil}|${tx}`)) {
     const k = S.boil;
     const kMove = win(k, 0, 0.06, 0.22, 0.28), kTilt = win(k, 0.06, 0.1, 0.18, 0.22);
+    // arrive upright with the base 1 cm over the small rim, then lower the spout onto its mark as it tips;
+    // pinning the spout from upright would sink the beaker through the small one
     const target = V3(POS.hot.x + 1.2, B.hot.anchors.plate.y + SM.h + 3.8, POS.hot.z + B.hot.anchors.plate.z);
-    pourPose(B.water.group, onTray('water', tx), qI, B.water.anchors.spout, target, Z, -1.85, kMove, kTilt, 8);
+    const aim = up(target, lerp(B.hot.anchors.plate.y + SM.h + 1 + B.water.anchors.spout.y, target.y, kTilt * kTilt));
+    pourPose(B.water.group, onTray('water', tx), qI, B.water.anchors.spout, aim, Z, -1.85, kMove, kTilt, 8);
     B.water.liquid.setPour(kTilt);
     B.small.group.position.copy(smallPos());
+    const host = k < 0.76 ? 'hotplate' : 'small';    // on the plate it lifts and clicks with it
+    if (B.small.group.userData.key !== host) ix.addGroup(host, B.small.group);
     B.small.liquid.setVolume(BOIL_ML * pourK);
     B.hot.setHeat(win(k, 0.26, 0.32, 0.7, 0.76));
   }
