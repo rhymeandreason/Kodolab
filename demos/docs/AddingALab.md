@@ -98,10 +98,10 @@ Each field has one job, and putting text in the wrong one is what makes the card
 
 Group steps into `phases` with a `desc` line each, so 16 steps read as 4 in the procedure list. Any card text can be a function, re-read on every render. A `caption` function is re-read every frame, so it can follow the animation: `cues(() => S.t, [[0, 'Pull off the leaves'], [0.42, 'Put it in the bag']])`.
 
-**Write captions as a video's voiceover, not a log of the animation.** Read in order, a lab's captions should be a coherent paragraph. That means:
+**Write captions as a video's voiceover, not a log of the animation.** Read in order, a lab's captions should be a coherent paragraph that still tells the student what to do: start from the card's `detail`, which is already the instruction, and condense it. That means:
 * One line for a stretch of action, not one per motion. "Soak a disk in yeast, blot it, drop it in" covers the whole handling, rather than "dip", "drop", "dip", "drop" flickering by for each disk.
 * Narrate a repeated procedure once, in full, then summarise: "Repeat with each cup, {conc} this time." Pick the narrated run by order of play ("no other trial started yet"), not by index, so it holds when a student clicks out of order (`catalase/main.js`'s `runCaption`).
-* Say why as well as what. A later beat should add meaning ("The weaker the peroxide, the longer the disks take to rise"), not restate the scene.
+* Instruct first. A why belongs in a `note` or on the card; a caption may name what to watch for ("The weaker the peroxide, the longer the disks take to rise") but never replaces the instruction with an explanation.
 * A summary line must stay true in any order the student plays the steps, so prefer "the weaker…, the longer…" to "slower than the last one".
 
 The last step's payoff goes in `completeHint` / `completeWhy`, not on the last step, where it would only flash during the animation. The complete card rises in and folds to its title on its own; a lab can style it wider with `.lab-card.complete` and stagger its contents under `.lab-card.arrive` (Ecoli's results).

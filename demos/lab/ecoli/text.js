@@ -73,9 +73,8 @@ LabText.add('en', {
       why: 'Each colony is millions of identical cells, grown from one.',
       caption: 'Add E. coli to both tubes',
       captions: {
-        pick: 'Pick up a colony with a sterile loop',
-        swirl: 'Swirl it into the tube until the liquid looks cloudy',
-        fresh: 'A fresh loop for each tube',
+        first: 'Pick up a colony with a sterile loop and swirl it into a tube until the liquid looks cloudy',
+        next: 'Repeat for the other tube, with a fresh loop',
       },
     },
     plasmid: {
@@ -84,7 +83,7 @@ LabText.add('en', {
       hint: 'Click the <b>GFP plasmid</b> vial',
       detail: 'Dip a fresh sterile loop into the plasmid solution and swirl it into the <b>+ plasmid</b> tube only.',
       why: 'The − tube is your control: the same cells, treated the same way, without the plasmid.',
-      caption: { text: 'Add the GFP plasmid to the + tube only', note: 'The − tube is the control' },
+      caption: { text: 'With a fresh loop, swirl the GFP plasmid into the + tube only', note: 'The − tube is the control' },
     },
     ice: {
       title: 'Incubate on ice', short: 'Ice',
@@ -102,9 +101,8 @@ LabText.add('en', {
       why: 'The sudden change in temperature opens temporary pores in the membrane, and plasmids slip in.',
       caption: 'Heat shock',
       captions: {
-        into: 'Into the 42 °C water bath',
-        shock: { text: 'Heat shock for exactly 50 seconds', note: 'Then straight back onto ice' },
-        back: 'Straight back onto ice',
+        shock: 'Move the tubes into the 42 °C water bath for exactly 50 seconds',
+        back: 'Then straight back onto ice',
       },
     },
     recover: {
@@ -126,10 +124,8 @@ LabText.add('en', {
       why: 'Each plate tests one thing: whether the cells can grow on ampicillin, and whether arabinose switches GFP on.',
       caption: 'Spread the cells on agar plates',
       captions: {
-        lids: 'Lift the lids',
-        pipette: 'Pipette 100 µL of the {sub} cells onto the {plate} plate',
-        spread: 'Spread it with a fresh sterile loop',
-        close: 'Put the lids back on',
+        pipette: 'Pipette 100 µL onto each plate: the − tube on {pa} and {pb}, the + tube on {pc} and {pd}',
+        spread: 'Spread each plate with a fresh sterile loop',
       },
     },
     incubate: {
@@ -145,7 +141,7 @@ LabText.add('en', {
       action: 'shine it on the plates',
       hint: 'Click the <b>UV lamp</b>',
       detail: 'Turn off the room lights and hold the UV lamp over the plates. Which colonies glow?',
-      caption: 'Turn off the lights and shine the UV lamp on the plates',
+      caption: 'Turn off the lights and shine the UV lamp on the plates. Which colonies glow?',
     },
   },
 

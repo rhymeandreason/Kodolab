@@ -326,12 +326,11 @@ async function actCells() {
   await anim(0.55, (e) => st.setLid(e));
   for (const tube of [B.plus, B.minus]) {
     const sx = sp.x + rand(-1.5, 0.5), sz = sp.z + rand(-1.75, -1);
-    S.cap = T.steps.cells.captions.pick;
+    S.cap = tube === B.plus ? T.steps.cells.captions.first : T.steps.cells.captions.next;
     await moveTo(lg.group, { pos: V3(sx, 3, sz), dur: 0.75, arc: 3 });
     await moveTo(lg.group, { pos: V3(sx, 0.55, sz), dur: 0.25 });
     await Promise.all([anim(0.35, (e) => lg.setBlob(0.9 * e)), anim(0.35, (e, k) => { lg.group.position.x = sx + Math.sin(k * Math.PI) * 0.6; })]);
     await moveTo(lg.group, { pos: V3(sx, 3, sz), dur: 0.25 });
-    S.cap = T.steps.cells.captions.swirl;
     await cap(tube, true, 0.3);
     const done = loopIntoTube(tube);
     await wait(1.15);
@@ -339,7 +338,7 @@ async function actCells() {
     tint(tube, COL.cells, 0.8);
     await done;
     cap(tube, false, 0.3);
-    if (tube === B.plus) { S.micro = 2; S.cap = T.steps.cells.captions.fresh; await discardLoop(); }
+    if (tube === B.plus) { S.micro = 2; S.cap = T.steps.cells.captions.next; await discardLoop(); }
   }
   await Promise.all([discardLoop(), anim(0.55, (e) => st.setLid(1 - e))]);
   S.cap = null;
@@ -370,11 +369,10 @@ async function actIce() {
 }
 
 async function actHeat() {
-  S.cap = T.steps.heat.captions.into;
+  S.cap = T.steps.heat.captions.shock;
   await both('bath', 1.6);
   S.micro = 5;
   B.bath.setActive(true);
-  S.cap = T.steps.heat.captions.shock;
   await timer('heat', 50, 3.4, 's', (k) => B.bath.setActive(true, Math.floor(k * 14) % 2 === 1));
   B.bath.setActive(false);
   S.cap = T.steps.heat.captions.back;
@@ -405,11 +403,11 @@ async function actRecover() {
 
 async function actPlate() {
   const plates = B.plates, lg = B.loop;
-  S.cap = T.steps.plate.captions.lids;
+  const [pa, pb, pc, pd] = PLATES.map((P) => P.title);
+  S.cap = fmt(T.steps.plate.captions.pipette, { pa, pb, pc, pd });
   await Promise.all(plates.map((p, i) => wait(i * 0.08).then(() => anim(0.55, (e) => p.setLid(e)))));
   for (let i = 0; i < 4; i++) {
     const tube = PLATES[i].src === 'plus' ? B.plus : B.minus, p = plates[i], tp = tube.group.position, pp = p.group.position;
-    S.cap = fmt(T.steps.plate.captions.pipette, { sub: PLATES[i].sub, plate: PLATES[i].title });
     await cap(tube, true, 0.3);
     await pipDraw(tp.x, tp.z, tube.liquid.surfaceY(), tubeTop(tube), COL.recovered);
     level(tube, tube.liquid.level - 0.4, 0.3);
@@ -430,7 +428,6 @@ async function actPlate() {
     await moveTo(lg.group, { pos: V3(lg.group.position.x, 2.3, lg.group.position.z), dur: 0.2 });
     await discardLoop();
   }
-  S.cap = T.steps.plate.captions.close;
   await Promise.all(plates.map((p, i) => wait(i * 0.08).then(() => anim(0.55, (e) => p.setLid(1 - e)))));
   S.cap = null;
 }

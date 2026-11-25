@@ -49,7 +49,8 @@ LabText.add('en', {
       hint: 'Click an <b>egg</b> to weigh it',
       hintMore: 'Click the next <b>egg</b> · <b>{n}/3</b>',
       detail: 'Weigh each raw egg on the balance and record its mass. Then set it gently in its beaker.',
-      captions: { weigh: 'Weigh the raw egg', place: 'Set it in its beaker' },
+      /* first: the first egg handled, narrated. next: the rest */
+      captions: { first: 'Weigh each raw egg and set it in its beaker. This mass is the baseline', next: 'Repeat with each egg' },
     },
     vinegar: {
       title: 'Cover with vinegar', short: 'Vinegar',
@@ -57,7 +58,7 @@ LabText.add('en', {
       hint: 'Click the <b>vinegar</b> to cover the eggs',
       detail: 'Pour about 250 mL of white vinegar into each beaker, enough to cover the egg.',
       why: 'Vinegar is about 5% acetic acid. Bubbles start at once: the acid is reacting with the shell.',
-      caption: { text: 'Pour vinegar over each egg', note: '5% acetic acid' },
+      caption: { text: 'Cover the eggs in vinegar', note: '5% acetic acid' },
     },
     soak: {
       title: 'Leave for two days', short: '48 h',
@@ -78,7 +79,7 @@ LabText.add('en', {
       hintMore: 'Click the next <b>beaker</b> · <b>{n}/3</b>',
       detail: 'Lift each egg out and weigh it. Pour the vinegar into the waste beaker, then put the egg back.',
       why: 'No shell, yet heavier than when it started: water moved into the egg through its membranes.',
-      captions: { lift: 'Lift the egg out and weigh it', drain: 'Pour the vinegar into the waste', back: 'Put the naked egg back' },
+      captions: { first: 'Weigh each naked egg. No shell, and yet it is heavier than before', drain: 'Pour off the vinegar and put the egg back', next: 'Repeat with each egg' },
     },
     predict: {
       title: 'Predict', short: 'Predict',
@@ -93,7 +94,7 @@ LabText.add('en', {
       hintMore: 'Click the next <b>bottle</b> · <b>{n}/3</b>',
       detail: 'Cover egg A with distilled water, egg B with 0.9% salt water and egg C with corn syrup.',
       why: 'The egg in corn syrup floats: syrup is denser than the egg.',
-      captions: { pour: 'Cover egg {egg} with {liquid}', float: 'Egg C floats: corn syrup is denser than the egg' },
+      captions: { first: 'Each egg gets a different liquid. Egg {egg}: {liquid}', next: 'Egg {egg}: {liquid}', float: 'Egg C floats: corn syrup is denser than the egg' },
     },
     osmosis: {
       title: 'Leave for a day', short: '24 h',
@@ -113,7 +114,7 @@ LabText.add('en', {
       hint: 'Click a <b>beaker</b> to weigh its egg',
       hintMore: 'Click the next <b>beaker</b> · <b>{n}/3</b>',
       detail: 'Weigh each egg and set it back in front of its beaker.',
-      captions: { lift: 'Weigh egg {egg}', set: 'Set it in front of its beaker' },
+      captions: { first: 'Weigh each egg again and set it in front of its beaker', next: 'Repeat with each egg' },
     },
   },
 

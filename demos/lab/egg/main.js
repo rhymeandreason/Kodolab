@@ -527,11 +527,13 @@ function multi(id, prefix, field, dur, view) {
     progress: () => done(field) / 3,
   };
 }
+/** True while the egg being moved is the first one handled in this step: its run is narrated. */
+const firstOf = (field) => !S.E.some((e, j) => j !== last.i && e[field] > 0);
 const clockText = (h, fmtKey) => fmt(fmtKey, { d: Math.floor(h / 24) + 1, h: Math.round(h) });
 
 const STEPS = [
   { ...multi('weigh0', 'egg', 'w0', 4.2, 'weigh'),
-    caption: () => (S.E[last.i].w0 < 0.6 ? C.weigh0.weigh : C.weigh0.place) },
+    caption: () => (firstOf('w0') ? C.weigh0.first : C.weigh0.next) },
   { id: 'vinegar', ...card('vinegar'), targets: ['vinegar'], view: 'vinegar', caption: T.steps.vinegar.caption,
     run: () => anim(8.4, (e, k) => { S.vin = 3 * k; }, Ease.linear) },
   { id: 'soak', ...card('soak'), hint: fmt(T.steps.soak.hint, { h: SOAK_H }), targets: [], view: 'soak',
@@ -539,7 +541,7 @@ const STEPS = [
     caption: cues(() => S.hours, [[0, C.soak.bubbles], [14, C.soak.thin], [32, C.soak.gone], [41, C.soak.swell]]),
     watch: { duration: SOAK_H, get: () => S.hours, set: (t) => { S.hours = t; }, rate: () => (SOAK_H / 16) * debugSpeed } },
   { ...multi('weigh1', 'beaker', 'w1', 6.5, 'weigh'),
-    caption: () => { const k = S.E[last.i].w1; return k < 0.36 ? C.weigh1.lift : k < 0.7 ? C.weigh1.drain : C.weigh1.back; } },
+    caption: () => (!firstOf('w1') ? C.weigh1.next : S.E[last.i].w1 < 0.36 ? C.weigh1.first : C.weigh1.drain) },
   /* Predicting happens on the card, off the bench: the step reads PRED, so a rebuild leaves
      it alone. Watch mode stops at the bench; predicting is the student's. */
   { id: 'predict', ...card('predict'), targets: [], view: 'predict', caption: T.steps.predict.caption, card: mountPredict,
@@ -547,13 +549,13 @@ const STEPS = [
     progress: () => PRED.filter(Boolean).length / 3 },
   { ...multi('fill', 'bottle', 'fill', 4.6, 'fill'),
     why: () => (S.E[2].fill >= 1 ? T.steps.fill.why : undefined),
-    caption: () => (last.i === 2 && S.E[2].fill > 0.62 ? C.fill.float : fmt(C.fill.pour, { egg: LETTER[last.i], liquid: T.liquids[last.i].name })) },
+    caption: () => (last.i === 2 && S.E[2].fill > 0.62 ? C.fill.float : fmt(firstOf('fill') ? C.fill.first : C.fill.next, { egg: LETTER[last.i], liquid: T.liquids[last.i].name })) },
   { id: 'osmosis', ...card('osmosis'), hint: fmt(T.steps.osmosis.hint, { h: OSMO_H }), targets: [], view: 'osmosis',
     clock: () => clockText(S.osmo, T.steps.osmosis.clock),
     caption: cues(() => S.osmo, [[0, C.osmosis.both], [4, C.osmosis.net], [10, C.osmosis.iso], [17, C.osmosis.slow]]),
     watch: { duration: OSMO_H, get: () => S.osmo, set: (t) => { S.osmo = t; }, rate: () => (OSMO_H / 14) * debugSpeed } },
   { ...multi('weigh2', 'beaker', 'w2', 4.8, 'weigh'),
-    caption: () => (S.E[last.i].w2 < 0.6 ? fmt(C.weigh2.lift, { egg: LETTER[last.i] }) : C.weigh2.set) },
+    caption: () => (firstOf('w2') ? C.weigh2.first : C.weigh2.next) },
 ];
 const PREDICT = STEPS.findIndex((s) => s.id === 'predict');
 const PHASES = [
