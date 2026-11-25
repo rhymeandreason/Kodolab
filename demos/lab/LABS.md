@@ -14,7 +14,7 @@ The four with a short URL are rows in `lib/lessons.js`; the rest are not wired t
 | Onion Root Tip | `onion/onion-lab.html` | /labs/onion-root-tip | Squash and stain, then label mitosis stages under a microscope |
 | Gel Electrophoresis | `gel/gel-lab.html` | /labs/gel-electrophoresis | Crime-scene DNA vs three suspects. Micropipette, gel run, ladder measuring |
 | Blood Typing | `bloodtype/blood-lab.html` | /labs/blood-typing | Type four people's blood, then Punnett squares to rule out a father |
-| Yeast Catalase | `catalase/catalase-lab.html` | none | Yeast-soaked paper disks float in H₂O₂ at five concentrations, then boiled yeast. Rate against concentration levels off. Disk and molecule zoom levels |
+| Yeast Catalase | `catalase/catalase-lab.html` | /labs/yeast-catalase | Yeast-soaked paper disks float in H₂O₂ at five concentrations, then boiled yeast. Rate against concentration levels off. Disk and molecule zoom levels |
 | Mendel's Peas | `mendel/mendel-lab.html` | none | Cross a green-pea bud with yellow-pea pollen, open the F₁ pod, grow and self the F₁, shell and count the F₂, fill a Punnett square. Cell (meiosis) and molecule (SGR, chlorophyll) zoom levels |
 | Egg Osmosis | `egg/egg-lab.html` | /labs/egg-osmosis | Dissolve three shells in vinegar, then weigh the eggs before and after a day in water, saline and corn syrup. Predictions live in the mass table |
 | Fruit Fly Genetics | `fly/fly-lab.html` | none | Morgan's white eye, crossed both ways: knock out stocks, sex flies under a stereo microscope, raise vials A and B, sort the F₁, cross A's F₁ in vial C, sort the F₂, then χ² and a Punnett square. Cell (X and Y in meiosis) and molecule (the White pump) zoom levels |

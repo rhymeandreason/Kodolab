@@ -112,6 +112,8 @@ const PAGES = {
     description: 'Gel electrophoresis in a 3D virtual lab: load crime-scene and suspect DNA, run the gel, size the bands against a ladder, and find whose pattern matches.' },
   '/labs/egg-osmosis': {
     description: 'Osmosis in a 3D virtual lab: dissolve three eggshells in vinegar, soak the bare eggs in water, saline and corn syrup, and weigh which way the water moved.' },
+  '/labs/yeast-catalase': {
+    description: 'Enzymes in a 3D virtual lab: float yeast-soaked paper disks in five strengths of hydrogen peroxide, time them, then boil the yeast and zoom to the catalase molecule to see why it stops.' },
   '/nodes': {
     description: 'All of Bio 101 as one interactive map: how the concepts connect, from molecules to cells to organisms and ecosystems.' },
   '/labs':
