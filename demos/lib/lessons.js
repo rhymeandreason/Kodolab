@@ -33,7 +33,7 @@ window.Lessons = [
   { key: 'strawberry',   unit: 'gene',   url: '/labs/strawberry-dna', file: '/demos/lab/strawberry/strawberry-lab.html', title: 'Strawberry DNA', blurb: 'A strawberry holds so much DNA that you can free it from the cells and lift it out on a stick.', still: '/demos/media/components/lab-strawberry-dna.webp', status: 'new' },
   { key: 'ecoli',        unit: 'gene',   url: '/labs/glowing-ecoli',  file: '/demos/lab/ecoli/ecoli-lab.html', title: 'Glowing E. coli', blurb: 'Add a plasmid carrying a jellyfish gene to E. coli. If the bacteria take it up, they glow green under UV light.', still: '/demos/media/components/lab-glowing-ecoli.webp', status: 'new' },
   { key: 'onion',        unit: 'gene',   url: '/labs/onion-root-tip', file: '/demos/lab/onion/onion-lab.html', title: 'Onion Root Tip', blurb: 'Squash and stain an onion root tip, then find each stage of mitosis under the microscope.', still: '/demos/media/components/lab-onion-root-tip.webp', status: 'new' },
-  { key: 'bloodtype',    unit: 'gene',   url: '/labs/blood-typing',   file: '/demos/lab/bloodtype/blood-lab.html', title: 'Blood Typing', blurb: 'Type four people\'s blood by which antibodies make it clump, then use their genes to work out who the father is not.', status: 'new' },
+  { key: 'bloodtype',    unit: 'gene',   url: '/labs/blood-typing',   file: '/demos/lab/bloodtype/blood-lab.html', title: 'Blood Typing', blurb: 'Type four people\'s blood by which antibodies make it clump, then use their genes to work out who the father is not.', still: '/demos/media/components/lab-blood-typing.webp', status: 'new' },
 ];
 
 window.LessonUnits = [
