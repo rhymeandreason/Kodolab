@@ -1,10 +1,11 @@
 /* Hand tools: transfer pipette, 10 mL syringe, scoop, stirring rod, wooden skewer,
- * hole punch, inoculation loop, scalpel, pencil. Each file notes its origin where it isn't the base centre. */
+ * hole punch, inoculation loop, scalpel, forceps, pencil. Each file notes its origin where it isn't the base centre. */
 import * as THREE from 'three';
 import { V2, V3, lerp } from '../core/math.js';
 import { mesh, rbox, roundedRectShape, wrapLabel } from '../core/geometry.js';
 import { FONT } from '../core/canvas.js';
 import { toLinear } from '../materials.js';
+import { powderMaterial } from './ingredients.js';
 
 /** LDPE transfer pipette. Origin at the tip, bulb up. setSqueeze(0..1) squeezes the bulb, setFluid(cm) fills the stem. */
 export function makePipette(mat, { fluid: fluidMat = mat.soap } = {}) {
@@ -122,8 +123,8 @@ export function makeSyringe(mat, { plunger: plungerColor = toLinear('#7cc4e8') }
   };
 }
 
-/** Steel scoop lying along +x; the bowl is at the origin. heap = powder in the bowl. */
-export function makeScoop(mat) {
+/** Steel scoop lying along +x; the bowl is at the origin. heap = powder in the bowl; powder is a material or a picked hex for it (white by default). */
+export function makeScoop(mat, { powder = mat.powder } = {}) {
   const g = new THREE.Group();
   const blade = mesh(new THREE.BoxGeometry(9.5, 0.07, 0.75), mat.chrome);
   blade.position.x = 5.0;
@@ -131,7 +132,7 @@ export function makeScoop(mat) {
   spoon.scale.set(1.45, 0.45, 0.85); spoon.position.x = -0.1;
   const handle = mesh(new THREE.CylinderGeometry(0.32, 0.36, 6, 16), mat.charcoal);
   handle.rotation.z = Math.PI / 2; handle.position.x = 12.6;
-  const heap = mesh(new THREE.SphereGeometry(0.5, 14, 10), mat.powder);
+  const heap = mesh(new THREE.SphereGeometry(0.5, 14, 10), typeof powder === 'string' ? powderMaterial(mat, powder) : powder);
   heap.scale.set(1.3, 0.55, 0.8); heap.position.set(-0.1, 0.02, 0); heap.visible = false;
   heap.userData.noHL = true;
   g.add(blade, spoon, handle, heap);
@@ -227,6 +228,56 @@ export function makeScalpel(mat) {
   blade.rotation.x = -Math.PI / 2; blade.position.y = 0.12;
   g.add(handle, grip, blade);
   return { group: g, anchors: { tip: V3(0, 0.12, 1.2), end: V3(0, 0.2, -12) } };
+}
+
+/** Stainless lab forceps, 11.5 cm, lying flat on the bench: two flat spring legs joined at the back,
+ *  blunt serrated tips. Origin at the closed jaw tips (the working end), the legs run along -z like
+ *  the scalpel's handle. setOpen(0..1) spreads the tips, 0 touching, 1 about 1 cm apart.
+ *  anchors.tip is between the tips, just behind their ends, where a held disk sits (it stays on
+ *  the centre line as the jaws open); anchors.grip is where fingers press. */
+export function makeForceps(mat, { open = 0 } = {}) {
+  const L = 11.4, T = 0.16, Y0 = 0.015;
+  const inner = [[0, 0], [0, 1.4], [0.35, 4], [0.55, 6.5], [0.35, 9.5], [0.08, L]];
+  const outer = [[0.5, 0], [0.52, 1.4], [0.9, 4], [1.05, 6.5], [0.85, 9.5], [0.6, L]];
+  /** One leg, in the pivot's frame (pivot at the joined end). sign +1 is the +x leg. */
+  const legGeo = (sign) => {
+    const pts = inner.concat(outer.slice().reverse()).map(([x, u]) => V2(sign * x, u));
+    if (sign < 0) pts.reverse();
+    const geo = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: T, bevelEnabled: false });
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(0, Y0, L);
+    return geo;
+  };
+  const dark = mat.make.standard({ color: toLinear('#7d858f'), metalness: 0.9, roughness: 0.4 });
+  const ridgeGeo = new THREE.BoxGeometry(0.44, 0.012, 0.05);
+  const g = new THREE.Group();
+  const legs = [1, -1].map((sign) => {
+    const pivot = new THREE.Group();
+    pivot.position.z = -L;
+    pivot.add(mesh(legGeo(sign), mat.steel, { cast: false }));
+    for (let i = 0; i < 5; i++) {
+      const r = mesh(ridgeGeo, dark, { cast: false });
+      r.position.set(sign * 0.25, Y0 + T + 0.004, L - 0.12 - i * 0.14);
+      pivot.add(r);
+    }
+    g.add(pivot);
+    return pivot;
+  });
+  const joint = mesh(rbox(1.3, T, 0.55, 0.06), mat.steel, { cast: false });
+  joint.position.set(0, Y0 + T / 2, -L + 0.2);
+  g.add(joint);
+  const out = {
+    group: g, open: 0,
+    anchors: { tip: V3(0, Y0 + T / 2, -0.2), grip: V3(0, Y0 + T, -6.5) },
+    /** Spread the tips: 0 touching, 1 about 1 cm apart. */
+    setOpen(k) {
+      out.open = k;
+      const a = Math.asin(Math.min(1, Math.max(0, k)) * 0.5 / L);
+      legs[0].rotation.y = -a; legs[1].rotation.y = a;
+    },
+  };
+  out.setOpen(open);
+  return out;
 }
 
 /** HB pencil with an eraser, 17 cm. Origin at the eraser end (the end that presses a

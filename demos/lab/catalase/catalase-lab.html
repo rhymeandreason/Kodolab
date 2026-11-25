@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" data-lab-theme="sky">
+<head>
+  <meta charset="utf-8">
+  <script defer src="/demos/lib/site.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Yeast Catalase</title>
+  <script src="../page.js" data-text="text.js"></script>  <!-- import map, fonts, icons, lab.css, the words (text.js) -->
+  <!-- the molecule view: house colours, and the ribbon the catalase subunit is drawn with -->
+  <script src="../../lib/palette.js"></script>
+  <script src="../../kit/ribbon.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <section class="panel cat-panel" id="catPanel"></section>
+  </div>
+  <script>LabPage.chrome()</script>
+
+  <script type="module" async src="intro-art.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

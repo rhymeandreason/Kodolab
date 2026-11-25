@@ -1,0 +1,87 @@
+/* Yeast Catalase: only what's specific to this lab. Shared chrome is in ../lab.css. */
+
+/* ---------- backgrounds per zoom level ---------- */
+.bg-disk, .zoom-lens.bg-disk { background: radial-gradient(1400px 900px at 58% 35%, #fbfdff 0%, #eaf2f8 50%, #d8e5ef 100%); }
+.bg-mol, .zoom-lens.bg-mol { background: radial-gradient(1400px 900px at 58% 35%, #fdfcff 0%, #efedf8 50%, #dfdcef 100%); }
+body[data-scale='disk'] .bg-disk, body[data-scale='mol'] .bg-mol { opacity: 1; }
+
+/* ---------- data panel ---------- */
+.cat-panel {
+  right: var(--gutter);
+  bottom: calc(var(--timeline-h) + var(--gutter) * 2);
+  width: 340px;
+  padding-bottom: 12px;
+}
+.cat-panel .clock {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px; font-weight: 600;
+  padding: 3px 9px; border-radius: 8px;
+  background: #0f1d2b; color: var(--accent-glow);
+}
+.cat-panel .clock:empty { display: none; }
+.cat-table { width: calc(100% - 24px); margin: 0 12px; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.cat-table th { font-size: 10.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); text-align: right; padding: 0 3px 5px; white-space: nowrap; }
+.cat-table th:first-child, .cat-table td:first-child { text-align: left; }
+.cat-table td { padding: 5px 3px; text-align: right; border-top: 1px solid var(--line); white-space: nowrap; }
+.cat-table td:first-child small { margin-left: 5px; font-size: 10.5px; color: #b91c1c; }
+.cat-table td[data-k="rate"] { font-weight: 600; }
+.cat-table .dash { color: var(--faint, #b4bcc6); }
+.cat-table tr.live td { background: var(--accent-soft); }
+.cat-graph { display: block; width: calc(100% - 16px); margin: 10px 8px 0; }
+.cat-graph .axis { stroke: var(--ink-2); stroke-width: 1; }
+.cat-graph .grid { stroke: var(--line); stroke-width: 1; }
+.cat-graph .tick { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.cat-graph .label { font-size: 10.5px; fill: var(--ink-2); font-weight: 600; }
+.cat-graph .line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.cat-graph .dot { fill: var(--accent); stroke: #fff; stroke-width: 1.5; }
+.cat-graph .dot.boiled { fill: #fff; stroke: #b91c1c; stroke-width: 2; }
+.cat-ask { margin: 8px 12px 0; font-size: 13px; }
+.cat-ask[hidden] { display: none; }
+.cat-ask p { margin: 0 0 6px; font-weight: 600; }
+.cat-answers { display: flex; flex-direction: column; gap: 4px; }
+.cat-answers button {
+  text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 9px;
+  padding: 6px 10px; font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer;
+}
+.cat-answers button:disabled { cursor: default; opacity: .6; }
+.cat-answers button.on { background: var(--ink); color: #fff; border-color: var(--ink); opacity: 1; }
+.cat-panel.asking .cat-answers { box-shadow: 0 0 0 2px var(--accent); border-radius: 10px; animation: cat-ask 1.6s ease-in-out infinite; }
+@keyframes cat-ask { 50% { box-shadow: 0 0 0 4px var(--accent-soft); } }
+.cat-verdict { margin: 6px 0 0 !important; font-weight: 500 !important; font-size: 12.5px; }
+.cat-verdict.ok { color: #15803d; }
+.cat-verdict.no { color: #b45309; }
+.cat-note { margin: 8px 14px 0; font-size: 11px; color: var(--muted); }
+
+/* the card centres in the space left of the panel */
+@media (min-width: 821px) {
+  .lab-card {
+    left: calc(280px + (100% - 280px - 360px) / 2);
+    width: min(470px, calc(100% - 280px - 360px - var(--gutter) * 2));
+    min-width: 0;
+  }
+  .lab-captions { right: calc(340px + var(--gutter) * 2); }
+  /* the zoom circles sit in a row above the data panel, not over it */
+  .zoom-insets { top: 66px; transform: none; flex-direction: row; gap: 24px; right: calc(var(--gutter) + 20px); }
+  .zoom-inset { width: 146px; height: 146px; }
+  .zi-dir { display: none; }
+  .cat-panel.asking .cat-note { display: none; }
+}
+@media (max-width: 820px) {
+  .cat-panel { left: var(--gutter); right: var(--gutter); width: auto; }
+  .cat-note, .cat-graph { display: none; }
+}
+
+/* ---------- info modal ---------- */
+.equation {
+  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  margin: 14px 0; padding: 12px; border-radius: 12px;
+  background: #f4f7f9;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px; color: var(--ink);
+}
+@media (min-width: 821px) and (max-height: 860px) {
+  .zoom-insets { gap: 16px; }
+  .zoom-inset { width: 112px; height: 112px; }
+  .cat-graph { max-height: 140px; }
+  .cat-note { display: none; }
+}

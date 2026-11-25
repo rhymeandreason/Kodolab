@@ -1,4 +1,4 @@
-/* Microscopy: a glass slide, a coverslip, a square of filter paper and a compound light
+/* Microscopy: a glass slide, a coverslip, a square of filter paper, a punched paper disk and a compound light
  * microscope (all from OnionRoot). Origins at the centre of the base.
  *
  *   const slide = makeSlide(mat, { label: ['Allium', 'root tip'] });
@@ -14,6 +14,7 @@
  */
 import * as THREE from 'three';
 import { V2, V3 } from '../core/math.js';
+import { seeded } from '../core/random.js';
 import { mesh, rbox } from '../core/geometry.js';
 import { makeCanvas, canvasTex, FONT } from '../core/canvas.js';
 import { toLinear } from '../materials.js';
@@ -98,6 +99,81 @@ export function makeFilterPaper(mat, { size = 3 } = {}) {
       spot.scale.setScalar(0.5 + k * 0.7);
     },
   };
+}
+
+const DISK_R = 0.32, DISK_T = 0.02, DISK_BUBBLES = 40;
+const DISK_GEO = new THREE.CylinderGeometry(DISK_R, DISK_R, DISK_T, 24);
+const BUBBLE_GEO = new THREE.SphereGeometry(1, 8, 6);
+const SOAK_STEPS = 8;
+const diskMats = new WeakMap();
+const DRY = new THREE.Color(0xfcfcfa), TAN = new THREE.Color(0xb48f58);
+/** Shared per createMaterials set: the soak ladder (dry is mat.paper) and the bubble material. */
+function diskKit(mat) {
+  if (!diskMats.has(mat)) {
+    const soaked = [mat.paper];
+    for (let i = 1; i <= SOAK_STEPS; i++) {
+      const k = i / SOAK_STEPS;
+      const m = mat.make.physical({ color: DRY.clone().lerp(TAN, k * 0.95), roughness: 0.95 - 0.6 * k, clearcoat: 0.5 * k, clearcoatRoughness: 0.3, transparent: true, opacity: 1 - 0.1 * k });
+      m.userData.shared = true;
+      soaked.push(m);
+    }
+    const bubble = mat.make.physical({ color: 0xf4fbff, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.55, depthWrite: false });
+    bubble.userData.shared = true;
+    diskMats.set(mat, { soaked, bubble });
+  }
+  return diskMats.get(mat);
+}
+
+/** A disk of filter paper from a 1/4-inch hole punch: radius 0.32 cm, 0.2 mm thick. Origin at the
+ *  disk's centre (not its base), lying flat, so rest it at y >= 0.03 (bubbles hang up to 0.03 cm below
+ *  the lower face). setSoak(0..1) goes from dry white to soaked with a tan yeast suspension, a little
+ *  translucent and wet. setBubbles(0..1) grows O2 bubbles on both faces and the rim, deterministic
+ *  per seed. anchors.top is the centre of the upper face. Soak materials are shared across disks. */
+export function makePaperDisk(mat, { seed = 1, soak = 0, bubbles = 0 } = {}) {
+  const K = diskKit(mat);
+  const g = new THREE.Group();
+  const disk = mesh(DISK_GEO, mat.paper, { cast: false });
+  const inst = new THREE.InstancedMesh(BUBBLE_GEO, K.bubble, DISK_BUBBLES);
+  inst.frustumCulled = false; inst.castShadow = false; inst.count = 0; inst.renderOrder = 4;
+  g.add(disk, inst);
+  const rnd = seeded(seed * 7919 + 13);
+  const spec = [];
+  for (let i = 0; i < DISK_BUBBLES; i++) {
+    const face = rnd() < 0.8 ? (rnd() < 0.5 ? 1 : -1) : 0;
+    const a = rnd() * Math.PI * 2, r = face ? Math.sqrt(rnd()) * (DISK_R - 0.03) : DISK_R;
+    spec.push({ face, a, r, size: 0.012 + rnd() * rnd() * 0.04, dy: (rnd() - 0.5) * DISK_T });
+  }
+  const dummy = new THREE.Object3D();
+  const out = {
+    group: g, disk, soak: 0, bubbles: 0,
+    anchors: { top: V3(0, DISK_T / 2, 0) },
+    /** 0 dry white, 1 soaked with yeast suspension. */
+    setSoak(k) {
+      out.soak = k;
+      disk.material = K.soaked[Math.round(Math.min(1, Math.max(0, k)) * SOAK_STEPS)];
+    },
+    /** 0 clean, 1 fizzy: more bubbles, each bigger. */
+    setBubbles(k) {
+      out.bubbles = k;
+      k = Math.min(1, Math.max(0, k));
+      const n = Math.ceil(DISK_BUBBLES * k);
+      inst.count = n;
+      for (let i = 0; i < n; i++) {
+        const b = spec[i], s = b.size * (0.35 + 0.65 * k);
+        const x = b.r * Math.cos(b.a), z = b.r * Math.sin(b.a);
+        const y = b.face ? b.face * (DISK_T / 2 + s * 0.5) : b.dy;
+        const push = b.face ? 0 : s * 0.5;
+        dummy.position.set(x + push * Math.cos(b.a), y, z + push * Math.sin(b.a));
+        dummy.scale.setScalar(s);
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+      }
+      inst.instanceMatrix.needsUpdate = true;
+    },
+  };
+  out.setSoak(soak);
+  out.setBubbles(bubbles);
+  return out;
 }
 
 /* ------------------------------------------------------------- microscope */

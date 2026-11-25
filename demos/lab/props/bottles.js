@@ -5,10 +5,10 @@ import { bandLabel, cardLabel } from '../core/labels.js';
 import { mesh, wrapLabel } from '../core/geometry.js';
 import { makeLiquid } from '../core/liquid.js';
 import { toLinear } from '../materials.js';
-import { ingredient as getIngredient } from './ingredients.js';
+import { ingredient as getIngredient, powderMaterial } from './ingredients.js';
 
 /** Open jar of white powder with a printed label, coloured by ingredient (props/ingredients.js;
- *  baking soda by default). title, line, color (label bands) and body (jar colour, picked hex)
+ *  baking soda by default). title, line, color (label bands), body (jar colour) and powder (contents, picked hex)
  *  override the ingredient's. dome = the powder surface. */
 export function makeJar(mat, { ingredient = 'bakingSoda', ...o } = {}) {
   const it = getIngredient(ingredient);
@@ -25,9 +25,10 @@ export function makeJar(mat, { ingredient = 'bakingSoda', ...o } = {}) {
     th.rotation.x = Math.PI / 2; th.position.y = 6.2 + i * 0.28;
     g.add(th);
   }
-  const powder = mesh(new THREE.CylinderGeometry(2.82, 2.82, 4.2, 40), mat.powder, { cast: false });
+  const powderMat = (o.powder ?? it.powder) ? powderMaterial(mat, o.powder ?? it.powder) : mat.powder;
+  const powder = mesh(new THREE.CylinderGeometry(2.82, 2.82, 4.2, 40), powderMat, { cast: false });
   powder.position.y = 2.5;
-  const dome = mesh(new THREE.SphereGeometry(2.8, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat.powder, { cast: false });
+  const dome = mesh(new THREE.SphereGeometry(2.8, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), powderMat, { cast: false });
   dome.scale.y = 0.16; dome.position.y = 4.6;
   g.add(powder, dome);
   g.add(wrapLabel({
@@ -66,13 +67,15 @@ export function makeSqueezeBottle(mat, { color = 0x3fbf7f, title = ['DISH', 'SOA
 /** Reagent bottle with a printed label, a cap and a liquid (isopropyl alcohol by default).
  *  Origin at the centre of the base; anchors.spout is the open neck. liquid.setFraction(f)
  *  fills 0..1 of the body (below the shoulder); liquid.setPour(k) while you tilt it.
- *  scale: 1 is about 100 mL, 3.6 × 10 cm; 2 is about 500 mL. Anchors are scaled with it. */
-export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91%', note = 'keep ice-cold', color = '#2f6fed', liquidColor = 0xdff0ff, scale = 1 } = {}) {
+ *  scale: 1 is about 100 mL, 3.6 × 10 cm; 2 is about 500 mL. Anchors are scaled with it.
+ *  glass tints the bottle (picked hex) and glassOpacity sets how much it hides: amber peroxide is
+ *  { glass: '#8a4a10', glassOpacity: 0.7 }. */
+export function makeReagentBottle(mat, { title = 'ISOPROPYL', line = 'ALCOHOL 91%', note = 'keep ice-cold', color = '#2f6fed', liquidColor = 0xdff0ff, scale = 1, glass = '#eef6ff', glassOpacity = 0.3 } = {}) {
   const outer = new THREE.Group(), g = new THREE.Group();
   g.scale.setScalar(scale);
   outer.add(g);
   const shell = mesh(new THREE.LatheGeometry([V2(0.001, 0.015), V2(1.7, 0.015), V2(1.8, 0.2), V2(1.8, 6.8), V2(1.6, 7.4), V2(0.75, 8.3), V2(0.6, 8.5), V2(0.6, 9.6), V2(0.55, 9.7)], 56),
-    mat.make.glass({ color: '#eef6ff', opacity: 0.3 }), { cast: false });
+    mat.make.glass({ color: glass, opacity: glassOpacity }), { cast: false });
   shell.renderOrder = 3;
   g.add(shell);
   const liquid = makeLiquid(mat, g, {

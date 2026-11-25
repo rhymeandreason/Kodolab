@@ -48,7 +48,7 @@ not yet in `Lab/` · blank = new
 | Outdoor scene | garden patch · woods · tide pool · stream · island · field with quadrats | | C, H, D |
 | Shadow catcher | shadow-only plane · plane with soft halo | 🧪 | P |
 | Work mat | silicone mat | ✅ | P |
-| Sheet | paper towel ✅ · filter paper · notebook | ◐ | P |
+| Sheet | paper towel ✅ · filter paper · punched paper disk (soak, bubbles) · notebook | ◐ | P |
 | Bench card | printed card in front of a sample | 🧪 | P |
 | Shelves | bench shelf · incubator shelf (holds experiment units) | | D |
 
@@ -84,7 +84,7 @@ not yet in `Lab/` · blank = new
 | Wash bottle | water · ethanol | | C |
 | Spray bottle | 70% ethanol · plain water | | C |
 | Shaker | salt | 🧪 | P |
-| Jar with powder | coloured by ingredient (`props/ingredients.js`): baking soda, salt; lid to match | ✅ | P, S |
+| Jar with powder | coloured by ingredient (`props/ingredients.js`): baking soda, salt, yeast; lid to match | ✅ | P, S |
 | Food coloring bottle | squeeze drops | | C |
 
 ## 3. Household containers
@@ -147,6 +147,7 @@ not yet in `Lab/` · blank = new
 | Stir bar | magnetic | | C |
 | Skewer | wooden | ✅ | P |
 | Scalpel | | 🧪 | P, C |
+| Forceps | stainless, opens 0..1 | 🧪 | P, C |
 | Razor blade | single-edge | | C |
 | Forceps | fine · blunt | | C |
 | Dissecting scissors | | | C |

@@ -41,10 +41,10 @@ export function ripple(parent, pos, maxR = 2) {
   });
 }
 
-/** Powder falling from `from` onto a liquid surface at height surfY. */
-export function powderFall(mat, parent, from, surfY) {
+/** Powder falling from `from` onto a liquid surface at height surfY. opts.material tints it (mat.powder by default). */
+export function powderFall(mat, parent, from, surfY, { material = mat.powder } = {}) {
   const N = 80;
-  const im = new THREE.InstancedMesh(GEO.powder, mat.powder, N);
+  const im = new THREE.InstancedMesh(GEO.powder, material, N);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = V3(), p = V3();
   for (let i = 0; i < N; i++) { m4.compose(from, q, V3(0, 0, 0)); im.setMatrixAt(i, m4); }
   parent.add(im);
