@@ -76,13 +76,11 @@ body[data-scale='cell'] .bg-cell, body[data-scale='mol'] .bg-mol { opacity: 1; }
     min-width: 0;
   }
   .lab-captions { right: calc(340px + var(--gutter) * 2); }
-  .zoom-insets { top: 66px; transform: none; flex-direction: row; gap: 24px; right: calc(var(--gutter) + 20px); }
-  .zoom-inset { width: 146px; height: 146px; }
-  .zi-dir { display: none; }
+  /* lab.css's circles, hung from the topbar instead of centred, so the counts panel fits under them */
+  .zoom-insets { top: 76px; transform: none; }
 }
 @media (min-width: 821px) and (max-height: 860px) {
-  .zoom-insets { gap: 16px; }
-  .zoom-inset { width: 112px; height: 112px; }
+  .zoom-inset { width: 202px; height: 202px; }
 }
 @media (max-width: 820px) {
   .fly-panel { left: var(--gutter); right: var(--gutter); width: auto; }
