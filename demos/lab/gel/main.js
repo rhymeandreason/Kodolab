@@ -66,7 +66,8 @@ const measure = createMeasure({
   onChange: () => {
     lesson.render();
     requestAnimationFrame(() => stage.resize());
-    if (lesson.step === MEASURE && measure.solved()) lesson.jumpTo(MEASURE + 1);
+    // hold on the correct verdict a beat before the complete card replaces it
+    if (lesson.step === MEASURE && measure.solved()) setTimeout(() => { if (lesson.step === MEASURE && measure.solved()) lesson.jumpTo(MEASURE + 1); }, 1600);
   },
 });
 const stage = createStage({
@@ -380,7 +381,7 @@ const STEPS = [
   { id: 'image', ...card('image'), targets: ['box'], view: 'run', caption: T.steps.image.caption, run: actImage },
   /* Measuring happens in the gel image panel, outside the bench: the step reads the panel, so a
      rebuild leaves it alone. Watch mode stops at the bench; measuring is the student's. */
-  { id: 'measure', ...card('measure'), targets: ['light'], view: 'image', caption: T.steps.measure.caption,
+  { id: 'measure', ...card('measure'), detail: () => measure.prompt(), targets: ['light'], view: 'image', caption: T.steps.measure.caption,
     isDone: () => lesson.mode === 'watch' || measure.solved(),
     progress: () => measure.progress(),
     run: async () => { if (!isInstant()) measure.open(); } },

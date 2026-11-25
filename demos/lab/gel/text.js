@@ -118,7 +118,6 @@ LabText.add('en', {
       title: 'Read the gel', short: 'Read',
       action: 'open the gel image',
       hint: 'Click the <b>blue-light box</b> to open the gel image',
-      detail: 'Measure the ladder, then the crime scene’s bands. Then decide which suspect matches.',
       why: 'Distance run is roughly a straight line against the log of size, so the ladder turns millimetres into base pairs.',
       caption: 'Measure the bands and compare the lanes',
     },
@@ -175,9 +174,8 @@ LabText.add('en', {
     plotX: 'Distance run (mm)',
     plotY: 'Size (bp, log scale)',
     curveNote: 'The line fits best in the middle; the biggest pieces run a little farther than it predicts.',
-    wrong: 'Not {name}: it has a band at {mm} mm, where the crime scene has none.',
-    right: '<b>{name} matches.</b> Every band lines up with the crime scene’s, and no band is extra.',
-    pick: '{short}',
+    wrong: '<b>Try again.</b> {name} has a band at {mm} mm, where the crime scene has none.',
+    right: '<b>Correct.</b> Every band in {name}’s lane lines up with the crime scene’s, and none is extra.',
   },
 
   complete: {

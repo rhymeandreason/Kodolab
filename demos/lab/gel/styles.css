@@ -31,8 +31,6 @@ body[data-scale='gel'] .bg-gel { opacity: 1; }
 .gp-photo { border-radius: 12px; overflow: hidden; background: #17120a; }
 .gp-img { display: block; width: 100%; height: 440px; }
 .gp-side { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.gp-step { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
-.gp-step b { color: var(--ink); }
 .gp-plot { display: block; width: 100%; height: 190px; }
 .gp-table { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .gp-table table { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; width: 100%; }
@@ -42,15 +40,6 @@ body[data-scale='gel'] .bg-gel { opacity: 1; }
 .gp-table td { padding: 2px 4px; border-top: 1px solid var(--line); color: var(--ink-2); }
 .gp-table td i { color: var(--muted); font-style: normal; font-size: 11px; }
 .gp-table tr.on td { color: var(--ink); }
-.gp-pick { display: flex; gap: 8px; flex-wrap: wrap; }
-.gp-pick[hidden] { display: none; }
-.gp-pick button {
-  flex: 1; border: 1px solid var(--line-2); background: #fff; cursor: pointer;
-  padding: 9px 10px; border-radius: var(--pill); font: var(--font-btn); color: var(--ink);
-}
-.gp-pick button:hover { border-color: var(--accent); }
-.gp-pick button.right { background: var(--accent); border-color: var(--accent); color: #fff; }
-.gp-pick button.wrong { background: #fdeaee; border-color: #f4b4c2; color: #9f1239; }
 .gp-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .gp-note b { color: var(--ink); }
 
@@ -59,3 +48,18 @@ body[data-scale='gel'] .bg-gel { opacity: 1; }
   .gp-body { grid-template-columns: 1fr; }
   .gp-img { height: 300px; }
 }
+
+/* the read step's suspects and verdict, on the instruction card */
+.lab-card .gp-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.lab-card .gp-pick button {
+  font: inherit; font-size: 14px; font-weight: 600; padding: 7px 16px; border-radius: 999px;
+  border: 1px solid var(--line, #e5e5e5); background: #fff; color: var(--ink); cursor: pointer;
+}
+.lab-card .gp-pick button:hover:not(:disabled) { border-color: var(--accent); }
+.lab-card .gp-pick button:disabled { cursor: default; }
+.lab-card .gp-pick button.right { background: #16a34a; border-color: #16a34a; color: #fff; }
+.lab-card .gp-pick button.wrong { background: #fdeaee; border-color: #f4b4c2; color: #9f1239; }
+.lab-card .gp-verdict { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 9px 12px; border-radius: 12px; font-size: 13.5px; line-height: 1.45; }
+.lab-card .gp-verdict i { font-size: 18px; flex: none; margin-top: 1px; }
+.lab-card .gp-verdict.right { background: #e8f7ee; color: #14532d; }
+.lab-card .gp-verdict.wrong { background: #fdeaee; color: #9f1239; }

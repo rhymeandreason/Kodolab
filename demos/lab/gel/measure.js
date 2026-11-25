@@ -2,12 +2,14 @@
  *   1. click each ladder band: its distance from the well goes on a semi-log plot
  *   2. click each crime-scene band: the ladder's line turns its distance into a size
  *   3. pick the suspect whose lane matches
+ * The step's words and the suspect buttons live on the instruction card (prompt()); the panel
+ * holds only what is measured.
  * The photo is drawn from model.js, the same lanes the bench gel paints, and every size and
  * distance the panel prints is read from there. Its state is the student's reading, not bench
  * state, so a timeline rebuild leaves it alone; restart clears it.
  *
  *   const measure = createMeasure({ onChange });
- *   measure.open() · close() · reset() · solved() · progress() · isOpen · el */
+ *   measure.open() · close() · reset() · solved() · progress() · prompt() · isOpen · el */
 import { T, fmt } from '../lab.js';
 import { SAMPLES, LADDER, MATCH, SUSPECTS, laneState } from './model.js';
 
@@ -32,10 +34,8 @@ export function createMeasure({ onChange = () => {} } = {}) {
     <div class="gp-body">
       <div class="gp-photo"><canvas class="gp-img"></canvas></div>
       <div class="gp-side">
-        <p class="gp-step"></p>
         <canvas class="gp-plot"></canvas>
         <div class="gp-table"></div>
-        <div class="gp-pick"></div>
         <p class="gp-note"></p>
       </div>
     </div>`;
@@ -82,6 +82,14 @@ export function createMeasure({ onChange = () => {} } = {}) {
       if (big) x.fillText(String(mm), G.left - 14, y);
     }
     x.textAlign = 'left'; x.fillText(M.ruler, 4, G.top - 18);
+    // measured CS bands run across every lane to the right, under the bands, so a match sits on its line
+    x.strokeStyle = 'rgba(252,165,165,.55)'; x.lineWidth = 1; x.setLineDash([3, 3]);
+    st.cs.forEach((v, i) => {
+      if (v === null) return;
+      const y = yOf(csMm[i]);
+      x.beginPath(); x.moveTo(xOf(LANE.cs) + G.laneW * 0.33 + 3, y); x.lineTo(w - 8, y); x.stroke();
+    });
+    x.setLineDash([]);
     // lanes: labels, wells, bands
     x.textAlign = 'center'; x.font = '700 11px system-ui, sans-serif';
     SAMPLES.forEach((s, i) => {
@@ -182,7 +190,6 @@ export function createMeasure({ onChange = () => {} } = {}) {
   function render() {
     if (!st) return;
     const p = phase(), f = fit();
-    $('.gp-step').innerHTML = p === 'ladder' ? M.stepLadder : p === 'cs' ? M.stepCs : M.stepPick;
     const row = (a, b, on) => `<tr class="${on ? 'on' : ''}"><td>${a}</td><td>${b}</td></tr>`;
     const ladderRows = LADDER.map((bp, i) => row(fmt(M.bp, { n: num(bp) }), st.ladder[i] === null ? `<i>${M.notYet}</i>` : fmt(M.mm, { n: st.ladder[i] }), st.ladder[i] !== null)).join('');
     const csRows = CS.bands.map((_, i) => {
@@ -192,10 +199,7 @@ export function createMeasure({ onChange = () => {} } = {}) {
     $('.gp-table').innerHTML = `
       <table><thead><tr><th colspan="2">${M.ladderHead}</th></tr><tr><th>${M.sizeCol}</th><th>${M.distCol}</th></tr></thead><tbody>${ladderRows}</tbody></table>
       <table class="${p === 'ladder' ? 'dim' : ''}"><thead><tr><th colspan="2">${M.csHead}</th></tr><tr><th>${M.distCol}</th><th>${M.estCol}</th></tr></thead><tbody>${csRows}</tbody></table>`;
-    const pick = $('.gp-pick');
-    pick.hidden = p !== 'pick';
-    pick.innerHTML = SUSPECTS.map((s) => `<button data-s="${s.key}" class="${st.pick === s.key ? (s.key === MATCH ? 'right' : 'wrong') : ''}">${fmt(M.pick, { short: T.samples[s.key].short })}</button>`).join('');
-    $('.gp-note').innerHTML = p !== 'pick' ? (p === 'cs' ? M.curveNote : '') : verdict();
+    $('.gp-note').innerHTML = p === 'cs' ? M.curveNote : '';
     drawPhoto();
     drawPlot();
   }
@@ -206,10 +210,24 @@ export function createMeasure({ onChange = () => {} } = {}) {
     const extra = bandsMm(s).find((d) => csMm.every((c) => Math.abs(c - d) > 1.5));
     return fmt(M.wrong, { name, mm: read(extra) });
   }
-  el.querySelector('.gp-pick').addEventListener('click', (ev) => {
-    const b = ev.target.closest('button[data-s]');
-    if (!b) return;
-    st.pick = b.dataset.s;
+  /** the instruction card's text: this sub-step, and at the end the suspects and the verdict */
+  function prompt() {
+    const p = phase();
+    if (p !== 'pick') return p === 'ladder' ? M.stepLadder : M.stepCs;
+    const done = st.pick === MATCH;
+    const btns = SUSPECTS.map((s) => {
+      const cls = st.pick === s.key ? (s.key === MATCH ? 'right' : 'wrong') : '';
+      return `<button type="button" data-suspect="${s.key}" class="${cls}"${done ? ' disabled' : ''}>${T.samples[s.key].short}</button>`;
+    }).join('');
+    const v = verdict();
+    const icon = st.pick === MATCH ? 'ph-check-circle' : 'ph-x-circle';
+    return `${M.stepPick}<span class="gp-pick">${btns}</span>`
+      + (v ? `<span class="gp-verdict ${st.pick === MATCH ? 'right' : 'wrong'}"><i class="ph-fill ${icon}"></i><span>${v}</span></span>` : '');
+  }
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-suspect]');
+    if (!b || phase() !== 'pick' || st.pick === MATCH) return;
+    st.pick = b.dataset.suspect;
     render();
     onChange();
   });
@@ -223,6 +241,7 @@ export function createMeasure({ onChange = () => {} } = {}) {
     close() { if (el.hidden) return; el.hidden = true; onChange(); },
     reset() { reset(); },
     solved: () => st.pick === MATCH,
+    prompt: () => prompt(),
     progress: () => {
       const n = st.ladder.filter((v) => v !== null).length + st.cs.filter((v) => v !== null).length + (st.pick === MATCH ? 1 : 0);
       return n / (LADDER.length + CS.bands.length + 1);
