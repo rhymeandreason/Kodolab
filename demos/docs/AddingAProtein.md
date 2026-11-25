@@ -158,7 +158,7 @@ Then `node proteins/<name>/tools/prep.js` again to write the `read` block back, 
 
 **`does` needs a word before registration.** If none of `DOES` fits, propose one when the bench is handed over, so the review settles it.
 
-**After registration, bake the still yourself** in `proteins/tools/stills.html`: open it in the built-in browser, pick the key, *Bake selected*, then look at `proteins/stills/<key>.webp` before committing it. "Chrome only" means a Chromium encoder, which the built-in browser is; Safari has no WebP encoder and the page refuses there. **The pane must be showing**: chains build one per animation frame, and a hidden pane gets none, so the page's wait runs out and it writes a half-built ribbon with no error. The rotation is the human's (`view.basis`), the bake is not.
+**After registration, bake the still yourself**: `node tools/bake-stills.js <key>` with the dev server up, then look at `proteins/stills/<key>.webp` before committing it. It drives `proteins/tools/stills.html` headless in the system Chrome (`playwright-core`, a root dev dependency), so the drawing and the save are the page's and no pane has to be showing. The rotation is the human's (`view.basis`), the bake is not. By hand still works: open `stills.html`, pick the key, *Bake selected*, in a Chromium browser (Safari has no WebP encoder and the page refuses) with the tab visible, since a hidden tab builds no chains and writes a half-built ribbon with no error.
 
 **A public short URL** is a `vercel.json` rewrite (both the rewrite and the 301) plus `node tools/seo.js`, which fails until `media/og/proteins/<key>.jpg` exists: the still scaled to 630 high and centred on a 1200×630 canvas of the stage paper. `docs/deploy.md`.
 

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<base href="/demos/proteins/catalase/">
+<title>Catalase — deposited structures</title>
+
+<!-- Bench. What each structure is lives in proteins/proteins.js; pocket
+     drawing is kit/proteinbox.js's setPocket, and what is in it is the baker's. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="../../css/kodo.css">
+<link rel="stylesheet" href="../protein-test.css">
+<link rel="stylesheet" href="../../kit/proteinbox.css">
+</head>
+<body>
+<nav class="sitenav floating chrome-title">
+  <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+  <a class="crumb" href="/proteins">proteins</a>
+</nav>
+<div id="app">
+  <div id="stage"></div>
+  <div class="panel">
+    <h1>Catalase</h1>
+    <p class="deck">Splits hydrogen peroxide into water and oxygen on a heme
+      iron, fast enough that the reaction is limited by how quickly peroxide
+      can reach it.</p>
+
+    <h2>view</h2>
+    <div id="views"></div>
+    <p class="note" id="d-purpose">&mdash;</p>
+    <button class="mode" id="s-inh" aria-pressed="true" style="display:none">
+      <span class="who">inhibitor on the iron</span><span class="chip" id="c-inh">&mdash;</span></button>
+
+    <h2>what you are looking at</h2>
+    <p class="meta" id="d-meta">&mdash;</p>
+    <table>
+      <tr class="hi"><td>completeness</td><td id="d-pct">&mdash;</td></tr>
+      <tr><td>fold, chain A</td><td id="d-fold">&mdash;</td></tr>
+      <tr><td>in the file</td><td id="d-lig">&mdash;</td></tr>
+      <tr><td>below the iron</td><td id="d-tyr">&mdash;</td></tr>
+      <tr class="hi"><td>above the iron</td><td id="d-above">&mdash;</td></tr>
+      <tr><td>NADPH modelled</td><td id="d-ndp">&mdash;</td></tr>
+      <tr><td>lining heme A</td><td id="d-contacts">&mdash;</td></tr>
+      <tr><td>extents &Aring;</td><td id="d-ext">&mdash;</td></tr>
+      <tr><td>superposed</td><td id="d-fit">&mdash;</td></tr>
+      <tr><td>frame</td><td id="d-view">&mdash;</td></tr>
+    </table>
+    <p class="note">Sticks come from the file's CONECT and LINK records;
+      side chains bond within their own residue. "Lining" is any heavy atom
+      within 4 &Aring; of the heme.</p>
+
+    <button class="mode" id="pick" style="margin-top:12px">copy this view</button>
+    <p class="note" id="pick-note">Turn the molecule, click copy.</p>
+
+    <p class="src">
+      <a id="d-rcsb" target="_blank" rel="noopener">RCSB entry<svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2h5.5v5.5M10 2 4.5 7.5M8 9.5H2V3.5"/></svg></a>
+      <a id="d-baked" href="data/">what this page loads</a>
+    </p>
+  </div>
+</div>
+
+<script src="../../lib/three.r186.min.js"></script>
+<script src="../../lib/palette.js"></script>
+<script src="../../lib/tokens-from-palette.js"></script>
+<script src="../../lib/molecules.js"></script>
+<script src="../../lib/scene.js"></script>
+<script src="../../folding/folding.js"></script>
+<script src="../../kit/ribbon.js"></script>
+<script src="../../kit/card-stage.js"></script>
+<script src="../../kit/proteinbox.js"></script>
+<script src="../proteins.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const box = Proteinbox.create({ mount: $('stage'), orbit: true, pad: 1.15, sub: 10,
+                                stage: { ortho: false, turn: 'trackball' } });
+const ME = ProteinLib.byKey('catalase');
+const LIGAND = { HEM: 'heme', NDP: 'NADPH', ACT: 'acetate (buffer)', SO4: 'sulfate (buffer)',
+                 AZI: 'azide (inhibitor)' };
+const cache = {};
+let view = null;
+window.bench = { box, cache, get view() { return view; } };
+
+function show(id) {
+  view = id;
+  const t = cache[id];
+  if (!t) return;
+  const v = ProteinLib.variantOf(ME, id);
+  const m = t.meta, a = m.counts.find(c => c.chain === 'A');
+  [...$('views').children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+  $('d-purpose').textContent = `${v.purpose} · ${v.species}`;
+  $('d-meta').textContent = `${m.entry} · chains ${t.order.join('')} · ${m.method}` +
+    (m.resolution ? ` · ${m.resolution.toFixed(2)} Å` : '');
+  $('d-pct').textContent = m.counts.map(c => `${c.chain} ${c.modelled}/${c.declared}`).join(' · ');
+  $('d-fold').textContent = `${a.helices} helices, ${a.strands} strands`;
+  $('d-lig').textContent = m.ligands.map(x => {
+    const [n, k] = x.split(' ');
+    return (LIGAND[n] || n) + (k ? ' ' + k : '');
+  }).join(', ');
+  const tyrA = m.tyrFe.find(k => k.a.split('.')[0].endsWith('A'));
+  $('d-tyr').textContent = tyrA ? `Tyr${tyrA.a.slice(3).split('.')[0].slice(0, -1)} · ${tyrA.d.toFixed(2)} Å` : 'not bonded';
+  const up = m.onIron.find(k => k.chain === 'A');
+  $('d-above').textContent = up ? `${LIGAND[up.what] || up.what} · ${up.d.toFixed(2)} Å` : 'nothing bound';
+  $('d-ndp').textContent = m.ndpChains.length ? `chains ${m.ndpChains.join(', ')} of ${m.chainsInFile}` : 'none';
+  $('d-contacts').textContent = `${m.contacts.own} residues of A` +
+    (m.contacts.other.length ? ', plus ' + m.contacts.other.map(x => `${x.res[0]}${x.res.slice(1).toLowerCase()}${x.num} of ${x.chain}`).join(', ') : '');
+  $('d-ext').textContent = t.extents.map(v => v.toFixed(0)).join(' × ');
+  $('d-fit').textContent = m.fit
+    ? `on ${m.fit.on}, ${m.fit.rmsd.toFixed(2)} Å over ${m.fit.atoms} heme atoms`
+    : (ME.fit.on === id ? 'the reference' : 'not superposed');
+  $('d-view').textContent = t.frame;
+  $('d-baked').href = `data/${v.read.baked}`;
+  $('d-rcsb').href = ProteinLib.urls(v).entry;
+  const colors = ProteinLib.colorsOf(ME, v);
+  box.setData(t, { view: ProteinLib.viewOf(ME, v) || t.view || null, ...(colors ? { colors } : {}) });
+  const inh = t.pocket.atoms.find(x => x.group === 'inhibitor');
+  $('s-inh').style.display = inh ? '' : 'none';   // .mode's display beats [hidden]
+  if (inh) $('c-inh').textContent = LIGAND[inh.res] ? LIGAND[inh.res].split(' ')[0] : inh.res;
+  box.setPocket(pocket(t));
+}
+
+/* The pocket minus the inhibitor when it is toggled off, bonds reindexed. */
+function pocket(t) {
+  const P = t.pocket;
+  if (withInh) return P;
+  const map = new Map(), atoms = [];
+  P.atoms.forEach((a, i) => { if (a.group !== 'inhibitor') { map.set(i, atoms.length); atoms.push(a); } });
+  return { atoms, bonds: P.bonds.filter(([i, j]) => map.has(i) && map.has(j))
+                                .map(([i, j]) => [map.get(i), map.get(j)]) };
+}
+
+let withInh = true;
+$('s-inh').addEventListener('click', () => {
+  withInh = !withInh;
+  $('s-inh').setAttribute('aria-pressed', String(withInh));
+  if (cache[view]) box.setPocket(pocket(cache[view]));
+});
+
+$('pick').addEventListener('click', () => {
+  const text = JSON.stringify(box.pickView());
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  $('pick-note').textContent = text;
+});
+
+for (const v of ME.variants) {
+  const b = document.createElement('button');
+  b.className = 'mode'; b.dataset.id = v.id; b.setAttribute('aria-pressed', 'false');
+  b.innerHTML = `<span class="who">${v.label}</span><span class="chip">${v.source.id}</span>`;
+  b.addEventListener('click', () => show(v.id));
+  $('views').appendChild(b);
+  fetch(`data/${v.read.baked}`).then(r => r.json()).then(t => {
+    cache[v.id] = t;
+    if (view === v.id || (!view && v.default)) show(v.id);
+  });
+}
+</script>
+</body>
+</html>

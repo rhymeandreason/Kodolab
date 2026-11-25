@@ -139,6 +139,7 @@ async function loadEntry(p) {
   box.draw();
 
   liveBox = box; liveKey = p.key;
+  document.body.dataset.live = p.key;    // tools/bake-stills.js waits on this
   opened = JSON.stringify(box.pickView());
   document.getElementById('basis').textContent = '';
   return box;

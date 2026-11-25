@@ -1157,6 +1157,65 @@
         baked: "cytc-3ZCF.json" } },
   ];
 
+  /* CATALASE'S THREE, chosen off proteins/catalase/catalase-test.html. Human
+     1DGF is the sharpest file (1.5 Å, every residue of all four chains) and
+     carries the tetramer and the site; yeast 1A4E is the paper-disk lab's
+     enzyme and the only yeast catalase deposited. Beef liver (1TGU, 7CAT,
+     8CAT) was triaged and not pulled: the same fold at lower resolution.
+
+     A view of chain A's heme with the two chain-C residues that line it was
+     baked and cut: true, and off the lab's point. The baker still measures
+     and bakes those contacts. */
+  const CATALASE_VARIANTS = [
+    { id: '1DGF', default: true,
+      purpose: 'the working enzyme: four subunits, a heme in each',
+      species: 'human', label: 'tetramer',
+      source: { kind: 'rcsb', id: '1DGF' },
+      frame: 'tetramer',
+      chains: 'A,B,C,D',
+      strands: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      pocket: { hemes: 'A,B,C,D', ndp: true },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 4,
+        residues: 1988,
+        declared: 1988,
+        ec: "1.11.1.6",
+        baked: "catalase-1DGF.json" } },
+    { id: '1DGF-site',
+      purpose: 'one subunit: the heme and what holds it',
+      species: 'human', label: 'one subunit',
+      source: { kind: 'rcsb', id: '1DGF' },
+      frame: 'site',
+      chains: 'A',
+      pocket: { hemes: 'A', ndp: true, distal: { 75: 'HIS', 148: 'ASN' }, proximal: { 358: 'TYR' } },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 4,
+        residues: 497,
+        declared: 497,
+        ec: "1.11.1.6",
+        baked: "catalase-1DGF-site.json" } },
+    /* AN INHIBITED ENZYME. Azide is LINKed to every iron on the distal side,
+       where peroxide binds, and the bench says so. Yeast numbers the site
+       five behind human at the distal pair and three at the Tyr; the match
+       was checked by distance to the iron, not by alignment. */
+    { id: '1A4E',
+      purpose: 'yeast catalase, azide blocking the iron',
+      species: 'yeast', label: 'yeast, inhibited',
+      source: { kind: 'rcsb', id: '1A4E' },
+      frame: 'site',
+      chains: 'A',
+      pocket: { hemes: 'A', inhibitor: 'AZI', distal: { 70: 'HIS', 143: 'ASN' }, proximal: { 355: 'TYR' } },
+      read: {
+        method: "x-ray diffraction",
+        chainsInFile: 4,
+        residues: 488,
+        declared: 488,
+        ec: "1.11.1.6",
+        baked: "catalase-1A4E.json" } },
+  ];
+
   /* 1OVA numbers its residues on α1-antitrypsin, with insertion codes; the
      baker renumbers in file order so the ribbon breaks only at real gaps. */
   const OVALBUMIN_VARIANTS = [
@@ -2277,6 +2336,39 @@
                  why: 'the docking patch is a surface claim, but the lysines '
                     + 'read as side chains and no lesson asks for the shape yet' },
       variants: CYTC_VARIANTS,
+    },
+    {
+      key: 'catalase', name: 'Catalase', dir: 'proteins/catalase',
+      blurb: 'Breaks hydrogen peroxide, a toxic by-product of metabolism, into '
+           + 'water and oxygen. Each of its four subunits holds a heme iron deep '
+           + 'inside, and it works about as fast as peroxide can reach it: the '
+           + 'fizz when liver meets peroxide is this enzyme.',
+      /* EC 1.11.1.6 on both entries' COMPND. */
+      does: 'enzyme',
+      pipeline: 'trace',
+      /* THE FIT IS ON THE HEME, BY ATOM NAME, between the two site views:
+         human and yeast are not co-numbered, and the claim the pair makes is
+         about what sits on the iron, so the iron is what has to hold still.
+         The tetramer is a scale of the same file, not a state. */
+      fit: { on: '1DGF-site', by: 'the heme\u2019s atoms, matched by name',
+             among: ['1DGF-site', '1A4E'] },
+      fitWhy: 'the two site views share a heme; the tetramer is a scale of the same file',
+      /* Four identical subunits, told apart so the tetramer reads as four
+         parts. The site views keep the ss palette. */
+      /* TWO FRAMES: the tetramer, and the superposed site pair. The tetramer's
+         extents are too close for a solved basis, so it was turned on the
+         bench; `site` keeps its solved one until someone aims it. */
+      view: { by: 'human',
+              why: 'the tetramer is nearly as wide as it is tall, so no solved '
+                 + 'basis survives a re-bake of it',
+              basis: { tetramer: [[0.0128, -0.1999, -0.9797],
+                                  [0.276, 0.9425, -0.1887],
+                                  [0.9611, -0.268, 0.0672]] } },
+      draw: { byStrand: { A: 0x2f6fb5, B: 0xc2571b, C: 0x4a9a58, D: 0x9b5bb0 } },
+      surface: { bake: false,
+                 why: 'the channel peroxide travels down is a surface claim worth '
+                    + 'revisiting; no lesson asks for it yet' },
+      variants: CATALASE_VARIANTS,
     },
     /* THE LIGHT REACTIONS' THREE MACHINES, chosen off
        proteins/photosystems/photosystems-test.html. Three proteins, one
