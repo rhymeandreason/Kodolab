@@ -33,6 +33,10 @@ export { makeLamp, makeTimer, makeWaterBath, makeUvLamp, makeHotPlate, makeAnaly
 export { makeAgarPlate } from './props/culture.js';
 export { makeStrawberry, makeCalyx, STRAWBERRY_H, strawberrySeed, makeDnaPrecipitate, makeLeaf, makeLeafDisk } from './props/specimens.js';
 export { makeOnion } from './props/onion.js';
+export { makePea, PEA_COLORS, peaMaterial, peaGeometry, makePeaPod } from './props/peas.js';
+export { makePeaFlower } from './props/flower.js';
+export { makePeaPlant } from './props/plants.js';
+export { makePot, makePlantTag, makeBrush, makePollinationBag } from './props/garden.js';
 export { makeEgg } from './props/animals.js';
 export { makeBalance } from './props/measuring.js';
 export { makeSlide, makeCoverslip, makeFilterPaper, makePaperDisk, makeMicroscope } from './props/microscopy.js';

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" data-lab-theme="violet">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mendel levels bench</title>
+  <script src="../page.js" data-text="text.js"></script>
+  <script src="../../lib/palette.js"></script>
+  <script src="../../kit/ribbon.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .bench-ctl { position: fixed; left: 12px; top: 64px; z-index: 50; width: 250px; padding: 10px 12px; font: 12px/1.4 system-ui; }
+    .bench-ctl label { display: grid; grid-template-columns: 70px 1fr 34px; gap: 6px; align-items: center; margin: 4px 0; }
+    .bench-ctl select { grid-column: 2 / 4; }
+    .bench-ctl .cue { margin-top: 8px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="app"><section class="panel bench-ctl" id="ctl"></section></div>
+  <script>LabPage.chrome()</script>
+  <script type="module">
+    /* A test bench for the two zoom worlds: every field of zoomState on a control. ?level=cell|mol opens there. */
+    import * as THREE from 'three';
+    import { V3, createStage, createMaterials, createZoom, chromeInsets, makeBench } from '../lab.js';
+    import { createCell } from './cell.js';
+    import { createMolecule } from './molecule.js';
+
+    const STEP_IDS = ['emasculate', 'pollen', 'pollinate', 'bag', 'ripen', 'guess1', 'open1', 'sow', 'grow', 'predict', 'shell', 'count', 'punnett'];
+    const Z = { step: 'emasculate', mother: 'yy', father: 'YY', self: false, meiosis: 0, fert: 0, pick: [1, 0], grid: 0, seed: 'Yy', mature: 0 };
+    const stage = createStage({ canvas: document.getElementById('scene'), views: { bench: { t: V3(0, 4, 0), p: V3(0, 40, 60) } }, insets: (w, h) => chromeInsets(w, h) });
+    stage.scene.add(makeBench(createMaterials(stage)).group);
+    let stepI = 0;
+    const zoom = createZoom(stage, {
+      levels: [
+        { key: 'cell', world: createCell(stage.env, { stepIds: STEP_IDS }), name: 'Cell', meta: '≈ 20 µm', bg: '#f3eee4' },
+        { key: 'mol', world: createMolecule(stage.env, { stepIds: STEP_IDS }), name: 'Molecule', meta: '≈ 10 nm', bg: '#e8f1e4' },
+      ],
+      getT: () => Z, getStep: () => stepI,
+    });
+    const ctl = document.getElementById('ctl');
+    const sel = (k, opts) => `<label>${k}<select data-k="${k}">${opts.map((o) => `<option ${String(Z[k]) === String(o) ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+    const sl = (k) => `<label>${k}<input type="range" min="0" max="1" step="0.001" value="${Z[k]}" data-k="${k}"><span>${Z[k]}</span></label>`;
+    ctl.innerHTML = sel('step', STEP_IDS) + sel('mother', ['YY', 'Yy', 'yy']) + sel('father', ['YY', 'Yy', 'yy']) + sel('self', [false, true])
+      + sel('pick', ['0,0', '0,1', '1,0', '1,1']) + sl('meiosis') + sl('fert') + sl('grid') + sel('seed', ['YY', 'Yy', 'yy']) + sl('mature')
+      + '<div class="cue" id="cue"></div>';
+    ctl.addEventListener('input', (e) => {
+      const k = e.target.dataset.k; if (!k) return;
+      let v = e.target.value;
+      if (e.target.type === 'range') { v = +v; e.target.nextElementSibling.textContent = v.toFixed(2); }
+      if (k === 'self') v = v === 'true';
+      if (k === 'pick') v = v.split(',').map(Number);
+      Z[k] = v;
+      if (k === 'step') { stepI = STEP_IDS.indexOf(v); zoom.onStep(); }
+    });
+    stage.onFrame((dt) => { zoom.update(dt); const c = zoom.caption(); document.getElementById('cue').innerHTML = c ? (c.text || c) : ''; });
+    window.BENCH = { Z, zoom, stage };
+    stage.start();
+    const lv = new URLSearchParams(location.search).get('level');
+    if (lv) setTimeout(() => zoom.go(lv), 300);
+  </script>
+</body>
+</html>

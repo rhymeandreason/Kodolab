@@ -11,6 +11,7 @@ Built here; the `Experiments/Lab` repo it came from is archived with the origina
 | `ecoli/ecoli-lab.html` | Bacterial transformation with GFP. One zoom level, a UV step that darkens the room, results on the complete card |
 | `onion/onion-lab.html` | Onion root tip squash. The microscope view (`microscope.js`) with a cell counter, and cell-division/'s plant mitosis loaded on the lab's three (`kit.js`) |
 | `gel/gel-lab.html` | Gel electrophoresis: crime-scene DNA against three suspects. A micropipette, a watch step for the run, a blue-light box, a gel level where DNA reptates through agarose (posed from the run alone), and a panel that measures the ladder to size the bands |
+| `mendel/mendel-lab.html` | Mendel's peas: a hand cross, F₁ and F₂ grown on the bench, pods shelled into a sorting tray. Plants with growth (`props/plants.js`), and zoom levels posed from the plants' calendar |
 | `gallery.html` | every prop on one bench: the catalog, and the check that a change broke nothing |
 | `props.html` | one prop on a turntable with its size, anchors and state sliders. `props.html#syringe` |
 | `themes.html` | the colour themes side by side, with the UI in each |
@@ -66,7 +67,7 @@ Colours that carry meaning in the experiment (cup A's line on the chart, a stain
 | --- | --- |
 | Units | 1 unit = 1 cm. The bench top is at y = 0. |
 | Origin | Centre of the base, +Y up. Exceptions are noted in each file (a syringe's is its tip, a punch's its die). |
-| Files | One per category, following [PROPS.md](PROPS.md)'s sections: `surfaces`, `glassware`, `bottles`, `bag`, `kitchen`, `racks`, `tools`, `equipment`, `culture`, `specimens`, `onion`, `microscopy`, `effects`, `ingredients`. |
+| Files | One per category, following [PROPS.md](PROPS.md)'s sections: `surfaces`, `glassware`, `bottles`, `bag`, `kitchen`, `racks`, `tools`, `equipment`, `culture`, `specimens`, `onion`, `garden` (pot, plant tag, brush, pollination bag), `plants` (pea plant), `peas` (seed, pod), `flower` (pea flower), `shapes` (their sheets, morphs and caches), `microscopy`, `effects`, `ingredients`. |
 | Shape | `makeX(mat, opts)` returns `{ group, anchors, ...controls }`. `worldOf(prop.group, prop.anchors.spout)` gives an anchor's world position. |
 | Anchors | Named points in local space: `top` (centre of an opening), `floor` (where contents rest), `spout` (where it pours from), `tip` (a tool's working end), `end`, `center`. A specific name (`powder`, `die`) only when none fit. |
 | Liquids | Every container with a liquid has `prop.liquid` from `core/liquid.js`: `setVolume(mL)`, `setLevel(cm)`, `setFraction(f)`, `setRange(f0, f1)` for layers, `setPour(k)` while tilting, `setColor`, `setCloud`, world-space `surfaceY()`. The container's inner wall profile sets the volume, and the surface stays level as it moves or tilts with no per-frame code. |

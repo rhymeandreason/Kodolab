@@ -98,7 +98,7 @@ not yet in `Lab/` · blank = new
 | Egg carton / ice cube tray | cells for seeds or samples | | C |
 | Shoebox | closed · open · maze with a hole | | C |
 | Food container | deli cup · takeout box | | C |
-| Plant pot | terracotta · nursery pot · peat pot · hydroponic net cup · burial pot with sample tags · willow in a soil tub (van Helmont) | | C, Q, H |
+| Plant pot | terracotta ✅ (soil, tape label; `color` for a dark nursery pot) · peat pot · hydroponic net cup · burial pot with sample tags · willow in a soil tub (van Helmont) | ◐ | C, Q, H |
 | Vase | with cut stems | | Q |
 | Terrarium / aquarium | tank with gravel · fish bowl | | C |
 | Balloon | flat · inflating on a bottle | | C |
@@ -148,6 +148,7 @@ not yet in `Lab/` · blank = new
 | Skewer | wooden | ✅ | P |
 | Scalpel | | 🧪 | P, C |
 | Forceps | stainless, opens 0..1 | 🧪 | P, C |
+| Paintbrush | fine round, pollen on the tip (Mendel) | ✅ | |
 | Razor blade | single-edge | | C |
 | Forceps | fine · blunt | | C |
 | Dissecting scissors | | | C |
@@ -197,6 +198,8 @@ not yet in `Lab/` · blank = new
 | Gloves and goggles | | | C |
 | Parafilm and foil | roll · square over a flask | | C |
 | Kimwipes box | | | C |
+| Pollination bag | glassine, flat or open, twist tie (Mendel) | ✅ | |
+| Plant tag | white plastic stake, printed (Mendel) | ✅ | |
 | Lab notebook | open with handwriting (auto-logged in design mode) | 🧪 | P, C, D |
 | Cheesecloth / coffee filter | | 🧪 | C, Q |
 | Seed packet and seeds | | | C |
@@ -211,11 +214,11 @@ not yet in `Lab/` · blank = new
 | Leaf | spinach with punched holes ✅; leaf disks that float or sink ✅ (floating motion is in the Photosynthesis sim) | ✅ | P |
 | Onion | bulb with roots; root tip cut off; onion halves | 🧪 | P, Q |
 | Strawberry | whole ✅; calyx removed ✅; mashed (pulp, in the Strawberry sim) | ◐ | P |
-| Seedling / plant | bean · radish · grass · duckweed · celery (dye uptake) · grass seedlings bending to light (Darwin) · pea plants (Mendel) · mint (Priestley) · willow (van Helmont) | | C, H, Q |
+| Seedling / plant | bean · radish · grass · duckweed · celery (dye uptake) · grass seedlings bending to light (Darwin) · pea plant on a cane, grows from a hooked shoot to dry pods ✅ (Mendel) · mint (Priestley) · willow (van Helmont) | ◐ | C, H, Q |
 | Elodea sprig | with bubbles | | C, M |
 | Corn ear | kernel colors by ratio; spotted kernels | | C, H |
-| Flower | whole; parts separated; cut flowers that wilt | | C, Q |
-| Seeds | dry · germinating · sprouted | | C, Q |
+| Flower | pea flower: bud, open, keel parted, emasculated, shedding, withering ✅; parts separated; cut flowers that wilt | ◐ | C, Q |
+| Seeds | dry pea, yellow or green ✅; pea pod, fresh to dry, opening ✅ · germinating · sprouted | ◐ | C, Q |
 | Acetabularia | cut and grafted giant cells, cap regrowing | | H |
 
 **Animals**
