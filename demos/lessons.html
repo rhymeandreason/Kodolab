@@ -366,7 +366,8 @@
 /* THE TABLE lives in lib/lessons.js. `url` is the short URL a student is sent
    to and the one the embed code carries and previews. `simple` names the query
    that gives the lesson's reduced view, where one exists; `bare` says the page
-   drops its title bar when framed (lib/embed.js). */
+   drops its title bar when framed (lib/embed.js); `bg` paints behind a
+   transparent still. */
 const UNITS = window.LessonUnits;
 const LESSONS = window.Lessons;
 const EMB_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>';
@@ -381,7 +382,7 @@ function teaser(l) {
 function card(l, extra = '') {
   if (l.soon) return teaser(l);
   return `<article class="card ${extra}" data-key="${l.key}">
-    <a class="pic ${l.mol ? 'mol' : ''}" href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"></a>
+    <a class="pic ${l.mol ? 'mol' : ''}"${l.bg ? ` style="background:${l.bg}"` : ''} href="${l.url}" tabindex="-1" aria-hidden="true"><img src="${l.still}" alt="" loading="lazy"></a>
     <div class="body">
       <h3><a href="${l.url}">${esc(l.title)}</a></h3>
       <p>${esc(l.blurb)}</p>
