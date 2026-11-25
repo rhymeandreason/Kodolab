@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lab card still</title>
+  <!-- The /labs card's image: a lab's prop, drawn by the lab's own art module in a 540x360 box.
+       ?lab=<folder> runs <folder>/still.js if the lab has one, else its intro-art.js, so the card
+       shows the intro card's prop unless a lab says otherwise. A still.js draws into .intro-art
+       the same way intro-art.js does (createPropArt), e.g. three bottles where the intro has one.
+       tools/bake-lab-still.js drives this headless and writes media/components/lab-<slug>.webp. -->
+  <script src="page.js"></script>  <!-- the import map; no data-text, no chrome -->
+  <style>
+    html, body { margin: 0; background: transparent; }
+    #intro .intro-art { width: 540px; height: 360px; aspect-ratio: auto; }
+  </style>
+</head>
+<body>
+  <div id="intro"><div class="intro-art"></div></div>
+  <script type="module">
+    const lab = new URLSearchParams(location.search).get('lab');
+    if (!/^[a-z0-9-]+$/.test(lab || '')) throw new Error('still.html: ?lab=<folder>');
+    try { await import(`./${lab}/still.js`); }
+    catch (e) {
+      if (!/failed to fetch|import/i.test(e.message)) throw e;
+      await import(`./${lab}/intro-art.js`);
+    }
+    const box = document.querySelector('.intro-art');
+    if (!box.introArt) throw new Error(`${lab}: its art module drew nothing into .intro-art`);
+    // the first frame: the turntable at its start angle, so a re-bake gives the same picture
+    while (!box.classList.contains('drawn')) await new Promise(requestAnimationFrame);
+    const cv = box.querySelector('canvas');
+    // read inside a frame callback, after the art's own render and before the buffer is cleared
+    window.stillWebp = await new Promise(r => requestAnimationFrame(() => r(cv.toDataURL('image/webp', 0.85))));
+    document.body.dataset.ready = '1';
+  </script>
+</body>
+</html>

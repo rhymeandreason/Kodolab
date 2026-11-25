@@ -175,4 +175,7 @@ Rule: Lowest face at y ≥ 0.015 cm (0.03 for scaled-up props). Walls start on t
 ## 10. Put it in kodolab
 
 * a card in `admin.html`, status prototype
-* to publish at `/labs/<name>`: a rewrite and a 301 in `vercel.json`; `<base href="/demos/lab/<folder>/">` in the page, or its scripts 404 at the short URL; a `PAGES` entry in `tools/seo.js`, then run it; a `lib/lessons.js` row with a card still in `media/components/`; then `node tools/check.js deploy`. `docs/deploy.md` is the why
+* to publish at `/labs/<name>`: a rewrite and a 301 in `vercel.json`; `<base href="/demos/lab/<folder>/">` in the page, or its scripts 404 at the short URL; a `PAGES` entry in `tools/seo.js`, then run it; a `lib/lessons.js` row; its URL in `lab/LABS.md`; then `node tools/check.js deploy`. `docs/deploy.md` is the why, and the egg lab's publish commit is a worked example
+* the slug is the experiment's common name (`/labs/egg-osmosis`, `/labs/blood-typing`). The row's blurb and the seo description are hers to approve: say so
+* the card still: `node tools/bake-lab-still.js <folder>`, network access on, writes the row's `still`. It is the intro card's prop by default; a different picture (three bottles where the intro has one) is a `<folder>/still.js` drawing into `.intro-art` like `intro-art.js` does. `lab/still.html`'s header. Look at the image before committing
+* publishing ends at the commit. She pushes
