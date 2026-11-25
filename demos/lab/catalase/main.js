@@ -591,14 +591,18 @@ function runCup(key) {
   const D = realDur(c);
   return anim(D, (e, k) => { S.run[c] = k >= 1 ? END(c) : simAt(c, k * D); }, Ease.linear);
 }
-/** Watch's caption for the cup being run. */
+/** Watch's caption for the cup being run: the first trial narrated, the rest summarised. */
 function runCaption(id) {
   const c = S.focus;
   if (c < 0) return T.steps[id].title;
-  const s = S.run[c], cc = C[id], conc = pct(CUPS[c].conc);
-  if (s < PREP_S) return s < SLIDE || ((s - SLIDE) % HAND) / HAND < 0.5 ? cc.dip : fmt(cc.drop, { conc });
-  if (relRate(c) === 0) return cc.none || cc.wait;
-  return R[c].some((t, i) => t != null && s >= DROP(i) + t) ? cc.float : cc.wait;
+  const s = S.run[c], conc = pct(CUPS[c].conc);
+  let cc = C[id];
+  if (id === 'disks') {
+    if (!CUPS[c].boiled && relRate(c) === 0 && s >= PREP_S) return cc.none;
+    cc = TRIALS.some((x) => x !== c && S.run[x] > 0) ? cc.next : cc.first;
+  }
+  if (s < PREP_S) return fmt(cc.prep, { conc });
+  return cc.float && R[c].some((t, i) => t != null && s >= DROP(i) + t) ? cc.float : cc.wait;
 }
 
 const STEPS = [
@@ -615,7 +619,7 @@ const STEPS = [
     } },
   { id: 'boil', ...card('boil', { mL: BOIL_ML, min: BOIL_MIN }), targets: ['hotplate'], view: 'boil',
     clock: () => (S.boil > 0.26 && S.boil < 0.76 ? fmt(T.steps.boil.clock, { min: Math.min(BOIL_MIN, Math.floor(ph(S.boil, 0.3, 0.72, Ease.linear) * BOIL_MIN)) }) : null),
-    caption: () => (S.boil < 0.26 ? C.boil.pour : S.boil < 0.74 ? C.boil.boil : C.boil.cool),
+    caption: () => fmt(S.boil < 0.26 ? C.boil.pour : S.boil < 0.74 ? C.boil.boil : C.boil.cool, { min: BOIL_MIN }),
     run: () => anim(7.5, (e, k) => { S.boil = k; }, Ease.linear) },
   { id: 'disks', ...card('disks'), view: 'cups',
     hint: () => (nDone(TRIALS) === 0 ? T.steps.disks.hint : fmt(T.steps.disks.hintMore, { n: nDone(TRIALS), total: TRIALS.length })),

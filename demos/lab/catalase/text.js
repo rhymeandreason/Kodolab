@@ -49,7 +49,7 @@ LabText.add('en', {
       hint: 'Click the <b>yeast</b> jar',
       detail: 'Stir {g} g of dry yeast into {mL} mL of warm water.',
       why: 'The cloudy suspension is millions of living yeast cells, each packed with catalase.',
-      captions: { scoop: 'Scoop dry yeast into warm water', stir: 'Stir until it is evenly cloudy' },
+      captions: { scoop: 'Stir dry yeast into warm water', stir: 'Every cell in the cloudy mix is packed with catalase' },
     },
     boil: {
       title: 'Boil some yeast', short: 'Boil',
@@ -58,7 +58,7 @@ LabText.add('en', {
       detail: 'Pour {mL} mL of the suspension into the small beaker and boil it for {min} minutes, then let it cool.',
       why: 'Same cells, same catalase molecules. Only their shape has changed.',
       clock: '{min} min',
-      captions: { pour: 'Pour some yeast into the small beaker', boil: 'Boil it', cool: 'Let it cool' },
+      captions: { pour: 'Set a little aside to boil', boil: '{min} minutes of heat unfolds its catalase', cool: 'Let it cool. This is the control' },
     },
     disks: {
       title: 'Time the disks', short: 'Disks',
@@ -68,7 +68,12 @@ LabText.add('en', {
       detail: 'With forceps, dip a paper disk in the yeast, blot it, and drop it in. Time how long it takes to float. Three disks per cup.',
       why: 'The disk sinks, then rises as O<sub>2</sub> collects in its fibres. More peroxide, faster rise.',
       clock: '{s} s',
-      captions: { dip: 'Dip a disk in yeast and blot it', drop: 'Drop it in {conc} peroxide', wait: 'Catalase splits the peroxide. O₂ bubbles collect on the disk', float: 'Enough O₂ to float' , none: 'No peroxide, no O₂: the disks stay down' },
+      /* first: the first cup run, narrated in full. next: every cup after it */
+      captions: {
+        first: { prep: 'Soak a paper disk in yeast, blot it, drop it in {conc} peroxide. Three disks per cup', wait: 'The disks sink while catalase splits the peroxide and O₂ collects in the paper', float: 'Enough gas, and a disk floats. The timer reads how long it took' },
+        next: { prep: 'Repeat with each cup, {conc} this time', wait: 'The weaker the peroxide, the longer the disks take to rise' },
+        none: 'Plain water: nothing to split, so the disks never float',
+      },
     },
     boiled: {
       title: 'Try the boiled yeast', short: 'Boiled',
@@ -77,7 +82,7 @@ LabText.add('en', {
       detail: 'Repeat with disks soaked in the boiled yeast, in {conc} peroxide. Stop the timer at {max} s.',
       why: 'Peroxide is there, yeast is there, and nothing happens. Heat unfolded the catalase.',
       clock: '{s} s',
-      captions: { dip: 'Dip a disk in the boiled yeast', drop: 'Drop it in {conc} peroxide', wait: 'No bubbles: the boiled enzyme does nothing' },
+      captions: { prep: 'Now the control: disks soaked in boiled yeast, in {conc} peroxide', wait: 'No bubbles. Boiled catalase splits nothing, so the disks stay down' },
     },
     read: {
       title: 'Read the graph', short: 'Graph',
