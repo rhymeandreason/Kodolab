@@ -263,7 +263,7 @@ function rebuild() {
 // =========================================================================
 // pose(): the bench from S
 // =========================================================================
-const X = V3(1, 0, 0), Z = V3(0, 0, 1), qI = new THREE.Quaternion();
+const X = V3(1, 0, 0), Z = V3(0, 0, 1), Z0 = V3(), qI = new THREE.Quaternion();
 const _a = V3(), _b = V3(), _t = V3(), _q = new THREE.Quaternion();
 
 /** A point along keyframes [[w, Vector3], ...], eased per segment. */
@@ -372,11 +372,20 @@ function pose(force = false) {
   // the yeast: scoop from the jar into the warm water on the tray, then stir
   if (changed('yeast', S.yeast)) {
     const k = S.yeast, sc = B.scoop.group, bk = onTray('water', TRAY.home);
-    const bowlRest = POS.scoop, jarTop = V3(POS.jar.x, 9, POS.jar.z), over = V3(bk.x - 0.6, bk.y + BK.h + 3.5, bk.z);
-    const p = track(k, [[0, bowlRest], [0.1, jarTop], [0.14, V3(POS.jar.x, 5.1, POS.jar.z)], [0.2, jarTop], [0.32, over], [0.42, over], [0.52, up(bowlRest, 4)], [0.6, bowlRest]], _a);
-    sc.position.copy(p);
-    sc.rotation.set(0, Math.PI + 0.25, -win(k, 0.33, 0.36, 0.4, 0.43) * 1.6);
-    B.scoop.heap.visible = k > 0.14 && k < 0.36;
+    // the bowl dips nose-down into the jar beside its centre (the handle side has room to clear the rim),
+    // levels to pick up a heap, lifts out still angled, then rolls over the beaker and taps twice
+    const yaw = Math.PI + 0.25, bowlRest = POS.scoop, dig = V3(POS.jar.x + 1.07, 0, POS.jar.z - 0.27);
+    const over = V3(bk.x - 0.6, bk.y + BK.h + 3.5, bk.z);
+    const p = track(k, [[0, bowlRest], [0.03, up(bowlRest, 4)], [0.09, up(dig, 10.5)], [0.13, up(dig, 4.75)], [0.17, up(dig, 5.4)],
+      [0.22, up(dig, 10.5)], [0.31, over], [0.45, over], [0.53, up(bowlRest, 4)], [0.58, bowlRest]], _a);
+    const a = track(k, [[0.07, Z0], [0.11, V3(0.9, 0, 0)], [0.13, V3(0.9, 0, 0)], [0.17, V3(0.45, 0, 0)], [0.2, V3(0.45, 0, 0)],
+      [0.24, V3(0.05, 0, 0)], [0.32, Z0], [0.36, V3(0, 2.1, 0)], [0.42, V3(0, 2.1, 0)], [0.46, Z0]], _t);
+    const tap = k > 0.37 && k < 0.42 ? Math.max(0, Math.sin(((k - 0.37) / 0.0125) * Math.PI)) * 0.3 : 0;
+    sc.position.set(p.x, p.y - tap, p.z);
+    sc.rotation.set(a.y, yaw, a.x, 'YZX');
+    const left = 1 - ph(k, 0.35, 0.42, Ease.linear);
+    B.scoop.heap.visible = k > 0.15 && left > 0;
+    B.scoop.heap.scale.set(1.3 * left, 0.55 * left, 0.8 * left);
     // the rod stirs from 0.55 to 0.95
     const stir = win(k, 0.55, 0.62, 0.9, 0.97), ang = k * 40;
     if (stir > 0) {
@@ -605,13 +614,14 @@ function runCaption(id) {
   return cc.float && R[c].some((t, i) => t != null && s >= DROP(i) + t) ? cc.float : cc.wait;
 }
 
+const YEAST_S = 6;
 const STEPS = [
   { id: 'yeast', ...card('yeast', { g: YEAST_G, mL: WATER_ML }), targets: ['jar'], view: 'prep',
     caption: () => (S.yeast < 0.5 ? C.yeast.scoop : C.yeast.stir),
     run: async () => {
-      const k = anim(5.2, (e, kk) => { S.yeast = kk; }, Ease.linear);
+      const k = anim(YEAST_S, (e, kk) => { S.yeast = kk; }, Ease.linear);
       if (!isInstant()) {
-        await anim(5.2 * 0.38, () => {});
+        await anim(YEAST_S * 0.36, () => {});
         const bk = onTray('water', TRAY.home);
         powderFall(mat, root, V3(bk.x - 0.6, bk.y + BK.h + 3, bk.z), B.water.liquid.surfaceY(), { material: yeastPowder });
       }
