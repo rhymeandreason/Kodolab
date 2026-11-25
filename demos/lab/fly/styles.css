@@ -1,0 +1,99 @@
+/* Fruit Fly Genetics: only what's specific to this lab. Shared chrome is in ../lab.css. */
+
+/* ---------- backgrounds per zoom level ---------- */
+.bg-cell, .zoom-lens.bg-cell { background: radial-gradient(1400px 900px at 58% 35%, #fffdfb 0%, #f7efeb 50%, #eadcd5 100%); }
+.bg-mol, .zoom-lens.bg-mol { background: radial-gradient(1400px 900px at 58% 35%, #fdfbf7 0%, #f3ece2 50%, #e4d8c8 100%); }
+body[data-scale='cell'] .bg-cell, body[data-scale='mol'] .bg-mol { opacity: 1; }
+
+/* ---------- the counts panel ---------- */
+.fly-panel, .lab-card { --eye-red: #a8231c; --eye-white: #e6dfcf; }
+.fly-panel {
+  right: var(--gutter);
+  bottom: calc(var(--timeline-h) + var(--gutter) * 2);
+  width: 340px;
+  padding-bottom: 12px;
+  max-height: calc(100vh - var(--timeline-h) - 250px);
+  overflow-y: auto;
+}
+.fly-panel .clock {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px; font-weight: 600;
+  padding: 3px 9px; border-radius: 8px;
+  background: #2a1219; color: var(--accent-glow);
+}
+.fly-panel .clock:empty { display: none; }
+.fly-table { width: calc(100% - 24px); margin: 0 12px; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.fly-table th { font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--muted); text-align: right; padding: 0 3px 5px; white-space: nowrap; }
+.fly-table th:first-child, .fly-table td:first-child { text-align: left; }
+.fly-table td { padding: 5px 3px; text-align: right; border-top: 1px solid var(--line); white-space: nowrap; }
+.fly-table tr.live td { background: var(--accent-soft); }
+.fly-table tr[data-r="morgan"] td { color: var(--muted); }
+.fly-table td.zero { color: var(--accent-ink); font-weight: 700; }
+.eye { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 3px; vertical-align: -1px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
+.eye.r { background: var(--eye-red); }
+.eye.w { background: var(--eye-white); }
+.fly-said { margin: 8px 12px 0; font-size: 12.5px; color: var(--muted); }
+.fly-said:empty { display: none; }
+.fly-note { margin: 6px 12px 0; font-size: 11.5px; color: var(--muted); }
+
+/* ---------- the hypothesis test (in the card) ---------- */
+.chi-table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; margin: 2px 0 10px; }
+.chi-table th { font-size: 10.5px; font-weight: 600; color: var(--muted); text-align: right; padding: 0 4px 4px; }
+.chi-table th:first-child, .chi-table td:first-child { text-align: left; }
+.chi-table td { padding: 4px; text-align: right; border-top: 1px solid var(--line); }
+.chi-table tr.obs td { font-weight: 700; }
+.chi-table td.hot { color: #be123c; font-weight: 700; }
+.chi-title { margin: 0 0 6px; font-weight: 600; font-size: 13px; }
+
+/* ---------- Punnett square ---------- */
+.fly-punnett { font-size: 13px; }
+.pun-title { margin: 0 0 8px; font-weight: 600; }
+.pun-title span { font-weight: 500; color: var(--muted); font-size: 12px; margin-left: 4px; }
+.pun-grid { display: grid; grid-template-columns: 58px 1fr 1fr; gap: 4px; padding: 4px; }
+.pun-corner { display: flex; flex-direction: column; justify-content: flex-end; font-size: 10px; color: var(--muted); line-height: 1.3; }
+.pun-head { display: grid; place-items: center; font-weight: 700; font-size: 15px; height: 28px; border-radius: 8px; background: #f8f1f3; }
+.pun-head.a-W { color: var(--eye-red); }
+.pun-head.a-w { color: #8a7f6a; }
+.pun-head.a-Y { color: #2563eb; }
+.pun-cell {
+  height: 44px; border: 1px dashed #d8c3ca; border-radius: 9px; background: #fff;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); cursor: pointer;
+}
+.pun-cell:disabled { cursor: default; }
+.pun-cell:not(:empty) { border-style: solid; border-color: var(--line); }
+.pun-cell.right { border-color: #16a34a; background: #e7f6ec; }
+.pun-cell.wrong { border-color: #e5484d; background: #fdeaee; animation: ask-shake .35s; }
+.pun-cell small { font-weight: 500; color: var(--muted); margin-left: 4px; font-size: 11px; }
+
+/* two predictions in one card */
+.card-ask + .card-ask { margin-top: 10px; }
+
+/* the card centres in the space left of the panel */
+@media (min-width: 821px) {
+  .lab-card {
+    left: calc(280px + (100% - 280px - 360px) / 2);
+    width: min(490px, calc(100% - 280px - 360px - var(--gutter) * 2));
+    min-width: 0;
+  }
+  .lab-captions { right: calc(340px + var(--gutter) * 2); }
+  .zoom-insets { top: 66px; transform: none; flex-direction: row; gap: 24px; right: calc(var(--gutter) + 20px); }
+  .zoom-inset { width: 146px; height: 146px; }
+  .zi-dir { display: none; }
+}
+@media (min-width: 821px) and (max-height: 860px) {
+  .zoom-insets { gap: 16px; }
+  .zoom-inset { width: 112px; height: 112px; }
+}
+@media (max-width: 820px) {
+  .fly-panel { left: var(--gutter); right: var(--gutter); width: auto; }
+  .fly-panel.yield { display: none; }
+}
+
+/* ---------- info modal ---------- */
+.equation {
+  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  margin: 14px 0; padding: 12px; border-radius: 12px;
+  background: #faf3f4;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px; color: var(--ink);
+}

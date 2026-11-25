@@ -17,6 +17,7 @@ The four with a short URL are rows in `lib/lessons.js`; the rest are not wired t
 | Yeast Catalase | `catalase/catalase-lab.html` | none | Yeast-soaked paper disks float in H₂O₂ at five concentrations, then boiled yeast. Rate against concentration levels off. Disk and molecule zoom levels |
 | Mendel's Peas | `mendel/mendel-lab.html` | none | Cross a green-pea bud with yellow-pea pollen, open the F₁ pod, grow and self the F₁, shell and count the F₂, fill a Punnett square. Cell (meiosis) and molecule (SGR, chlorophyll) zoom levels |
 | Egg Osmosis | `egg/egg-lab.html` | /labs/egg-osmosis | Dissolve three shells in vinegar, then weigh the eggs before and after a day in water, saline and corn syrup. Predictions live in the mass table |
+| Fruit Fly Genetics | `fly/fly-lab.html` | none | Morgan's white eye, crossed both ways: knock out stocks, sex flies under a stereo microscope, raise vials A and B, sort the F₁, cross A's F₁ in vial C, sort the F₂, then χ² and a Punnett square. Cell (X and Y in meiosis) and molecule (the White pump) zoom levels |
 | Juniper's Seizures | `calf/calf-lab.html` | none | Calf seizure case, drawn from frame art in `calf/art/`. Not in `README.md` |
 
 Benches: `gallery.html` (every prop), `props.html#<prop>` (one prop on a turntable), `themes.html` (colour themes).
@@ -34,6 +35,7 @@ Benches: `gallery.html` (every prop), `props.html#<prop>` (one prop on a turntab
 | Egg Osmosis | The predict step waits on the mass table's buttons, not the bench; Watch skips it. Masses are drawn once per session, so **restart** gives new eggs |
 | Yeast Catalase | The read step waits on the panel's question, not the bench; Watch skips it. Float times are drawn once per session, so **restart** gives new data |
 | Mendel's Peas | Predict, count and Punnett steps wait on the panel, not the bench; Watch skips them. Pea genotypes are drawn once per session, so **restart** gives new counts. `levels-test.html` poses both zoom worlds from sliders |
+| Fruit Fly Genetics | Sort, count and question steps wait on the stereo view or the card, not the bench; Watch sorts for you. After 8 correct manual sorts, **Sort the rest** finishes a set. Flies are drawn once per session, so **restart** gives new counts. `stereo-test.html` and `levels-test.html` are its benches |
 | Juniper's Seizures | Not in `lessons.js` or `README.md`; status unknown |
 
 ## Every lab

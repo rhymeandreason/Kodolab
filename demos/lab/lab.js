@@ -42,4 +42,6 @@ export { makeBalance } from './props/measuring.js';
 export { makeSlide, makeCoverslip, makeFilterPaper, makePaperDisk, makeMicroscope } from './props/microscopy.js';
 export { makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeLead, makeTransilluminator } from './props/electrophoresis.js';
 export { makeMicropipette, makeTipBox, makePipetteStand, makePipetteRack, PIPETTE_SIZES } from './props/micropipette.js';
+export { makeFlyVial, makeFlySwarm, makeFlyPad, makeCO2Gun, makeStereoScope, makeMorgue, FLY_COLORS } from './props/flyroom.js';
+export { makeFly } from './props/fly.js';
 export { makeStream, ripple, powderFall, drop, makeBubbles, makeSteam } from './props/effects.js';

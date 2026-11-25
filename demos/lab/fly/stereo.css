@@ -1,0 +1,72 @@
+/* The stereo microscope view (stereo.js). Built on lab.css's "Microscope view": the same top bar,
+   eyepiece and panels; this sheet adds the pile chips, the callout and the side panel.
+   A pile's colour is content, set inline as --c. */
+
+.stereo-eye { background: #ecebe6; }
+.stereo-vignette { background: radial-gradient(circle, transparent 66%, rgba(40, 34, 26, .1) 84%, rgba(24, 20, 16, .5) 100%); }
+
+/* pile labels in the field, clamped to its rim with an arrow when the pile is out of view */
+.stereo-chips { position: absolute; inset: 0; pointer-events: none; }
+.stereo-chip {
+  position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px 0 9px;
+  border: 0; border-radius: var(--pill); background: rgba(255, 255, 255, .92); color: var(--ink); cursor: pointer; pointer-events: auto;
+  font: 600 12.5px/1 var(--sans); white-space: nowrap; box-shadow: 0 0 0 1.5px var(--c), 0 4px 12px -4px rgba(20, 26, 36, .35);
+  transition: background .15s, box-shadow .15s;
+}
+.stereo-chip::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.stereo-chip i { display: none; font-size: 12px; color: var(--c); }
+.stereo-chip.edge i { display: inline-block; }
+.stereo-chip.edge::before { display: none; }
+.stereo-chip b { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.stereo-chip:hover { background: #fff; box-shadow: 0 0 0 2.5px var(--c), 0 6px 14px -4px rgba(20, 26, 36, .4); }
+
+/* the wrong-pile hint, pinned to the fly that bounced back */
+.stereo-callout { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; }
+.stereo-callout[hidden] { display: none; }
+.stereo-callout-body {
+  position: absolute; left: 0; bottom: 22px; transform: translateX(-50%); width: max-content; max-width: min(280px, 60vw);
+  padding: 10px 13px; border-radius: 12px; background: rgba(23, 24, 26, .9); color: #fff; font-size: 13px; line-height: 1.45;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, .5); border-top: 3px solid var(--c); animation: stereo-pop .25s ease;
+}
+.stereo-callout-body::after {
+  content: ''; position: absolute; left: 50%; bottom: -6px; width: 12px; height: 12px; margin-left: -6px;
+  background: rgba(23, 24, 26, .9); transform: rotate(45deg); border-radius: 2px;
+}
+.stereo-callout-body b { color: #fff; }
+@keyframes stereo-pop { from { opacity: 0; transform: translateX(-50%) translateY(6px); } }
+
+.stereo-controls .sliders, .stereo-zoom { min-width: 300px; }
+
+/* the side panel: progress, piles, sort the rest */
+.stereo-side { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow: auto; min-height: 0; align-self: center; }
+.stereo-progress b { display: block; font-size: 14px; font-weight: 600; color: var(--ink); }
+.stereo-bar { height: 6px; margin-top: 7px; border-radius: var(--pill); background: rgba(23, 24, 26, .08); overflow: hidden; }
+.stereo-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: var(--pill); transition: width .4s; }
+.stereo-piles-h { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
+.stereo-piles { display: grid; gap: 6px; }
+.stereo-pile {
+  display: grid; grid-template-columns: 10px 1fr auto auto; align-items: center; gap: 10px; height: 40px; padding: 0 12px;
+  border-radius: var(--pill); border: 1px solid var(--line-2); background: #fff; cursor: pointer; font: 600 13.5px/1 var(--sans); color: var(--ink);
+  text-align: left; transition: background .15s, border-color .15s, box-shadow .15s;
+}
+.stereo-pile i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.stereo-pile b { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); }
+.stereo-pile kbd { font-family: var(--mono); font-size: 10.5px; color: var(--muted); padding: 2px 6px; border-radius: 5px; background: rgba(23, 24, 26, .06); }
+.stereo-pile:hover { border-color: var(--c); background: color-mix(in srgb, var(--c) 7%, #fff); }
+.stereo-pile.armed { border-color: color-mix(in srgb, var(--c) 60%, #fff); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 14%, transparent); }
+.stereo-pile.full { opacity: .55; }
+.stereo-auto { margin-top: 4px; padding: 12px; border-radius: var(--radius-pop); background: var(--accent-soft); }
+.stereo-auto[hidden] { display: none; }
+.stereo-auto p { margin: 0 0 10px; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.stereo-auto .btn { width: 100%; justify-content: center; gap: 8px; }
+
+@media (max-width: 1180px) {
+  .stereo-side { align-self: stretch; }
+  .stereo-piles { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 820px) {
+  .stereo-zoom { min-width: 0; width: 100%; }
+  .stereo-chip { height: 24px; padding: 0 8px 0 7px; font-size: 11px; gap: 4px; }
+  .stereo-chip b { font-size: 10.5px; }
+  .stereo-pile { height: 38px; font-size: 12.5px; gap: 7px; padding: 0 10px; }
+}

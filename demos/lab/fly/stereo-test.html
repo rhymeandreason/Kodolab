@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-lab-theme="rose">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stereo microscope bench</title>
+  <script src="../page.js" data-text="text.js"></script>
+  <style>
+    .bench-ctl { position: fixed; left: 12px; top: 64px; z-index: 30; width: 230px; padding: 12px; font: 13px/1.4 system-ui; display: grid; gap: 8px; }
+    .bench-ctl button { justify-content: center; }
+    .bench-ctl pre { margin: 0; font: 11px/1.4 'JetBrains Mono', monospace; white-space: pre-wrap; color: var(--muted); max-height: 240px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div id="app" data-title="Stereo microscope bench">
+    <section class="panel bench-ctl">
+      <b>Stereo microscope</b>
+      <button class="btn" data-set="f2">F₂ flies (60)</button>
+      <button class="btn" data-set="parents">Parents' stock (24)</button>
+      <pre id="log"></pre>
+    </section>
+  </div>
+  <script>LabPage.chrome()</script>
+  <script type="module">
+    /* A bench for fly/stereo.js: ?set=f2 (default) or ?set=parents opens it on load. */
+    import { createStereoView } from './stereo.js';
+
+    const is = (sex, eye) => (f) => f.sex === sex && (!eye || f.eye === eye);
+    const name = { f: 'female', m: 'male' };
+    const hint = (sex, eye) => (f) => f.sex !== sex
+      ? `This one is a <b>${name[f.sex]}</b>. Look at the tip of the abdomen, and for sex combs on the front legs.`
+      : `Look again at the <b>eyes</b>: this one's are ${f.eye}.`;
+    const SETS = {
+      f2: () => ({
+        flies: [...Array(60)].map((_, i) => ({ id: 'f2-' + (i + 1), sex: i < 30 ? 'f' : 'm', eye: i < 30 || i % 2 ? 'red' : 'white' })),
+        piles: [
+          { key: 'fr', label: '♀ red', color: '#e11d48', fits: is('f', 'red'), hint: hint('f', 'red') },
+          { key: 'fw', label: '♀ white', color: '#a855f7', fits: is('f', 'white'), hint: hint('f', 'white') },
+          { key: 'mr', label: '♂ red', color: '#ea580c', fits: is('m', 'red'), hint: hint('m', 'red') },
+          { key: 'mw', label: '♂ white', color: '#0284c7', fits: is('m', 'white'), hint: hint('m', 'white') },
+        ],
+        autoAfter: 6,
+      }),
+      parents: () => ({
+        flies: [...Array(24)].map((_, i) => ({ id: 'p-' + (i + 1), sex: i % 2 ? 'm' : 'f', eye: i < 12 ? 'red' : 'white' })),
+        piles: [
+          { key: 'Af', label: 'A ♀', color: '#e11d48', cap: 3, fits: is('f', 'red'), hint: hint('f', 'red') },
+          { key: 'Am', label: 'A ♂', color: '#0284c7', cap: 3, fits: is('m', 'white'), hint: hint('m', 'white') },
+          { key: 'Bf', label: 'B ♀', color: '#a855f7', cap: 3, fits: is('f', 'white'), hint: hint('f', 'white') },
+          { key: 'Bm', label: 'B ♂', color: '#ea580c', cap: 3, fits: is('m', 'red'), hint: hint('m', 'red') },
+        ],
+        autoAfter: 3,
+      }),
+    };
+    const scope = createStereoView({});
+    const log = document.getElementById('log');
+    const state = {};
+    function openSet(key) {
+      state[key] = state[key] || {};
+      scope.open(Object.assign(SETS[key](), {
+        sorted: state[key],
+        onChange: (s) => { state[key] = s; log.textContent = 'change ' + JSON.stringify(s); },
+        onDone: (s) => { log.textContent = 'done ' + JSON.stringify(s); },
+        onClose: () => { log.textContent += '\nclosed'; },
+      }));
+    }
+    document.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => openSet(b.dataset.set)));
+    window.BENCH = { scope, openSet, state };
+    openSet(new URLSearchParams(location.search).get('set') || 'f2');
+  </script>
+</body>
+</html>

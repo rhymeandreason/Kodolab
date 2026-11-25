@@ -17,9 +17,22 @@ import {
   makeOnion, makeScalpel, makeForceps, makePencil, makeSlide, makeCoverslip, makeFilterPaper, makePaperDisk, makeMicroscope,
   makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeTransilluminator, makeMicropipette, makeTipBox, makePipetteStand, makePipetteRack,
   makeHotPlate, makeWatchGlass, makeDropperBottle,
-  makeNozzleBottle, makeTypingTray, makeStirStick, makeStickCup, makeEgg, makeBalance,
+  makeFly, makeNozzleBottle, makeTypingTray, makeStirStick, makeStickCup, makeEgg, makeBalance,
   makePea, makePeaPod, makePeaFlower, makePot, makePeaPlant, makePlantTag, makeBrush, makePollinationBag,
 } from '../lab.js';
+import { V3, makeFlyVial, makeFlySwarm, makeFlyPad, makeCO2Gun, makeStereoScope, makeMorgue } from '../lab.js';
+
+// fly room demos: a 3 red : 1 white brood, adults half each sex, and a pile of knocked-out flies
+const flyEyes = (n) => Array.from({ length: n }, (_, i) => (i % 4 === 3 ? 'white' : 'red'));
+const flyAdults = (n) => Array.from({ length: n }, (_, i) => ({ id: i, sex: i % 2 ? 'm' : 'f', eye: i % 4 === 3 ? 'white' : 'red' }));
+function flyPile(swarm, n, r, y = 0) {
+  swarm.count = 0;
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.39996, d = r * Math.sqrt((i + 0.5) / n);
+    swarm.set(i, V3(Math.cos(a) * d, y, Math.sin(a) * d), Q(0, i * 1.7, 0), { sex: i % 2 ? 'm' : 'f', eye: i % 4 === 3 ? 'white' : 'red' });
+  }
+  swarm.commit();
+}
 
 const slider = (label, min, max, step, value, unit, set) => ({ label, min, max, step, value, unit, set });
 const toggle = (label, value, set) => ({ toggle: true, label, value, set });
@@ -314,4 +327,42 @@ export const PROPS = [
     desc: 'Glassine bag, 5 × 8 cm, to keep stray pollen off a crossed flower. Origin at the mouth, body along +y (shown mouth up). setOpen 0 flat, 1 open; setTie gathers the mouth with a twist tie.',
     make: (mat) => { const b = makePollinationBag(mat); b.group.rotation.x = Math.PI; b.group.position.y = 8.05; return b; },
     controls: [slider('Open', 0, 1, 0.01, 1, '', (p, v) => p.setOpen(v)), slider('Tie', 0, 1, 0.01, 0, '', (p, v) => p.setTie(v))] },
+  { key: 'fly', group: 'Fly room', name: 'Fruit fly ♀', file: 'fly.js', call: "makeFly(mat, { sex: 'f', eye: 'red' })",
+    desc: 'Drosophila, built to be sexed at 40×: faceted eyes, aristae, ocelli, bristles, veined wings, halteres; the female 2.5 mm, pointed and banded with an ovipositor. Shown 10× life size. setPose 0 standing, 1 anesthetized on its side; setTwitch(t); setEye.',
+    make: (mat) => { const f = makeFly(mat, { sex: 'f', eye: 'red' }); f.group.scale.setScalar(10); return f; },
+    controls: [slider('Pose', 0, 1, 0.01, 0, '', (p, v) => p.setPose(v)), toggle('White eyes', false, (p, on) => p.setEye(on ? 'white' : 'red'))] },
+  { key: 'flyMale', group: 'Fly room', name: 'Fruit fly ♂', file: 'fly.js', call: "makeFly(mat, { sex: 'm', eye: 'white' })",
+    desc: 'The male: 2.0 mm, abdomen rounded with a solid black tip, genital arch, and a sex comb on each foreleg. Shown 10× life size.',
+    make: (mat) => { const f = makeFly(mat, { sex: 'm', eye: 'white' }); f.group.scale.setScalar(10); return f; },
+    controls: [slider('Pose', 0, 1, 0.01, 0, '', (p, v) => p.setPose(v)), toggle('White eyes', true, (p, on) => p.setEye(on ? 'white' : 'red'))] },
+  { key: 'flyvial', group: 'Fly room', name: 'Fly vial', file: 'flyroom.js', call: "makeFlyVial(mat, { label: 'C', sub: 'F1 × F1', seed: 3 })",
+    desc: 'Narrow Drosophila vial, 25 × 95 mm polystyrene: cornmeal food under live yeast, a cellulose plug. Origin at the base; anchors mouth, top (plug), floor (food surface), center. setLife({ day, eyes }) runs the brood: eggs, larvae churning the food, wanderers, pupae darkening on the wall with the eye colour showing from day 8, empty cases. setAdults(list) and update(time) for crawling flies; setAsleep(k) drops them onto whichever wall faces down. Tilt lays it on its side.',
+    make: (mat) => { const v = makeFlyVial(mat, { label: 'C', sub: 'F1 × F1', seed: 3 }); v.setLife({ day: 7, eyes: flyEyes(80) }); v.plug.children[0].onBeforeRender = () => v.update(performance.now() / 1000); return v; },
+    controls: [
+      slider('Day', 0, 12, 0.05, 7, '', (p, v) => p.setLife({ day: v })),
+      slider('Adults', 0, 40, 1, 12, '', (p, v) => p.setAdults(flyAdults(v))),
+      slider('Asleep', 0, 1, 0.01, 0, '', (p, v) => p.setAsleep(v)),
+      slider('Plug', 0, 1, 0.01, 0, '', (p, v) => p.setPlug(v)),
+      slider('Tilt', 0, 1.571, 0.01, 0, 'rad', (p, v) => { p.group.rotation.z = v; p.group.position.y = 1.25 * Math.sin(v); }),
+    ] },
+  { key: 'flyswarm', group: 'Fly room', name: 'Flies (instanced)', file: 'flyroom.js', call: 'makeFlySwarm(mat, 200)',
+    desc: 'Bench-scale flies, the vial\'s look: female 2.5 mm with a banded abdomen, male 2.0 mm with a dark tip, red or white eyes, veined wings. set(i, pos, quat, { sex, eye, pose }) then commit(); pose \'side\' (default) lies a knocked-out fly on its flank, \'stand\' stands it.',
+    make: (mat) => { const s = makeFlySwarm(mat, 200); flyPile(s, 30, 1.6, 0.015); return s; },
+    controls: [slider('Flies', 1, 200, 1, 30, '', (p, v) => flyPile(p, v, 0.3 * Math.sqrt(v), 0.015))] },
+  { key: 'flypad', group: 'Fly room', name: 'CO₂ fly pad', file: 'flyroom.js', call: 'makeFlyPad(mat)',
+    desc: 'Porous polyethylene pad in a grey frame, 9.6 × 7.1 cm, hose barb at the back. anchors.top is the pad surface, anchors.barb the hose end. setGas(k) is a faint shimmer of CO₂. Shown with sleeping flies.',
+    make: (mat) => { const p = makeFlyPad(mat), s = makeFlySwarm(mat, 60); s.group.position.copy(p.anchors.top); flyPile(s, 40, 2.4); p.group.add(s.group); return p; },
+    controls: [slider('Gas', 0, 1, 0.01, 1, '', (p, v) => p.setGas(v))] },
+  { key: 'co2gun', group: 'Fly room', name: 'CO₂ blowgun', file: 'flyroom.js', call: 'makeCO2Gun(mat)',
+    desc: 'Pistol-grip blowgun with an 18 G blunt needle and a hose at the butt. Origin at the needle tip, needle along +x, grip toward −y; shown lying on its side. anchors.grip; setTrigger(k).',
+    make: (mat) => { const gn = makeCO2Gun(mat); gn.group.rotation.x = -Math.PI / 2; gn.group.position.set(8, 1.36, -4); return gn; },
+    controls: [slider('Trigger', 0, 1, 0.01, 0, '', (p, v) => p.setTrigger(v))] },
+  { key: 'stereoscope', group: 'Fly room', name: 'Stereo microscope', file: 'flyroom.js', call: 'makeStereoScope(mat)',
+    desc: 'Dissecting microscope, 38 cm: stage plate, pillar, focus block, zoom body, eyepieces at 45°, LED ring light. Faces +z. anchors.stage is where the pad sits (shown on it), lens the ring light, eyepiece the eyepoint with eyeAxis. setLight(k).',
+    make: (mat) => { const sc = makeStereoScope(mat), p = makeFlyPad(mat), s = makeFlySwarm(mat, 60); p.group.position.copy(sc.anchors.stage); s.group.position.copy(p.anchors.top); flyPile(s, 40, 2.4); p.group.add(s.group); sc.group.add(p.group); return sc; },
+    controls: [slider('Light', 0, 1, 0.01, 1, '', (p, v) => p.setLight(v))] },
+  { key: 'morgue', group: 'Fly room', name: 'Morgue', file: 'flyroom.js', call: "makeMorgue(mat, { label: 'Morgue' })",
+    desc: 'Squat glass jar of mineral oil with a tape label, where counted flies go. anchors top, floor; liquid is the oil; setDead(n) sinks n flies to the bottom.',
+    make: (mat) => makeMorgue(mat),
+    controls: [slider('Oil', 0, 4.5, 0.05, 3.9, 'cm', (p, v) => p.liquid.setLevel(v)), slider('Dead flies', 0, 60, 1, 14, '', (p, v) => p.setDead(v))] },
 ];
