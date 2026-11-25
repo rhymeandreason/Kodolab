@@ -107,7 +107,7 @@ const mat = createMaterials(stage);
 
 let S = null, B = null, M = null, root = null;
 let lesson, ix;
-const PRED = [null, null, null];   // the student's predictions live in the panel: a rebuild keeps them
+const PRED = [null, null, null];   // the student's predictions live outside the bench: a rebuild keeps them
 
 function place(prop, pos, yaw = 0) {
   prop.group.position.copy(pos);
@@ -427,7 +427,7 @@ function tickStreams() {
 }
 
 // =========================================================================
-// The data panel: masses as they are measured, and the predictions
+// The data panel: masses as they are measured, and the predictions beside them
 // =========================================================================
 const PRED_KEYS = ['swell', 'same', 'shrink'];
 const PRED_ICON = { swell: 'ph-arrow-up', same: 'ph-equals', shrink: 'ph-arrow-down' };
@@ -444,20 +444,39 @@ function buildPanel() {
         <tr data-i="${i}">
           <td><span class="swatch" style="background:${L.tape}"></span><b>${LETTER[i]}</b><small>${T.liquids[i].label}</small></td>
           <td data-c="raw"></td><td data-c="naked"></td><td data-c="final"></td>
-          <td data-c="change"><div class="pred">${PRED_KEYS.map((k) => `<button type="button" data-p="${k}" title="${P.pred[k]}"><i class="ph-bold ${PRED_ICON[k]}"></i></button>`).join('')}</div><div class="result"></div></td>
+          <td data-c="change"><i class="pred ph-bold"></i><div class="result"></div></td>
         </tr>`).join('')}
       </tbody>
     </table>
     <p class="egg-note">${fmt(P.note, { pct: SAME * 100 })}</p>`;
-  $('#eggPanel').addEventListener('click', (ev) => {
-    const btn = ev.target.closest('button[data-p]');
-    if (!btn || !canPredict()) return;
-    PRED[Number(btn.closest('tr').dataset.i)] = btn.dataset.p;
-    panelKey = '';
-    if (PRED.every(Boolean) && lesson.step === PREDICT) lesson.jumpTo(PREDICT + 1);
-  });
 }
 const canPredict = () => lesson && lesson.mode !== 'watch' && lesson.step === PREDICT;
+
+/** The predict step's card: one inner card per egg, each with swell / same / shrink. */
+function mountPredict(el) {
+  const P = T.panel;
+  el.innerHTML = `<div class="egg-preds">${LIQ.map((L, i) => `
+    <div class="egg-pred" data-i="${i}">
+      <div class="egg-pred-head"><span class="swatch" style="background:${L.tape}"></span><b>${fmt(T.props.beaker, { egg: LETTER[i] })}</b></div>
+      <small>${T.liquids[i].label}</small>
+      <div class="egg-pred-opts">${PRED_KEYS.map((k) => `<button type="button" data-p="${k}"><i class="ph-bold ${PRED_ICON[k]}"></i>${P.pred[k]}</button>`).join('')}</div>
+    </div>`).join('')}</div>`;
+  const sync = () => el.querySelectorAll('.egg-pred').forEach((c) => {
+    const i = Number(c.dataset.i);
+    c.classList.toggle('chosen', !!PRED[i]);
+    c.querySelectorAll('button').forEach((b) => b.classList.toggle('on', PRED[i] === b.dataset.p));
+  });
+  el.onclick = (ev) => {
+    const btn = ev.target.closest('button[data-p]');
+    if (!btn || !canPredict()) return;
+    PRED[Number(btn.closest('.egg-pred').dataset.i)] = btn.dataset.p;
+    sync();
+    panelKey = '';
+    // a beat to see the last choice land before the card moves on
+    if (PRED.every(Boolean)) setTimeout(() => { if (PRED.every(Boolean) && lesson.step === PREDICT) lesson.jumpTo(PREDICT + 1); }, 600);
+  };
+  sync();
+}
 
 let panelKey = '';
 function renderPanel() {
@@ -470,16 +489,13 @@ function renderPanel() {
   if (key === panelKey) return;
   panelKey = key;
   const g = (v) => (v == null ? '<span class="dash">–</span>' : v.toFixed(1));
-  $('#eggPanel').classList.toggle('asking', canPredict());
   rec.forEach((r, i) => {
     const row = $(`#eggPanel tr[data-i="${i}"]`);
     ['raw', 'naked', 'final'].forEach((c) => { row.querySelector(`[data-c="${c}"]`).innerHTML = g(r[c]); });
-    row.querySelectorAll('.pred button').forEach((b) => {
-      b.classList.toggle('on', PRED[i] === b.dataset.p);
-      b.disabled = !canPredict();
-    });
     const res = row.querySelector('.result'), pred = row.querySelector('.pred');
-    pred.hidden = r.final != null;
+    pred.className = `pred ph-bold ${PRED[i] ? PRED_ICON[PRED[i]] : ''}`;
+    pred.title = PRED[i] ? fmt(T.panel.you, { p: T.panel.pred[PRED[i]] }) : '';
+    pred.hidden = r.final != null || !PRED[i];
     res.hidden = r.final == null;
     if (r.final != null) {
       const c = (r.final / r.naked - 1) * 100, out = outcome(i);
@@ -524,9 +540,9 @@ const STEPS = [
     watch: { duration: SOAK_H, get: () => S.hours, set: (t) => { S.hours = t; }, rate: () => (SOAK_H / 16) * debugSpeed } },
   { ...multi('weigh1', 'beaker', 'w1', 6.5, 'weigh'),
     caption: () => { const k = S.E[last.i].w1; return k < 0.36 ? C.weigh1.lift : k < 0.7 ? C.weigh1.drain : C.weigh1.back; } },
-  /* Predicting happens in the data panel, off the bench: the step reads PRED, so a rebuild leaves
+  /* Predicting happens on the card, off the bench: the step reads PRED, so a rebuild leaves
      it alone. Watch mode stops at the bench; predicting is the student's. */
-  { id: 'predict', ...card('predict'), targets: [], view: 'predict', caption: T.steps.predict.caption,
+  { id: 'predict', ...card('predict'), targets: [], view: 'predict', caption: T.steps.predict.caption, card: mountPredict,
     isDone: () => lesson.mode === 'watch' || PRED.every(Boolean),
     progress: () => PRED.filter(Boolean).length / 3 },
   { ...multi('fill', 'bottle', 'fill', 4.6, 'fill'),

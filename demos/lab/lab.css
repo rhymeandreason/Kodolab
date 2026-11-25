@@ -209,6 +209,7 @@ html, body {
 .lab-card.complete .card-head { display: none; } /* no 'Complete' chip: the title says it */
 .lab-card.complete h2 { margin-top: 0; }
 .lab-card .card-text { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.lab-card .card-extra { margin-top: 12px; }
 .lab-card [hidden] { display: none !important; }
 .why {
   display: flex; gap: 8px; margin: 10px 0 0; padding: 8px 10px; background: var(--blue-soft);

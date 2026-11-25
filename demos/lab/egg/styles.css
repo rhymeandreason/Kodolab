@@ -23,17 +23,24 @@
 .egg-table .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: 0; }
 .egg-table .dash { color: var(--faint, #b4bcc6); }
 .egg-table td[data-c="change"] { width: 96px; }
-.egg-table .pred { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: rgba(23, 24, 26, 0.05); }
-.egg-table .pred button {
-  border: 0; background: transparent; width: 28px; height: 24px; border-radius: 7px;
-  color: var(--ink-2); cursor: pointer; display: grid; place-items: center; font-size: 13px;
-}
-.egg-table .pred button:disabled { cursor: default; opacity: .45; }
-.egg-table .pred button.on { background: var(--ink); color: #fff; opacity: 1; }
-.egg-table .pred button:not(:disabled):hover:not(.on) { background: #fff; }
-.egg-panel.asking .pred { box-shadow: 0 0 0 2px var(--accent); animation: egg-ask 1.6s ease-in-out infinite; }
-@keyframes egg-ask { 50% { box-shadow: 0 0 0 4px var(--accent-soft); } }
+.egg-table .pred { color: var(--muted); font-size: 14px; }
 .egg-table .pred[hidden], .egg-table .result[hidden] { display: none; }
+
+/* ---------- predict: one inner card per egg ---------- */
+.egg-preds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.egg-pred { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.egg-pred .swatch { width: 10px; height: 10px; border-radius: 3px; }
+.egg-pred-head { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.egg-pred small { display: block; margin: 2px 0 8px; font-size: 11.5px; line-height: 1.3; color: var(--muted); }
+.egg-pred-opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 10px; background: rgba(23, 24, 26, 0.05); }
+.egg-pred-opts button {
+  display: grid; justify-items: center; gap: 1px; min-width: 0; overflow: hidden; padding: 4px 0; border: 0; border-radius: 7px;
+  background: transparent; color: var(--ink-2); font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer;
+}
+.egg-pred-opts button i { font-size: 13px; }
+.egg-pred-opts button:hover:not(.on) { background: #fff; }
+.egg-pred-opts button.on { background: var(--ink); color: #fff; }
+
 .egg-table .result { display: inline-flex; align-items: center; gap: 6px; }
 .egg-table .result b { font-size: 15px; }
 .egg-table .result .up { color: #2563eb; }
@@ -49,6 +56,7 @@
     width: min(470px, calc(100% - 280px - 380px - var(--gutter) * 2));
     min-width: 0;
   }
+  .lab-card:has(.egg-preds) { width: min(620px, calc(100% - 280px - 380px - var(--gutter) * 2)); }
   .lab-captions { right: calc(360px + var(--gutter) * 2); }
 }
 @media (max-width: 820px) {

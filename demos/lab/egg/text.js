@@ -82,7 +82,7 @@ LabText.add('en', {
     },
     predict: {
       title: 'Predict', short: 'Predict',
-      hint: 'In the table, predict each egg: <b>swell</b>, <b>same</b> or <b>shrink</b>',
+      hint: 'Predict each egg on the card: <b>swell</b>, <b>same</b> or <b>shrink</b>',
       detail: 'Each egg will spend a day in a different liquid. Which will gain water, and which will lose it?',
       caption: 'Predict what each egg will do',
     },

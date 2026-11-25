@@ -23,6 +23,9 @@
  *                                        // why shows once the step's object is clicked; the
  *                                        // hint (click line) hides while a click animates
  *     run: async (key) => {...},         // animate one click
+ *     card?: (el) => {...},              // fill el, a slot in the card under the detail, on entering
+ *                                        // the step (UI the step asks for: choices, a form). el is
+ *                                        // emptied, and its onclick cleared, when the step changes
  *     clock?: () => '3:24' | null,       // text for the card's top-right clock (a time-lapse); null hides it
  *     isDone?: () => bool,               // multi-click steps (default: done after one click)
  *     progress?: () => 0..1,             // timeline fill while in progress
@@ -432,6 +435,7 @@ export function createLesson({
     <h2></h2>
     <div class="card-body"><div>
       <p class="card-text"></p>
+      <div class="card-extra" hidden></div>
       <p class="why"><i class="ph-fill ph-lightbulb"></i><span></span></p>
       <div class="card-action"><i></i><span></span></div>
     </div></div>`;
@@ -441,6 +445,7 @@ export function createLesson({
     clock: card.querySelector('.card-clock'), clockText: card.querySelector('.card-clock span'),
     action: card.querySelector('.card-action'), actionIcon: card.querySelector('.card-action i'), actionText: card.querySelector('.card-action span'),
     fold: card.querySelector('.card-fold'),
+    extra: card.querySelector('.card-extra'),
   };
   let cardStep = -1;
   /* The complete card folds to its title, so the student can see the bench behind a tall
@@ -623,7 +628,12 @@ export function createLesson({
     cardStep = S.step;
     card.classList.toggle('complete', !s); // a sim can style its complete card (e.g. wider for results)
     C.fold.hidden = !!s;
-    if (entering) setFolded(false);
+    if (entering) {
+      setFolded(false);
+      C.extra.replaceChildren(); C.extra.onclick = null;
+      if (s && s.card) s.card(C.extra);
+      C.extra.hidden = !C.extra.hasChildNodes();
+    }
     if (!s) {
       C.chip.textContent = UI.complete;
       C.title.textContent = UI.labComplete;
