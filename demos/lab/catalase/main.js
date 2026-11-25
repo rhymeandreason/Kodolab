@@ -499,12 +499,12 @@ const canAnswer = () => lesson && lesson.mode !== 'watch' && lesson.step === REA
 /** The read step's card: the question, its answers, and right / try again under them. */
 function mountAsk(el) {
   const P = T.panel;
-  el.innerHTML = `<div class="cat-ask">
-    <p class="cat-q">${fmt(P.ask, { lo: pct(CONC[LO]), hi: pct(CONC[HI]) })}</p>
-    <div class="cat-answers">${Object.entries(P.answers).map(([k, a]) => `<button type="button" data-a="${k}">${a.text}</button>`).join('')}</div>
-    <p class="cat-verdict" hidden></p>
+  el.innerHTML = `<div class="card-ask">
+    <p class="ask-q">${fmt(P.ask, { lo: pct(CONC[LO]), hi: pct(CONC[HI]) })}</p>
+    <div class="ask-answers">${Object.entries(P.answers).map(([k, a]) => `<button type="button" data-a="${k}">${a.text}</button>`).join('')}</div>
+    <p class="ask-verdict" hidden></p>
   </div>`;
-  const v = el.querySelector('.cat-verdict');
+  const v = el.querySelector('.ask-verdict');
   const sync = () => {
     const pick = ANSWER.pick, right = pick && P.answers[pick].right;
     el.querySelectorAll('button[data-a]').forEach((b) => {
@@ -514,7 +514,7 @@ function mountAsk(el) {
     const a = rateOf(LO), b = rateOf(HI);
     v.hidden = !pick || a == null || b == null;
     if (v.hidden) return;
-    v.className = 'cat-verdict ' + (right ? 'ok' : 'no');
+    v.className = 'ask-verdict ' + (right ? 'ok' : 'no');
     v.innerHTML = `<i class="ph-fill ${right ? 'ph-check-circle' : 'ph-x-circle'}"></i><span>${right
       ? fmt(P.right, { pct: Math.round((b / a - 1) * 100) }) : fmt(P.wrong, { a: rateFmt(a), b: rateFmt(b) })}</span>`;
   };

@@ -90,7 +90,7 @@ LabText.add('en', {
     },
     guess1: {
       title: 'Predict', short: 'Predict',
-      hint: 'Pick an answer in the <b>panel</b>',
+      hint: 'Pick an answer below',
       detail: 'One parent made only yellow peas, the other only green. What colour will their offspring be?',
       caption: 'What colour will the offspring be?',
     },
@@ -119,7 +119,7 @@ LabText.add('en', {
     },
     predict: {
       title: 'Predict', short: 'Predict',
-      hint: 'Pick an answer in the <b>panel</b>',
+      hint: 'Pick an answer below',
       detail: 'Every F<sub>1</sub> pea was yellow. Now each F<sub>1</sub> plant has bred with itself. What will be in their pods?',
       caption: 'What will the F₁ plants’ peas be?',
     },
@@ -134,13 +134,13 @@ LabText.add('en', {
     },
     count: {
       title: 'Count', short: 'Count',
-      hint: 'Answer the question in the <b>panel</b>',
+      hint: 'Answer the question below',
       detail: 'Compare your count of {n} peas with Mendel’s {mendel}.',
       caption: 'About one F₂ pea in four is green',
     },
     punnett: {
       title: 'Fill the Punnett square', short: 'Punnett',
-      hint: 'Click the <b>squares</b> in the panel',
+      hint: 'Click the <b>squares</b> below',
       detail: 'Each F<sub>1</sub> plant is Yy. Each of its pollen grains and eggs carries Y or y. Click a square to set the pea it makes.',
       caption: 'Y or y from each parent: four equally likely peas',
     },
@@ -171,14 +171,14 @@ LabText.add('en', {
       ask: 'About what fraction of your F₂ peas are green?',
       answers: { none: 'none', quarter: 'about 1 in 4', half: 'about 1 in 2', most: 'about 3 in 4' },
       right: 'Right: {g} of {n}, or {pct}%. Mendel counted {mg} green of {mn}.',
-      wrong: 'Look again: {g} green out of {n}.',
+      wrong: 'Try again. You counted {g} green out of {n}.',
     },
     garden: 'Count as many as Mendel',
     gardenNote: 'The same cross, {n} peas: {y} yellow, {g} green.',
     punnett: {
       title: 'Punnett square', pollen: 'Pollen', egg: 'Egg', parent: 'F₁ plant (Yy)',
       done: '1 YY : 2 Yy : 1 yy, and Y shows whenever it is there: <b>3 yellow : 1 green</b>.',
-      wrong: 'Each square gets one allele from its row and one from its column.',
+      wrong: 'Try again. Each square gets one allele from its row and one from its column.',
     },
   },
 

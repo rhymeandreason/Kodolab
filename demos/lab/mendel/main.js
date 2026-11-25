@@ -617,44 +617,88 @@ function buildPanel() {
         <tr data-r="mendel"><td>${P.mendel}</td><td>${MENDEL.yellow.toLocaleString()}</td><td>${MENDEL.green.toLocaleString()}</td><td>${ratio(MENDEL.yellow, MENDEL.green)}</td></tr>
       </tbody>
     </table>
-    <div class="pea-ask" id="askGuess1" hidden>${askHTML('guess1', P.guess1)}</div>
-    <div class="pea-ask" id="askPredict" hidden>${askHTML('predict', P.predict)}</div>
-    <div class="pea-ask" id="askCount" hidden>${askHTML('count', P.count)}
-      <button type="button" class="pea-garden" id="peaGarden" hidden>${P.garden}</button><p class="pea-note" id="peaGardenNote"></p></div>
-    <div class="pea-punnett" id="peaPunnett" hidden>
-      <p class="pun-title">${P.punnett.title} <span>${P.punnett.parent} × ${P.punnett.parent}</span></p>
-      <div class="pun-grid">
-        <span class="pun-corner"><small>${P.punnett.egg} ↓</small><small>${P.punnett.pollen} →</small></span>
-        ${PUN.cols.map((a) => `<span class="pun-head a-${a}">${a}</span>`).join('')}
-        ${PUN.rows.map((r, ri) => `<span class="pun-head a-${r}">${r}</span>${PUN.cols.map((c, ci) => `<button type="button" class="pun-cell" data-i="${ri * 2 + ci}"></button>`).join('')}`).join('')}
-      </div>
-      <p class="pea-verdict" id="punVerdict"></p>
-    </div>`;
+    <p class="pea-said" id="saidGuess1"></p>
+    <p class="pea-said" id="saidPredict"></p>
+    <button type="button" class="pea-garden" id="peaGarden" hidden>${P.garden}</button><p class="pea-note" id="peaGardenNote"></p>`;
   $('#peaPanel').addEventListener('click', (ev) => {
-    const a = ev.target.closest('button[data-a]');
-    if (a) return answer(a.dataset.q, a.dataset.a);
-    const c = ev.target.closest('.pun-cell');
-    if (c && canPunnett()) {
-      const i = +c.dataset.i;
-      ANS.cells[i] = PUN_CYCLE[(PUN_CYCLE.indexOf(ANS.cells[i]) + 1) % PUN_CYCLE.length];
-      panelKey = '';
-      if (punDone() && lesson.step === STEP_IDS.indexOf('punnett')) lesson.jumpTo(lesson.step + 1);
-      return;
-    }
     if (ev.target.closest('#peaGarden')) { growGarden(); panelKey = ''; }
   });
 }
-function askHTML(q, A) {
-  return `<p>${A.ask}</p><div class="pea-answers">${Object.entries(A.answers).map(([k, t]) => `<button type="button" data-q="${q}" data-a="${k}">${t}</button>`).join('')}</div><p class="pea-verdict" data-v="${q}"></p>`;
-}
 const asking = (q) => lesson && lesson.mode !== 'watch' && stepId() === q;
 const canPunnett = () => asking('punnett');
-function answer(q, a) {
-  if (!asking(q)) return;
-  ANS[q] = a;
-  panelKey = '';
-  const right = q !== 'count' || a === 'quarter';
-  if (right) lesson.jumpTo(lesson.step + 1);
+const verdictHTML = (right, html) => `<i class="ph-fill ${right ? 'ph-check-circle' : 'ph-x-circle'}"></i><span>${html}</span>`;
+/** Move on from step q after a beat to read the card, if the student is still on it. */
+const moveOn = (q, ms) => setTimeout(() => { if (stepId() === q) lesson.jumpTo(lesson.step + 1); }, ms);
+
+/** A question step's card. A prediction takes any answer; count has a right one, and says so. */
+const askCard = (q) => (el) => {
+  const A = P[q], graded = q === 'count';
+  el.innerHTML = `<div class="card-ask">
+    <p class="ask-q">${A.ask}</p>
+    <div class="ask-answers">${Object.entries(A.answers).map(([k, t]) => `<button type="button" data-a="${k}">${t}</button>`).join('')}</div>
+    <p class="ask-verdict" hidden></p>
+  </div>`;
+  const v = el.querySelector('.ask-verdict');
+  const sync = () => {
+    const pick = ANS[q], right = !!pick && (!graded || pick === 'quarter');
+    el.querySelectorAll('button[data-a]').forEach((b) => {
+      b.className = b.dataset.a !== pick ? '' : !graded ? 'on' : right ? 'right' : 'wrong';
+      b.disabled = !asking(q) || right;
+    });
+    v.hidden = !graded || !pick;
+    if (v.hidden) return;
+    const c = counted(), n = c.yellow + c.green;
+    v.className = 'ask-verdict ' + (right ? 'ok' : 'no');
+    v.innerHTML = verdictHTML(right, right
+      ? fmt(A.right, { g: c.green, n, pct: Math.round((100 * c.green) / n), mg: MENDEL.green.toLocaleString(), mn: (MENDEL.yellow + MENDEL.green).toLocaleString() })
+      : fmt(A.wrong, { g: c.green, n }));
+  };
+  el.onclick = (ev) => {
+    const b = ev.target.closest('button[data-a]');
+    if (!b || !asking(q)) return;
+    ANS[q] = b.dataset.a;
+    panelKey = '';
+    sync();
+    if (!graded) moveOn(q, 700); else if (ANS[q] === 'quarter') moveOn(q, 2200);
+  };
+  sync();
+};
+
+/** The Punnett step's card: click a square to cycle its genotype. */
+function mountPunnett(el) {
+  const U = P.punnett;
+  el.innerHTML = `<div class="pea-punnett">
+    <p class="pun-title">${U.title} <span>${U.parent} × ${U.parent}</span></p>
+    <div class="pun-grid">
+      <span class="pun-corner"><small>${U.egg} ↓</small><small>${U.pollen} →</small></span>
+      ${PUN.cols.map((a) => `<span class="pun-head a-${a}">${a}</span>`).join('')}
+      ${PUN.rows.map((r, ri) => `<span class="pun-head a-${r}">${r}</span>${PUN.cols.map((c, ci) => `<button type="button" class="pun-cell" data-i="${ri * 2 + ci}"></button>`).join('')}`).join('')}
+    </div>
+  </div>
+  <p class="ask-verdict" hidden></p>`;
+  const v = el.querySelector('.ask-verdict');
+  const sync = () => {
+    const done = punDone(), full = ANS.cells.every(Boolean);
+    el.querySelectorAll('.pun-cell').forEach((b) => {
+      const i = +b.dataset.i, g = ANS.cells[i];
+      b.innerHTML = g ? `<i class="pea ${isYellow(g) ? 'y' : 'g'}"></i>${g}` : '';
+      b.disabled = !canPunnett() || done;
+      b.classList.toggle('wrong', !!g && !done && full && g !== punRight(i));
+      b.classList.toggle('right', done);
+    });
+    v.hidden = !done && !full;
+    v.className = 'ask-verdict ' + (done ? 'ok' : 'no');
+    v.innerHTML = verdictHTML(done, done ? U.done : U.wrong);
+  };
+  el.onclick = (ev) => {
+    const c = ev.target.closest('.pun-cell');
+    if (!c || !canPunnett() || punDone()) return;
+    const i = +c.dataset.i;
+    ANS.cells[i] = PUN_CYCLE[(PUN_CYCLE.indexOf(ANS.cells[i]) + 1) % PUN_CYCLE.length];
+    sync();
+    if (punDone()) moveOn('punnett', 2600);
+  };
+  sync();
 }
 /** Mendel's sample size of the same cross: each pea yellow unless both alleles are y. */
 function growGarden() {
@@ -688,43 +732,12 @@ function renderPanel() {
   row('f2').classList.toggle('live', id === 'shell');
   row('mendel').hidden = i < STEP_IDS.indexOf('count');
 
-  const showAsk = (el, q, from) => {
-    el.hidden = i < STEP_IDS.indexOf(from);
-    el.classList.toggle('asking', asking(q));
-    el.classList.toggle('done', !!ANS[q] && i > STEP_IDS.indexOf(q));    // answered and moved on: the result line only
-    el.querySelectorAll('button[data-a]').forEach((b) => { b.classList.toggle('on', ANS[q] === b.dataset.a); b.disabled = !asking(q); });
-  };
-  showAsk($('#askGuess1'), 'guess1', 'guess1');
-  showAsk($('#askPredict'), 'predict', 'predict');
-  showAsk($('#askCount'), 'count', 'count');
-  $('#askGuess1').hidden ||= i > STEP_IDS.indexOf('sow');
-  const said = (q, A) => (ANS[q] ? fmt(P.yourGuess, { a: A.answers[ANS[q]] }) : '');
-  $('[data-v="guess1"]').innerHTML = said('guess1', P.guess1);
-  $('[data-v="predict"]').innerHTML = said('predict', P.predict);
-  const vc = $('[data-v="count"]'), n = c.yellow + c.green;
-  if (ANS.count) {
-    const right = ANS.count === 'quarter';
-    vc.innerHTML = right ? fmt(P.count.right, { g: c.green, n, pct: Math.round((100 * c.green) / n), mg: MENDEL.green.toLocaleString(), mn: (MENDEL.yellow + MENDEL.green).toLocaleString() })
-      : fmt(P.count.wrong, { g: c.green, n });
-    vc.className = 'pea-verdict ' + (right ? 'ok' : 'no');
-  } else vc.innerHTML = '';
+  // the student's predictions stay beside the counts they predicted
+  const said = (q) => (ANS[q] ? fmt(P.yourGuess, { a: P[q].answers[ANS[q]] }) : '');
+  $('#saidGuess1').innerHTML = i <= STEP_IDS.indexOf('sow') ? said('guess1') : '';
+  $('#saidPredict').innerHTML = said('predict');
   $('#peaGarden').hidden = ANS.count !== 'quarter' || !!ANS.garden;
   $('#peaGardenNote').innerHTML = ANS.garden ? fmt(P.gardenNote, { n: ANS.garden.n.toLocaleString(), y: ANS.garden.y.toLocaleString(), g: ANS.garden.g.toLocaleString() }) + ' ' + ratio(ANS.garden.y, ANS.garden.g) : '';
-
-  const pun = $('#peaPunnett');
-  pun.hidden = i < STEP_IDS.indexOf('punnett');
-  pun.classList.toggle('asking', canPunnett());
-  const done = punDone() || (lesson.mode === 'watch' && i >= STEPS.length);
-  pun.querySelectorAll('.pun-cell').forEach((b) => {
-    const g = done ? punRight(+b.dataset.i) : ANS.cells[+b.dataset.i];
-    b.innerHTML = g ? `<i class="pea ${isYellow(g) ? 'y' : 'g'}"></i>${g}` : '';
-    b.disabled = !canPunnett();
-    b.classList.toggle('wrong', !!g && !done && ANS.cells.every(Boolean) && g !== punRight(+b.dataset.i));
-  });
-  const pv = $('#punVerdict');
-  pv.innerHTML = done ? P.punnett.done : ANS.cells.every(Boolean) ? P.punnett.wrong : '';
-  pv.className = 'pea-verdict ' + (done ? 'ok' : 'no');
-  $('#peaPanel').classList.toggle('has-ask', ['guess1', 'predict', 'count', 'punnett'].some(asking));
 }
 
 // =========================================================================
@@ -738,7 +751,7 @@ const card = (id, vars = {}) => {
 };
 const go = (key, dur) => anim(dur, (e, k) => { S[key] = k; }, Ease.linear);
 const panelStep = (id, vars, extra = {}) => ({
-  id, ...card(id, vars), targets: [], view: extra.view || 'overview', caption: T.steps[id].caption,
+  id, respond: true, ...card(id, vars), targets: [], view: extra.view || 'overview', caption: T.steps[id].caption, card: askCard(id),
   isDone: () => lesson.mode === 'watch' || (ANS[id] != null && (id !== 'count' || ANS.count === 'quarter')),
   progress: () => (ANS[id] ? 1 : 0), ...extra,
 });
@@ -782,7 +795,7 @@ const STEPS = [
     progress: () => nShelled() / F1_POTS,
     caption: () => C.shell.sort },
   panelStep('count', { mendel: (MENDEL.yellow + MENDEL.green).toLocaleString() }, { view: 'tray' }),
-  panelStep('punnett', {}, { view: 'tray', isDone: () => lesson.mode === 'watch' || punDone(), progress: () => ANS.cells.filter((c, i) => c === punRight(i)).length / 4 }),
+  panelStep('punnett', {}, { view: 'tray', card: mountPunnett, isDone: () => lesson.mode === 'watch' || punDone(), progress: () => ANS.cells.filter((c, i) => c === punRight(i)).length / 4 }),
 ];
 function B_KEYS() { return F1_X.map((x, p) => 'f1_' + p); }
 STEPS.find((s) => s.id === 'count').detail = () => fmt(T.steps.count.detail, { n: R ? R.f2.flat(2).length : 0, mendel: (MENDEL.yellow + MENDEL.green).toLocaleString() });

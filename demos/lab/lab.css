@@ -211,6 +211,25 @@ html, body {
 .lab-card .card-text { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
 .lab-card .card-extra { margin-top: 12px; }
 .lab-card [hidden] { display: none !important; }
+/* a question on the step card: answer buttons, then right (green) or try again (red) */
+.ask-q { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.ask-answers { display: flex; flex-direction: column; gap: 6px; }
+.ask-answers button {
+  text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 10px;
+  padding: 8px 12px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; transition: border-color .15s;
+}
+.ask-answers button:hover:not(:disabled) { border-color: var(--accent); }
+.ask-answers button:disabled { cursor: default; opacity: .6; }
+.ask-answers button.on { background: var(--ink); border-color: var(--ink); color: #fff; opacity: 1; }
+.ask-answers button.wrong { background: #fdeaee; border-color: #e5484d; color: #9f1239; animation: ask-shake .35s; opacity: 1; }
+.ask-answers button.right { background: #16a34a; border-color: #16a34a; color: #fff; opacity: 1; }
+@keyframes ask-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.ask-verdict { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 9px 11px; border-radius: 12px; font-size: 13px; line-height: 1.45; }
+.ask-verdict i { font-size: 18px; flex: none; }
+.ask-verdict.ok { background: #e7f6ec; color: #14532d; }
+.ask-verdict.ok i { color: #16a34a; }
+.ask-verdict.no { background: #fdeaee; color: #7f1d1d; }
+.ask-verdict.no i { color: #e5484d; }
 .why {
   display: flex; gap: 8px; margin: 10px 0 0; padding: 8px 10px; background: var(--blue-soft);
   border-radius: var(--radius-pop); font-size: 12.5px; line-height: 1.45; color: #1e3a8a;
