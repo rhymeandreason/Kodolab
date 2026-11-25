@@ -148,7 +148,7 @@ function rebuild() {
   // things to hover for their name and what they do
   ix.register('tubes', plus.group, { ...T.objects.tubes });
   ix.addGroup('tubes', minus.group);
-  ix.register('pipette', pip.group, { ...T.objects.pipette });
+  ix.register('pipette', pip.group, { ...T.objects.pipette, ringPlane: 'vertical' });
   ix.register('loop', loop.group, { ...T.objects.loop });
   ix.register('waste', waste.group, { ...T.objects.waste });
   ix.register('rack', rack.group, { ...T.objects.rack });

@@ -17,6 +17,8 @@
  *   // ringAround: size the 'circle' ring from another group, e.g. the ice bath a bottle stands in
  *   ix.register('bottle', bottle.group, { name, ringAround: iceBath.group });
  *   // ringRadius: a fixed circle (cm) round the group's origin, overriding the measured base
+ *   // ringPlane: 'vertical' stands the band upright round a held or hanging object (a funnel
+ *   // in a tube, a pipette), facing the camera and moving with it
  *   // ringShape: 'circle' rounds a fitted oval or box into a circle (an egg, a berry)
  *   ix.addGroup('box', gel.group);   // gel.group now hovers, lifts and clicks as 'box'
  *
@@ -323,12 +325,39 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
     path.absarc(hx - rc, -hz + rc, rc, Math.PI * 1.5, Math.PI * 2);
     return path;
   }
-  function bandGeo({ hx, hz, round }) {
-    const gap = 0.3, band = Math.min(1.2, Math.max(0.5, 0.15 * Math.min(hx, hz)));
+  function bandGeo({ hx, hz, round, upright }) {
+    const gap = 0.3, band = upright ? Math.min(0.7, Math.max(0.35, 0.08 * Math.min(hx, hz))) : Math.min(1.2, Math.max(0.5, 0.15 * Math.min(hx, hz)));
     const rIn = round ? Math.min(hx, hz) + gap : Math.min(0.2 * Math.min(hx, hz), 1.5) + gap;
     const shape = rrect(new THREE.Shape(), hx + gap + band, hz + gap + band, rIn + band);
     shape.holes.push(rrect(new THREE.Path(), hx + gap, hz + gap, rIn));
-    return new THREE.ShapeGeometry(shape, 24).rotateX(-Math.PI / 2);
+    const geo = new THREE.ShapeGeometry(shape, 24);
+    return upright ? geo : geo.rotateX(-Math.PI / 2);
+  }
+  /* ringPlane 'vertical': for a held or hanging object (a funnel in a tube, a pipette) the band
+   * stands upright round its silhouette, turned to face the camera, and moves with it. */
+  const camYaw = () => { X.set(1, 0, 0).applyQuaternion(camera.quaternion); return Math.atan2(-X.z, X.x); };
+  function silhouette(o) {
+    const g = o.group;
+    g.updateWorldMatrix(true, true);
+    g.getWorldPosition(P);
+    const yaw = camYaw(), c = Math.cos(yaw), s = Math.sin(yaw);
+    let u0 = Infinity, u1 = -Infinity, w0 = Infinity, w1 = -Infinity;
+    const pts = [];
+    g.traverseVisible((m) => {
+      if (!m.isMesh || !m.geometry?.attributes.position || m.userData.hitProxy) return;
+      const pos = m.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+        const u = (v.x - P.x) * c - (v.z - P.z) * s, w = v.y - P.y;   // across the view, and up
+        pts.push(u, w);
+        u0 = Math.min(u0, u); u1 = Math.max(u1, u); w0 = Math.min(w0, w); w1 = Math.max(w1, w);
+      }
+    });
+    if (!pts.length) return null;
+    const cu = (u0 + u1) / 2, cw = (w0 + w1) / 2, hx = Math.max(0.3, (u1 - u0) / 2), hz = Math.max(0.3, (w1 - w0) / 2);
+    let corner = 0;
+    for (let i = 0; i < pts.length; i += 2) corner = Math.max(corner, ((pts[i] - cu) / hx) ** 2 + ((pts[i + 1] - cw) / hz) ** 2);
+    return { g, upright: true, a: 0, cx: cu, cz: cw, hx, hz, round: corner < 1.7 };
   }
   function placeRing(k, o, t) {
     let r = rings[k];
@@ -343,22 +372,29 @@ export function createInteraction(stage, { targets = () => [], busy = () => fals
     if (!r.userData.fp || t - r.userData.at > 0.3) {   // re-measure a few times a second: props change shape
       let fp;
       if (o.ringRadius) { o.group.updateWorldMatrix(true, false); fp = { g: o.group, a: 0, cx: 0, cz: 0, hx: o.ringRadius, hz: o.ringRadius, round: true, y: 0 }; }
-      else fp = footprint(o);
+      else fp = o.ringPlane === 'vertical' ? silhouette(o) : footprint(o);
       if (fp && o.ringShape === 'circle') fp.round = true, fp.hx = fp.hz = Math.max(fp.hx, fp.hz);
       r.userData.at = t;
       if (!fp) { r.visible = false; return; }
       const old = r.userData.fp;
-      if (!old || old.round !== fp.round || Math.abs(old.a - fp.a) > 0.02 || Math.abs(old.hx - fp.hx) > 0.05 || Math.abs(old.hz - fp.hz) > 0.05) {
+      if (!old || old.upright !== fp.upright || old.round !== fp.round || Math.abs(old.a - fp.a) > 0.02 || Math.abs(old.hx - fp.hx) > 0.05 || Math.abs(old.hz - fp.hz) > 0.05) {
         r.geometry.dispose(); r.geometry = bandGeo(fp);
       } else { fp.hx = old.hx; fp.hz = old.hz; }
       r.userData.fp = fp;
     }
-    const fp = r.userData.fp, yaw = yawOf(fp.g), c = Math.cos(yaw), s = Math.sin(yaw);
+    const fp = r.userData.fp;
     fp.g.getWorldPosition(P);
     r.visible = true;
+    r.material.opacity = 0.6 + 0.2 * Math.sin(t * 3.2);
+    if (fp.upright) {
+      const yaw = camYaw(), c = Math.cos(yaw), s = Math.sin(yaw);
+      r.position.set(P.x + fp.cx * c, P.y + fp.cz, P.z - fp.cx * s);
+      r.rotation.set(0, yaw, 0);
+      return;
+    }
+    const yaw = yawOf(fp.g), c = Math.cos(yaw), s = Math.sin(yaw);
     r.position.set(P.x + fp.cx * c + fp.cz * s, P.y + fp.y - (o.ringAround ? 0 : lifts[k] || 0) + 0.1, P.z - fp.cx * s + fp.cz * c); // the ring stays on the bench
     r.rotation.set(0, yaw + fp.a, 0);
-    r.material.opacity = 0.6 + 0.2 * Math.sin(t * 3.2);
   }
   function dropRing(k) {
     const r = rings[k]; if (!r) return;

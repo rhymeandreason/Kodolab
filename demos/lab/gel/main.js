@@ -170,7 +170,7 @@ function rebuild() {
   ix.register('gel', gel.group, { ...T.objects.gel, anchor: V3(0, 1.4, 0) });
   ix.register('box', box.group, { ...T.objects.box });
   ix.addGroup('box', gel.group);   // the gel lies in the box until step 4 lifts it out
-  ix.register('pipette', pip.group, { ...T.objects.pipette });
+  ix.register('pipette', pip.group, { ...T.objects.pipette, ringPlane: 'vertical' });
   ix.register('tips', tipBox.group, { ...T.objects.tips });
   ix.register('rack', rack.group, { ...T.objects.rack });
   ix.register('waste', waste.group, { ...T.objects.waste });

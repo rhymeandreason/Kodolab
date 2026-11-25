@@ -82,7 +82,7 @@ function rebuild() {
   ix.addGroup('berry', P.calyx.group);
   ix.register('bag', P.bag.group, { ...T.objects.bag, anchor: V3(0, 2.2, 0) });
   ix.register('beaker', P.beaker.group, { ...T.objects.beaker, anchor: V3(0, 9.4, 0) });
-  ix.register('funnel', P.funnel.group, { ...T.objects.funnel, anchor: V3(0, 7.4, 0) });
+  ix.register('funnel', P.funnel.group, { ...T.objects.funnel, anchor: V3(0, 7.4, 0), ringPlane: 'vertical' });
   ix.register('bottle', P.bottle.group, { ...T.objects.bottle, anchor: V3(0, 10.6, 0), ringAround: P.ice.group });
   ix.register('skewer', P.skewer.group, { ...T.objects.skewer, anchor: V3(0, 7.5, 0) });
   // things to hover for their name and what they do

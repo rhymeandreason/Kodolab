@@ -214,7 +214,7 @@ function rebuild() {
   ix.register('analyzer', analyzer.group, { ...T.objects.analyzer, anchor: V3(0, 9, 0) });
   TUBES.forEach((t, i) => ix.register(t.key, tubes[i].group, { name: tubeText(t.key).label, short: tubeText(t.key).card, desc: fmt(tubeText(t.key).desc, { osm: Math.round(t.osm) }), anchor: V3(0, 14.5, 0) }));
   ix.register('scope', scope.group, { ...T.objects.scope, anchor: V3(0, 36, 0) });
-  ix.register('pipette', pip.group, { ...T.objects.pipette });
+  ix.register('pipette', pip.group, { ...T.objects.pipette, ringPlane: 'vertical' });
   ix.register('tips', tipBox.group, { ...T.objects.tips });
   ix.register('rack', rack.group, { ...T.objects.rack });
   ix.register('waste', waste.group, { ...T.objects.waste });
