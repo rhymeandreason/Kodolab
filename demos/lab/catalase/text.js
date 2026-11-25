@@ -131,6 +131,8 @@ LabText.add('en', {
     cup: '{conc}',
     boiledCup: 'Boiled',
     bottle: { title: 'HYDROGEN', line: 'PEROXIDE 3%', note: 'H₂O₂ · topical' },
+    /* printed on the mat */
+    zones: { prep: 'YEAST PREP', stock: 'STOCK', cups: 'HYDROGEN PEROXIDE', control: 'CONTROL', tray: 'DISK TRAY' },
   },
 
   /* the zoom levels. disk.js and molecule.js read their own block; nothing else does */
