@@ -31,6 +31,8 @@ Copy `lab/strawberry/` to `lab/<name>/` and rename the page `<name>-lab.html`. *
 
 Pick the accent on the root: `<html lang="en" data-lab-theme="teal">`. The themes are in `lab/themes.html`, and the lab's CSS uses the `--accent*` tokens, never hex, for anything themed (README, "Colour themes").
 
+**Splitting the build across agents:** write the contract first, one short file: every new prop's call, origin, anchors and setters; the state object each zoom level poses from; and what each step sets it to. Then props, levels and `main.js` can be built at once and meet with little rework. Give the level builders a bench page with every state field on a slider (`mendel/levels-test.html`). A props brief names the anatomy (Mendel's: stipules bigger than the leaflets, branched tendrils, a keel round ten stamens, fresh vs dry pods); "a pea plant" alone gets a generic vine.
+
 ## 2. The minimum `main.js`
 
 ```js
@@ -108,10 +110,14 @@ Going back or jumping ahead calls `rebuild()`, replays the earlier clicks instan
 4. **Multi-click steps** need `isDone()`, and ideally `progress()` for the timeline fill. An auto-completed step clicks its first active target until `isDone()`.
 5. **Timed steps** use `watch: { duration, get, set, rate }`. `set(t)` poses everything from `t` alone, so the student can scrub (Photosynthesis's observation step).
 6. **A sim that poses objects every frame** poses them only when its state changes, or the hover lift is overwritten.
+7. **A life cycle is one number.** Mendel's `poseSite(site, age)` turns days since a flower opened into bud, flower, wither, pod, dry pod; the parents, the cross and the F₁ garden all call it, so scrubbing comes free.
+8. **Where an item lands follows click order**, kept in `S` (Mendel's `S.order`), never a fixed index per source: a student who clicks out of order otherwise makes landed items jump to new slots.
 
 **Hand actions are shared:** `lab/hands.js` has `pourPose`, `carry` (over a container wall), `dropIn` (a used item into a bin) and the micropipette's `takeTip`, `pipetteDraw`, `pipetteDispense`, `ejectTip`. They keep these rules; use them before writing your own, and add one there when a second lab would repeat it.
 
 **A step finished off the bench** (a panel where the student counts or measures: Onion's eyepiece, Gel's gel image) keeps its state in that panel, not in `S`, so a rebuild leaves it alone and only restart clears it. The step's `isDone` reads the panel and returns true in Watch (`lesson.mode === 'watch'`), since Watch stops at the bench; `progress` reads it too; its `run` opens the panel unless `isInstant()`. The panel's change handler calls `lesson.jumpTo(i + 1)` once it is done, because no bench click is coming to advance the step.
+
+**A graded question must survive the noise in the student's data.** Work out the spread before writing the choices: Mendel's ~120 peas pick "ratio nearest 3:1 or 2:1" wrong about one run in eight, while "about 1 in 4 green, or 1 in 2" is 3.6 σ safe. A prediction is never graded; show what they said beside what happened. Once answered and passed, a question folds to its result line, or the panel grows over the zoom circles.
 
 ## 5. The intro card
 
@@ -132,6 +138,7 @@ Its text is `intro` in `text.js`, built by `page.js` before any module loads, so
 
 * `insets: (w, h) => chromeInsets(w, h)`, passed to `createStage`, measures the standard chrome so views centre in the free area. A lab with panels of its own passes extras (`chromeInsets(w, h, { bottom: ['.data-panel'] })`) or adjusts the result; Photosynthesis's observation step is the example.
 * The card's height changes per step: call `stage.resize()` in `onEnter`.
+* Close-ups aim from the props, not typed coordinates: read the subject's world position and facing after `rebuild()` and write them into the view's `t` and `p` (`stage.focus` reads the views object by reference). Turn a prop so the part being worked on faces the reader (Mendel's `faceFront`). Typed coordinates break whenever a prop changes.
 * Watch mode's camera takes `rig: { t, p }` (the one default zoom) and `special: [...]`, the view names allowed to zoom in, as `createFollowCam` options. Everything else only pans (README, "Watch camera").
 
 ## 8. Props
@@ -145,6 +152,8 @@ Reuse first: `lab/gallery.html` shows every prop, and `lab/props.html#<key>` one
 
 A common ingredient gets one entry in `props/ingredients.js` in a colour no other uses, never a colour in the lab. Bigger machinery (a cell scene) stays in the lab's folder until a second lab needs it.
 
+**A setter that changes a material after creation paints every copy now drawing.** `ix.register` gives each mesh its own material copy, so a prop that keeps writing to the material it made stops changing on screen once it is clickable, frozen in whatever state it was registered in (Mendel's pods stayed dry, its leaves stayed yellow). Tag the material with `live()` and change it through `paint(root, m, fn)`, both in `props/shapes.js`.
+
 Rule: Lowest face at y ≥ 0.015 cm (0.03 for scaled-up props). Walls start on top of the floor, and inner parts are 0.04 cm narrower than the walls around them. This solves flickering when object is placed on a table.
 
 ## 9. Check it
@@ -153,7 +162,8 @@ Rule: Lowest face at y ≥ 0.015 cm (0.03 for scaled-up props). Walls start on t
 * at \~1440×900 and at phone width, in both modes, on every step with a side panel
 * back, jump ahead and scrub from every step: the bench must come back the same
 * `lab/gallery.html` after any prop change, since every lab shares the props
-* the browser pane's tab is hidden and rAF does not run there: drive frames with `stage.frame(performance.now())`, and have the human play it through in Safari
+* screenshots: headless Playwright (in `node_modules`, Chromium) renders a lab on the GPU at a true 1440×900 with rAF and tweens running. Launch with `--use-angle=metal --enable-gpu --ignore-gpu-blocklist`, reach each step with `page.evaluate(() => LAB.lesson.jumpTo(i))`, and run it with network access, since three.js and fonts come from a CDN. Since a step's pose is a function of `S` alone, setting an action's progress (`LAB.S.em = 0.5`) shows the middle of an animation, which is where things clip through each other; a few frames per action, from the step's camera and one from the side, go a long way
+* the built-in browser pane is for what the human should watch. Its tab is usually hidden: rAF does not run, the first screenshot after a change is often stale (take two), camera glides need `stage.focus(view, 0)`, and `window.__noLiveReload = true` stops reloads while other agents save. Have the human play it through in Safari
 
 ## 10. Put it in kodolab
 
