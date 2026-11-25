@@ -55,7 +55,7 @@ export function makeMicropipette(mat, { button = toLinear('#facc15'), volume = 1
   plunger.add(rod, cap);
   g.add(plunger);
   const api = {
-    group: g, tip, plunger, hasTip: true, fill: 0,
+    group: g, tip, tipLen: TIP_L, plunger, hasTip: true, fill: 0,
     anchors: { point: V3(0, 0, 0), nose: V3(0, 3.5, 0), top: V3(0, 22.8, 0), hook: V3(0, 18.6, -1.6) },
     setPlunger(k) { plunger.position.y = -1.0 * clamp(k); },
     setTip(on) { this.hasTip = on; tip.visible = on; if (fluid) fluid.visible = on && this.fill > 0.01; },

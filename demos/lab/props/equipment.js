@@ -257,12 +257,13 @@ export function makeAnalyzer(mat, { color = toLinear('#e9edf2') } = {}) {
   const g = new THREE.Group();
   const W = 14, D = 12, H = 7.5;
   g.add(mesh(rbox(W, H, D, 0.9), mat.make.solid(color, 0.45)));
-  const bezel = mesh(rbox(W - 2, 5.2, 0.4, 0.3), mat.make.solid(toLinear('#26303b'), 0.4));
-  bezel.position.set(0, 3.9, D / 2 - 0.05);
+  const SY = 3.9, BH = 5.2;                       // screen centre; rbox's base is y = 0, so centre the bezel on SY
+  const bezel = mesh(rbox(W - 2, BH, 0.4, 0.3), mat.make.solid(toLinear('#26303b'), 0.4));
+  bezel.position.set(0, SY - BH / 2, D / 2 - 0.05);
   g.add(bezel);
   const c = makeCanvas(640, 400), tex = canvasTex(c);
   const screen = mesh(new THREE.PlaneGeometry(W - 3, 4.4), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), { cast: false });
-  screen.position.set(0, 3.9, D / 2 + 0.17); screen.userData.noSketch = true;
+  screen.position.set(0, SY, D / 2 + 0.17); screen.userData.noSketch = true;
   g.add(screen);
   const port = mesh(new THREE.CylinderGeometry(0.9, 0.7, 0.4, 24), mat.make.solid(toLinear('#3b82f6'), 0.35));
   port.position.set(3.6, H + 0.1, -2.6);

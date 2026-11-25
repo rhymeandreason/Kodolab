@@ -293,7 +293,7 @@ async function load(i) {
   });
 
   say(C.eject);
-  await ejectTip(pip, root, POS.waste.clone().add(V3(0, 9.5, 0)), POS.waste.clone().setY(0.9));
+  await ejectTip(pip, root, POS.waste.clone().add(V3(0, 9.5, 0)), POS.waste.clone().setY(0.9), { within: 1.7 });
   await moveTo(pip.group, { pos: pipRest(B.stand), dur: 0.7, arc: 2 });
   S.cap = null;
 }

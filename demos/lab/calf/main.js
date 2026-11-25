@@ -270,7 +270,7 @@ async function transfer(above, into, onDispense, C = null, tube = B.blood) {
   });
   if (C) say(C.load);
   await pipetteDispense(pip, { above, into, onDispense });
-  await ejectTip(pip, root, POS.waste.clone().add(V3(0, 9.5, 0)), POS.waste.clone().setY(0.9));
+  await ejectTip(pip, root, POS.waste.clone().add(V3(0, 9.5, 0)), POS.waste.clone().setY(0.9), { within: 1.7 });  // bin floor r = 3.0 × 0.7, less the tip's width
   await moveTo(pip.group, { pos: pipRest(B.stand), dur: 0.7, arc: 2 });
 }
 

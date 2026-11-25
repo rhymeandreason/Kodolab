@@ -39,11 +39,20 @@ export function carry(obj, to, dur = 1.4, clear = 7) {
 }
 
 /** Drop `obj` (re-parented to `parent`, keeping where it is) onto `floor`, scattered within
- *  `spread` cm, tipping onto its side. It stays there. */
-export function dropIn(parent, obj, floor, { dur = 0.45, spread = 0.9, tip = [1.1, 1.5] } = {}) {
+ *  `spread` cm, tipping onto its side. It stays there. `within` (cm) is the radius of a container's
+ *  floor: both ends of an object `len` cm long (its y axis) then land inside it, centred on `floor`. */
+export function dropIn(parent, obj, floor, { dur = 0.45, spread = 0.9, tip = [1.1, 1.5], within, len = 0 } = {}) {
   parent.attach(obj);
   const a = obj.position.clone();
-  const x = floor.x + rand(-spread, spread), z = floor.z + rand(-spread, spread), rz = rand(tip[0], tip[1]), ry = rand(0, Math.PI * 2);
+  const rz = rand(tip[0], tip[1]), ry = rand(0, Math.PI * 2);
+  let x = floor.x + rand(-spread, spread), z = floor.z + rand(-spread, spread);
+  if (within != null) {
+    // The point sits at the origin and the far end reaches `reach` along (-cos ry, sin ry).
+    const reach = len * Math.sin(rz), dx = -Math.cos(ry) * reach, dz = Math.sin(ry) * reach;
+    const room = Math.max(0, within - reach / 2) * Math.random();     // slack to slide the pair off-centre
+    const sa = rand(0, Math.PI * 2);
+    x = floor.x - dx / 2 + Math.cos(sa) * room; z = floor.z - dz / 2 + Math.sin(sa) * room;
+  }
   return anim(dur, (e) => {
     obj.position.set(lerp(a.x, x, e), lerp(a.y, floor.y, e), lerp(a.z, z, e));
     obj.rotation.set(0, ry, rz * e);
@@ -87,13 +96,14 @@ export async function pipetteDispense(pip, { above, into, onDispense }) {
   anim(0.2, (e) => pip.setPlunger(1 - e));
 }
 
-/** Carry the pipette to `over` and eject its tip, which drops into the bin at `floor` and stays. */
-export async function ejectTip(pip, parent, over, floor) {
+/** Carry the pipette to `over` and eject its tip, which drops into the bin at `floor` and stays.
+ *  `within` is the bin's floor radius, so the tip lies inside it. */
+export async function ejectTip(pip, parent, over, floor, { within } = {}) {
   await moveTo(pip.group, { pos: over, dur: 0.7, arc: 2 });
   pip.group.updateMatrixWorld(true);
   const t = pip.tip.clone();
   pip.group.localToWorld(t.position.set(0, 0, 0));
   pip.setTip(false);
   parent.add(t);
-  return dropIn(parent, t, floor);
+  return dropIn(parent, t, floor, within == null ? {} : { within, len: pip.tipLen, tip: [0.7, 1.0] });
 }
