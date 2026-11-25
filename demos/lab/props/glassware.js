@@ -8,6 +8,7 @@
  *   b.liquid.setVolume(150);
  *   b.anchors.spout           // pouring lip, local space (+x side of the rim)
  *   labelAt: the tape label's angle round the wall (0 faces +z; default 0.55)
+ *   labelTop: put the label just under the rim, clear of whatever sits inside
  *
  *   const tube = makeTestTube(mat);
  *   const filtrate = tube.addLayer(0xef7593, 0.85);   // each layer is a liquid
@@ -32,7 +33,7 @@ function edgeRing(mat, r, y, tube) {
   return m;
 }
 
-export function makeBeaker(mat, { r = 3.6, h = 9.6, level = 5.3, cap = 250, label, sub, color = '#0891b2', liquidColor = 0x5aa9e6, labelAt = 0.55 } = {}) {
+export function makeBeaker(mat, { r = 3.6, h = 9.6, level = 5.3, cap = 250, label, sub, color = '#0891b2', liquidColor = 0x5aa9e6, labelAt = 0.55, labelTop = false } = {}) {
   const g = new THREE.Group();
   const t = 0.14;
   const pts = [
@@ -63,8 +64,9 @@ export function makeBeaker(mat, { r = 3.6, h = 9.6, level = 5.3, cap = 250, labe
     },
   }));
   if (label) {
+    const lh = Math.min(2.4, h * 0.3), ly = labelTop ? h - lh - 0.35 : h * 0.3;
     g.add(wrapLabel({
-      rTop: r + 0.02, rBot: r + 0.02, y0: h * 0.3, y1: h * 0.3 + Math.min(2.4, h * 0.3), arc: 1.25, center: labelAt, order: 6,
+      rTop: r + 0.02, rBot: r + 0.02, y0: ly, y1: ly + lh, arc: 1.25, center: labelAt, order: 6,
       draw: (c, w, hh) => tapeLabel(c, w, hh, label, sub, color),
     }));
   }

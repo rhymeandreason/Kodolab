@@ -70,6 +70,7 @@ function massAt(i) {
 // =========================================================================
 const BX = [-4, 8, 20], BZ = 4, BOTTLE_Z = -15;
 const BK = { r: 4.3, h: 12, t: 0.14 };   // 500 mL Griffin, about 8.6 × 12 cm
+const BK_LABEL = 0.8;              // the tape label's angle round the wall; each beaker turns it to face front
 const POS = {
   towel: V3(-36, 0, 5), balance: V3(-20, 0, 2), vinegar: V3(-12, 0, -15), waste: V3(33, 0, 1),
 };
@@ -129,9 +130,9 @@ function rebuild() {
   const towel = place(makePaperTowel(mat, { w: 21, d: 12 }), POS.towel);
   const balance = place(makeBalance(mat), POS.balance);
   const beakers = LIQ.map((L, i) => place(makeBeaker(mat, {
-    r: BK.r, h: BK.h, level: 0, cap: 500, label: fmt(T.props.beaker, { egg: LETTER[i] }), sub: T.liquids[i].name, color: L.tape, liquidColor: VINEGAR.color, labelAt: 1.25,
-  }), V3(BX[i], 0, BZ)));
-  const waste = place(makeBeaker(mat, { r: 5.3, h: 14.5, level: 0, cap: 1000, label: T.props.waste, color: '#64748b', liquidColor: VINEGAR.color }), POS.waste);
+    r: BK.r, h: BK.h, level: 0, cap: 500, label: fmt(T.props.beaker, { egg: LETTER[i] }), sub: T.liquids[i].name, color: L.tape, liquidColor: VINEGAR.color, labelAt: BK_LABEL, labelTop: true,
+  }), V3(BX[i], 0, BZ), -BK_LABEL));
+  const waste = place(makeBeaker(mat, { r: 5.3, h: 14.5, level: 0, cap: 1000, label: T.props.waste, color: '#64748b', liquidColor: VINEGAR.color, labelAt: 0 }), POS.waste);
   const vinegar = place(makeReagentBottle(mat, { ...T.props.vinegar, color: '#b38b1d', liquidColor: VINEGAR.color, scale: 1.6 }), POS.vinegar);
   const bottles = LIQ.map((L, i) => place(makeReagentBottle(mat, { ...T.props.bottles[i], color: L.tape, liquidColor: L.color, scale: 1.25 }), V3(BX[i], 0, BOTTLE_Z)));
   bottles[2].liquid.mesh.material.opacity = LIQ[2].opacity;
@@ -254,6 +255,7 @@ function tickFx(time) {
 // pose(): the bench from S
 // =========================================================================
 const X = V3(1, 0, 0), Z = V3(0, 0, 1), qI = new THREE.Quaternion();
+const qBK = new THREE.Quaternion().setFromAxisAngle(V3(0, 1, 0), -BK_LABEL), zBK = Z.clone().applyQuaternion(qBK);
 const _p = V3();
 
 /** Lift straight up to `top`, carry level, lower: a pure function of k for replays. */
@@ -264,6 +266,16 @@ function liftPath(a, b, k, top, out) {
   return out;
 }
 const vinFill = (i) => ph(S.vin, i + 0.3, i + 0.7, Ease.linear);
+
+// The vinegar bottle stays in hand for all three pours. Upright between them, its spout rides
+// VIN_LIFT above and behind the pour point, so the body clears every rim.
+const VIN_GO = 0.15, VIN_HOP = 0.18, VIN_LIFT = V3(0, 8, -6);
+const vinTarget = (j) => V3(BX[j] - 0.6, BK.h + 3.2, BZ - 2.4);
+const vinCarry = (j) => vinTarget(j).add(VIN_LIFT);
+function vinHop(j, k) {
+  const spout = vinCarry(j).lerp(vinCarry(j + 1), smooth(k));
+  pourPose(B.vinegar.group, POS.vinegar, qI, B.vinegar.anchors.spout, spout, X, 0, 1, 0);
+}
 const drained = (i) => ph(S.E[i].w1, 0.38, 0.56, Ease.linear);
 const solFill = (i) => ph(S.E[i].fill, 0.3, 0.7, Ease.linear);
 
@@ -282,19 +294,33 @@ function pose(force = false) {
 
   // bottles and beakers move only for their own pours, so the hover lift is left alone otherwise
   if (changed('vin', S.vin)) {
-    const j = Math.min(2, Math.floor(S.vin)), u = S.vin - j, done = S.vin >= 3;
-    const target = V3(BX[j] - 0.6, BK.h + 3.2, BZ - 2.4);
-    const kMove = done ? 0 : win(u, 0, 0.22, 0.78, 1), kTilt = done ? 0 : win(u, 0.22, 0.36, 0.64, 0.78);
-    pourPose(B.vinegar.group, POS.vinegar, qI, B.vinegar.anchors.spout, target, X, 1.95, kMove, kTilt, 5);
-    B.vinegar.cap.visible = S.vin <= 0.01 || done;
-    B.vinegar.liquid.setFraction(0.85 - 0.2 * (vinFill(0) + vinFill(1) + vinFill(2))).setPour(kTilt);
+    const v = S.vin, home = v <= 0 || v >= 3;
+    let tilt = 0;
+    if (home) pourPose(B.vinegar.group, POS.vinegar, qI, B.vinegar.anchors.spout, POS.vinegar, X, 0, 0, 0);
+    else if (v < VIN_GO || v > 3 - VIN_GO) {
+      // off the shelf to the first beaker, back from the last, passing behind the beakers
+      const k = smooth(v < VIN_GO ? v / VIN_GO : (3 - v) / VIN_GO);
+      pourPose(B.vinegar.group, POS.vinegar, qI, B.vinegar.anchors.spout, vinCarry(v < 1 ? 0 : 2), X, 0, k, 0, 3);
+    } else {
+      const j = Math.min(2, Math.floor(v)), u = v - j;
+      if (u < VIN_HOP && j > 0) vinHop(j - 1, (u + VIN_HOP) / (2 * VIN_HOP));
+      else if (u > 1 - VIN_HOP && j < 2) vinHop(j, (u - 1 + VIN_HOP) / (2 * VIN_HOP));
+      else {
+        // tilt in place: the spout comes down from behind the rim as the bottle tips
+        tilt = win(u, VIN_GO, 0.3, 0.7, 1 - VIN_HOP);
+        const spout = vinCarry(j).lerp(vinTarget(j), tilt);
+        pourPose(B.vinegar.group, POS.vinegar, qI, B.vinegar.anchors.spout, spout, X, 1.95, 1, tilt);
+      }
+    }
+    B.vinegar.cap.visible = home;
+    B.vinegar.liquid.setFraction(0.85 - 0.2 * (vinFill(0) + vinFill(1) + vinFill(2))).setPour(tilt);
   }
   LIQ.forEach((L, i) => {
     const e = S.E[i];
     if (changed('bk' + i, e.w1)) {
       const kMove = win(e.w1, 0.2, 0.36, 0.6, 0.72), kTilt = win(e.w1, 0.36, 0.42, 0.54, 0.6);
       const target = V3(POS.waste.x - 3.6, B.waste.h + 9, POS.waste.z);   // high enough that the upright beaker clears the rim
-      pourPose(B.beakers[i].group, V3(BX[i], 0, BZ), qI, B.beakers[i].anchors.spout, target, Z, -1.9, kMove, kTilt, 13);
+      pourPose(B.beakers[i].group, V3(BX[i], 0, BZ), qBK, B.beakers[i].anchors.spout, target, zBK, -1.9, kMove, kTilt, 13);
       B.beakers[i].liquid.setPour(kTilt);
     }
     if (changed('bt' + i, e.fill)) {
