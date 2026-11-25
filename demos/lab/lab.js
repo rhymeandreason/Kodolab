@@ -37,5 +37,5 @@ export { makeEgg } from './props/animals.js';
 export { makeBalance } from './props/measuring.js';
 export { makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope } from './props/microscopy.js';
 export { makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeLead, makeTransilluminator } from './props/electrophoresis.js';
-export { makeMicropipette, makeTipBox, makePipetteStand } from './props/micropipette.js';
+export { makeMicropipette, makeTipBox, makePipetteStand, makePipetteRack, PIPETTE_SIZES } from './props/micropipette.js';
 export { makeStream, ripple, powderFall, drop, makeBubbles, makeSteam } from './props/effects.js';

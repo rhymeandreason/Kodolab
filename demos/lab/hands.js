@@ -100,10 +100,12 @@ export async function pipetteDispense(pip, { above, into, onDispense }) {
  *  `within` is the bin's floor radius, so the tip lies inside it. */
 export async function ejectTip(pip, parent, over, floor, { within } = {}) {
   await moveTo(pip.group, { pos: over, dur: 0.7, arc: 2 });
+  if (pip.setEject) await anim(0.15, (e) => pip.setEject(e));
   pip.group.updateMatrixWorld(true);
   const t = pip.tip.clone();
   pip.group.localToWorld(t.position.set(0, 0, 0));
   pip.setTip(false);
   parent.add(t);
+  if (pip.setEject) anim(0.25, (e) => pip.setEject(1 - e));
   return dropIn(parent, t, floor, within == null ? {} : { within, len: pip.tipLen, tip: [0.7, 1.0] });
 }

@@ -186,7 +186,8 @@ function rebuild() {
   });
   const tipBox = place(makeTipBox(mat, { lid: false }), POS.tips);
   const stand = place(makePipetteStand(mat), POS.stand);
-  const pip = place(makeMicropipette(mat, { volume: 10 }), pipRest(stand));
+  const pip = makeMicropipette(mat, { volume: 10 });
+  place(pip, pipRest(stand, pip));
   pip.setTip(false);
   const waste = makeWasteBin(mat, { label: T.props.waste, symbol: null });
   waste.group.scale.setScalar(0.7);
@@ -226,8 +227,8 @@ function rebuild() {
 
 const bagKey = (f) => `bag-${f}`;
 
-function pipRest(stand) {
-  return POS.stand.clone().add(stand ? stand.anchors.hang : V3(0, 21.6, -0.1)).sub(V3(0, 18.6, -1.6));
+function pipRest(stand, pip) {
+  return POS.stand.clone().add(stand.rest(pip));
 }
 
 /** The analyzer screen and the four tubes, from S alone. */
@@ -271,7 +272,7 @@ async function transfer(above, into, onDispense, C = null, tube = B.blood) {
   if (C) say(C.load);
   await pipetteDispense(pip, { above, into, onDispense });
   await ejectTip(pip, root, POS.waste.clone().add(V3(0, 9.5, 0)), POS.waste.clone().setY(0.9), { within: 1.7 });  // bin floor r = 3.0 × 0.7, less the tip's width
-  await moveTo(pip.group, { pos: pipRest(B.stand), dur: 0.7, arc: 2 });
+  await moveTo(pip.group, { pos: pipRest(B.stand, pip), dur: 0.7, arc: 2 });
 }
 
 async function actAnalyze() {

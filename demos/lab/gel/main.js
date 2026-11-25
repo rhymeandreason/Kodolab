@@ -29,16 +29,16 @@ const POS = {
   tae: V3(-34, 0, -16), lidRest: V3(-34, 0.8, 8), combRest: V3(-18, 0.18, 17),
   box: V3(0, 0, 0),
   rack: V3(24, 0, -8), tips: V3(24, 0, 12), stand: V3(38, 0, -8), waste: V3(38, 0, 12),
-  power: V3(4, 0, -24), light: V3(58, 0, 2),
+  power: V3(4, 0, -26), light: V3(58, 0, 2),
 };
-const MAT = { w: 150, d: 72, x0: -75, z0: -36 };
+const MAT = { w: 150, d: 76, x0: -75, z0: -38 };
 
 /** Zone names printed on the bench, as in blood-lab. */
 function printedMat() {
   const S = 16, c = makeCanvas(MAT.w * S, MAT.d * S), x = c.getContext('2d');
   x.font = `700 21px ${FONT}`; x.fillStyle = 'rgba(30,45,75,0.55)'; x.textAlign = 'center'; x.textBaseline = 'middle';
   const Zn = T.props.zones;
-  [[Zn.buffer, POS.tae.x, POS.tae.z + 7], [Zn.power, POS.power.x, POS.power.z - 7.5], [Zn.box, POS.box.x, 14],
+  [[Zn.buffer, POS.tae.x, POS.tae.z + 7], [Zn.power, POS.power.x, POS.power.z - 10.5], [Zn.box, POS.box.x, 16],
     [Zn.lid, POS.lidRest.x, POS.lidRest.z + 8], [Zn.samples, POS.rack.x, POS.rack.z + 6], [Zn.pipette, POS.stand.x, POS.stand.z + 6],
     [Zn.tips, POS.tips.x, POS.tips.z + 7], [Zn.waste, POS.waste.x, POS.waste.z + 7], [Zn.light, POS.light.x, POS.light.z + 13]]
     .forEach(([t, wx, wz]) => x.fillText(t.split('').join(' '), (wx - MAT.x0) * S, (wz - MAT.z0) * S));
@@ -55,7 +55,7 @@ const VIEWS = {
   box: { t: V3(-14, 6, -4), p: V3(-14, 46, 54) },
   load: { t: V3(14, 4, 0), p: V3(14, 44, 46) },
   connect: { t: V3(2, 4, -8), p: V3(2, 44, 44) },
-  run: { t: V3(0, 2.5, 1), p: V3(0, 28, 22) },
+  run: { t: V3(0, 2.5, 0.5), p: V3(0, 32, 26) },
   image: { t: V3(58, 3, 1.5), p: V3(58, 30, 24) },
 };
 
@@ -133,7 +133,8 @@ function rebuild() {
   });
   const tipBox = place(makeTipBox(mat, { lid: false }), POS.tips);
   const stand = place(makePipetteStand(mat), POS.stand);
-  const pip = place(makeMicropipette(mat, { volume: LOAD_UL }), pipRest(stand));
+  const pip = makeMicropipette(mat, { volume: LOAD_UL });
+  place(pip, pipRest(stand, pip));
   pip.setTip(false);
   const waste = makeWasteBin(mat, { label: T.props.waste, symbol: null });
   waste.group.scale.setScalar(0.7);
@@ -164,7 +165,7 @@ function rebuild() {
   ix.register('comb', comb.group, { ...T.objects.comb, anchor: V3(0, 2.2, 0) });
   ix.register('lid', lid, { ...T.objects.lid, anchor: V3(0, 1.5, 0) });
   SAMPLES.forEach((s, i) => ix.register(s.key, tubes[i].group, { name: label(s.key).short, short: label(s.key).label, desc: label(s.key).desc, anchor: V3(0, 6.2, 0) }));
-  ix.register('power', power.group, { ...T.objects.power, anchor: V3(0, 7, 0) });
+  ix.register('power', power.group, { ...T.objects.power, anchor: V3(0, power.size.H + 1, 0) });
   ix.register('light', light.group, { ...T.objects.light, anchor: V3(0, 5, 0) });
   ix.register('gel', gel.group, { ...T.objects.gel, anchor: V3(0, 1.4, 0) });
   ix.register('box', box.group, { ...T.objects.box });
@@ -177,8 +178,8 @@ function rebuild() {
   applyLights();
 }
 
-function pipRest(stand) {
-  return POS.stand.clone().add(stand ? stand.anchors.hang : V3(0, 21.6, -0.1)).sub(V3(0, 18.6, -1.6));
+function pipRest(stand, pip) {
+  return POS.stand.clone().add(stand.rest(pip));
 }
 
 /** Lay both leads from the supply's jacks to wherever their plugs are (S.plug). */
@@ -187,7 +188,7 @@ function poseLeads() {
   ['black', 'red'].forEach((k, i) => {
     const a = worldOf(ps, B.power.anchors[k]);
     const aDir = Z.clone().applyQuaternion(ps.quaternion);
-    const rest = POS.power.clone().add(V3(-4.8 + i * 3.2, 0.25, 9 + i * 0.8));
+    const rest = POS.power.clone().add(V3(-6.4 + i * 3.6, 0.25, B.power.size.D / 2 + 3.5 + i * 0.8));
     const inLid = worldOf(B.lid, B.box.lidAnchors[k]);
     const e = S.plug[k];
     const b = rest.clone().lerp(inLid, Ease.inOut(e));
@@ -295,7 +296,7 @@ async function load(i) {
 
   say(C.eject);
   await ejectTip(pip, root, POS.waste.clone().add(V3(0, 9.5, 0)), POS.waste.clone().setY(0.9), { within: 1.7 });
-  await moveTo(pip.group, { pos: pipRest(B.stand), dur: 0.7, arc: 2 });
+  await moveTo(pip.group, { pos: pipRest(B.stand, pip), dur: 0.7, arc: 2 });
   S.cap = null;
 }
 

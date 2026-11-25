@@ -13,14 +13,15 @@ import { toLinear } from '../materials.js';
 
 const BLACK = toLinear('#23272e'), RED = toLinear('#d92b2b');
 
-/** Mini gel box, 10.2 × 21 cm, 5.5 cm tall. A raised bed in the middle (top at anchors.bed)
+/** Mini gel box, 12 × 25 cm on its plinth, 7 cm tall (the size of a Mini-Sub-style tank). A raised bed in the middle (top at anchors.bed)
  *  holds the gel; the buffer chambers at each end hold the electrodes, a platinum wire across
  *  the floor. setBuffer(cm) fills it (anchors.bed.y + 0.9 covers a 0.6 cm gel); setCurrent(0..1)
  *  bubbles the electrodes, twice as many at the cathode (H₂) as at the anode (O₂), and
  *  update(time) moves them. The lid sits closed on top as `lid` (a group: attach it elsewhere
  *  to move it), with its plugs at lidAnchors.black / red. */
 export function makeGelBox(mat, { color = '#a9cbe8', base = '#3a4350' } = {}) {
-  const W = 10.2, L = 21, H = 5.5, t = 0.4, BED = 2.0;
+  const W = 11.3, L = 24.5, H = 7, t = 0.4, BED = 2.4;
+  const PX = W / 2 - 2.0;                 // x of the electrode pins and plug housings
   const g = new THREE.Group();
   // clear blue-tinted acrylic; its cut edges read darker and denser than its faces, as on a real tank
   const wall = mat.make.widePlastic({ color, opacity: 0.22, edge: 0.7, back: 0.25 });
@@ -47,15 +48,15 @@ export function makeGelBox(mat, { color = '#a9cbe8', base = '#3a4350' } = {}) {
     });
   });
   // the gel bed, with the dams that keep it off the electrodes
-  add(new THREE.BoxGeometry(W - 2 * t - 0.04, BED - t, 12), bedMat, 0, t + (BED - t) / 2, 0);
+  add(new THREE.BoxGeometry(W - 2 * t - 0.04, BED - t, 13), bedMat, 0, t + (BED - t) / 2, 0);
   // electrodes: platinum wire across each chamber's floor, up the end wall to a pin
   const wire = mat.steel;
   const ELZ = L / 2 - 1.1;
   [-1, 1].forEach((s) => {
     const w = add(new THREE.CylinderGeometry(0.04, 0.04, W - 2 * t - 0.6, 6), wire, 0, 0.75, s * ELZ, { cast: false });
     w.rotation.z = Math.PI / 2;
-    add(new THREE.CylinderGeometry(0.04, 0.04, H - 0.8, 6), wire, 3.1, 0.75 + (H - 0.8) / 2, s * ELZ, { cast: false });
-    add(new THREE.CylinderGeometry(0.12, 0.12, 0.9, 10), mat.chrome, 3.1, H + 0.1, s * ELZ);
+    add(new THREE.CylinderGeometry(0.04, 0.04, H - 0.8, 6), wire, PX, 0.75 + (H - 0.8) / 2, s * ELZ, { cast: false });
+    add(new THREE.CylinderGeometry(0.12, 0.12, 0.9, 10), mat.chrome, PX, H + 0.1, s * ELZ);
   });
   // the buffer: a box of liquid from the floor up to `level`
   const bufMat = mat.make.liquid(toLinear('#d8ebfa'), 0.35, { roughness: 0.1 });
@@ -81,7 +82,7 @@ export function makeGelBox(mat, { color = '#a9cbe8', base = '#3a4350' } = {}) {
     skirt.position.set(0, -0.35, s * (L / 2 + 0.2)); skirt.renderOrder = 3;
     lid.add(skirt);
     const house = mesh(rbox(1.5, 1.3, 1.5, 0.3), mat.make.solid(s < 0 ? BLACK : RED, 0.4));
-    house.position.set(3.1, 0.2, s * ELZ);
+    house.position.set(PX, 0.2, s * ELZ);
     lid.add(house);
   });
   g.add(lid);
@@ -93,13 +94,13 @@ export function makeGelBox(mat, { color = '#a9cbe8', base = '#3a4350' } = {}) {
   bub.frustumCulled = false; bub.renderOrder = 2; bub.userData.noHL = true;
   g.add(bub);
   // two thirds at the cathode (−z): water splits into twice as much H₂ as O₂
-  const bd = Array.from({ length: N }, (_, i) => ({ z: i < N * 2 / 3 ? -ELZ : ELZ, x: lerp(-3.9, 3.9, R()), o: R(), s: lerp(0.04, 0.09, R()), sp: lerp(0.5, 0.9, R()) }));
+  const bd = Array.from({ length: N }, (_, i) => ({ z: i < N * 2 / 3 ? -ELZ : ELZ, x: lerp(-(W / 2 - t - 0.8), W / 2 - t - 0.8, R()), o: R(), s: lerp(0.04, 0.09, R()), sp: lerp(0.5, 0.9, R()) }));
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = V3(), sc = V3();
 
   const api = {
     group: g, lid, buffer, level: 0, current: 0,
-    lidAnchors: { black: V3(3.1, 0.85, -ELZ), red: V3(3.1, 0.85, ELZ) },   // the plug tops, in lid space
-    anchors: { bed: V3(0, BED, 0), top: V3(0, H, 0), lidTop: V3(0, H + 0.35, 0), black: V3(3.1, H + 0.55, -ELZ), red: V3(3.1, H + 0.55, ELZ), fill: V3(-3, H, -ELZ) },
+    lidAnchors: { black: V3(PX, 0.85, -ELZ), red: V3(PX, 0.85, ELZ) },   // the plug tops, in lid space
+    anchors: { bed: V3(0, BED, 0), top: V3(0, H, 0), lidTop: V3(0, H + 0.35, 0), black: V3(PX, H + 0.55, -ELZ), red: V3(PX, H + 0.55, ELZ), fill: V3(-PX, H, -ELZ) },
     size: { W, L, H },
     setBuffer(cm) {
       this.level = cm;
@@ -215,35 +216,36 @@ export function makeGelComb(mat, { xs = [-2.9, -1.45, 0, 1.45, 2.9], toothW = 0.
   return { group: g, anchors: { top: V3(0, depth + 1.8, 0) } };
 }
 
-/** Power supply, 14 × 10 cm: a screen on the sloped front, a rocker switch and two jacks.
+/** Power supply, 20 × 17 cm, 8.5 cm tall (a compact benchtop unit): a screen on the sloped front, a rocker switch and two jacks.
  *  setDisplay({ on, volts, mA, time }) redraws the screen; anchors.black / red are the jacks. */
 export function makePowerSupply(mat, { color = toLinear('#e7ebf0') } = {}) {
   const g = new THREE.Group();
-  const W = 14, D = 10, H = 6;
+  const W = 20, D = 17, H = 8.5;
   const body = mesh(rbox(W, H, D, 0.6), mat.make.solid(color, 0.45));
   g.add(body);
-  const face = mesh(new THREE.BoxGeometry(W - 1, 3.4, 0.3), mat.make.solid(toLinear('#2a313b'), 0.4));
-  face.position.set(0, 3.6, D / 2 + 0.05); face.rotation.x = -0.18;
+  const face = mesh(new THREE.BoxGeometry(W - 1.4, 4.6, 0.3), mat.make.solid(toLinear('#2a313b'), 0.4));
+  face.position.set(0, 5.4, D / 2 + 0.05); face.rotation.x = -0.18;
   g.add(face);
   const c = makeCanvas(512, 192), tex = canvasTex(c);
-  const screen = mesh(new THREE.PlaneGeometry(7.4, 2.6), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), { cast: false });
-  screen.position.set(-1.6, 3.62, D / 2 + 0.22); screen.rotation.x = -0.18; screen.userData.noSketch = true;
+  const screen = mesh(new THREE.PlaneGeometry(10, 3.75), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), { cast: false });
+  screen.position.set(-2.6, 5.42, D / 2 + 0.22); screen.rotation.x = -0.18; screen.userData.noSketch = true;
   g.add(screen);
   const sw = new THREE.Group();
-  sw.position.set(4.6, 3.6, D / 2 + 0.25); sw.rotation.x = -0.18;
-  const rock = mesh(rbox(1.3, 0.5, 1.8, 0.15), mat.make.solid(toLinear('#ef4444'), 0.4));
+  sw.position.set(6.4, 5.4, D / 2 + 0.25); sw.rotation.x = -0.18;
+  const rock = mesh(rbox(1.6, 0.5, 2.3, 0.18), mat.make.solid(toLinear('#ef4444'), 0.4));
   rock.rotation.x = Math.PI / 2; rock.position.z = 0.15;
   const pivot = new THREE.Group(); pivot.add(rock); sw.add(pivot);
   g.add(sw);
   const jack = (x, col) => {
-    const j = mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.6, 18), mat.make.solid(col, 0.35));
-    j.rotation.x = Math.PI / 2; j.position.set(x, 1.1, D / 2 + 0.3); g.add(j);
+    const j = mesh(new THREE.CylinderGeometry(0.5, 0.55, 0.6, 18), mat.make.solid(col, 0.35));
+    j.rotation.x = Math.PI / 2; j.position.set(x, 1.6, D / 2 + 0.3); g.add(j);
   };
-  jack(-3.6, BLACK); jack(-1.2, RED);
+  jack(-5, BLACK); jack(-2.2, RED);
   let last = '';
   const api = {
     group: g, on: false,
-    anchors: { black: V3(-3.6, 1.1, D / 2 + 0.6), red: V3(-1.2, 1.1, D / 2 + 0.6), button: V3(4.6, 4.4, D / 2 + 0.4), top: V3(0, H, 0) },
+    anchors: { black: V3(-5, 1.6, D / 2 + 0.6), red: V3(-2.2, 1.6, D / 2 + 0.6), button: V3(6.4, 6.4, D / 2 + 0.4), top: V3(0, H, 0) },
+    size: { W, D, H },
     setDisplay({ on = false, volts = 100, mA = 0, time = '' } = {}) {
       this.on = on;
       pivot.rotation.x = on ? 0.3 : -0.3;
