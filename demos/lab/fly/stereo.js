@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import { T, fmt, createMaterials, toLinear, makeBrush, disposeTree, srgbOut, LIGHT, seeded, clamp, lerp, smooth, themeColor } from '../lab.js';
 import { makeFly } from '../props/fly.js';
+import { FLY_COLORS } from '../props/flyroom.js';
 
 const FIELD_MAX = 6, FIELD_MIN = 0.4;          // cm across the eyepiece: the whole pad, one fly
 const FOV = 24, TILT = 7 * Math.PI / 180;      // vertical fov (deg), and the camera leans toward the student
@@ -108,6 +109,25 @@ export function createStereoView({ title, words } = {}) {
   const $ = (q) => root.querySelector(q);
 
   /* ---------- DOM ---------- */
+  /* The sexing key: each abdomen drawn from above, front at the top. A female shows seven
+     segments, banded to a pointed tip; a male five, the last ones fused solid black and rounded. */
+  function guideHtml() {
+    const G = W.guide;
+    const band = (y, w) => `<rect x="${30 - w}" y="${y}" width="${w * 2}" height="3.2" rx="1.6"/>`;
+    const female = `<svg viewBox="0 0 60 92" aria-hidden="true"><path class="sg-body" d="M30 4 C46 4 50 22 49 40 C48 60 40 78 30 89 C20 78 12 60 11 40 C10 22 14 4 30 4Z"/>
+      <g class="sg-band">${[16, 27, 38, 49, 60, 70, 79].map((y, i) => band(y, [17, 18.5, 18.5, 17.5, 15, 11.5, 7][i])).join('')}</g></svg>`;
+    const male = `<svg viewBox="0 0 60 92" aria-hidden="true"><path class="sg-body" d="M30 10 C44 10 48 24 47 40 C46 56 42 70 30 72 C18 70 14 56 13 40 C12 24 16 10 30 10Z"/>
+      <g class="sg-band">${[20, 31].map((y, i) => band(y, [16, 17][i])).join('')}</g>
+      <path class="sg-tip" d="M13.6 44 C14.5 58 19 69.5 30 72 C41 69.5 45.5 58 46.4 44 C40 46 20 46 13.6 44Z"/>
+      <g class="sg-leg"><path d="M53 8 L58 30"/><path class="sg-comb" d="M55.2 15 l-3 1 M55.7 17.2 l-3 1 M56.2 19.4 l-3 1 M56.7 21.6 l-3 1 M57.2 23.8 l-3 1"/></g></svg>`;
+    const card = (cls, name, art, clues) => `<div class="sg-card ${cls}">${art}<div><b>${name}</b><ul>${clues.map((c) => `<li>${c}</li>`).join('')}</ul></div></div>`;
+    return `<div class="stereo-piles-h">${G.title}</div>
+      ${card('f', G.female, female, G.femaleClues)}
+      ${card('m', G.male, male, G.maleClues)}
+      <div class="sg-eyes"><span>${G.eyes}</span><i class="r"></i>${G.red}<i class="w"></i>${G.white}</div>
+      <p class="sg-tipnote"><i class="ph-bold ph-magnifying-glass-plus"></i>${G.tip}</p>`;
+  }
+
   function buildDom() {
     ensureCss();
     root = document.createElement('section');
@@ -118,7 +138,8 @@ export function createStereoView({ title, words } = {}) {
         <button class="btn scope-back" data-act="back"><i class="ph-bold ph-arrow-left"></i>${W.back}</button>
         <div class="scope-title"><b>${title || W.title}</b><span class="scope-sub"></span></div>
       </header>
-      <div class="scope-grid no-left">
+      <div class="scope-grid">
+        <aside class="panel stereo-guide" style="--fly-body:${FLY_COLORS.body};--fly-band:${FLY_COLORS.band};--eye-red:${FLY_COLORS.eyeRed};--eye-white:${FLY_COLORS.eyeWhite}">${guideHtml()}</aside>
         <main class="eye-col">
           <div class="eyepiece stereo-eye">
             <canvas></canvas>

@@ -253,6 +253,16 @@ LabText.add('en', {
     done: 'All sorted',
     doneCap: 'Every pile is full',
     offscreen: 'Off the field: zoom out to see it',
+    guide: {
+      title: 'Telling them apart',
+      female: 'Female',
+      femaleClues: ['Bigger', 'Abdomen <b>pointed</b>, striped to the tip', 'No sex combs'],
+      male: 'Male',
+      maleClues: ['Smaller', 'Abdomen <b>rounded</b>, tip solid black', '<b>Sex combs</b>: a black brush on each front leg'],
+      eyes: 'Eyes',
+      red: 'brick red', white: 'pearly white',
+      tip: 'Scroll to zoom in on one fly for the sex combs.',
+    },
   },
 
   /* the zoom levels. cell.js and molecule.js read their own block; nothing else does */

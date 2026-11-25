@@ -60,6 +60,25 @@
 .stereo-auto p { margin: 0 0 10px; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
 .stereo-auto .btn { width: 100%; justify-content: center; gap: 8px; }
 
+/* the sexing key, left of the field */
+.stereo-guide { align-self: center; }
+.sg-card { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; padding: 10px 12px 10px 8px; border-radius: var(--radius-pop); background: #fff; border: 1px solid var(--line-2); }
+.sg-card svg { width: 52px; height: 80px; }
+.sg-body { fill: var(--fly-body); stroke: color-mix(in srgb, var(--fly-body) 55%, #000); stroke-width: 1; }
+.sg-band rect, .sg-tip { fill: var(--fly-band); }
+.sg-leg path { fill: none; stroke: color-mix(in srgb, var(--fly-body) 50%, #000); stroke-width: 2; stroke-linecap: round; }
+.sg-leg .sg-comb { stroke: var(--fly-band); stroke-width: 1.2; }
+.sg-card b { display: block; font-size: 14px; font-weight: 650; color: var(--ink); margin-bottom: 4px; }
+.sg-card ul { margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+.sg-card ul b { display: inline; font-size: inherit; margin: 0; }
+.sg-eyes { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); }
+.sg-eyes span { font-weight: 650; color: var(--ink); margin-right: 4px; }
+.sg-eyes i { width: 11px; height: 11px; border-radius: 50%; margin-left: 4px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
+.sg-eyes i.r { background: var(--eye-red); }
+.sg-eyes i.w { background: var(--eye-white); }
+.sg-tipnote { margin: 0; display: flex; gap: 7px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.sg-tipnote i { font-size: 15px; color: var(--accent); flex: none; margin-top: 1px; }
+
 @media (max-width: 1180px) {
   .stereo-side { align-self: stretch; }
   .stereo-piles { grid-template-columns: 1fr 1fr; }
