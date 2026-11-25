@@ -308,7 +308,7 @@ const STEPS = [
   { id: 'observe', ...T.steps.observe, targets: ['scope'], view: 'scope', run: observe },
   /* Counting happens in the microscope view, outside the bench: the step reads the view's tally,
      so a rebuild leaves it alone. Watch mode stops at the bench; counting is the student's. */
-  { id: 'count', ...T.steps.count, targets: ['scope'], view: 'scope',
+  { id: 'count', respond: true, ...T.steps.count, targets: ['scope'], view: 'scope',
     detail: () => fmt(T.steps.count.detail, { n: ENOUGH, done: scope.tally().total }),
     isDone: () => lesson.mode === 'watch' || scope.tally().total >= ENOUGH,
     progress: () => Math.min(1, scope.tally().total / ENOUGH),

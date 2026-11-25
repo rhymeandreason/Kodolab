@@ -622,7 +622,7 @@ const STEPS = [
     caption: () => runCaption('boiled') },
   /* Answering happens in the panel, off the bench: the step reads ANSWER, so a rebuild leaves it
      alone. Watch mode stops at the bench; the answer is the student's. */
-  { id: 'read', ...card('read', { lo: pct(CONC[LO]), hi: pct(CONC[HI]) }), targets: [], view: 'graph', caption: T.steps.read.caption,
+  { id: 'read', respond: true, ...card('read', { lo: pct(CONC[LO]), hi: pct(CONC[HI]) }), targets: [], view: 'graph', caption: T.steps.read.caption,
     isDone: () => lesson.mode === 'watch' || (ANSWER.pick && T.panel.answers[ANSWER.pick].right),
     progress: () => (ANSWER.pick ? 1 : 0) },
 ];
