@@ -9,6 +9,8 @@
  *      const shell = LessonShell.create({
  *        brand: 'The Mass of a Tree',
  *        title: 'The Mass of a Tree',      // optional: what the narration opens with
+ *        narration: 'tree-lab',             // optional: media/narration/<this>/ holds baked
+ *                                           // clips (tools/narrate.js); else all live speech
 
  *        section: { label: 'library', href: '/library' },   // optional, beside the mark
  *        hint:  'Drag to orbit · Scroll to zoom',
@@ -242,6 +244,7 @@
     };
     if (global.Listen && global.speechSynthesis) {
       listener = global.Listen.create({
+        clips: opts.narration ? `/demos/media/narration/${opts.narration}/` : null,
         onLine(text, at) {
           if (reading) reading.classList.remove('is-reading');
           reading = at || null;
@@ -288,7 +291,9 @@
       const read = [{ say: step.title || '', el: els.title }];
       for (const p of els.body.querySelectorAll('p, li')) if (p.textContent.trim()) read.push({ say: p.textContent, el: p });
       const own = step.listen ? step.listen(ctx, read) : null;
-      const desc = typeof step.describe === 'function' ? step.describe(ctx) : step.describe;
+      /* A describe function is read when the narrator reaches it, so its
+         numbers are the scene's then, and it is never baked. */
+      const desc = typeof step.describe === 'function' ? () => step.describe(ctx) : step.describe;
       const beats = own || read.concat(desc ? [{ pause: 400 }, { say: desc }] : []);
       if (i < steps.length - 1) beats.push({ pause: 300 }, { wait: 'Press Space for the next step.' }, { run: () => goTo(i + 1) });
       else beats.push({ pause: 300 }, { say: 'That is the end of the lesson.' });
@@ -719,6 +724,15 @@
          `shell.listen && shell.listen.comment(text)`. */
       get listen() { return listener; },
       get listening() { return !!listener && listener.state !== 'off'; },
+      /* Every sentence the narration can bake: the intro and each step's
+         chapter, as the panel reads on that step. Visits each step to read
+         its panel, then returns. tools/narrate.js calls it. */
+      script() {
+        const keep = current, out = global.Listen.script(introBeats());
+        for (let i = 0; i < steps.length; i++) { swap(i); out.push(...global.Listen.script(chapterFor(i))); }
+        if (keep >= 0) swap(keep);
+        return [...new Set(out)];
+      },
       /* `scene(name, mount)` registers and returns the component;
          `showScene(name | [names])` puts one on stage outside the step order,
          for a control that switches scale where a step would be too much. */

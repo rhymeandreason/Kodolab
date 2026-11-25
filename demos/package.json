@@ -9,9 +9,11 @@
     "check:handedness": "node tools/check-handedness.js",
     "smiles": "node tools/spec2smiles.js",
     "bake:vectors": "node tools/bake-vectors.js",
-    "serve": "node tools/dev-server.js"
+    "serve": "node tools/dev-server.js",
+    "narrate": "node tools/narrate.js"
   },
   "devDependencies": {
-    "@rdkit/rdkit": "^2025.3.4-1.0.0"
+    "@rdkit/rdkit": "^2025.3.4-1.0.0",
+    "kokoro-js": "^1.2.1"
   }
 }

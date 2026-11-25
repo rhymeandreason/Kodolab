@@ -91,6 +91,7 @@ const stepMeta=[
 const shell = LessonShell.create({
   brand: 'Water',
   title: 'Structure of Water',
+  narration: 'water-lab',
   hint: 'Drag to orbit · Scroll to zoom',
   steps: stepMeta.map((m,i)=>({ eyebrow:m.tab, title:m.claim, body:m.body, describe:()=>describeStep(i),
     listen: i<3 ? (ctx, read)=>listenStep(i, read) : undefined })),

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Narration voices</title>
+<script defer src="/demos/lib/site.js"></script>
+<link rel="stylesheet" href="../css/kodo.css">
+<!-- =========================================================================
+     NARRATION BENCH: one script, two engines, to pick a voice before baking
+     narration for lessons.
+
+     macOS voices go through Web Speech, which reads whatever the browser
+     exposes: Safari lists downloaded Enhanced/Premium voices, never Siri or
+     Personal Voice. Web Speech cannot record, so baking uses `say` with the
+     same voice name; the page writes that command.
+
+     Kokoro (82M, Apache-2.0) runs in the page through kokoro-js, and its
+     output downloads as WAV. First load pulls the model from Hugging Face.
+
+     Both engines get the normalised text, not the raw box: TTS reads a bare
+     four-digit year as a cardinal ("one thousand eight hundred...").
+     ========================================================================= -->
+<style>
+  main { padding-bottom: 5rem; }
+  section { margin-top: 2.4rem; }
+  .say { margin: .5rem 0 0; max-width: 60em; color: var(--text-muted); font-size: .95rem; }
+  textarea { width: 100%; min-height: 7rem; padding: .9rem 1rem; border: 1px solid var(--border-hair); border-radius: 12px; background: var(--surface-card); color: var(--text-strong); font: inherit; font-size: 1.05rem; line-height: 1.5; resize: vertical; box-sizing: border-box; }
+  textarea:focus-visible { outline: 0; border-color: var(--accent); }
+  .spoken { margin-top: .8rem; padding: .8rem 1rem; border-radius: 12px; background: color-mix(in srgb, var(--accent) 7%, var(--surface-card)); font-size: .95rem; line-height: 1.5; }
+  .spoken b { font-family: var(--font-ui); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-right: .6em; }
+  .spoken mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 4px; padding: 0 .15em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.2rem; margin-top: 1.2rem; }
+  .card { padding: 1.1rem 1.2rem 1.3rem; background: var(--surface-card); border: 1px solid var(--border-hair); border-radius: 14px; }
+  .card h2 { margin: 0; font-size: 1.15rem; }
+  .row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: .9rem; }
+  label.f { display: flex; flex-direction: column; gap: .25rem; font-family: var(--font-ui); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+  select, input[type=range] { font: inherit; font-size: .95rem; }
+  select { padding: .45rem .8rem; border: 1px solid var(--border-hair); border-radius: 999px; background: var(--surface-page); color: var(--text-strong); max-width: 100%; }
+  .val { font-variant-numeric: tabular-nums; color: var(--text-strong); letter-spacing: 0; text-transform: none; }
+  .cmd { margin-top: 1rem; position: relative; }
+  .cmd pre { margin: 0; padding: .7rem .9rem; padding-right: 4.5rem; border-radius: 10px; background: var(--surface-page); border: 1px solid var(--border-hair); font: .8rem/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+  .cmd button { position: absolute; top: .45rem; right: .45rem; }
+  .status { margin-top: .7rem; font-size: .88rem; color: var(--text-muted); min-height: 1.3em; }
+  audio { width: 100%; margin-top: .9rem; }
+  .takes { margin-top: .8rem; display: flex; flex-direction: column; gap: .5rem; }
+  .take { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center; font-size: .85rem; }
+  .take audio { margin: 0; height: 2rem; }
+  .take .meta { grid-column: 1 / -1; color: var(--text-muted); }
+  .check { display: flex; gap: .45rem; align-items: center; font-size: .9rem; margin-top: .7rem; }
+</style>
+</head>
+<body class="kodo">
+<div class="page">
+  <nav class="sitenav">
+    <a class="mark" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <span class="crumb">test</span>
+  </nav>
+  <header class="pagehead">
+    <h1>narration voices</h1>
+    <p class="deck">One script through macOS voices and Kokoro, to pick what lessons get baked with.</p>
+  </header>
+
+  <main>
+    <section>
+      <textarea id="text" spellcheck="false">Between 1856 and 1863, Gregor Mendel bred roughly 28,000 to 30,000 garden pea plants (Pisum sativum) to discover how traits pass from parents to offspring.</textarea>
+      <label class="check"><input type="checkbox" id="norm" checked> Say years as years, strip markdown links</label>
+      <div class="spoken" id="spoken"></div>
+    </section>
+
+    <div class="grid">
+      <div class="card">
+        <h2>macOS voices</h2>
+        <p class="say" id="sysNote">Live in the browser. Bake with the command below.</p>
+        <div class="row">
+          <label class="f">Voice <select id="sysVoice"></select></label>
+        </div>
+        <div class="row">
+          <label class="f">Rate <span class="val" id="sysRateV"></span><input type="range" id="sysRate" min="0.6" max="1.4" step="0.05" value="1"></label>
+          <label class="f">Pitch <span class="val" id="sysPitchV"></span><input type="range" id="sysPitch" min="0.7" max="1.3" step="0.05" value="1"></label>
+        </div>
+        <div class="row">
+          <button class="btn" id="sysPlay">Speak</button>
+          <button class="btn" id="sysStop">Stop</button>
+        </div>
+        <div class="cmd"><pre id="sayCmd"></pre><button class="textbtn" id="copyCmd">Copy</button></div>
+      </div>
+
+      <div class="card">
+        <h2>Kokoro</h2>
+        <p class="say">82M open model, runs in this page. First run downloads it (about 90 MB, cached after).</p>
+        <div class="row">
+          <label class="f">Voice <select id="kVoice"></select></label>
+          <label class="f">Run on <select id="kDevice"></select></label>
+        </div>
+        <div class="row">
+          <label class="f">Speed <span class="val" id="kSpeedV"></span><input type="range" id="kSpeed" min="0.7" max="1.3" step="0.05" value="1"></label>
+        </div>
+        <div class="row">
+          <button class="btn" id="kGen">Generate</button>
+        </div>
+        <div class="status" id="kStatus"></div>
+        <div class="takes" id="kTakes"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ---- text normalisation -------------------------------------------------
+const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+const two = n => n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+
+// 1856 → eighteen fifty-six · 1805 → eighteen oh five · 1900 → nineteen hundred · 2005 → two thousand five
+function yearWords(y) {
+  const hi = Math.floor(y / 100), lo = y % 100;
+  if (y >= 2000 && y < 2010) return 'two thousand' + (lo ? ' ' + ONES[lo] : '');
+  if (lo === 0) return two(hi) + ' hundred';
+  return two(hi) + ' ' + (lo < 10 ? 'oh ' + ONES[lo] : two(lo));
+}
+
+// A bare 4-digit number from 1100 to 2099 reads as a year. "1,856" and
+// "1856.5" do not match; "1500 molecules" would, so the box shows the result.
+const YEAR = /(?<!\d|\d[,.])(1[1-9]\d\d|20\d\d)(?!\d|[,.]\d)/g;
+
+function normalise(raw) {
+  return raw
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/(\d)\s*[–—-]\s*(\d)/g, '$1 to $2')
+    .replace(YEAR, (_, y) => yearWords(+y))
+    .replace(/\s+/g, ' ').trim();
+}
+
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function spokenText() { return $('norm').checked ? normalise($('text').value) : $('text').value.trim(); }
+
+function renderSpoken() {
+  const raw = $('text').value;
+  let html;
+  if ($('norm').checked) {
+    const marked = raw.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/(\d)\s*[–—-]\s*(\d)/g, '$1 to $2').replace(YEAR, y => '\u0001' + yearWords(+y) + '\u0002');
+    html = esc(marked.replace(/\s+/g, ' ').trim()).replace(/\u0001/g, '<mark>').replace(/\u0002/g, '</mark>');
+  } else html = esc(raw.trim());
+  $('spoken').innerHTML = '<b>Spoken</b>' + html;
+  renderCmd();
+}
+
+// ---- macOS voices via Web Speech ----------------------------------------
+const synth = window.speechSynthesis;
+let sysVoices = [];
+
+// Chrome puts the tier in the name ("Evan (Enhanced)"); Safari names it
+// "Evan" and puts the tier in voiceURI ("com.apple.voice.enhanced.en-US.Evan").
+function tierOf(v) {
+  const s = v.name + ' ' + v.voiceURI;
+  return /premium/i.test(s) ? 'Premium' : /enhanced/i.test(s) ? 'Enhanced' : '';
+}
+const rankVoice = v => ({ Premium: 0, Enhanced: 1 }[tierOf(v)] ?? 2);
+// `say` wants the tier in the name.
+const sayName = v => /\(/.test(v.name) || !tierOf(v) ? v.name : `${v.name} (${tierOf(v)})`;
+
+function loadSysVoices() {
+  const all = synth ? synth.getVoices() : [];
+  sysVoices = all.filter(v => /^en/i.test(v.lang) && rankVoice(v) < 2)
+    .sort((a, b) => rankVoice(a) - rankVoice(b) || a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
+  const keep = $('sysVoice').value;
+  $('sysVoice').innerHTML = sysVoices.map((v, i) =>
+    `<option value="${i}">${esc(sayName(v))} · ${v.lang}${v.localService ? '' : ' · online'}</option>`).join('');
+  if (keep && +keep < sysVoices.length) $('sysVoice').value = keep;
+  $('sysNote').textContent = !synth ? 'This browser has no Web Speech.'
+    : !sysVoices.length ? 'No Enhanced or Premium voices. Download them in System Settings → Accessibility → Spoken Content.'
+    : `${sysVoices.length} Enhanced/Premium voices. Live only; bake with the command below.`;
+  renderCmd();
+}
+
+function sysVoice() { return sysVoices[+$('sysVoice').value]; }
+
+function renderCmd() {
+  const v = sysVoice();
+  const name = v ? sayName(v) : 'Evan (Enhanced)';
+  const wpm = Math.round(175 * +$('sysRate').value);
+  const text = spokenText().replace(/'/g, "'\\''");
+  $('sayCmd').textContent = `say -v '${name}' -r ${wpm} -o narration.m4a --file-format=m4af --data-format=aac '${text}'`;
+  $('sysRateV').textContent = (+$('sysRate').value).toFixed(2) + '×';
+  $('sysPitchV').textContent = (+$('sysPitch').value).toFixed(2);
+}
+
+$('sysPlay').onclick = () => {
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(spokenText());
+  const v = sysVoice();
+  if (v) { u.voice = v; u.lang = v.lang; }
+  u.rate = +$('sysRate').value;
+  u.pitch = +$('sysPitch').value;
+  synth.speak(u);
+};
+$('sysStop').onclick = () => synth && synth.cancel();
+$('copyCmd').onclick = async () => {
+  await navigator.clipboard.writeText($('sayCmd').textContent);
+  $('copyCmd').textContent = 'Copied';
+  setTimeout(() => $('copyCmd').textContent = 'Copy', 1200);
+};
+
+if (synth) {
+  loadSysVoices();
+  synth.addEventListener('voiceschanged', loadSysVoices);
+}
+
+// ---- inputs --------------------------------------------------------------
+$('text').addEventListener('input', renderSpoken);
+$('norm').addEventListener('change', renderSpoken);
+['sysVoice', 'sysRate', 'sysPitch'].forEach(id => $(id).addEventListener('input', renderCmd));
+$('kSpeed').addEventListener('input', () => $('kSpeedV').textContent = (+$('kSpeed').value).toFixed(2) + '×');
+$('kSpeedV').textContent = '1.00×';
+renderSpoken();
+</script>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+
+// kokoro-js 1.2.1's own list; replaced by tts.voices once the model loads.
+const VOICES = ['af_heart','af_bella','af_nicole','af_sarah','af_sky','af_nova','af_river','af_jessica','af_alloy','af_aoede','af_kore',
+  'am_michael','am_fenrir','am_puck','am_adam','am_echo','am_eric','am_liam','am_onyx',
+  'bf_emma','bf_isabella','bf_alice','bf_lily','bm_george','bm_fable','bm_lewis','bm_daniel'];
+const label = id => {
+  const [p, n] = id.split('_');
+  const who = { af: 'US ♀', am: 'US ♂', bf: 'UK ♀', bm: 'UK ♂' }[p] || p;
+  return `${n[0].toUpperCase() + n.slice(1)} · ${who}`;
+};
+const fillVoices = ids => {
+  const keep = $('kVoice').value || 'af_heart';
+  $('kVoice').innerHTML = ids.map(id => `<option value="${id}">${label(id)}</option>`).join('');
+  $('kVoice').value = ids.includes(keep) ? keep : ids[0];
+};
+fillVoices(VOICES);
+
+const devices = [];
+if (navigator.gpu) devices.push(['webgpu', 'WebGPU (fp32)']);
+devices.push(['wasm', 'CPU (q8)']);
+$('kDevice').innerHTML = devices.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+
+let tts = null, ttsDevice = null, KokoroTTS = null;
+
+async function getTTS() {
+  const device = $('kDevice').value;
+  if (tts && ttsDevice === device) return tts;
+  if (!KokoroTTS) {
+    $('kStatus').textContent = 'Loading kokoro-js…';
+    ({ KokoroTTS } = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js'));
+  }
+  $('kStatus').textContent = 'Downloading model…';
+  const t0 = performance.now();
+  tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+    dtype: device === 'webgpu' ? 'fp32' : 'q8',
+    device,
+    progress_callback: p => {
+      if (p.status === 'progress' && p.total) $('kStatus').textContent = `Downloading ${p.file} · ${Math.round(100 * p.loaded / p.total)}%`;
+    },
+  });
+  ttsDevice = device;
+  if (tts.voices) fillVoices(Object.keys(tts.voices).filter(id => /^[ab][fm]_/.test(id)));
+  $('kStatus').textContent = `Model ready in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+  return tts;
+}
+
+function wav(samples, rate) {
+  const buf = new ArrayBuffer(44 + samples.length * 2), d = new DataView(buf);
+  const str = (o, s) => [...s].forEach((c, i) => d.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); d.setUint32(4, 36 + samples.length * 2, true); str(8, 'WAVE');
+  str(12, 'fmt '); d.setUint32(16, 16, true); d.setUint16(20, 1, true); d.setUint16(22, 1, true);
+  d.setUint32(24, rate, true); d.setUint32(28, rate * 2, true); d.setUint16(32, 2, true); d.setUint16(34, 16, true);
+  str(36, 'data'); d.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) d.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 0x7fff, true);
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+$('kGen').onclick = async () => {
+  $('kGen').disabled = true;
+  try {
+    const engine = await getTTS();
+    const voice = $('kVoice').value, speed = +$('kSpeed').value;
+    const text = window.spokenText();
+    $('kStatus').textContent = 'Generating…';
+    const t0 = performance.now();
+    const out = await engine.generate(text, { voice, speed });
+    const secs = (performance.now() - t0) / 1000;
+    const dur = out.audio.length / out.sampling_rate;
+    const url = URL.createObjectURL(wav(out.audio, out.sampling_rate));
+    const take = document.createElement('div');
+    take.className = 'take';
+    take.innerHTML = `<audio controls src="${url}"></audio>
+      <a class="textbtn" href="${url}" download="kokoro-${voice}.wav">WAV</a>
+      <span class="meta">${label(voice)} · ${speed.toFixed(2)}× · ${dur.toFixed(1)} s audio in ${secs.toFixed(1)} s on ${ttsDevice}</span>`;
+    $('kTakes').prepend(take);
+    take.querySelector('audio').play().catch(() => {});
+    $('kStatus').textContent = '';
+  } catch (e) {
+    console.error(e);
+    $('kStatus').textContent = 'Failed: ' + (e.message || e);
+  } finally {
+    $('kGen').disabled = false;
+  }
+};
+</script>
+</body>
+</html>

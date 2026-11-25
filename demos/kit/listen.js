@@ -7,7 +7,7 @@
  *  not recordings, because a simulation's narration has to say numbers that
  *  only exist at run time: "60°C", "about 3 hydrogen bonds each".
  *
- *      const L = Listen.create({ onLine, onState });
+ *      const L = Listen.create({ onLine, onState, clips: '/demos/media/narration/water-lab/' });
  *      L.chapter([ 'A sentence.', { say, el, then }, { pause: 600 },
  *                  { run: fn }, { wait: 'Press Space to go on.' } ]);
  *      L.comment('A hydrogen bond just broke.');   // only while a chapter waits
@@ -31,6 +31,11 @@
  *  voices at once, and a liquid produces an event every frame.
  *
  *  `speakable()` rewrites what speech engines misread: δ−, H₂O, °C, Na⁺.
+ *
+ *  BAKED CLIPS. With `clips`, a sentence whose speakable text is in that
+ *  folder's manifest.json plays the recording (tools/narrate.js, Kokoro);
+ *  any other, a run-time number above all, is spoken live. `script(beats)`
+ *  is the bakeable part of a chapter: its literal sentences, speakable.
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -75,6 +80,17 @@
     const onState = opts.onState || (() => {});
     const commentGap = opts.commentGap || 6000;
     let voice = null;
+    /* speakable text → clip URL, filled when the manifest arrives; a sentence
+       spoken before then is spoken live. One element for every clip: Safari
+       lets it play again only because the first play came from a click. */
+    const clips = new Map();
+    const player = opts.clips && global.Audio ? new Audio() : null;
+    if (player) {
+      player.preload = 'auto';
+      fetch(opts.clips + 'manifest.json').then(r => r.ok ? r.json() : null).then(m => {
+        if (m) for (const [key, text] of Object.entries(m.clips)) clips.set(text, opts.clips + key + '.m4a');
+      }).catch(() => {});
+    }
     if (synth) {
       voice = pickVoice();
       synth.addEventListener && synth.addEventListener('voiceschanged', () => { voice = pickVoice(); });
@@ -95,7 +111,29 @@
       }
       return out;
     }
-    function speak(text, my) {
+    function hush() {
+      if (synth) synth.cancel();
+      if (player && !player.paused) player.pause();
+    }
+    function playClip(url, my) {
+      return new Promise(done => {
+        let finished = false;
+        const finish = ok => { if (finished) return; finished = true; clearInterval(guard); player.onended = player.onerror = null; done(ok); };
+        player.onended = () => finish(true);
+        player.onerror = () => finish(false);
+        player.src = url;
+        player.playbackRate = api.rate;
+        player.play().catch(() => finish(false));
+        const guard = setInterval(() => { if (my !== token) { player.pause(); finish(true); } }, 100);
+      });
+    }
+    async function speak(text, my) {
+      const url = text && clips.get(speakable(text));
+      if (url && await playClip(url, my)) return;
+      if (my !== token) return;
+      return say(text, my);
+    }
+    function say(text, my) {
       return new Promise(done => {
         if (!synth || !text) { done(); return; }
         const u = new SpeechSynthesisUtterance(speakable(text));
@@ -150,10 +188,12 @@
     const api = {
       rate: opts.rate || 1,
       get state() { return state; },
-      get supported() { return !!synth; },
+      get supported() { return !!synth || !!player; },
+      /* The folder under media/narration/, for tools/narrate.js. */
+      clipsName: opts.clips ? opts.clips.replace(/\/$/, '').split('/').pop() : null,
       chapter(beats) {
         token++;
-        if (synth) synth.cancel();
+        hush();
         if (waitRelease) waitRelease();
         lines = flatten(beats); at = 0;
         set('speaking');
@@ -167,7 +207,7 @@
         /* Its own flag, not synth.speaking: Chromium leaves that true after a
            cancelled line, and every comment after it was dropped. */
         if (!o.force && (now - lastComment < commentGap || commenting)) return false;
-        if (o.force && synth) synth.cancel();
+        if (o.force) hush();
         lastComment = now; commenting = true;
         onLine(text, null);
         speak(text, token).then(() => { commenting = false; });
@@ -176,7 +216,7 @@
       pause() {
         if (state !== 'speaking') return;
         token++; set('paused');
-        if (synth) synth.cancel();
+        hush();
       },
       resume() {
         if (state !== 'paused') return;
@@ -188,13 +228,13 @@
       back() {
         let k = Math.max(0, at - 1);
         while (k > 0 && !(lines[k].say != null)) k--;
-        token++; if (synth) synth.cancel(); if (waitRelease) waitRelease();
+        token++; hush(); if (waitRelease) waitRelease();
         at = k; set('speaking'); run(token);
       },
       go() { if (waitRelease) waitRelease(); },
       stop() {
         token++; lines = []; at = 0;
-        if (synth) synth.cancel();
+        hush();
         if (waitRelease) waitRelease();
         onLine('', null);
         set('off');
@@ -203,5 +243,14 @@
     return api;
   }
 
-  global.Listen = { create, speakable, sentences };
+  function script(beats) {
+    const out = [];
+    for (const b of beats || []) {
+      const t = typeof b === 'string' ? b : b && typeof b.say === 'string' ? b.say : b && typeof b.wait === 'string' ? b.wait : '';
+      for (const s of sentences(t)) out.push(speakable(s));
+    }
+    return out.filter(Boolean);
+  }
+
+  global.Listen = { create, speakable, sentences, script };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
