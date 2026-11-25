@@ -17,10 +17,10 @@ const SIZES = {
 };
 export const PIPETTE_SIZES = Object.keys(SIZES);
 
-/* The body, from the reference photo (side view, 24 cm without a tip). Origin of these numbers
+/* The body, from the reference photo (side view), shortened to 19 cm without a tip so it sits with the other props. Origin of these numbers
  * is the bottom of the body; +z is the side with the counter, -x the finger hook, +x the
  * ejector. */
-const BODY_H = 12.4, BODY_D = 2.3, NOSE = 9.2, HOOK_SEAT = V3(-2.2, 11.1, 0);
+const BODY_H = 9.6, BODY_D = 2.3, NOSE = 7.0, HOOK_SEAT = V3(-2.2, BODY_H - 1.3, 0);
 const TRAVEL = 1.1, EJECT = 0.55;
 
 /** Outer and inner profiles of a tip, point at y = 0. */
@@ -87,7 +87,7 @@ function sideText(text, w, h, { color = '#7b8794', weight = 600 } = {}) {
   return m;
 }
 
-/** Micropipette. Origin at the tip's point, plunger up; 24 cm without a tip. size picks
+/** Micropipette. Origin at the tip's point, plunger up; 19 cm without a tip. size picks
  *  P10 · P20 · P200 · P1000 (button colour, counter, tip); volume is the set volume in µL.
  *  setPlunger(k): 0.75 is the first stop (the set volume), 1 the second (blow-out).
  *  setEject(k) presses the ejector, which slides the sleeve down onto the tip's rim.
@@ -117,12 +117,12 @@ export function makeMicropipette(mat, { size = 'P20', volume, color, body = toLi
   const hook = new THREE.Shape();
   hook.moveTo(-0.6, BODY_H - 0.2);
   hook.lineTo(-1.4, BODY_H - 0.15);
-  hook.quadraticCurveTo(-2.95, BODY_H - 0.1, -3.5, 10.85);
-  hook.quadraticCurveTo(-3.55, 10.55, -3.2, 10.7);
-  hook.quadraticCurveTo(-2.4, 11.75, -0.6, 11.25);
+  hook.quadraticCurveTo(-2.95, BODY_H - 0.1, -3.5, BODY_H - 1.55);
+  hook.quadraticCurveTo(-3.55, BODY_H - 1.85, -3.2, BODY_H - 1.7);
+  hook.quadraticCurveTo(-2.4, BODY_H - 0.65, -0.6, BODY_H - 1.15);
   hook.closePath();
   b.add(mesh(slab(hook, 1.3, 0.16), bodyMat));
-  b.add(mesh(slab(rectShape(1.0, 0.25, 1.85, 10.2, 0.25), 1.5, 0.12), bodyMat));
+  b.add(mesh(slab(rectShape(1.0, 0.25, 1.85, BODY_H - 2.2, 0.25), 1.5, 0.12), bodyMat));
   // collar under the body, with the lug the ejector rod runs down
   b.add(mesh(lathe([[0, -1.75], [0.62, -1.75], [0.78, -1.2], [0.98, -0.45], [1.0, 0.1], [0, 0.1]], 40), accent));
   const lug = mesh(rbox(1.0, 1.4, 1.0, 0.3), accent); lug.position.set(1.25, -1.15, 0); b.add(lug);
@@ -130,10 +130,10 @@ export function makeMicropipette(mat, { size = 'P20', volume, color, body = toLi
   // counter window and print on the +z side
   const face = BODY_D / 2 + 0.005;
   const frame = mesh(rbox(0.85, 0.02, 2.5, 0.12), dark, { cast: false });
-  frame.rotation.x = Math.PI / 2; frame.position.set(0.1, 4.5, face - 0.017); b.add(frame);
+  frame.rotation.x = Math.PI / 2; frame.position.set(0.1, 3.9, face - 0.017); b.add(frame);
   const wc = makeCanvas(128, 384), wtex = canvasTex(wc);
   const win = mesh(new THREE.PlaneGeometry(0.6, 2.2), new THREE.MeshBasicMaterial({ map: wtex, toneMapped: false }), { cast: false });
-  win.position.set(0.1, 4.5, face + 0.006); win.userData.noSketch = true; b.add(win);
+  win.position.set(0.1, 3.9, face + 0.006); win.userData.noSketch = true; b.add(win);
   const paint = (v) => {
     const x = wc.getContext('2d'), [n, len, dec] = S.digits(v);
     const s = String(Math.round(n)).padStart(len, '0').slice(-len);
@@ -151,16 +151,16 @@ export function makeMicropipette(mat, { size = 'P20', volume, color, body = toLi
     }
     wtex.needsUpdate = true;
   };
-  const name = sideText(size, 0.7, 2.0, { color: '#5b6672', weight: 700 }); name.position.set(-0.1, 9.0, face); b.add(name);
-  const range = sideText(`${S.min}–${S.max} µL`, 0.55, 3.0, { color: '#7b8794' }); range.position.set(-0.05, 1.9, face); b.add(range);
+  const name = sideText(size, 0.7, 2.0, { color: '#5b6672', weight: 700 }); name.position.set(-0.1, 6.9, face); b.add(name);
+  const range = sideText(`${S.min}–${S.max} µL`, 0.42, 2.2, { color: '#7b8794' }); range.position.set(-0.05, 1.35, face); b.add(range);
 
   // the nose the tip seats on, and the sleeve that pushes it off
   b.add(mesh(lathe([[0, N0 - yB], [radiusAt(TIP_IN, N0) - 0.004, N0 - yB], [T.R - 0.1, T.L - yB], [T.R - 0.09, T.L + 0.6 - yB], [0, T.L + 0.6 - yB]], 32), dark));
   const ejector = new THREE.Group(); b.add(ejector);
   const sTop = Math.max(0.5, T.R + 0.04);
   ejector.add(mesh(lathe([[T.R - 0.12, T.L + 0.1 - yB], [T.R - 0.02, T.L + 0.1 - yB], [T.R + 0.0, T.L + 0.5 - yB], [sTop, -1.9], [0.6, -1.6], [T.R - 0.12, -1.6]], 40), accent));
-  const stem = mesh(rbox(0.4, 1.0, 0.7, 0.12), grey); stem.position.set(1.42, 10.15, 0); ejector.add(stem);
-  const tab = mesh(rbox(1.55, 0.7, 1.3, 0.28), accent); tab.position.set(1.85, 11.05, 0); ejector.add(tab);
+  const stem = mesh(rbox(0.4, 1.0, 0.7, 0.12), grey); stem.position.set(1.42, BODY_H - 2.25, 0); ejector.add(stem);
+  const tab = mesh(rbox(1.55, 0.7, 1.3, 0.28), accent); tab.position.set(1.85, BODY_H - 1.35, 0); ejector.add(tab);
 
   // plunger: a rod into the body and a hexagonal button
   const plunger = new THREE.Group();
@@ -242,7 +242,7 @@ const BAR_T = 1.0;
 /** Stand for one micropipette: a weighted base and an upright whose top edge the finger hook
  *  hangs over, the pipette beside it with its counter facing +z. rest(pip) is where the
  *  pipette's origin goes, in stand space. */
-export function makePipetteStand(mat, { color = toLinear('#cfe0ee'), height = 24.5 } = {}) {
+export function makePipetteStand(mat, { color = toLinear('#cfe0ee'), height = 19.5 } = {}) {
   const g = new THREE.Group();
   const m = mat.make.solid(color, 0.5);
   const px = 1.2, bx = px + HOOK_SEAT.x;    // the pipette's axis, and the upright's centre
@@ -258,7 +258,7 @@ export function makePipetteStand(mat, { color = toLinear('#cfe0ee'), height = 24
 /** Linear rack: two splayed legs and a bar the pipettes hang on by their hooks, counters
  *  facing -x as they would in the lab. rest(pip, i) is where pipette i's origin goes, in rack
  *  space, with rotation.y = ry. hang(pip, i) adds it to the rack there. */
-export function makePipetteRack(mat, { slots = 3, spacing = 4.4, color = toLinear('#cfe0ee'), height = 25 } = {}) {
+export function makePipetteRack(mat, { slots = 3, spacing = 4.4, color = toLinear('#cfe0ee'), height = 20 } = {}) {
   const g = new THREE.Group();
   const m = mat.make.solid(color, 0.5);
   const W = slots * spacing + 1.2;

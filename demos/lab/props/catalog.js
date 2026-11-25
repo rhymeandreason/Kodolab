@@ -237,7 +237,7 @@ export const PROPS = [
     make: (mat) => makeTransilluminator(mat),
     controls: [slider('Light', 0, 1, 0.01, 0, '', (p, v) => p.setOn(v)), slider('Filter', 0, 1, 0.01, 0, '', (p, v) => p.setCover(v))] },
   { key: 'micropipette', group: 'Plastic', name: 'Micropipette', file: 'micropipette.js', call: "makeMicropipette(mat, { size: 'P20', volume: 10 })",
-    desc: 'Adjustable micropipette, P10 · P20 · P200 · P1000, 24 cm without a tip. Origin at the tip point. setPlunger(k): 0.75 first stop, 1 second. setEject(k), setTip(on), setFill(f) fills to the height f of the set volume reaches in the tip, setVolume(µL).',
+    desc: 'Adjustable micropipette, P10 · P20 · P200 · P1000, 19 cm without a tip. Origin at the tip point. setPlunger(k): 0.75 first stop, 1 second. setEject(k), setTip(on), setFill(f) fills to the height f of the set volume reaches in the tip, setVolume(µL).',
     make: (mat) => { const p = makeMicropipette(mat); p.setFill(1); return p; },
     controls: [slider('Volume', 2, 20, 0.1, 10, 'µL', (p, v) => p.setVolume(v)), slider('Plunger', 0, 1, 0.01, 0, '', (p, v) => p.setPlunger(v)), slider('Eject', 0, 1, 0.01, 0, '', (p, v) => p.setEject(v)), slider('Fill', 0, 1, 0.01, 1, '', (p, v) => p.setFill(v)), toggle('Tip', true, (p, on) => p.setTip(on))] },
   { key: 'tipbox', group: 'Plastic', name: 'Pipette tip box', file: 'micropipette.js', call: 'makeTipBox(mat)',
