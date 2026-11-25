@@ -49,7 +49,7 @@ LabText.add('en', {
       hint: 'Click the <b>onion</b>',
       detail: 'The onion has grown fresh roots over water for a few days. Lift it out and cut off the last 5 mm of one root.',
       why: 'Cells divide in the meristem, just behind the very tip. Further up, cells only grow longer.',
-      captions: { lift: 'Lift the onion out of the water', cut: 'Cut off the last 5 mm of a root', drop: 'Into a watch glass on the hot plate' },
+      caption: 'Lift the onion out of the water, cut off the last 5 mm of a root, and drop it into the watch glass',
     },
     acid: {
       title: 'Add hydrochloric acid', short: 'Acid',
@@ -57,7 +57,7 @@ LabText.add('en', {
       hint: 'Click the <b>HCl</b> bottle',
       detail: 'Cover the tip in the watch glass with a few drops of 1 M hydrochloric acid.',
       why: 'The acid breaks down pectin, the glue between plant cells, so they can be spread apart. It also kills the cells, fixing each one at the stage it had reached.',
-      caption: 'Cover the tip with 1 M hydrochloric acid',
+      caption: 'Cover the tip with 1 M hydrochloric acid, which loosens the glue between its cells',
     },
     heat: {
       title: 'Warm the acid', short: 'Heat',
@@ -65,8 +65,7 @@ LabText.add('en', {
       hint: 'Click the <b>hot plate</b>',
       detail: 'Warm the watch glass to 60 °C for 5 minutes. Then pour off the acid and rinse the tip in water.',
       why: 'Warmth speeds the acid up. Rinsing washes it out, so it stops softening the tissue and does not get in the way of the stain.',
-      caption: { text: 'Warm the tip in 1 M HCl at 60 °C', note: '5 minutes' },
-      captions: { rinse: 'Pour off the acid and rinse the tip in water' },
+      caption: 'Warm the acid to 60 °C for 5 minutes, then pour it off and rinse the tip in water',
     },
     stain: {
       title: 'Stain the chromosomes', short: 'Stain',
@@ -74,7 +73,7 @@ LabText.add('en', {
       hint: 'Click a <b>stain</b>',
       detail: 'Lay the tip on a slide and cover it with a few drops of stain. Pick one: <b>acetic orcein</b> or <b>toluidine blue</b>.',
       why: 'Both stains bind DNA. Chromosomes pack DNA tightly, so they stain darkest, and the dense meristem at the tip darkens most.',
-      caption: { text: 'Cover the tip with a few drops of stain', note: '2 minutes' },
+      caption: 'Lay the tip on a slide and cover it with stain for 2 minutes, until the chromosomes darken',
     },
     cover: {
       title: 'Add a coverslip', short: 'Coverslip',
@@ -82,7 +81,7 @@ LabText.add('en', {
       hint: 'Click the <b>coverslip</b>',
       detail: 'Lower a coverslip onto the stain at an angle, then lay filter paper over it.',
       why: 'Lowering it at an angle pushes air out, so no bubbles get trapped. The paper soaks up extra stain.',
-      caption: 'Lower the coverslip at an angle',
+      caption: 'Lower the coverslip at an angle so no air is trapped, then lay filter paper over it',
     },
     squash: {
       title: 'Squash the tissue', short: 'Squash',
@@ -90,7 +89,7 @@ LabText.add('en', {
       hint: 'Click the <b>pencil</b>',
       detail: 'Press straight down on the coverslip with the eraser end of a pencil, without twisting. Press {n} of {total}.',
       why: 'Firm, even pressure spreads the cells into a single layer, so each one can be seen on its own. Too hard, and they burst.',
-      caption: 'Press straight down with the eraser',
+      caption: 'Press straight down with the eraser, without twisting, to spread the cells into a single layer',
     },
     observe: {
       title: 'Observe under the microscope', short: 'Observe',
@@ -98,7 +97,7 @@ LabText.add('en', {
       hint: 'Click the <b>microscope</b>',
       detail: 'Clip the slide onto the stage and switch on the lamp. Start on low power to find the dark meristem, then switch up to name single cells.',
       why: 'Low power shows the whole tip, so you can find where cells divide. High power shows chromosomes in each cell.',
-      caption: 'Clip the slide onto the microscope stage',
+      caption: 'Clip the slide onto the microscope stage and switch on the lamp',
     },
     count: {
       title: 'Count dividing cells', short: 'Count',

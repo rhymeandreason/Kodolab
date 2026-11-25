@@ -119,7 +119,6 @@ function rebuild() {
     presses: 0,        // squash presses so far
     squash: 0,         // how far the tissue has spread, 0..1 (the microscope reads it)
     clock: null,       // the card's timer text while a timed step runs
-    cap: null,         // Watch mode's caption while an action runs
     openAfter: false,  // look down the microscope once the last step's click has played
   };
 
@@ -183,15 +182,12 @@ async function drops(bottle, n, at, surfY, color, onDrop = () => {}) {
 // =========================================================================
 async function cut() {
   const { onion, scalpel } = B;
-  S.cap = T.steps.cut.captions.lift;
   await anim(1.2, (e) => { onion.group.position.y = ONION_Y + LIFT * e; });
-  S.cap = T.steps.cut.captions.cut;
   const at = world(onion, onion.anchors.cut);
   const rest = { p: scalpel.group.position.clone(), q: scalpel.group.quaternion.clone() };
   const p1 = at.clone().add(V3(0.3, -0.05, 2.6));
   await moveTo(scalpel.group, { pos: p1, quat: Q(0, -Math.PI / 2, 0), dur: 1, arc: 6 });
   await moveTo(scalpel.group, { pos: p1.clone().add(V3(0, 0, -5)), dur: 0.35 });
-  S.cap = T.steps.cut.captions.drop;
   root.attach(onion.tip);
   moveTo(scalpel.group, { pos: rest.p, quat: rest.q, dur: 1.1, arc: 5 });
   anim(1.3, (e) => { onion.group.position.y = ONION_Y + LIFT * (1 - e); });
@@ -199,7 +195,6 @@ async function cut() {
   await moveTo(onion.tip, { pos: spot.clone().add(V3(0, 3, 0)), quat: lyingInGlass(), dur: 1.4, arc: 6 });
   await moveTo(onion.tip, { pos: spot, dur: 0.5, ease: Ease.in });
   B.glass.group.attach(onion.tip);
-  S.cap = null;
 }
 
 async function acid() {
@@ -217,13 +212,11 @@ async function heat() {
   onion.holdTip();
   await anim(0.6, (e) => hot.setHeat(1 - e));
   // pour off the acid, rinse in water, pour that off too
-  S.cap = T.steps.heat.captions.rinse;
   await anim(0.6, (e) => L.setLevel(ACID.level * (1 - e)));
   L.setColor(RINSE);
   await anim(0.45, (e) => L.setLevel(0.35 * e));
   await anim(0.3, () => {}, Ease.linear);
   await anim(0.5, (e) => L.setLevel(0.35 * (1 - e)));
-  S.cap = null;
 }
 
 async function stain(key) {
@@ -297,9 +290,9 @@ async function observe() {
 
 const clock = () => (S ? S.clock : null);
 const STEPS = [
-  { id: 'cut', ...T.steps.cut, targets: ['onion'], view: 'onion', caption: () => (S && S.cap) || T.steps.cut.title, run: cut },
+  { id: 'cut', ...T.steps.cut, targets: ['onion'], view: 'onion', run: cut },
   { id: 'acid', ...T.steps.acid, targets: ['acid'], view: 'acid', run: acid },
-  { id: 'heat', ...T.steps.heat, targets: ['hot'], view: 'acid', clock, caption: () => (S && S.cap) || T.steps.heat.caption, run: heat },
+  { id: 'heat', ...T.steps.heat, targets: ['hot'], view: 'acid', clock, run: heat },
   { id: 'stain', ...T.steps.stain, targets: STAIN_KEYS, view: 'stain', clock, run: stain },
   { id: 'cover', ...T.steps.cover, targets: ['coverslip'], view: 'slide', run: cover },
   { id: 'squash', ...T.steps.squash, targets: ['pencil'], view: 'slide',
