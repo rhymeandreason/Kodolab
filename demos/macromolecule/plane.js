@@ -374,7 +374,7 @@
       const put = u => {
         for(const r of riders){
           r.p.mol.position.lerpVectors(r.fromPos, r.toPos, u);
-          THREE.Quaternion.slerp(r.fromQuat, r.toQuat, r.p.mol.quaternion, u);
+          r.p.mol.quaternion.slerpQuaternions(r.fromQuat, r.toQuat, u);
         }
       };
       if(!motion){ put(1); land(); return; }

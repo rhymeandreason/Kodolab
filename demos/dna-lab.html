@@ -92,7 +92,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/three.r186.min.js"></script>
 <script src="lib/palette.js"></script>
 <script src="lib/tokens-from-palette.js"></script>
 <script src="lib/molecules.js"></script>
@@ -423,7 +423,7 @@ function tryLatch(){
       L.motion.seq([
         { dur:0.28, ease:'outBack', onUpdate:u=>{
             move.mol.position.lerpVectors(from, target.pos, u);
-            THREE.Quaternion.slerp(fq, target.quat, move.mol.quaternion, u);
+            move.mol.quaternion.slerpQuaternions(fq, target.quat, u);
             // The drag is over, so nothing else is redrawing the bonds while
             // the tween runs — and the bonds are what the student is waiting
             // to see. They appear as soon as the geometry earns them.
@@ -845,7 +845,7 @@ function tryJoin(){
   L.motion.seq([
     { dur:0.3, ease:'outBack', onUpdate:u=>{
         guest.mol.position.lerpVectors(guest.from, t.pos, u);
-        THREE.Quaternion.slerp(guest.fq, t.quat, guest.mol.quaternion, u);
+        guest.mol.quaternion.slerpQuaternions(guest.fq, t.quat, u);
       }},
     { call:()=>join(host, guest) },
   ], { tag:'join:'+guest.want+':'+guest.kind });

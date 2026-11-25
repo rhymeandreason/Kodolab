@@ -54,6 +54,8 @@ const LOADER    = path.join(__dirname, '..', 'demos', 'kit', 'app.js');
  * server drops the cache per request, so a component added to the table
  * reaches the next build. */
 function loader() { delete require.cache[LOADER]; return require(LOADER); }
+/* The tag an app stored before kit/app.js loaded three.js itself still carries. Tolerated,
+ * never required: the loader replaces what it loads. */
 const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
 
 const MAX_DRAFT = 16000;   // output tokens; a page is 2,000 to 4,500
@@ -279,7 +281,6 @@ function validate(html, names) {
    * redefines its globals under the first one's feet. */
   const tags = [...src.matchAll(/<script\b([^>]*\ssrc=["']([^"']+)["'][^>]*)>/gi)];
   const app = tags.filter(m => /(^|\/)kit\/app\.js$/.test(m[2]));
-  if (!tags.some(m => m[2] === CDN)) problems.push(`does not load three.js from ${CDN}: the page writes that one tag itself, above kit/app.js`);
   if (!app.length) {
     problems.push('does not load ../kit/app.js: one tag loads the library, and it names the components in data-use');
   } else if (app.length > 1) {

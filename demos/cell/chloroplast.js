@@ -721,11 +721,11 @@
        edge-on and would otherwise fall to ambient. No shadow maps. */
     box.renderer.toneMapping = THREE.NoToneMapping;
     box.scene.traverse(o => {
-      if (o.isAmbientLight) o.intensity = 0.48;
-      else if (o.isDirectionalLight) { o.color.set(o.intensity > 0.6 ? 0xfff6e6 : 0xf3ecd8); o.intensity *= 0.85; }
+      if (o.isAmbientLight) o.intensity = Math.PI * 0.48;
+      else if (o.isDirectionalLight) { o.color.set(o.intensity > 0.6 * Math.PI ? 0xfff6e6 : 0xf3ecd8); o.intensity *= 0.85; }
     });
     for (const [x, y, z, i] of [[-4, 4, 3, 0.30], [4, -2, 3, 0.24]]) {
-      const l = new THREE.DirectionalLight(0xffffff, i);
+      const l = new THREE.DirectionalLight(0xffffff, Math.PI * i);
       l.position.set(x, y, z);
       box.camera.add(l, l.target);
     }

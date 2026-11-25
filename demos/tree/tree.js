@@ -6,8 +6,8 @@
  *  needs: a person for scale, Van Helmont's potted willow, five particle
  *  flows (CO₂ in, O₂ out, water and minerals up the trunk, ambient air) and
  *  two hundred cubes that fly out of the tree and stack into piles by
- *  origin. Ported from the ES-module prototype, now in attic/tree-prototype/, onto r128 and
- *  kit/card-stage.js; lib/geo.js carries the geometry r128 lacks.
+ *  origin. Ported from the ES-module prototype, now in attic/tree-prototype/, onto the global three.js and
+ *  kit/card-stage.js; lib/geo.js carries its capsule and merge.
  *
  *      Tree.create(THREE, root, camera, opts)   the actors: root is yours
  *      Tree.mount(el, params)                   one box, one handle
@@ -334,10 +334,10 @@
     const tweens = global.CardStage.tweens();
     const V3 = () => new THREE.Vector3();
 
-    /* Lights: a sun, not a studio. r128's lights are not physical units, so
-       these are tuned by eye against the prototype, not copied from it. */
-    const hemi = new THREE.HemisphereLight(0xe9eef6, 0xb9a98c, 0.6);
-    const sun = new THREE.DirectionalLight(0xfff1dc, 1.15);
+    /* Lights: a sun, not a studio. Intensities are tuned by eye against the
+       prototype, in r128's units: the Math.PI is the factor r155 stopped applying. */
+    const hemi = new THREE.HemisphereLight(0xe9eef6,0xb9a98c, Math.PI * 0.6);
+    const sun = new THREE.DirectionalLight(0xfff1dc, Math.PI * 1.15);
     sun.position.set(-6, 24, -14);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -445,8 +445,8 @@
     let daylight = P.daylight, treeOpacity = P.treeOpacity;
     function applyDaylight(v) {
       daylight = v;
-      sun.intensity = lerp(0.12, 1.15, v);
-      hemi.intensity = lerp(0.25, 0.6, v);
+      sun.intensity = Math.PI * lerp(0.12, 1.15, v);
+      hemi.intensity = Math.PI * lerp(0.25, 0.6, v);
       groundMat.color.lerpColors(NIGHT.ground, DAY.ground, v);
       soilMat.color.lerpColors(NIGHT.soil, DAY.soil, v);
       sunDisc.material.opacity = v;
@@ -583,10 +583,10 @@
     el.appendChild(labels);
     box.cam.target.fromArray(params.target || [0, 6.5, 0]);
     box.renderer.shadowMap.enabled = true;
-    box.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    box.renderer.shadowMap.type = THREE.PCFShadowMap;
     box.camera.far = 400;
     for (const o of box.camera.children) if (o.isLight) o.intensity *= 0.25;
-    for (const o of box.scene.children) if (o.isAmbientLight) o.intensity = 0.2;
+    for (const o of box.scene.children) if (o.isAmbientLight) o.intensity = Math.PI * 0.2;
 
     /* Widen on a portrait canvas; the offset is CardStage's. */
     function layout() {

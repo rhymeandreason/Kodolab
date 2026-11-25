@@ -1266,13 +1266,13 @@
        Key and rim ride the camera, Stage's own rule: orbiting then reads as
        turning the cell under a fixed lamp. */
     box.scene.traverse(o => {
-      if (o.isAmbientLight) o.intensity = 0.26;
+      if (o.isAmbientLight) o.intensity = Math.PI * 0.26;
       else if (o.isDirectionalLight) o.intensity *= 0.55;
     });
-    box.scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x2a1414, 0.55));
-    const key = new THREE.DirectionalLight(0xfff2e8, 0.70); key.position.set(-4, 5, 6);
-    const rim = new THREE.DirectionalLight(0xbfd4ff, 0.5); rim.position.set(3, 2, -7);
-    const under = new THREE.DirectionalLight(0xffd9c8, 0.28); under.position.set(2, -6, 2);
+    box.scene.add(new THREE.HemisphereLight(0xdfe9ff,0x2a1414, Math.PI * 0.55));
+    const key = new THREE.DirectionalLight(0xfff2e8, Math.PI * 0.70); key.position.set(-4, 5, 6);
+    const rim = new THREE.DirectionalLight(0xbfd4ff, Math.PI * 0.5); rim.position.set(3, 2, -7);
+    const under = new THREE.DirectionalLight(0xffd9c8, Math.PI * 0.28); under.position.set(2, -6, 2);
     box.camera.add(key, key.target, rim, rim.target, under, under.target);
 
     cell = create(THREE, box.root, params);

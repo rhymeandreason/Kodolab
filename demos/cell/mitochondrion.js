@@ -500,8 +500,8 @@
        this closely a cast shadow lands as soot. */
     box.renderer.toneMapping = THREE.NoToneMapping;
     box.scene.traverse(o => {
-      if (o.isAmbientLight) o.intensity = 0.46;
-      else if (o.isDirectionalLight) { o.color.set(o.intensity > 0.6 ? 0xfff4e8 : 0xf0e4dc); o.intensity *= 0.85; }
+      if (o.isAmbientLight) o.intensity = Math.PI * 0.46;
+      else if (o.isDirectionalLight) { o.color.set(o.intensity > 0.6 * Math.PI ? 0xfff4e8 : 0xf0e4dc); o.intensity *= 0.85; }
     });
     /* TWO EXTRA LIGHTS, BOTH ON THE CAMERA, and the ambient nearly doubled.
        Almost every surface worth seeing here is a crista face, and a crista
@@ -509,7 +509,7 @@
        ambient and the inside of the organelle reads as a dark well. These
        two rake it from either side, which is what models a plate. */
     for (const [x, y, z, i] of [[-4, 4, 3, 0.30], [4, -2, 3, 0.24]]) {
-      const l = new THREE.DirectionalLight(0xffffff, i);
+      const l = new THREE.DirectionalLight(0xffffff, Math.PI * i);
       l.position.set(x, y, z);
       box.camera.add(l, l.target);
     }

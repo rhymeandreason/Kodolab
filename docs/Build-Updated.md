@@ -6,13 +6,13 @@ Today the repo is the site: Vercel serves the working tree as committed, with no
 
 **Search sees almost nothing.** Most of a page's text is written by its scripts. Measured on the static HTML, with scripts removed: `dna-structure.html` has 18 characters of body text, `tree/tree-lab.html` has 1, and `lessons.html` has the masthead and the teacher strip but none of the lesson cards. Google renders JavaScript, but only the first step's text is ever in the DOM before a click. Bing and the AI crawlers (GPTBot, ClaudeBot, Perplexity) mostly do not run scripts at all. The top bar's links are injected by `lib/site.js`, so to those crawlers a lesson page links nowhere.
 
-**A lesson is slow to load.** `glycolysis-lab.html` loads 26 local scripts plus three.js from cdnjs:
+**A lesson is slow to load.** `glycolysis-lab.html` loads 26 local scripts plus three.js:
 
 |  | gzipped |
 | --- | --- |
 | The 26 local files as served | 210 KB |
 | The same files with comments stripped | 69 KB |
-| three.min.js, from a second origin | 149 KB |
+| `lib/three.r186.min.js`, same origin | 194 KB |
 
 Two thirds of what we send is comments. The comments stay in the source, where the repo's reasoning lives; the build removes them from what ships.
 
@@ -30,7 +30,7 @@ Two thirds of what we send is comments. The comments stay in the source, where t
 
 **Plain scripts first, ES modules second.** Pages load globals in an order the page states. The build concatenates in that order and minifies; nothing is converted. That ships the load-time win without touching a library file. Modules are the end state and have their own section (9), because three things this plan would otherwise hand-build (the shared `core` bundle, per-page molecule data, the `ORDER` tables) are what imports give for free.
 
-**Three.js moves to current early in the build, not last.** The upgrade depends only on bundling and the smoke run's screenshot diff, and it is what the generator gains most from, since a model writes current Three. It is not a reason to hold up a component: with colour management off, what breaks is the five shader files and the light intensities (section 6), so ordinary geometry and material code written on r128 ports almost free.
+**Three.js is already current.** The site moved to r186 ahead of the build (section 6), as one vendored global script, so the build inherits it and only has to bundle it.
 
 **Two devDependencies in the root `package.json`:** `esbuild`, to minify and later to bundle, and `playwright-core`, to drive the Chrome already installed for the smoke run (section 5). Neither ships to a student.
 
@@ -40,7 +40,7 @@ Two thirds of what we send is comments. The comments stay in the source, where t
 
 * *React / Next.* Rewrites imperative three.js pages to get server rendering we can get from a bake.
 * *react-three-fiber.* The mount contract is framework-free and is what a generated app is written against. A reactive wrapper adds a runtime and a second way to drive a scene.
-* *Vite, Astro.* Both want ES modules and want to own the scripts, which fights r128 globals. **That objection expires when section 9 lands.** By then `tools/bake.js` and the templates exist and work, so the question becomes whether a framework earns the migration, and the default answer is no: esbuild's `bundle` mode covers the half the build lacks.
+* *Vite, Astro.* Both want ES modules and want to own the scripts, which fights a library of globals. **That objection expires when section 9 lands.** By then `tools/bake.js` and the templates exist and work, so the question becomes whether a framework earns the migration, and the default answer is no: esbuild's `bundle` mode covers the half the build lacks.
 * *Eleventy.* The closest fit (plain templates, data files, passthrough). The tripwire for reaching for it is in section 8.
 * *Committing baked output to the source.* What `tools/seo.js` does today. It works, but a data edit needs a re-bake, a missed one ships stale, and parallel sessions collide on generated blocks. The build replaces it, and seo.js's writers become bake stages.
 
@@ -126,20 +126,22 @@ A bundle is the files concatenated in the page's order, each minified by esbuild
 
 * Size report: each page's bundle bytes, gzipped, against the previous build, so a page that doubles is seen.
 
-## 6. Upgrading Three.js
+## 6. Three.js is r186
 
-r128 was never forced by the absence of a build: the library is plain scripts on a global `THREE`, and current Three ships no global build (removed around r160) and no global add-ons. The build removes that obstacle. It bundles current Three from npm and assigns it to `window.THREE`, so no library file is converted; the dev server loads the same prebuilt file.
+Done, ahead of the build. Current Three ships no global build (removed around r160) and the library is plain scripts on a global `THREE`, so `demos/tools/vendor-three.js` bundles the ES module into one classic script, `demos/lib/three.r186.min.js`, at the version `lab/page.js` pins. No library file was converted. The bundle adds `THREE.OrbitControls` and turns colour management off. `kit/app.js` writes the tag for a generated app, so `Components.md` names none; an app stored with the old r128 CDN tag still runs, because the loader replaces that global.
 
-**What changes between r128 and r17x, from a scan of the library:**
-- *Colour management* (r152): colours are converted by default, which would shift every authored colour. Two lines restore r128 exactly: `THREE.ColorManagement.enabled = false` and `renderer.outputColorSpace = THREE.LinearSRGBColorSpace`.
-- *Physical light units* (r155, legacy mode removed r165): intensities scale by about π. Only directional, hemisphere and ambient lights are used, in 10 files.
-- *Shaders*: 2 files use `onBeforeCompile` and 3 use `ShaderMaterial`. The only real work.
-- *Found when `demos/lab/` moved to r186* (`lab/core/three-compat.js` holds each fix): r163+ ignores a material's `envMapIntensity` when the reflection comes from `scene.environment`; a render target is no longer tone mapped or sRGB-encoded, so an inset drawn into one needs its own shader variant (and compiles on first use unless warmed with `compileAsync`); a renderer that never set an encoding output linear on r128 but outputs sRGB now; punctual lights default to decay 2; PMREM keeps low-roughness reflections much sharper, so strip lights in an env map read as stripes; `WebGLMultisampleRenderTarget` is gone (`samples` on a plain target).
-- Smaller: the `slerpQuaternions` return-value workaround in `lib/molview.js`, `Geo.capsule` (current Three has `CapsuleGeometry`), and WebGL2 becomes required.
+**What the move changed, and where each fix lives:**
+- *Colour management* (r152): off in the bundle, and `lib/scene.js` sets `outputColorSpace = LinearSRGBColorSpace`, so a hex reaches the screen as typed. A scene that wants sRGB out sets it on its own renderer.
+- *Light units* (r155): the hidden ×π is gone, so every intensity is written `Math.PI * x`, including where a component re-tunes Stage's lights. Only directional, hemisphere and ambient lights are used.
+- *Stencil* (r163): off by default, and `membrane/clip.js` caps with it, so Stage's renderer asks for it.
+- *`envMapIntensity`* (r163): ignored when the reflection comes from `scene.environment`, so the plant cell hands each material the environment as its own `envMap`.
+- *Renames and removals*: `outputEncoding` and `texture.encoding` to `colorSpace`, static `Quaternion.slerp`, `PlaneBufferGeometry`, `BufferAttribute.updateRange`, `THREE.Clock`, `PCFSoftShadowMap`, the `morphTargets` material flags.
+- *The shader files needed nothing.* `onBeforeCompile` and `ShaderMaterial` code ran unchanged.
+- *The labs' own list* (render targets, punctual decay, PMREM sharpness) is `lab/core/three-compat.js` and `lab/README.md`.
 
-**Gained:** prototypes and generated code written against current Three run without being ported down, current add-ons, and the renderer's newer features.
+**Still open:** colours and lighting judged in Safari, page by page; Lambert is shaded per pixel now, where r128 shaded per vertex. Moving a page to current defaults (colour management on, physical lights) is a separate choice, made one page at a time. `Geo.capsule` could give way to `CapsuleGeometry`, and `lib/molview.js`'s `slerpQuaternions` workaround is no longer needed.
 
-**Order:** load current Three with the r128 colour and light behaviour switched on; diff every featured page's smoke-run screenshot against r128; fix the five shader files; then move pages to the current defaults one at a time, each judged in Safari. The version is pinned in `package.json`, and `kit/app.js`'s `ORDER` and `Components.md`'s tag change with it.
+**For the build:** bundle the same pinned version from npm in place of the vendored file; `kit/app.js`'s `ORDER` changes with it.
 
 **Stay on `WebGLRenderer` for this step.** `WebGPURenderer` with TSL materials is the direction, and GPU compute is where `water/watersim.js` and the capillary fluid would gain most. It is a second migration with its own risk (Safari, school Chromebooks, every custom shader rewritten in TSL), and it should start as one bench, after modules, with the CPU path kept.
 
@@ -263,7 +265,7 @@ Content is what a Beta user judges, and a 1.5 s cold load is tolerable. So the c
 
 6. `tools/build.js` copying to `dist/`, `vercel.json` pointed at it, a deploy that serves the same site. Nothing else changes, so a problem here is the build's alone.
 7. Bundling, scripts and stylesheets, behind the smoke run, then `immutable` on `_b/`. First because load time is what a student feels, and it depends on no bake.
-8. Three.js r128 to current, behind the screenshot diff (section 6). Sooner if a new component needs something r128 lacks.
+8. Three.js from npm in the bundle, replacing the vendored r186 file (section 6).
 9. Generated-app bundles (section 7): the sandbox cache test, whose answer decides whether bundles alone help; then per-component bundles and the splice in `framed()`.
 10. `tools/bake.js` and the dev server running it. `head` moves over from `seo.js`, whose writes into the source are then removed.
 11. `sitenav`: every page's top bar from one template. The priority for search and for a consistent layout.

@@ -40,7 +40,7 @@ Four rules were prose here and enforced by nothing: both molecule families at on
 <link rel="stylesheet" href="proteins/protein-test.css"> <!-- a protein bench links this and kit/proteinbox.css, and no site sheet -->
 <link rel="stylesheet" href="molecule-builder/molecule-builder.css"> <!-- only with molecule-builder.js -->
 ...
-<script src=".../three.min.js"></script>
+<script src=".../lib/three.r186.min.js"></script>
 <script src="palette.js"></script>     <!-- always, first — atom/bond colours + radii -->
 <script src="tokens-from-palette.js"></script>  <!-- always, straight after — publishes the atom/bond colours as CSS -->
 <script src="molecules.js"></script>   <!-- always — PALETTE, SCALE, VIEW + the empty registry -->
@@ -128,7 +128,7 @@ General plumbing. A page loads the ones its mechanic needs; none of them knows w
 | `kit/lesson-stage.js` | `LessonStage.attach(shell, {toggle, boxes})` → on ctx: `split` · `caption` · `side` · `sideNote` · `bar` · `toggle`/`variant`/`onToggle` · `scrub` · `under` · `use({show,keep})` · `fade`. Stage chrome for a lesson with several scenes: an A/B split, a switch, a scrubber, boxes built per step. Chrome in `css/lesson-shell.css`. First page: `sickle-lab.html` | own header |
 | `kit/timeline-shell.js` | `TimelineShell.create({brand,tracks,onTime,onTrack,onStep,onLayout})` → the LessonShell api plus `freeRect()` and `time` (`t` · `playing` · `seek` · `play` · `setTrack`). **A lesson that is one continuous animation**: the steps are stretches of one clock (`dur`), a dock plays and scrubs it, two or more tracks draw a switch. Built on `LessonShell.create`, and its `setSteps` is what the switch calls. Chrome in `css/lesson-shell.css`. Not in `SHELLS` yet: one page. First page: `cell-division/cell-division-lab.html` | own header |
 | `lib/story.js` | `Story.scroll(sections, onPart)` → the Lenis instance. A story page's scroll: momentum, which section is on the reading line, and the settle onto it. Pairs with `css/story.css`; after Lenis | own header |
-| `lib/geo.js` | `Geo.capsule` · `Geo.roundedBox` · `Geo.merge` — the three geometries the r128 global build lacks. After `scene.js`, before `leaf/` or `tree/` | own header |
+| `lib/geo.js` | `Geo.capsule` · `Geo.roundedBox` · `Geo.merge` — three geometries every component builds the same way. After `scene.js`, before `leaf/` or `tree/` | own header |
 
 ### Molecule data — the specs and what builds them
 

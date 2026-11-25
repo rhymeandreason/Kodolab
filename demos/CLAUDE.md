@@ -25,7 +25,7 @@ Each layer may use the ones above it and knows nothing of the ones below.
 
 **Share the plumbing, not the physics.** Deliberately no monolithic `engine.js`. The test for whether something belongs in a shared module — *would two lessons disagree about it?* — and the same split a level down inside the bonding builder: `Modules.md`.
 
- `membrane-lab.html` still runs its own inline membrane, it doesn’t use the component yet.
+`membrane-lab.html` still runs its own inline membrane, it doesn’t use the component yet.
 
 ## What to read
 
@@ -35,7 +35,7 @@ Every doc lives in `demos/docs/` except the node graph's two and the clipper's, 
 
 | Task | Read |
 | --- | --- |
-| A component a generated app can mount (a cell, a tissue, an organism, any render) | `AddingAComponent.md` — the mount contract, the r128 stack, budgets, and the test of done: `tools/gen-app.js` writes a working page from `Components.md` alone |
+| A component a generated app can mount (a cell, a tissue, an organism, any render) | `AddingAComponent.md` — the mount contract, the r186 global-script stack, budgets, and the test of done: `tools/gen-app.js` writes a working page from `Components.md` alone |
 | What a generated app may use | `Components.md` — the reference the model is handed, and its only context. A component is not done until its section exists |
 | The generator, `tools/gen-app.js`, or the builder backend | `Generator.md` — how a page is generated today, what it costs, what the edit runs showed, and what the backend should do differently |
 | A template a generated app can be built on (the page's shape, not its scene) | `Generator.md` §3 — a template is `kit/lesson-shell.js` with a wrapper, never beside it: `ctx.q` means one thing or `Components.md` forks per template. `kit/app.js`'s `SHELLS` is the registration, and the failure that matters is a template the model never picks |

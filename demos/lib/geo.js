@@ -1,11 +1,9 @@
 /* =============================================================================
- *  lib/geo.js — geometry the r128 global build does not ship
+ *  lib/geo.js — capsule, rounded box, merge
  * =============================================================================
- *  Three r128 is the whole library's stack (CLAUDE.md), and its global build
- *  has no CapsuleGeometry, no RoundedBoxGeometry and no BufferGeometryUtils.
- *  The procedural components (leaf/, tree/) were prototyped on a modern
- *  module build and used all three, so this is where they live now — one
- *  copy, not one per component.
+ *  The global three.js build (lib/three.r186.min.js) carries no addons, so
+ *  RoundedBoxGeometry and BufferGeometryUtils are not there, and the capsule
+ *  here predates three's own. One copy, not one per component.
  *
  *    Geo.capsule(THREE, r, len, capSeg, radial)   a lathe: two quarter arcs and a wall
  *    Geo.roundedBox(THREE, w, h, d, seg, r)        a subdivided box whose vertices are

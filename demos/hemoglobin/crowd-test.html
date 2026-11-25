@@ -100,7 +100,7 @@
 </div>
 <div id="hud"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../lib/three.r186.min.js"></script>
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
 <script src="../lib/molecules.js"></script>
@@ -425,9 +425,8 @@ function buildColliders(radius) {
   return m;
 }
 
-/* Does this three build support per-instance colour? r125 added it; the page
-   pins r128, so this should always be true — but a silent fallback to a flat
-   crowd beats a crash if the pin ever moves. */
+/* Does this three build support per-instance colour? r125 added it, so this
+   should always be true, but a silent fallback to a flat crowd beats a crash. */
 const INSTANCE_COLOR = typeof THREE.InstancedMesh.prototype.setColorAt === 'function';
 
 /* ------------------------------------------------------------ the molecules */
@@ -960,13 +959,13 @@ function spawn(built, radius, extentR) {
        live prefix; the matrices are contiguous from 0, so a prefix is all it
        ever needs to be. (16 floats per matrix.) */
     for (const mesh of live) {
-      mesh.instanceMatrix.updateRange.offset = 0;
-      mesh.instanceMatrix.updateRange.count = COUNT * 16;
+      mesh.instanceMatrix.clearUpdateRanges();
+      mesh.instanceMatrix.addUpdateRange(0, COUNT * 16);
       mesh.instanceMatrix.needsUpdate = true;
     }
     if (colliders.visible) {
-      colliders.instanceMatrix.updateRange.offset = 0;
-      colliders.instanceMatrix.updateRange.count = COUNT * 16;
+      colliders.instanceMatrix.clearUpdateRanges();
+      colliders.instanceMatrix.addUpdateRange(0, COUNT * 16);
       colliders.instanceMatrix.needsUpdate = true;
     }
     const t2 = performance.now();

@@ -482,12 +482,12 @@
     /* bloodcell.js's light: no shadow maps, a hemisphere for the red, key and
        rim on the camera. The same cell should be lit the same way. */
     box.scene.traverse(o => {
-      if (o.isAmbientLight) o.intensity = 0.3;
+      if (o.isAmbientLight) o.intensity = Math.PI * 0.3;
       else if (o.isDirectionalLight) o.intensity *= 0.55;
     });
-    box.scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x2a1414, 0.55));
-    const key = new THREE.DirectionalLight(0xfff2e8, 0.7); key.position.set(-4, 5, 6);
-    const rim = new THREE.DirectionalLight(0xbfd4ff, 0.5); rim.position.set(3, 2, -7);
+    box.scene.add(new THREE.HemisphereLight(0xdfe9ff,0x2a1414, Math.PI * 0.55));
+    const key = new THREE.DirectionalLight(0xfff2e8, Math.PI * 0.7); key.position.set(-4, 5, 6);
+    const rim = new THREE.DirectionalLight(0xbfd4ff, Math.PI * 0.5); rim.position.set(3, 2, -7);
     box.camera.add(key, key.target, rim, rim.target);
 
     sim = create(THREE, box.root, box.camera, params);

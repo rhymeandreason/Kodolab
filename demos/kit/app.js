@@ -34,8 +34,9 @@
   /* Every library file a generated app may load, in the only order they may
      load in. Membership is decided below; position is decided here, so a
      component listing its files in any order still lands them correctly. */
+  const THREE_JS = 'lib/three.r186.min.js', THREE_REV = '186';
   const ORDER = [
-    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    THREE_JS,
     'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js',
     'https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/dist/plot.umd.min.js',
     'https://unpkg.com/smiles-drawer@2.4.1/dist/smiles-drawer.min.js',
@@ -124,13 +125,12 @@
     'kit/sandbox-shell.js',  // last: a template reads what the shell defined
   ];
 
-  /* three.js is NOT here: the page writes that tag itself. Chrome refuses a
-     parser-blocking CROSS-SITE script written by document.write on a slow
-     connection, and a three.js that silently does not arrive is every page
-     dead with no error worth reading. Same-origin writes are exempt, which is
-     everything below. Graph's d3 and Plot are the remaining exception, taken
-     knowingly: they are cross-site, they load only on a page that charts, and
-     a missing chart is a visible hole rather than a blank window. */
+  /* three.js is the library's own file (tools/vendor-three.js builds it) and
+     is written first, below, on every page. Chrome refuses a parser-blocking
+     CROSS-SITE script written by document.write on a slow connection, and
+     same-origin writes are exempt. Graph's d3 and Plot are the exception,
+     taken knowingly: they are cross-site, they load only on a page that
+     charts, and a missing chart is a visible hole rather than a blank window. */
   /* A page picks one template with data-shell. The step-through is the base
      and every other template is built on it, so it is in CORE and a template
      adds only its own file. */
@@ -220,7 +220,7 @@
                  'lib/mol-sugars.js', 'lib/mol-glycans.js', 'lib/mol-lipids.js',
                  'lib/mol-nucleic.js', 'lib/molview.js', 'molecule/molecule.js'],
     Quiz:       ['quiz/quiz.js'],
-    /* A scene the page defines itself. Geo for the shapes r128 lacks. */
+    /* A scene the page defines itself. Geo for capsule, rounded box and merge. */
     Scene:      ['lib/geo.js', 'kit/scale.js', 'custom/scene.js'],
   };
 
@@ -328,5 +328,8 @@
      flashes unstyled. */
   const linked = new Set([...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.getAttribute('href')));
   for (const f of out.css) if (!linked.has(url(f)) && !linked.has(f)) document.write(`<link rel="stylesheet" href="${url(f)}">`);
+  /* A stored app from before the library moved off r128 still carries the r128
+     CDN tag; this one loads after it and replaces its global. */
+  if (!(window.THREE && window.THREE.REVISION === THREE_REV)) out.scripts.unshift(THREE_JS);
   for (const f of out.scripts) document.write(`<scr` + `ipt src="${url(f)}"></scr` + `ipt>`);
 })();

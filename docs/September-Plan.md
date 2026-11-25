@@ -22,7 +22,7 @@ Generated apps will be the median, not the bespoke. The featured lessons stay ha
 
 3. **Invariants live in the components.** A remixer can make ice denser than water. Clamp parameter ranges inside the module and keep the existing checkers as the gate. The generator cannot be trusted with accuracy and does not need to be if the components refuse to lie.
 
-4. **One stack.** Leaf and Tree are now components in `Components.md` on the r128 global stack, alongside WaterSim, Membrane and Proteinbox. (Done)
+4. **One stack.** Leaf and Tree are now components in `Components.md` on the global-script stack (r128 then, r186 now), alongside WaterSim, Membrane and Proteinbox. (Done)
 
 5. **Freeze the library.** Student apps live forever. Serve it at a pinned path like `/lib/v1/kodo.js` and `/lib/v1/kodo.css` by Vercel rewrite, and never change v1 behaviour. A behaviour change cuts v2. Serving from our own origin keeps the iframe CSP simple.
 

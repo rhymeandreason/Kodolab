@@ -30,11 +30,10 @@
   <input id="tween" type="range" min="0" max="2" step="0.001" value="0">
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../lib/three.r186.min.js"></script>
 <script>
 // ============================================================================
-//  Procedural plant cell cross-section  (three.js r128)
+//  Procedural plant cell cross-section  (three.js r186)
 //  Units: cell apothem = 1.  Y up.  Cut plane tilts down toward the camera.
 // ============================================================================
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -50,7 +49,7 @@ const glass=(h,op,o={})=>mat(h,Object.assign({transparent:true,opacity:op,depthW
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
-renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.NoToneMapping;
 document.body.appendChild(renderer.domElement);
 
@@ -67,11 +66,11 @@ controls.autoRotate=true; controls.autoRotateSpeed=.35;
 renderer.domElement.addEventListener('pointerdown',()=>controls.autoRotate=false,{once:true});
 
 // soft lighting, no shadows
-scene.add(new THREE.HemisphereLight(0xffffff,0xbcd4c2,.55));
-const key=new THREE.DirectionalLight(0xfff6e8,.55); key.position.set(4,7,5); scene.add(key);
-const fill=new THREE.DirectionalLight(0xdbe9ff,.28); fill.position.set(-6,3,-3); scene.add(fill);
-const rim=new THREE.DirectionalLight(0xffffff,.18); rim.position.set(0,4,-7); scene.add(rim);
-scene.add(new THREE.AmbientLight(0xffffff,.12));
+scene.add(new THREE.HemisphereLight(0xffffff,0xbcd4c2, Math.PI * .55));
+const key=new THREE.DirectionalLight(0xfff6e8, Math.PI * .55); key.position.set(4,7,5); scene.add(key);
+const fill=new THREE.DirectionalLight(0xdbe9ff, Math.PI * .28); fill.position.set(-6,3,-3); scene.add(fill);
+const rim=new THREE.DirectionalLight(0xffffff, Math.PI * .18); rim.position.set(0,4,-7); scene.add(rim);
+scene.add(new THREE.AmbientLight(0xffffff, Math.PI * .12));
 
 // ---------------------------------------------------------------- textures
 function wallTexture(){
@@ -84,14 +83,14 @@ function wallTexture(){
     g.lineWidth=.6+r()*2.2;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);g.stroke();
   }
   for(let i=0;i<60;i++){const x=r()*512,y=r()*512,rad=20+r()*60;const gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,`rgba(255,255,255,${r()*.2})`);gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,rad*2,rad*2);}
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.encoding=THREE.sRGBEncoding;return t;
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace = THREE.SRGBColorSpace;return t;
 }
 function cytoTexture(){
   const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');
   g.fillStyle='#f2f2f2';g.fillRect(0,0,256,256);
   const r=rng(3);
   for(let i=0;i<90;i++){const x=r()*256,y=r()*256,rad=10+r()*50;const gr=g.createRadialGradient(x,y,0,x,y,rad);const w=r()<.5;gr.addColorStop(0,w?`rgba(255,255,255,${r()*.35})`:`rgba(0,40,40,${r()*.12})`);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,rad*2,rad*2);}
-  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t;
+  const t=new THREE.CanvasTexture(c);t.colorSpace = THREE.SRGBColorSpace;return t;
 }
 const wallTex=wallTexture(), cytoTex=cytoTexture();
 (function(){
@@ -101,7 +100,7 @@ const wallTex=wallTexture(), cytoTex=cytoTexture();
   g.fillStyle=gr;g.fillRect(0,0,512,256);
   // a few bright soft "window" highlights
   for(const [x,y,w,h] of [[60,40,140,50],[330,30,120,40],[220,70,60,25]]){const rg=g.createRadialGradient(x+w/2,y+h/2,0,x+w/2,y+h/2,w);rg.addColorStop(0,'rgba(255,255,255,.7)');rg.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=rg;g.fillRect(x-w,y-h,w*3,h*3);}
-  const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;t.encoding=THREE.sRGBEncoding;
+  const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;t.colorSpace = THREE.SRGBColorSpace;
   const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromEquirectangular(t).texture;pm.dispose();
 })();
 
@@ -517,6 +516,8 @@ function frame(now){
   for(let i=dying.length-1;i>=0;i--){const L=dying[i],k=clamp((now-L.userData.t0)/450,0,1);layoutOrganelles(L,1-easeInOut(k),dt,time);if(k>=1){cutFrame.remove(L);dying.splice(i,1);}}
   controls.update();renderer.render(scene,camera);
 }
+// three r163+ scales a reflection by envMapIntensity only when the map is the material's own
+scene.traverse(o=>{for(const m of [].concat(o.material||[]))if(m.isMeshStandardMaterial&&!m.envMap)m.envMap=scene.environment;});
 requestAnimationFrame(frame);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 </script>

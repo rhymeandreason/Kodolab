@@ -15,7 +15,7 @@
  *  conditions · inhibition. The temperature and pH model lives here, not in
  *  the steps, because the panel's chart and the scene must read one curve.
  *
- *  Loads after three r128, OrbitControls, lib/annotate.js, enzyme-lib.js, enzyme-models.js and
+ *  Loads after lib/three.r186.min.js (which carries OrbitControls), lib/annotate.js, enzyme-lib.js, enzyme-models.js and
  *  enzyme-reactor.js. Exposes window.Enzyme.
  * ========================================================================== */
 (function (global) {
@@ -45,7 +45,7 @@
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(opts.pixelRatio || Math.min(devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
     // the shell's paper, so the far dust fades into the page
@@ -58,11 +58,11 @@
     Object.assign(controls, { enableDamping: true, dampingFactor: 0.08, enablePan: false, minDistance: 4.5, maxDistance: 30, rotateSpeed: 0.7, zoomSpeed: 0.8 });
 
     // lib/scene.js's studio light, brighter, parented to the camera so highlights stay put on orbit
-    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    scene.add(new THREE.AmbientLight(0xffffff, Math.PI * 0.75));
     scene.add(camera);
-    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    const key = new THREE.DirectionalLight(0xffffff, Math.PI * 1.2);
     key.position.set(4, 6, 8);
-    const fill = new THREE.DirectionalLight(0x88aaff, 0.45);
+    const fill = new THREE.DirectionalLight(0x88aaff, Math.PI * 0.45);
     fill.position.set(-6, -2, -4);
     camera.add(key, key.target, fill, fill.target);
 
@@ -72,7 +72,7 @@
       c.width = c.height = 256;
       draw(c.getContext('2d'));
       const t = new THREE.CanvasTexture(c);
-      t.encoding = THREE.sRGBEncoding;
+      t.colorSpace = THREE.SRGBColorSpace;
       return t;
     }
     function shadowPlane(tex, w, h) {
@@ -423,11 +423,12 @@
       updateEnzyme(dt);
       energy.update(dt);
     }
-    const clock = new THREE.Clock();
+    let last = performance.now();
     let raf = 0;
     function frame() {
       raf = requestAnimationFrame(frame);
-      tick(Math.min(clock.getDelta(), 0.05));
+      const now = performance.now(), dt = (now - last) / 1000; last = now;
+      tick(Math.min(dt, 0.05));
       updateDust(time);
       renderer.render(scene, camera);
       updateDynamicLabels();

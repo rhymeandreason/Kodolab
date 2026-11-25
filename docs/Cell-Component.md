@@ -178,7 +178,7 @@ Add a triangle budget per component when the first is measured; `animalcell.js` 
 - A hidden part is still simulated. Hiding is visibility only.
 - Featured sets are short.
 - Every number a page could print is in `state()`.
-- Colours are typed as sRGB and converted; r128 has no colour management and a hex lands in the material as linear. Any new part goes through `animalcell.js`'s `col()`.
+- Colours are typed as sRGB and converted; colour management is off and a hex lands in the material as linear. Any new part goes through `animalcell.js`'s `col()`.
 
 ## 12. Files, and the order to build them
 

@@ -4,8 +4,9 @@
  *
  * The kit stack reads a global THREE. This sets it to the lab's own module before loading the
  * scripts in order, so a kit scene builds objects from the same three.js the lab renders with:
- * one copy, one revision. A script that adds to THREE (r128's examples/js, THREE.OrbitControls)
- * cannot run here, since a module namespace is frozen; take controls from zoom.js instead.
+ * one copy, one revision, the same one lib/three.r186.min.js gives a classic page. A script that
+ * adds to THREE cannot run here, since a module namespace is frozen, and THREE.OrbitControls is
+ * the classic bundle's alone; take controls from zoom.js instead.
  */
 import * as THREE from 'three';
 

@@ -43,18 +43,18 @@
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(global.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0);
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NoToneMapping;
 
     const scene = new THREE.Scene();
     if (!CD.mat) CD.initShared();
     const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
     // the enzyme lesson's studio light, parented to the camera so highlights stay put on orbit
-    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    scene.add(new THREE.AmbientLight(0xffffff, Math.PI * 0.75));
     scene.add(camera);
-    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    const key = new THREE.DirectionalLight(0xffffff, Math.PI * 1.2);
     key.position.set(4, 6, 8);
-    const fill = new THREE.DirectionalLight(0x88aaff, 0.45);
+    const fill = new THREE.DirectionalLight(0x88aaff, Math.PI * 0.45);
     fill.position.set(-6, -2, -4);
     camera.add(key, key.target, fill, fill.target);
     const HOME_DIR = new V3(0.22, 0.3, 1).normalize();

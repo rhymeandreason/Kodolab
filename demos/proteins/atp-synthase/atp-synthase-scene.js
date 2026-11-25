@@ -32,7 +32,7 @@
  *  THE TURN IS A RIGID ROTATION of 8H9S's own rotor coordinates about the
  *  axis the baker measured. The head's shape change is NOT animated.
  *
- *  Needs: three r128, palette.js, molecules.js, skel.js, mol-carriers.js,
+ *  Needs: three (global), palette.js, molecules.js, skel.js, mol-carriers.js,
  *  scene.js, atomkit.js, membrane/parts.js, kit/ribbon.js, kit/card-stage.js,
  *  kit/proteinbox.js, proteins/proteins.js.
  * ========================================================================== */

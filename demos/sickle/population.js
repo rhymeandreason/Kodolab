@@ -306,7 +306,7 @@
       step: dt => { if (sim) { sim.step(dt); CardStage.fire(frames, [sim.state(), dt], 'Population frame'); } },
       viewOffset: params.viewOffset,
     });
-    box.scene.add(new THREE.HemisphereLight(0xfff8ee, 0x8a8070, 0.35));
+    box.scene.add(new THREE.HemisphereLight(0xfff8ee,0x8a8070, Math.PI * 0.35));
     /* Aimed behind the centre, so the village sits low in its box and a
        page can lay a chart across the top. */
     box.cam.target.set(0, 0, -2.5);

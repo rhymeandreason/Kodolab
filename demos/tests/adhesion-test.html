@@ -11,7 +11,7 @@
 </style>
 </head>
 <body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../lib/three.r186.min.js"></script>
 
 <script id="frag" type="x-shader/x-fragment">
 precision highp float;
@@ -251,6 +251,7 @@ void main(){
 <script>
 const renderer = new THREE.WebGLRenderer({antialias:false});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const cam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
@@ -295,7 +296,7 @@ const uni = {
   uTextC:{value:new THREE.Vector2(0, 0.55)},
   uTextS:{value:new THREE.Vector2(9.2, 4.6)}
 };
-scene.add(new THREE.Mesh(new THREE.PlaneBufferGeometry(2,2), new THREE.ShaderMaterial({
+scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), new THREE.ShaderMaterial({
   uniforms: uni,
   vertexShader: 'void main(){ gl_Position = vec4(position,1.0); }',
   fragmentShader: document.getElementById('frag').textContent

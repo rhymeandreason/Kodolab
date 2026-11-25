@@ -38,8 +38,8 @@
  *  state(): {explode, seed, isolate, aperture, flows, hovered, layers:[{name, y, height}]}
  *  Events: 'hover' (name | null) · 'select' (name | null) · 'frame' (state)
  *
- *  Three r128 has no CapsuleGeometry and no RoundedBoxGeometry in the global
- *  build; lib/geo.js carries both, so load it first.
+ *  The capsule and rounded box come from lib/geo.js, not from three, so
+ *  load it first.
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -802,20 +802,20 @@
        like stone. */
     box.renderer.toneMapping = THREE.NoToneMapping;
     box.scene.traverse(o => {
-      if (o.isAmbientLight) o.intensity = 0.18;
+      if (o.isAmbientLight) o.intensity = Math.PI * 0.18;
       else if (o.isDirectionalLight) {
         /* Stage's fill is blue, for a molecule on white paper. On a leaf it
            reads as cold grey in every shadowed face. */
-        o.color.set(o.intensity > 0.6 ? 0xfff6e6 : 0xdfeaf2);
+        o.color.set(o.intensity > 0.6 * Math.PI ? 0xfff6e6 : 0xdfeaf2);
         o.intensity *= 0.75;
       }
     });
     /* Sky above, leaf-litter below: the one world-fixed light, because up and
        down are real for a leaf and a hemisphere casts nothing. */
-    box.scene.add(new THREE.HemisphereLight(0xeef7e2, 0x60724a, 0.38));
+    box.scene.add(new THREE.HemisphereLight(0xeef7e2,0x60724a, Math.PI * 0.38));
     /* On the camera, like Stage's own. Low and to the left of the view, so the
        side of a cell facing away from the key is still modelled. */
-    const under = new THREE.DirectionalLight(0xffffff, 0.3);
+    const under = new THREE.DirectionalLight(0xffffff, Math.PI * 0.3);
     under.position.set(-5, -4, 6);
     box.camera.add(under, under.target);
 

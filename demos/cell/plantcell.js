@@ -2,7 +2,7 @@
  *  cell/plantcell.js — a plant cell cut open, in four tissues and three states
  * =============================================================================
  *  A hexagonal cell in a wall, cut on a tilted plane, with the organelles
- *  standing on the cut face. r128 and kit/card-stage.js, no build step.
+ *  standing on the cut face. Global three.js and kit/card-stage.js, no build step.
  *
  *      PlantCell.create(THREE, root, camera, opts)   the model: root is yours
  *      PlantCell.mount(el, params)                   one box, one handle
@@ -1068,17 +1068,17 @@
     box.cam.target.fromArray(home.target);
     // Same soft, shadowless rig as the animal cell, so the two read as lit by
     // one studio. See cell/animalcell.js for why there is no shadow map.
-    box.renderer.outputEncoding = THREE.sRGBEncoding;
+    box.renderer.outputColorSpace = THREE.SRGBColorSpace;
     for (const o of box.camera.children) if (o.isLight) o.intensity *= 0.25;
-    for (const o of box.scene.children) if (o.isAmbientLight) o.intensity = 0.22;
-    box.scene.add(new THREE.HemisphereLight(0xf4f8ff, 0xe8cbb8, 0.55));
-    const key = new THREE.DirectionalLight(0xfff4ea, 0.55);
+    for (const o of box.scene.children) if (o.isAmbientLight) o.intensity = Math.PI * 0.22;
+    box.scene.add(new THREE.HemisphereLight(0xf4f8ff,0xe8cbb8, Math.PI * 0.55));
+    const key = new THREE.DirectionalLight(0xfff4ea, Math.PI * 0.55);
     key.position.set(14, 26, 16);
     box.scene.add(key, key.target);
-    const fill = new THREE.DirectionalLight(0xdbe6ff, 0.25);
+    const fill = new THREE.DirectionalLight(0xdbe6ff, Math.PI * 0.25);
     fill.position.set(-14, 8, -10);
     box.scene.add(fill, fill.target);
-    const rim = new THREE.DirectionalLight(0xffffff, 0.2);
+    const rim = new THREE.DirectionalLight(0xffffff, Math.PI * 0.2);
     rim.position.set(-2, -6, -18);
     box.scene.add(rim, rim.target);
     /* AN ENVIRONMENT, FOR THE VACUOLE. Four analytic lights give a clearcoat
@@ -1103,7 +1103,7 @@
       g2.fillStyle = hl; g2.fillRect(24, -12, 92, 92);
       const tex = new THREE.CanvasTexture(c);
       tex.mapping = THREE.EquirectangularReflectionMapping;
-      tex.encoding = THREE.sRGBEncoding;
+      tex.colorSpace = THREE.SRGBColorSpace;
       const pm = new THREE.PMREMGenerator(box.renderer);
       box.scene.environment = pm.fromEquirectangular(tex).texture;
       pm.dispose(); tex.dispose();
@@ -1175,6 +1175,11 @@
     canvas.addEventListener('dblclick', goHome);
 
     sim = create(THREE, box.root, box.camera, params);
+    /* three r163+ scales a reflection by the material's envMapIntensity only when the map is the
+       material's own, so hand each one the scene's. */
+    box.scene.traverse(o => {
+      for (const m of [].concat(o.material || [])) if (m.isMeshStandardMaterial && !m.envMap) m.envMap = box.scene.environment;
+    });
     box.pump();
 
     /* The component contract: set / state / on / destroy. `state` is a

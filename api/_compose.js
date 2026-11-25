@@ -198,7 +198,6 @@ function page(lesson) {
 <title>${title}</title>
 </head>
 <body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../kit/app.js" data-shell="steps" data-use="${uses.join(',')}"></script>
 <script type="application/json" id="lesson">
 ${json}

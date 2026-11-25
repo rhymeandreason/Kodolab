@@ -123,8 +123,6 @@ const EnzymeModels = (() => {
       vertexColors: true,
       roughness: 0.48,
       metalness: 0,
-      morphTargets: true,
-      morphNormals: true,
     });
     return new THREE.Mesh(geo, mat);
   }
@@ -239,7 +237,7 @@ const EnzymeModels = (() => {
       g.fillStyle = gr;
       g.fillRect(0, 0, 128, 128);
       glowTex = new THREE.CanvasTexture(c);
-      glowTex.encoding = THREE.sRGBEncoding;
+      glowTex.colorSpace = THREE.SRGBColorSpace;
     }
     return new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTex, color: col(hex), transparent: true, opacity, depthWrite: false,

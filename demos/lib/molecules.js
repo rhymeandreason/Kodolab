@@ -1,6 +1,6 @@
 /* =====================================================================
  *  molecules.js — shared molecule library + colour palette
- *  Loaded as a classic script (Three r128 global style) BEFORE the page's
+ *  Loaded as a classic script (global THREE) BEFORE the page's
  *  main script. Exposes window.MolLib for both water-lab.html and the
  *  upcoming molecule-builder.html, so colours and geometry stay identical
  *  across pages.

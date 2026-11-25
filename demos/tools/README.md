@@ -149,6 +149,17 @@ It injects its reload client into HTML **responses**, never into the files. The
 repo deploys to GitHub Pages from the working tree, so the published pages must
 stay exactly what is committed. `python3 -m http.server` to see what ships.
 
+# tools/vendor-three.js
+
+Builds `lib/three.r<N>.min.js`, the global-script three.js every classic page loads. three.js ships no global build since r160, so this bundles the ES module with esbuild, adds `THREE.OrbitControls`, and turns colour management off.
+
+```bash
+node tools/vendor-three.js            # the version lab/page.js pins
+node tools/vendor-three.js 0.187.0    # another one
+```
+
+Needs npm and the network; it installs into a temp folder and leaves the repo's `node_modules` alone. A new revision changes the file name, so rename it in `kit/app.js` (`THREE_JS`, `THREE_REV`) and in every page's tag, then load the pages: `docs/Build-Updated.md` section 6 lists what the last move broke.
+
 # tools/check-docs.js
 
 Audits the claims `CLAUDE.md` and `SCIENCE.md` make about the code, for the same

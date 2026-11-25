@@ -44,8 +44,8 @@
  *  than as silhouettes, and why a lesson can fly inside one. Outer, lip and
  *  inner are vertex colours, which is why the materials carry no `color`.
  *
- *  COLOURS ARE TYPED AS sRGB AND CONVERTED. r128 has no colour management:
- *  a hex string lands in the material as linear, and with sRGBEncoding on
+ *  COLOURS ARE TYPED AS sRGB AND CONVERTED. Colour management is off:
+ *  a hex string lands in the material as linear, and with sRGB output on
  *  the renderer it draws paler than typed. Every colour goes through col().
  * ========================================================================== */
 (function (global) {

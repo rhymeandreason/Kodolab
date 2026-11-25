@@ -98,7 +98,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../lib/three.r186.min.js"></script>
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
 <script src="../lib/molecules.js"></script>
@@ -336,7 +336,7 @@ function colourFor(m, resName, chain, num) {
      underneath it. That is the thing to keep an eye on while picking, and
      the reason this is a knob rather than a constant.
 
-     r128 has no colour management, so setStyle just divides by 255 —
+     Colour management is off, so setStyle just divides by 255 —
      the hex in the swatch is the number in the shader. */
   return new THREE.Color().setStyle(plainCol.value);
 }

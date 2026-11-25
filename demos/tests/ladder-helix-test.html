@@ -55,7 +55,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../lib/three.r186.min.js"></script>
 <script src="../lib/palette.js"></script>
 <script src="../lib/tokens-from-palette.js"></script>
 <script src="../lib/molecules.js"></script>
@@ -201,7 +201,7 @@ function place(t){
   for(let i = 0; i < rungs.length; i++){
     if(i > 0){
       const u = progress(t, i);
-      THREE.Quaternion.slerp(LADDER_Q, HELIX_Q, _sq, u);
+      _sq.slerpQuaternions(LADDER_Q, HELIX_Q, u);
       _st.lerpVectors(LADDER_T, HELIX_T, u);
       _fp.add(_st.applyQuaternion(_fq));
       _fq.multiply(_sq);

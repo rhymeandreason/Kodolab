@@ -430,8 +430,11 @@
     // Stage.defaults sets both for every box on a page, which is how a page
     // of thumbnails (the homepage) spends less GPU than a lesson.
     const renderer=new THREE.WebGLRenderer(
-      {canvas,antialias:o.antialias!==false,alpha:true});
+      {canvas,antialias:o.antialias!==false,alpha:true,stencil:true});   // stencil: membrane/clip.js caps with it, and three r163+ defaults it off
     renderer.setPixelRatio(Math.min(devicePixelRatio,o.pixelRatio||2));
+    // Linear out and (in the vendored three) colour management off: a palette hex reaches
+    // the screen as typed. A scene that wants sRGB output sets it on box.renderer itself.
+    renderer.outputColorSpace=THREE.LinearSRGBColorSpace;
     const scene=new THREE.Scene();
     // An ortho camera's standing distance is not its framing, and frame()
     // writes cam.r as the frustum HALF-HEIGHT — so the camera ends up parked
@@ -443,13 +446,14 @@
       : new THREE.PerspectiveCamera(45,1,0.1,1000);
     const root=new THREE.Group(); scene.add(root);
 
-    scene.add(new THREE.AmbientLight(0xffffff,.55));
+    // Math.PI on every light: the intensities are authored in r128 units, which hid that factor.
+    scene.add(new THREE.AmbientLight(0xffffff, Math.PI * .55));
     // Lights parented to the camera so they travel with the view: orbiting reads
     // as rotating the MODEL under a fixed studio light — highlights stay put on
     // screen instead of sweeping across the molecules.
     scene.add(camera);
-    const keyL=new THREE.DirectionalLight(0xffffff,.9); keyL.position.set(4,6,8);
-    const fillL=new THREE.DirectionalLight(0x88aaff,.4); fillL.position.set(-6,-2,-4);
+    const keyL=new THREE.DirectionalLight(0xffffff, Math.PI * .9); keyL.position.set(4,6,8);
+    const fillL=new THREE.DirectionalLight(0x88aaff, Math.PI * .4); fillL.position.set(-6,-2,-4);
     camera.add(keyL,keyL.target,fillL,fillL.target);
 
     const cam={theta:camInit.theta,phi:camInit.phi,r:camInit.r,target:new THREE.Vector3(0,0,0)};

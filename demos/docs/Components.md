@@ -30,7 +30,6 @@ Every app is one page on the shell the section above chose. A full-window scene,
 </head>
 <body>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="../kit/app.js" data-shell="steps" data-use="Membrane,Graph"></script>
 <script>
   // the shell, the mount(s), shell.goTo(0): see "The step-through shell"
@@ -1019,7 +1018,7 @@ A tutor for a college Bio 101 student. Concise, no repetition, one claim per par
 Read the page you wrote against this list. Every line is a failure that renders
 correctly and then breaks, or breaks nothing and is wrong anyway.
 
-- The Three r128 tag, then one `../kit/app.js` tag whose `data-shell` is the
+- One `../kit/app.js` tag whose `data-shell` is the
   template the page actually enters, and no other `<script>` or
   `<link>` for a library file. Its `data-use` names every component the page mounts, and no other.
 - Every `mount()` passes `viewOffset: shell.viewOffset`.
