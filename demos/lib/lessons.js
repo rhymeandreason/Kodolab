@@ -34,6 +34,7 @@ window.Lessons = [
   { key: 'ecoli',        unit: 'gene',   url: '/labs/glowing-ecoli',  file: '/demos/lab/ecoli/ecoli-lab.html', title: 'Glowing E. coli', blurb: 'Add a plasmid carrying a jellyfish gene to E. coli. If the bacteria take it up, they glow green under UV light.', still: '/demos/media/components/lab-glowing-ecoli.webp', bg: 'radial-gradient(circle at 55% 0%, #1a1440, #0b0920 75%)', status: 'new' },
   { key: 'onion',        unit: 'gene',   url: '/labs/onion-root-tip', file: '/demos/lab/onion/onion-lab.html', title: 'Onion Root Tip', blurb: 'Squash and stain an onion root tip, then find each stage of mitosis under the microscope.', still: '/demos/media/components/lab-onion-root-tip.webp', status: 'new' },
   { key: 'bloodtype',    unit: 'gene',   url: '/labs/blood-typing',   file: '/demos/lab/bloodtype/blood-lab.html', title: 'Blood Typing', blurb: 'Type four people\'s blood by which antibodies make it clump, then use their genes to work out who the father is not.', still: '/demos/media/components/lab-blood-typing.webp', bg: '#ddd0fb', status: 'new' },
+  { key: 'gel',          unit: 'gene',   url: '/labs/gel-electrophoresis', file: '/demos/lab/gel/gel-lab.html', title: 'Gel Electrophoresis', blurb: 'Run crime-scene DNA beside three suspects\' through a gel, size the bands against a ladder, and find whose pattern matches.', still: '/demos/media/components/lab-gel-electrophoresis.webp', bg: 'radial-gradient(circle at 50% 0%, #1e2a44, #0b1020 75%)', status: 'new' },
 ];
 
 window.LessonUnits = [
