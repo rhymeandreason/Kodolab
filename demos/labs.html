@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/demos/lib/site.js"></script>
+<!-- Served at /labs by a vercel.json rewrite, which does not move the file. -->
+<base href="/demos/">
+<title>Labs — Kodolab</title>
+<!-- seo: written by demos/tools/seo.js; edit its PAGES table, not these lines -->
+<meta name="description" content="Classic biology bench labs in 3D: extract strawberry DNA, transform glowing E. coli, stain onion root tips, type blood, run a gel and float leaf disks.">
+<link rel="canonical" href="https://www.kodolab.org/labs">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kodolab">
+<meta property="og:url" content="https://www.kodolab.org/labs">
+<meta property="og:title" content="Labs — Kodolab">
+<meta property="og:description" content="Classic biology bench labs in 3D: extract strawberry DNA, transform glowing E. coli, stain onion root tips, type blood, run a gel and float leaf disks.">
+<meta name="twitter:card" content="summary">
+<!-- /seo -->
+
+<!-- ===================================================================
+     EVERY BENCH LAB, as invitations. library.html's bar, head and foot
+     (css/library.css), with lessons.html's larger card, since a lab is a
+     thing you go into, not a part.
+
+     THE LIST IS lib/lessons.js: a lab is a row whose url is under /labs/.
+     A lab with no row (no short URL yet) is not shown; wire it there.
+     =================================================================== -->
+
+<link rel="stylesheet" href="css/kodo.css">
+<link rel="stylesheet" href="css/brand.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Jost:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="css/library.css">
+<style>
+
+  .labs { display: grid; gap: 1.6rem 1.4rem; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); padding: 1rem 0 2rem; }
+  .lab { position: relative; display: flex; flex-direction: column; background: #fff; border-radius: 16px; border: 1px solid rgba(var(--ink-t), .08);
+    box-shadow: 0 1px 2px rgba(var(--ink-t), .06), 0 14px 40px -18px rgba(var(--ink-t), .28); overflow: hidden; text-decoration: none; color: inherit;
+    transition: transform .3s var(--soft), box-shadow .3s var(--soft); }
+  .lab:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(var(--ink-t), .06), 0 24px 50px -18px rgba(var(--ink-t), .35); }
+  .lab .pic { position: relative; aspect-ratio: 3 / 2; background: var(--paper-2); overflow: hidden; }
+  .lab .pic img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--soft); }
+  .lab:hover .pic img { transform: scale(1.04); }
+  .lab .tag { position: absolute; left: 12px; top: 11px; font: 600 10.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--ink);
+    background: rgba(255, 255, 255, .82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 6px 9px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
+  .lab .tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--hue); display: inline-block; }
+  .lab .body { padding: 1.05rem 1.2rem 1.15rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+  .lab h3 { font-size: 1.3rem; line-height: 1.15; }
+  .lab p { margin: 0; font-family: var(--serif); font-style: italic; font-size: .93rem; line-height: 1.42; color: var(--ink-2); }
+
+  @media (max-width: 560px) {
+    .labs { grid-template-columns: 1fr; gap: 1rem; }
+    .lab h3 { font-size: 1.12rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { .lab, .lab .pic img { transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="mk" href="/"><img src="/kodolab-wordmark.svg" alt="kodolab"></a>
+    <!-- The same words and order as lib/site.js's NAV; site.js only adds the account here. -->
+    <nav class="links" aria-label="Site">
+      <a class="lnk" href="/lessons">Lessons</a>
+      <a class="lnk" href="/labs" aria-current="page">Labs</a>
+      <a class="lnk" href="/library">Library</a>
+      <a class="lnk" href="/build">Build</a>
+    </nav>
+  </div>
+</header>
+
+<section class="head">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">High School and College</span>
+      <h1>The <em>labs</em></h1>
+    </div>
+    <div>
+      <p class="lede">Classic biology lab experiments in 3D. Simulate using equipment and reading results.</p>
+      <p class="meta" id="tally"></p>
+    </div>
+  </div>
+</section>
+
+<main>
+  <div class="wrap">
+    <div class="labs" id="labs"></div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Kodolab · <a href="https://www.linkedin.com/in/maryhuang1/" target="_blank" rel="noopener">Mary Huang</a> · <a href="/lessons">Lessons</a> · <a href="/contribute">Contribute</a> · <a href="mailto:mary@kodolab.org">Email</a> · <a href="#feedback" data-feedback="wish">Send feedback</a> · <a href="/privacy">Privacy</a></span>
+    <span class="dots"><i style="background:var(--green)"></i><i style="background:var(--coral)"></i><i style="background:var(--blue)"></i><i style="background:var(--amber)"></i><i style="background:var(--violet)"></i></span>
+  </div>
+</footer>
+
+<script src="lib/lessons.js"></script>
+<script>
+'use strict';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const UNIT = Object.fromEntries(LessonUnits.map(u => [u.key, u]));
+const LABS = Lessons.filter(l => l.url && l.url.startsWith('/labs/') && !l.soon);
+
+document.getElementById('labs').innerHTML = LABS.map(l => {
+  const u = UNIT[l.unit];
+  return `<a class="lab" href="${l.url}">
+    <div class="pic"${l.bg ? ` style="background:${l.bg}"` : ''}>
+      <img src="${l.still}" alt="" loading="lazy">
+      ${u ? `<span class="tag" style="--hue:${u.hue}"><i></i>${esc(u.title)}</span>` : ''}
+    </div>
+    <div class="body">
+      <h3>${esc(l.title)}</h3>
+      <p>${esc(l.blurb)}</p>
+    </div>
+  </a>`;
+}).join('');
+
+const units = new Set(LABS.map(l => l.unit)).size;
+document.getElementById('tally').textContent =
+  `${LABS.length} labs · ${units} unit${units === 1 ? '' : 's'}`;
+</script>
+</body>
+</html>

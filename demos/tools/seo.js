@@ -112,6 +112,8 @@ const PAGES = {
     description: 'Gel electrophoresis in a 3D virtual lab: load crime-scene and suspect DNA, run the gel, size the bands against a ladder, and find whose pattern matches.' },
   '/nodes': {
     description: 'All of Bio 101 as one interactive map: how the concepts connect, from molecules to cells to organisms and ecosystems.' },
+  '/labs':
+    { description: 'Classic biology bench labs in 3D: extract strawberry DNA, transform glowing E. coli, stain onion root tips, type blood, run a gel and float leaf disks.' },
   '/library': { image: 'library',
     description: "Everything in Kodolab's open library: the 3D components a generated app can mount, every protein, and every molecule." },
   '/molecules': { image: 'molecules',
