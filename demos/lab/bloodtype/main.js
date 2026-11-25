@@ -241,7 +241,7 @@ const STEPS = [
     isDone: () => lesson.mode === 'watch' || notebook.checked(),
     progress: () => notebook.progress(),
     run: async () => { if (!isInstant()) notebook.open('data'); } },
-  { id: 'solve', ...card('solve'), targets: [], view: 'trays', detail: solveCard,
+  { id: 'solve', respond: true, ...card('solve'), targets: [], view: 'trays', detail: solveCard,
     isDone: () => lesson.mode === 'watch' || notebook.solved(),
     run: async () => { if (!isInstant()) notebook.open('genetics'); } },
 ];
