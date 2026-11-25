@@ -33,6 +33,8 @@ export { makeLamp, makeTimer, makeWaterBath, makeUvLamp, makeHotPlate, makeAnaly
 export { makeAgarPlate } from './props/culture.js';
 export { makeStrawberry, makeCalyx, STRAWBERRY_H, strawberrySeed, makeDnaPrecipitate, makeLeaf, makeLeafDisk } from './props/specimens.js';
 export { makeOnion } from './props/onion.js';
+export { makeEgg } from './props/animals.js';
+export { makeBalance } from './props/measuring.js';
 export { makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope } from './props/microscopy.js';
 export { makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeLead, makeTransilluminator } from './props/electrophoresis.js';
 export { makeMicropipette, makeTipBox, makePipetteStand } from './props/micropipette.js';

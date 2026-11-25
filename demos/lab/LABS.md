@@ -14,6 +14,7 @@ The four with a short URL are rows in `lib/lessons.js`; the rest are not wired t
 | Onion Root Tip | `onion/onion-lab.html` | /labs/onion-root-tip | Squash and stain, then label mitosis stages under a microscope |
 | Gel Electrophoresis | `gel/gel-lab.html` | /labs/gel-electrophoresis | Crime-scene DNA vs three suspects. Micropipette, gel run, ladder measuring |
 | Blood Typing | `bloodtype/blood-lab.html` | /labs/blood-typing | Type four people's blood, then Punnett squares to rule out a father |
+| Egg Osmosis | `egg/egg-lab.html` | none | Dissolve three shells in vinegar, then weigh the eggs before and after a day in water, saline and corn syrup. Predictions live in the mass table |
 | Juniper's Seizures | `calf/calf-lab.html` | none | Calf seizure case, drawn from frame art in `calf/art/`. Not in `README.md` |
 
 Benches: `gallery.html` (every prop), `props.html#<prop>` (one prop on a turntable), `themes.html` (colour themes).
@@ -28,6 +29,7 @@ Benches: `gallery.html` (every prop), `props.html#<prop>` (one prop on a turntab
 | Onion Root Tip | Microscope open: **1–4** pick the objective, a stage's first letter labels the selected cell, arrows pan, Esc deselects then closes |
 | Labs with zoom levels | **1, 2, 3** switch level (ignored with a modifier held) |
 | Leaf Disks, Strawberry, E. coli | `?marker=dot` swaps the target marker style |
+| Egg Osmosis | The predict step waits on the mass table's buttons, not the bench; Watch skips it. Masses are drawn once per session, so **restart** gives new eggs |
 | Juniper's Seizures | Not in `lessons.js` or `README.md`; status unknown |
 
 ## Every lab

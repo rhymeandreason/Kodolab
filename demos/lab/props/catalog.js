@@ -17,7 +17,7 @@ import {
   makeOnion, makeScalpel, makePencil, makeSlide, makeCoverslip, makeFilterPaper, makeMicroscope,
   makeGelBox, makeAgaroseGel, makeGelComb, makePowerSupply, makeTransilluminator, makeMicropipette, makeTipBox, makePipetteStand,
   makeHotPlate, makeWatchGlass, makeDropperBottle,
-  makeNozzleBottle, makeTypingTray, makeStirStick, makeStickCup,
+  makeNozzleBottle, makeTypingTray, makeStirStick, makeStickCup, makeEgg, makeBalance,
 } from '../lab.js';
 
 const slider = (label, min, max, step, value, unit, set) => ({ label, min, max, step, value, unit, set });
@@ -130,6 +130,19 @@ export const PROPS = [
   { key: 'calyx', group: 'Food', name: 'Calyx', file: 'specimens.js', call: 'makeCalyx(mat)',
     desc: 'The green sepals and stem, on their own. minY says how far the tips hang below the origin.',
     make: (mat) => { const c = makeCalyx(mat); c.group.position.y = -c.minY + 0.05; return c; }, controls: [] },
+  { key: 'egg', group: 'Food', name: 'Egg', file: 'animals.js', call: 'makeEgg(mat)',
+    desc: 'Hen\'s egg lying on its side, origin at its centre. setShell(d) dissolves the shell in patches; then the membranes show the yolk through. setShape and setSize swell or shrivel it (Egg osmosis lab).',
+    make: (mat) => { const e = makeEgg(mat); e.group.position.y = e.bottom() + 0.02; return e; },
+    controls: [
+      slider('Shell', 0, 1, 0.01, 0, '', (p, v) => p.setShell(v)),
+      slider('Size', 0.7, 1.15, 0.01, 1, '', (p, v) => { p.setSize(v); p.group.position.y = p.bottom() + 0.02; }),
+      slider('Swell', 0, 1, 0.01, 0, '', (p, v) => p.setShape({ swell: v })),
+      slider('Shrivel', 0, 1, 0.01, 0, '', (p, v) => p.setShape({ wrinkle: v, sag: v })),
+    ] },
+  { key: 'balance', group: 'Equipment', name: 'Top-loading balance', file: 'measuring.js', call: 'makeBalance(mat)',
+    desc: 'Digital balance, 0.1 g. show(grams) prints the reading; anchors.pan is the top of the pan.',
+    make: (mat) => makeBalance(mat),
+    controls: [slider('Reading', 0, 100, 0.1, 0, 'g', (p, v) => p.show(v > 0 ? v : null))] },
   { key: 'plate', group: 'Food', name: 'Plate', file: 'kitchen.js', call: 'makePlate(mat)',
     desc: 'Sage china plate, 9 cm.', make: (mat) => makePlate(mat), controls: [] },
   { key: 'bowl', group: 'Food', name: 'Bowl', file: 'kitchen.js', call: 'makeBowl(mat)',
